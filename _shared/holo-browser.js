@@ -80,12 +80,20 @@ export function classifyInput(raw, { search = DEFAULT_SEARCH } = {}) {
   if (/^chrome:\/\//i.test(s)) return mk("chrome", "chrome", s.toLowerCase(), s, { page: s.replace(/^chrome:\/\//i, "").replace(/\/.*$/, "") });
   if (/^holo:\/\//i.test(s)) return mk("internal", "holo", s, s, {});                  // holo://<appId> alias (NTP fleet)
   if (/^file:\/\//i.test(s)) return mk("file", "file", s, s, {});
+  // browser-internal + hand-off schemes: not loadable through resolveLoad — the APP dispatches
+  // them (blank surface, wallet, torrent engine, messenger). Naming them here keeps the omnibox
+  // total: every input classifies to a destination, never silently to a web search.
+  if (/^about:/i.test(s)) return mk("about", "about", s, s, { page: s.slice(6) });                    // about:blank etc — blank surface, NOT a search
+  if ((m = s.match(/^wc:([^@]+)@(\d+)/i))) return mk("walletconnect", "wc", s, s, { topic: m[1], version: +m[2] });   // → holo-walletconnect pairing
+  if (/^ethereum:/i.test(s)) return mk("wallet", "ethereum", s, s, { target: s.slice(9) });           // EIP-681 payment/contract link → wallet
+  if (/^magnet:\?/i.test(s)) return mk("magnet", "magnet", s, s, {});                                 // classify + hand-off (no torrent engine yet)
+  if ((m = s.match(/^(mailto|tel):(.+)$/i))) return mk("external", m[1].toLowerCase(), s, s, { target: m[2] });   // → messenger
   // hand the rest to the federated dweb classifier (ipfs/ipns/dnslink/ens/web/search).
   const d = dwebClassify(s);
   if (d.kind === "ipfs") return mk("ipfs", "ipfs", normIpfs(d.target, "ipfs"), s, {});
   if (d.kind === "ipns") return mk("ipns", "ipns", normIpfs(d.target, "ipns"), s, {});
   if (d.kind === "ens")  return mk("ens", "ens", d.target, s, { name: d.target.split("/")[0] });
-  if (d.kind === "web")  { const u = new URL(s); return mk("web", u.protocol.replace(":", ""), u.href, s, { origin: u.origin }); }
+  if (d.kind === "web")  { const u = new URL(s); const gw = u.pathname.match(/^\/(ipfs|ipns)\/([A-Za-z0-9]{40,})(\/.*)?$/); return mk("web", u.protocol.replace(":", ""), u.href, s, gw ? { origin: u.origin, [gw[1]]: gw[2] } : { origin: u.origin }); }   // gateway path → keep web nav, carry the CID hint (L1: the loader may offer the content-addressed mirror)
   if (d.kind === "did")  return mk("did", "holo", s, s, {});
   if (d.kind === "demo") return mk("demo", "holo", "@demo", s, {});
   // A bare domain (holo-dweb flags it "dnslink" as a content-addressed CANDIDATE). For a
@@ -315,6 +323,14 @@ export function selfTest() {
   ok(classifyInput("example.com").scheme === "https" && classifyInput("example.com").kind === "web", "classify a bare domain → https navigate");
   ok(classifyInput("hello world").kind === "search", "classify free text → search");
   ok(classifyInput("chrome://newtab").scheme === "chrome", "classify chrome:// internal page");
+  // the omnibox is TOTAL: hand-off schemes classify to destinations, never fall to a web search.
+  ok(classifyInput("about:blank").kind === "about", "classify about: → blank surface, not a search");
+  ok(classifyInput("wc:abc123@2?relay-protocol=irn&symKey=00ff").kind === "walletconnect" && classifyInput("wc:abc123@2?x=1").topic === "abc123", "classify wc: → WalletConnect pairing");
+  ok(classifyInput("ethereum:0x" + "11".repeat(20)).kind === "wallet", "classify ethereum: → wallet");
+  ok(classifyInput("magnet:?xt=urn:btih:aaaa").kind === "magnet", "classify magnet:");
+  ok(classifyInput("mailto:a@b.c").kind === "external" && classifyInput("tel:+441234").scheme === "tel", "classify mailto:/tel: → hand-off");
+  const gw = classifyInput("https://ipfs.io/ipfs/bafybeigdyrzt5sfp7udm7hu76uh7y26nf3efuylqabf3oclgtqy55fbzdi");
+  ok(gw.kind === "web" && gw.ipfs && gw.ipfs.startsWith("bafy"), "gateway URL stays web nav + carries the CID hint (L1 mirror offer)");
   // κ mint + Law L5 re-derivation / tamper-refusal.
   const store = new KappaStore();
   const bytes = toBytes("<!doctype html><title>t</title><h1>hello</h1>");

@@ -10,7 +10,7 @@ Instant ephemeral tour, no biometric: append `?guest=1`.
 
 ## What holds it together
 - **κ-verified shell (Law L5).** `apps/holo-messenger/shell-manifest.json` commits the SHA-256 of every
-  shell byte (aggregate κ `ad3e768d3d5be25f…`). The service worker refuses any byte that does not
+  shell byte (aggregate κ `7de5a55dec98e957…`). The service worker refuses any byte that does not
   re-derive to its committed κ, and can recover the whole shell from the content-addressed store in `b/`
   — the origin is untrusted plumbing.
 - **Sovereign identity.** Sign-in is your device's authenticator; fail-closed, nothing confidential paints

@@ -1,0 +1,84 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <title>Holo Money</title>
+    <meta name="description" content="Holo Money — the neobank surface of Hologram OS. Real balances over the sovereign wallet (WDK), money as κ-links (Holo Pay), virtual cards as κ-objects with generative faces. One column: phone, and the desktop right carriage, are the same app." />
+
+    <link rel="stylesheet" href="../../_shared/holo-theme.css" />
+    <link rel="stylesheet" href="../../_shared/holo-mobile.css" />
+    <!-- holo-theme.js boots theming + Holo UX (one canonical wire, Law L2) -->
+    <script src="../../_shared/holo-theme.js"></script>
+    <link rel="stylesheet" href="./style.css" />
+  </head>
+  <body data-holo-boot="off">
+    <div id="app" aria-busy="true">
+      <!-- ── HOME ─────────────────────────────────────────────────── -->
+      <section id="scr-home" class="screen on">
+        <div class="hero">
+          <header class="hero-bar">
+            <button id="avatar" class="avatar" title="You" aria-label="Identity"></button>
+            <div class="search" role="search"><span class="s-ic">⌕</span><span class="s-ph">Search</span></div>
+            <button id="stats-ic" class="hb-ic" title="Analytics" aria-label="Analytics">▦</button>
+          </header>
+          <div class="hero-mid">
+            <div class="acct-lbl">Personal · <span id="fiat-unit">USD</span></div>
+            <div id="balance" class="balance">$0</div>
+            <button id="accounts-pill" class="pill" aria-expanded="false">Accounts</button>
+            <div id="wallet-state" class="wallet-state" hidden></div>
+          </div>
+          <div id="accounts" class="accounts" hidden></div>
+          <nav class="quick" aria-label="Quick actions">
+            <button data-act="add"><span class="q-ic">+</span><span>Add money</span></button>
+            <button data-act="move"><span class="q-ic">⇄</span><span>Move</span></button>
+            <button data-act="details"><span class="q-ic">≡</span><span>Details</span></button>
+            <button data-act="more"><span class="q-ic">···</span><span>More</span></button>
+          </nav>
+        </div>
+        <div class="txs">
+          <div id="tx-list" class="tx-list"><div class="empty">Loading activity…</div></div>
+          <button id="tx-all" class="see-all" hidden>See all</button>
+        </div>
+      </section>
+
+      <!-- ── CARDS ────────────────────────────────────────────────── -->
+      <section id="scr-cards" class="screen">
+        <header class="scr-hd"><h1>Cards</h1><button id="card-add" class="cta-sm">＋ Get card</button></header>
+        <div id="card-rail" class="card-rail" tabindex="0"></div>
+        <div id="card-meta" class="card-meta"></div>
+      </section>
+
+      <!-- ── PAY ──────────────────────────────────────────────────── -->
+      <section id="scr-pay" class="screen">
+        <header class="scr-hd"><h1>Payments</h1></header>
+        <div class="pay-verbs">
+          <button id="pay-send" class="pv"><span class="q-ic">↗</span>Send</button>
+          <button id="pay-request" class="pv"><span class="q-ic">↙</span>Request</button>
+        </div>
+        <div id="pay-links" class="pay-links"><div class="empty">Payment links you create appear here — each one IS the payment (κ-link, no server).</div></div>
+      </section>
+
+      <!-- ── STATS ────────────────────────────────────────────────── -->
+      <section id="scr-stats" class="screen">
+        <header class="scr-hd"><h1>Analytics</h1></header>
+        <div id="stats-body"><div class="empty">Spending view builds from your on-chain history.</div></div>
+      </section>
+
+      <!-- ── tab bar ──────────────────────────────────────────────── -->
+      <nav id="tabs" aria-label="Sections">
+        <button data-scr="home" class="on"><span class="t-ic">⌂</span>Home</button>
+        <button data-scr="cards"><span class="t-ic">▭</span>Cards</button>
+        <button data-scr="pay"><span class="t-ic">⇄</span>Pay</button>
+        <button data-scr="stats"><span class="t-ic">◔</span>Stats</button>
+      </nav>
+
+      <!-- ── bottom sheet (one, repopulated) ──────────────────────── -->
+      <div id="sheet" hidden><div id="sheet-card" role="dialog" aria-modal="true"></div></div>
+
+      <!-- ── onboarding overlay ───────────────────────────────────── -->
+      <div id="onboard" hidden></div>
+    </div>
+    <script type="module" src="./app.mjs"></script>
+  </body>
+</html>

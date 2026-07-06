@@ -508,6 +508,9 @@
           <button class="mmact" data-sheet="swap"><span class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 1l4 4-4 4M3 11V9a4 4 0 0 1 4-4h14M7 23l-4-4 4-4M21 13v2a4 4 0 0 1-4 4H3"/></svg></span>Swap</button>
           <button class="mmact" data-sheet="send"><span class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 19V5M5 12l7-7 7 7"/></svg></span>Send</button>
           <button class="mmact" data-sheet="receive"><span class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14M19 12l-7 7-7-7"/></svg></span>Receive</button>
+          <!-- Holo Money — the neobank surface over this vault (balance · cards · pay-links · stats). The vault
+               signs; Holo Money is the bank UX. Opens in the same carriage via the identity bridge (open-money). -->
+          <button class="mmact" id="openHoloMoney" style="grid-column: 1 / -1" title="Holo Money — your bank over this vault"><span class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="6" width="18" height="13" rx="2.5"/><path d="M3 10.5h18"/><path d="M7 15h4"/></svg></span>Holo Money</button>
         </div>
 
         <div class="mm-tabs">
@@ -1403,6 +1406,8 @@
       } else {
         $("collapseBtn").style.display = "none";   // standalone page → fullscreen button stays, no collapse
       }
+      // Holo Money — hand the carriage to the neobank surface; the parent (shell / messenger) swaps facets.
+      { const b = $("openHoloMoney"); if (b) b.onclick = () => { try { parentWin()?.postMessage({ type: "holo-identity", action: "open-money" }, location.origin); } catch {} }; }
 
       // ── THE SIX SOVEREIGN CATEGORIES — one κ owns them all; each wired to a REAL Hologram source ──
       const svgI = (p) => '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">' + p + "</svg>";

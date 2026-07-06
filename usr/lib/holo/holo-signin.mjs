@@ -143,6 +143,44 @@ function renderNoBio(panel, u, reason) {
       <div class="status">${esc(reason || "No device biometric here")}</div></div>`;
 }
 
+// ── THE NAME CEREMONY — authenticate first, name second (the holo-login.relabel seam, now wired). ─────────
+// Once, right after the FIRST successful ceremony, the operator is asked what they want to be called. The
+// name is metadata on the sovereign record (κ unchanged — identity stays the key, Law L1), lives ONLY in the
+// device vault, and flows everywhere a greeting paints: session presentation (messenger home), holo.lastOperator
+// (next boot's first frame), presence (SSO). Roam/restore joins arrive already named → no ask. Answering or
+// declining both settle it — the question is asked at most once per operator, ever. Guests are never asked.
+const NAME_DEFAULTS = new Set(["", "you", "operator"]);
+const askedKey = (kappa) => "holo.name.asked:" + kappa;
+function askName(panel, u) {
+  const field = "width:100%;text-align:center;font-size:calc(var(--u,17px)*1.18);font-weight:300;padding:.62em .8em;border-radius:.55em;background:rgba(255,255,255,.09);color:#f4f7fc;border:1px solid rgba(255,255,255,.22);outline:none;font-family:inherit";
+  panel.innerHTML = `${avatarHtml(u)}<h1 class="hl-name">What should we call you?</h1>
+    <div class="hl-auth">
+      <input id="hl-name-input" style="${field}" placeholder="Your name" maxlength="48" autocomplete="off" spellcheck="false" enterkeyhint="done">
+      <button class="hl-bio" id="hl-name-go">${I.arrow}Continue</button>
+      <button class="hl-alt hl-more" id="hl-name-skip">Not now</button>
+      <div class="status">Kept on this device — never sent anywhere.</div>
+    </div>`;
+  return new Promise((resolve) => {
+    const input = panel.querySelector("#hl-name-input");
+    let settled = false;
+    const done = (v) => { if (settled) return; settled = true; resolve(String(v || "").trim().replace(/\s+/g, " ").slice(0, 48)); };
+    const go = panel.querySelector("#hl-name-go"); if (go) go.onclick = () => done(input && input.value);
+    const skip = panel.querySelector("#hl-name-skip"); if (skip) skip.onclick = () => done("");
+    if (input) { input.onkeydown = (e) => { if (e.key === "Enter") done(input.value); }; setTimeout(() => { try { input.focus(); } catch {} }, 40); }
+  });
+}
+async function ensureNamed(panel, principal) {
+  if (!principal || principal.guest) return principal;
+  let asked = false; try { asked = localStorage.getItem(askedKey(principal.kappa)) === "1"; } catch {}
+  if (asked || !NAME_DEFAULTS.has(String(principal.label || "").trim().toLowerCase())) return principal;
+  const name = await askName(panel, null);
+  try { localStorage.setItem(askedKey(principal.kappa), "1"); } catch {}
+  if (name) {
+    try { const L = await import("./holo-login.mjs"); await L.relabel(principal.kappa, name); principal.label = name; } catch {}
+  }
+  return principal;
+}
+
 // signOut() — the missing piece: clear the shared presence, lock the operator realm, drop the session. After
 // this a fresh open shows the full gate again. Exposed on window.holo.signOut.
 export async function signOut() {
@@ -180,6 +218,9 @@ export async function signIn({ root, params, app = "holospace", appName = "Holog
     };
 
     const establish = async (principal, secret, guest) => {
+      // THE NAME CEREMONY — after the device-rooted ceremony has passed, before anything else paints. One
+      // choke-point, so EVERY door (first-run enrol, returning unlock, silent SSO, restore) names exactly once.
+      if (!guest) { try { principal = await ensureNamed(panel, principal); } catch {} }
       // HANDOFF SEAM: a caller (e.g. the OS greeter) owns session + navigation. Run the ceremony, hand off,
       // still cache the greeting hint for next-boot baseline, then reveal. The caller's onEstablished does its
       // own openSession/persist/publish/enterShell — the primitive does NOT double it.

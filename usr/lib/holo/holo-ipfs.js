@@ -382,6 +382,7 @@ const MIME = {
   png: "image/png", jpg: "image/jpeg", jpeg: "image/jpeg", gif: "image/gif", webp: "image/webp", avif: "image/avif", ico: "image/x-icon", bmp: "image/bmp",
   mp4: "video/mp4", webm: "video/webm", mov: "video/quicktime", mp3: "audio/mpeg", wav: "audio/wav", ogg: "audio/ogg", flac: "audio/flac", m4a: "audio/mp4",
   pdf: "application/pdf", wasm: "application/wasm", woff: "font/woff", woff2: "font/woff2", ttf: "font/ttf", otf: "font/otf", eot: "application/vnd.ms-fontobject",
+  m3u8: "application/vnd.apple.mpegurl", ts: "video/mp2t", rss: "application/rss+xml", atom: "application/atom+xml", vtt: "text/vtt", srt: "application/x-subrip",
 };
 export const mimeByExt = (name) => MIME[String(name || "").split(".").pop().toLowerCase()] || "";
 

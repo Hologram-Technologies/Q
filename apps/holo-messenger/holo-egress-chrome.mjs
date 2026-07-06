@@ -22,13 +22,24 @@
 // regress it.
 
 import { spawn } from "node:child_process";
-import { existsSync } from "node:fs";
+import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
+import { createHash } from "node:crypto";
 import os from "node:os";
 
-const CDP_PORT = Number(process.env.HOLO_EGRESS_CDP || 9356);   // distinct from host :9333 / look :9334
-const PROFILE = process.env.HOLO_EGRESS_PROFILE || join(os.tmpdir(), "holo-egress-profile");
+const BASE_PORT = Number(process.env.HOLO_EGRESS_CDP || 9356);   // distinct from host :9333 / look :9334
+// One PROFILE ROOT holds one sub-profile per operator. Keying by the operator κ (TEE login)
+// makes site logins + cookies BOTH persistent (survive restarts) AND isolated (operator A's
+// Google session never bleeds into operator B's). HOLO_EGRESS_PROFILE overrides the root.
+const PROFILE_ROOT = process.env.HOLO_EGRESS_PROFILE || join(os.tmpdir(), "holo-egress");
 const MAX_TABS = Number(process.env.HOLO_EGRESS_MAX_TABS || 4);
+
+// operator κ → a short, filesystem-safe, stable key. A missing/guest operator shares one
+// "anon" context (no identity to bind to — still persistent, just not per-person).
+function opKey(operator) {
+  if (!operator || typeof operator !== "string") return "anon";
+  return "op-" + createHash("sha256").update(operator).digest("hex").slice(0, 16);
+}
 // A normal Chrome UA (headless Chrome otherwise leaks "HeadlessChrome/…", an instant bot tell).
 const UA = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/149.0.0.0 Safari/537.36";
 
@@ -81,47 +92,73 @@ function looksBlocked(html, finalUrl) {
   return /our systems have detected unusual traffic|before you continue to google|id="recaptcha|please (show you'?re|verify you are) (a )?human|Just a moment\.\.\.|Attention Required! \| Cloudflare|Checking your browser before/i.test(head);
 }
 
-// ── CDP plumbing (per-target WebSocket, flat protocol not needed) ────────────────────────────
-let _browser = null;   // { proc, wsBase } singleton promise-guard
-let _starting = null;
+// ── CDP plumbing — ONE headless Chrome PER OPERATOR (own profile + own port) ──────────────────
+const _instances = new Map();   // opKey → { proc, port, profile } (a live/adopted browser)
+const _starting = new Map();    // opKey → Promise (spawn-in-flight guard, prevents double spawn)
 
 async function cdpVersion(port) {
-  try { return await (await fetch(`http://127.0.0.1:${port}/json/version`)).json(); } catch { return null; }
+  try { const c = new AbortController(); const t = setTimeout(() => c.abort(), 1500);
+    const r = await fetch(`http://127.0.0.1:${port}/json/version`, { signal: c.signal }); clearTimeout(t); return await r.json(); }
+  catch { return null; }
 }
+function portFree(port) {
+  return new Promise((res) => {
+    // free ⇔ nothing answers the CDP probe; good enough (we only ever bind localhost CDP here).
+    cdpVersion(port).then((v) => res(!v));
+  });
+}
+// The port a profile last used, remembered in a sidecar so a dev-server restart RE-ADOPTS the
+// still-running egress Chrome (a persistent profile can only be opened by one instance; adopting
+// avoids a profile-lock spawn failure).
+const portFile = (profile) => join(profile, ".holo-egress-port");
+function rememberPort(profile, port) { try { mkdirSync(profile, { recursive: true }); writeFileSync(portFile(profile), String(port)); } catch {} }
+function recallPort(profile) { try { return Number(readFileSync(portFile(profile), "utf8")) || 0; } catch { return 0; } }
 
-async function ensureBrowser() {
-  if (_browser) return _browser;
-  if (_starting) return _starting;
-  _starting = (async () => {
-    // Reuse an egress Chrome already listening (same persistent profile → only one may run).
-    let v = await cdpVersion(CDP_PORT);
-    if (!v) {
-      const bin = findChrome();
-      if (!bin) { _starting = null; return null; }
-      const args = [
-        "--headless=new", "--disable-gpu", "--hide-scrollbars", "--mute-audio",
-        `--remote-debugging-port=${CDP_PORT}`, "--remote-allow-origins=*",
-        `--user-data-dir=${PROFILE}`,
-        "--no-first-run", "--no-default-browser-check", "--disable-background-networking",
-        "--disable-features=Translate,MediaRouter,OptimizationHints",
-        "--disable-extensions", "--window-size=1280,900", "--lang=en-US",
-        "about:blank",
-      ];
-      let proc;
-      try { proc = spawn(bin, args, { stdio: "ignore", windowsHide: true }); }
-      catch { _starting = null; return null; }
-      proc.on("exit", () => { _browser = null; });
-      // wait for the CDP endpoint to come up
-      for (let i = 0; i < 40; i++) { v = await cdpVersion(CDP_PORT); if (v) break; await sleep(250); }
-      if (!v) { try { proc.kill(); } catch {} _starting = null; return null; }
-      _browser = { proc, port: CDP_PORT };
-    } else {
-      _browser = { proc: null, port: CDP_PORT };   // adopted an already-running egress Chrome
+async function ensureBrowser(operator) {
+  const key = opKey(operator);
+  const live = _instances.get(key);
+  if (live) return live;
+  if (_starting.has(key)) return _starting.get(key);
+  const p = (async () => {
+    const profile = key === "anon" ? join(PROFILE_ROOT, "anon") : join(PROFILE_ROOT, key);
+
+    // 1 · adopt a still-running egress Chrome for THIS profile (sidecar port), if any.
+    const prior = recallPort(profile);
+    if (prior) { const v = await cdpVersion(prior); if (v) { const inst = { proc: null, port: prior, profile }; _instances.set(key, inst); return inst; } }
+
+    // 2 · else spawn a fresh one on the next free port from the base.
+    const bin = findChrome();
+    if (!bin) return null;
+    let port = 0;
+    for (let cand = BASE_PORT; cand < BASE_PORT + 128; cand++) {
+      // skip ports already owned by our own instances this session
+      if ([..._instances.values()].some((i) => i.port === cand)) continue;
+      if (await portFree(cand)) { port = cand; break; }
     }
-    _starting = null;
-    return _browser;
+    if (!port) return null;
+    const args = [
+      "--headless=new", "--disable-gpu", "--hide-scrollbars", "--mute-audio",
+      `--remote-debugging-port=${port}`, "--remote-allow-origins=*",
+      `--user-data-dir=${profile}`,
+      "--no-first-run", "--no-default-browser-check", "--disable-background-networking",
+      "--disable-features=Translate,MediaRouter,OptimizationHints",
+      "--disable-extensions", "--window-size=1280,900", "--lang=en-US",
+      "about:blank",
+    ];
+    let proc;
+    try { proc = spawn(bin, args, { stdio: "ignore", windowsHide: true }); }
+    catch { return null; }
+    proc.on("exit", () => { if (_instances.get(key) && _instances.get(key).proc === proc) _instances.delete(key); });
+    let v = null;
+    for (let i = 0; i < 40; i++) { v = await cdpVersion(port); if (v) break; await sleep(250); }
+    if (!v) { try { proc.kill(); } catch {} return null; }
+    rememberPort(profile, port);
+    const inst = { proc, port, profile };
+    _instances.set(key, inst);
+    return inst;
   })();
-  return _starting;
+  _starting.set(key, p);
+  try { return await p; } finally { _starting.delete(key); }
 }
 
 function cdpClient(wsUrl) {
@@ -165,13 +202,16 @@ async function closeTab(br, targetId) { try { await fetch(`http://127.0.0.1:${br
 
 /**
  * Render a live document in a real headless Chrome and return its settled outerHTML.
+ * @param {string} url
+ * @param {{timeoutMs?:number, operator?:string}} opts  operator κ → a per-identity Chrome
+ *   (own persistent profile + port), so site logins persist and never cross operators.
  * @returns {Promise<null | {status:number, contentType:string, buffer:Buffer, finalUrl:string}>}
  */
-export async function egressRender(url, { timeoutMs = 22000 } = {}) {
+export async function egressRender(url, { timeoutMs = 22000, operator } = {}) {
   let t;
   const parsed = (() => { try { return new URL(url); } catch { return null; } })();
   if (!parsed || (parsed.protocol !== "http:" && parsed.protocol !== "https:")) return null;
-  const br = await ensureBrowser();
+  const br = await ensureBrowser(operator);
   if (!br) return null;
   await acquire();
   let cli = null;
@@ -226,4 +266,32 @@ export async function egressRender(url, { timeoutMs = 22000 } = {}) {
   }
 }
 
-export function egressConfig() { return { port: CDP_PORT, profile: PROFILE, chrome: findChrome() }; }
+// Resolve (spawning if needed) an operator's egress and report where it lives — used by the
+// witness to prove isolation. Returns null if Chrome is unavailable.
+export async function egressInstance(operator) {
+  const br = await ensureBrowser(operator);
+  return br ? { key: opKey(operator), port: br.port, profile: br.profile } : null;
+}
+
+// Gracefully close an egress Chrome — Browser.close flushes cookies/session state to the
+// persistent profile before exit, so the NEXT open re-adopts them (the persistence guarantee).
+async function _shutdownInst(inst) {
+  try {
+    const v = await cdpVersion(inst.port);
+    if (v && v.webSocketDebuggerUrl) { const cli = cdpClient(v.webSocketDebuggerUrl); await cli.ready; await cli.send("Browser.close", {}, 4000); cli.close(); }
+  } catch {}
+  try { if (inst.proc) inst.proc.kill(); } catch {}
+}
+export async function egressShutdown(operator) {
+  const key = opKey(operator);
+  const inst = _instances.get(key);
+  if (!inst) return false;
+  _instances.delete(key);
+  await _shutdownInst(inst);
+  return true;
+}
+export async function egressShutdownAll() {
+  for (const key of [..._instances.keys()]) { const inst = _instances.get(key); _instances.delete(key); await _shutdownInst(inst); }
+}
+
+export function egressConfig() { return { basePort: BASE_PORT, profileRoot: PROFILE_ROOT, chrome: findChrome() }; }

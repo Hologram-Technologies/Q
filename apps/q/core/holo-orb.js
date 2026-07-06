@@ -20,10 +20,17 @@
 // WGSL — fullscreen-triangle vertex + a raymarched, noise-displaced SDF sphere with the OS brand spectrum
 // (OKLAB-interpolated), a triangular lattice shell, thin-film iridescence, an inner living nebula, ACES filmic
 // tonemap and temporal dither. Idle-animated (breath + spin + shimmer) so it's alive at rest with ZERO main-
-// thread involvement. Adapted from the OS orb (usr/lib/holo/voice/holo-voice-orb-gpu.mjs).
+// thread involvement. TERM-IDENTICAL to the native OS orb (usr/lib/holo/voice/holo-voice-orb-gpu.mjs): same
+// march (72 steps / 4 octaves / radius 0.82 / freq 1.7 / glow 0.012), same full signal uniforms (level + bands
+// + onset + energy + warm/dim/gold), same spin/swell/iridescence/nebula formulas — so the messenger's corner
+// orb and the CEF home-tab orb are the SAME animation, pixel for pixel (minus the OS-only morph-form library).
 // ─────────────────────────────────────────────────────────────────────────────────────────────────────────
 const WGSL = `
-struct U { res: vec2f, time: f32, lvl: f32 };
+struct U {
+  res: vec2f, time: f32, level: f32,
+  bass: f32, mid: f32, treble: f32, onset: f32,
+  energy: f32, warm: f32, dim: f32, gold: f32,
+};
 @group(0) @binding(0) var<uniform> u: U;
 
 const STOPS = array<vec3f, 8>(
@@ -44,7 +51,7 @@ fn vnoise(x: vec3f) -> f32 {
   let x00 = mix(n000,n100,w.x); let x10 = mix(n010,n110,w.x); let x01 = mix(n001,n101,w.x); let x11 = mix(n011,n111,w.x);
   return mix(mix(x00,x10,w.y), mix(x01,x11,w.y), w.z) * 2.0 - 1.0;
 }
-fn fbm(p0: vec3f) -> f32 { var p = p0; var a = 0.5; var s = 0.0; for (var i = 0; i < 5; i = i + 1) { s = s + a * vnoise(p); p = p * 1.9; a = a * 0.5; } return s; }
+fn fbm(p0: vec3f) -> f32 { var p = p0; var a = 0.5; var s = 0.0; for (var i = 0; i < 4; i = i + 1) { s = s + a * vnoise(p); p = p * 1.9; a = a * 0.5; } return s; }
 fn srgb2lin(c: vec3f) -> vec3f { return select(c/12.92, pow((c+0.055)/1.055, vec3f(2.4)), c > vec3f(0.04045)); }
 fn lin2srgb(c: vec3f) -> vec3f { let x = max(c, vec3f(0.0)); return select(x*12.92, 1.055*pow(x, vec3f(1.0/2.4))-0.055, x > vec3f(0.0031308)); }
 fn lin2oklab(c: vec3f) -> vec3f {
@@ -62,9 +69,9 @@ fn oklab2srgb(c: vec3f) -> vec3f {
 }
 fn spec(t0: f32) -> vec3f { let t = fract(t0) * 7.0; let k = clamp(i32(floor(t)), 0, 6); let a = lin2oklab(srgb2lin(STOPS[k])); let b = lin2oklab(srgb2lin(STOPS[k+1])); return oklab2srgb(mix(a, b, fract(t))); }
 fn sdf(p: vec3f) -> f32 {
-  let R = 0.82 + u.lvl * 0.05 + sin(u.time * 0.6) * 0.012;
+  let R = 0.82 + u.level * 0.05 + u.onset * 0.03 + sin(u.time * 0.6) * 0.012;
   let warp = vec3f(u.time*0.05, u.time*0.06, u.time*0.07);
-  let disp = fbm(p * 1.7 + warp) * (0.07 + u.lvl * 0.22);
+  let disp = fbm(p * 1.7 + warp) * (0.07 + u.level * 0.20 + u.mid * 0.14 + u.bass * 0.10);
   return length(p) - R - disp;
 }
 fn nrm(p: vec3f) -> vec3f { let e = vec2f(0.0012, 0.0); return normalize(vec3f(sdf(p+e.xyy)-sdf(p-e.xyy), sdf(p+e.yxy)-sdf(p-e.yxy), sdf(p+e.yyx)-sdf(p-e.yyx))); }
@@ -76,15 +83,15 @@ fn aces(x: vec3f) -> vec3f { let a=2.51; let b=0.03; let c=2.43; let d=0.59; let
   let uv = (fc.xy - 0.5 * u.res) / u.res.y;
   let ro = vec3f(0.0, 0.0, 3.6);
   let rd = normalize(vec3f(uv.x, -uv.y, -1.5));
-  let spin = u.time / 7.0 * (1.0 + u.lvl * 1.4);
+  let spin = u.time / 7.0 * (1.0 + u.level * 1.6 + u.treble * 1.4) * (0.4 + 0.6 * u.energy);
   var t = 0.0; var glow = 0.0; var neb = 0.0; var hit = false; var hp = vec3f(0.0);
   var omega = 1.2; var prevD = 1e9; var stepLen = 0.0;
-  for (var i = 0; i < 96; i = i + 1) {
+  for (var i = 0; i < 72; i = i + 1) {
     let p = ro + rd * t; let d = sdf(p);
     if (omega > 1.0 && (d + prevD) < stepLen) { t = t - stepLen; omega = 1.0; prevD = 1e9; continue; }
     prevD = d;
     glow = glow + 0.012 / (1.0 + d * d * 42.0);
-    if (d < 0.0) { neb = neb + (0.5 + 0.5 * fbm(p * 2.7 + vec3f(u.time * 0.09))) * 0.05; }
+    if (d < 0.0) { neb = neb + (0.5 + 0.5 * fbm(p * 2.72 + vec3f(u.time * 0.09))) * 0.05; }
     if (d < 0.0015) { hit = true; hp = p; break; }
     stepLen = max(d * omega, 0.004); t = t + stepLen;
     if (t > 6.0) { break; }
@@ -99,7 +106,7 @@ fn aces(x: vec3f) -> vec3f { let a=2.51; let b=0.03; let c=2.43; let d=0.59; let
     let fres = pow(1.0 - max(dot(n, -rd), 0.0), 2.5);
     let ld = normalize(vec3f(-0.4, 0.7, 0.5));
     let diff = 0.5 + 0.5 * max(dot(n, ld), 0.0);
-    let irid = spec(hue + fres * 0.30);
+    let irid = spec(hue + fres * 0.30 + u.treble * 0.08);
     let bodyHue = mix(base, irid, fres * 0.45);
     let A = lon * 18.0; let B = lat * 11.0; let pf = sin(lat * 3.14159265);
     let g = max(gline(B), max(gline(A + B * 0.5), gline(A - B * 0.5))) * pf;
@@ -108,14 +115,18 @@ fn aces(x: vec3f) -> vec3f { let a=2.51; let b=0.03; let c=2.43; let d=0.59; let
     let edgeRGB = vec3f(spec(hue - dofs).r, spec(hue).g, spec(hue + dofs).b);
     let edge = (edgeRGB * 1.7 + vec3f(0.22, 0.22, 0.32)) * (0.7 + 0.6 * fres);
     col = mix(face, edge, g) + bodyHue * fres * 0.55;
-    col = col * (0.9 + u.lvl * 0.45);
+    col = col * (0.9 + u.level * 0.45 + u.onset * 0.5);
     alpha = max(g, 0.34 + 0.45 * fres);
   }
   let ncol = spec(spin + 0.55 + neb);
-  col = col + ncol * neb * (0.7 + u.lvl * 0.9);
+  col = col + ncol * neb * (0.7 + u.level * 0.9 + u.bass * 0.8);
   let gcol = spec(spin + 0.25);
-  col = col + gcol * glow * (0.6 + u.lvl * 1.0);
+  col = col + gcol * glow * (0.6 + u.level * 1.0 + u.treble * 0.7);
   alpha = max(alpha, clamp((glow + neb * 0.6) * 1.2, 0.0, 1.0));
+  if (u.gold > 0.0) { col = mix(col, vec3f(1.0, 0.78, 0.20) * (0.4 + 0.9 * length(col)), u.gold); }
+  col.r = col.r * (1.0 + u.warm * 0.10);
+  col.b = col.b * (1.0 - u.warm * 0.30);
+  col = col * (1.0 - u.dim * 0.4);
   col = aces(col * 1.18);
   col = col + (ign(fc.xy + u.time * 60.0) - 0.5) * (1.5 / 255.0);
   col = clamp(col, vec3f(0.0), vec3f(1.0));
@@ -127,31 +138,38 @@ fn aces(x: vec3f) -> vec3f { let a=2.51; let b=0.03; let c=2.43; let d=0.59; let
 const WORKER_BODY = [
   "const WGSL = __WGSL__;",
   "let dev=null, ctx=null, pipeline=null, bind=null, ubuf=null, uf=null, raf=0, running=false, dead=false, canvas=null;",
-  "let dpr=1, ss=1, cssW=64, cssH=64;",
-  "let mode=0, extLevel=-1, cur=0.15, dbg=false, fc=0;",   // mode: 0 idle · 1 listening · 2 thinking · 3 speaking. cur = eased base level; extLevel = live speech amplitude (0..1) or -1. dbg = optional level readback.
+  "let dpr=1, ssMax=1, scale=1, cssW=64, cssH=64;",   // backing = css × dpr × scale; scale climbs to ssMax (SSAA) with headroom, drops under load — the native orb's ladder
+  "let mode=0, extLevel=-1, cur=0.0, gcur=0.0, dbg=false, fc=0, lastT=0, emaDt=0;",   // mode: 0 idle · 1 listening · 2 thinking · 3 speaking. cur = eased base level; gcur = eased gold (mind-flare) wash; extLevel = live speech amplitude (0..1) or -1.
   "const NOW=function(){return (typeof performance!=='undefined')?performance.now():Date.now();};",
   "const RAF=(typeof requestAnimationFrame==='function')?requestAnimationFrame:function(f){return setTimeout(function(){f(NOW());},16);};",
   "const CAF=(typeof cancelAnimationFrame==='function')?cancelAnimationFrame:clearTimeout;",
-  "function resize(){var w=Math.max(1,Math.round(cssW*dpr*ss)),h=Math.max(1,Math.round(cssH*dpr*ss)); if(canvas.width!==w||canvas.height!==h){canvas.width=w;canvas.height=h;}}",
-  // Q-state-reactive level: idle = calm breath; listening = alert; thinking = brighter + faster (higher base +
-  // quicker oscillation → spin & glow rise, they scale with lvl in the WGSL); speaking = pulse to live amplitude
-  // (extLevel) or a synthetic speech cadence. cur eases between modes so transitions read as intent, not a snap.",
-  "function frame(){ if(!running||dead) return; var t=NOW()/1000; var base, osc;",
-  "  if(mode===2){ base=0.50; osc=0.12*Math.sin(t*3.4); }",
-  "  else if(mode===1){ base=0.24; osc=0.05*Math.sin(t*2.0); }",
+  "function resize(){var s=dpr*scale;var w=Math.max(1,Math.round(cssW*s)),h=Math.max(1,Math.round(cssH*s)); if(canvas.width!==w||canvas.height!==h){canvas.width=w;canvas.height=h;}}",
+  // Q-state-reactive level, calibrated to the NATIVE orb's idle: at rest level eases to 0 (energy 1), so the
+  // idle animation is exactly the OS home-tab orb — breath sin(t·0.6)·0.012, spin t/7, fbm skin 0.07. States
+  // modulate on top: listening = alert; thinking = livelier + the OS gold mind-flare wash; speaking = pulse to
+  // live amplitude (extLevel) or a synthetic speech cadence. cur/gcur ease so transitions read as intent.",
+  "function frame(){ if(!running||dead) return; var t=NOW()/1000; var base, osc, gold=0;",
+  "  if(mode===2){ base=0.35; osc=0.10*Math.sin(t*3.4); gold=0.30+0.20*Math.sin(t*3.4); }",
+  "  else if(mode===1){ base=0.22; osc=0.05*Math.sin(t*2.0); }",
   "  else if(mode===3){ base=0.32; osc=(extLevel>=0?0.0:0.30*Math.abs(Math.sin(t*6.5))); }",
-  "  else { base=0.15; osc=0.10*Math.sin(t*1.1); }",
+  "  else { base=0.0; osc=0.0; }",
   "  var live=(extLevel>=0&&(mode===1||mode===3))?extLevel*0.6:0.0;",   // REAL audio amplitude swells the orb (listening to you · speaking as Q)
-  "  cur+=(base-cur)*0.06; var lvl=Math.max(0.0, cur+osc+live);",
-  "  if(dbg&&((fc++%15)===0)){ try{ self.postMessage({t:'lvl', v:lvl, mode:mode}); }catch(e){} }",
-  "  uf[0]=canvas.width; uf[1]=canvas.height; uf[2]=t; uf[3]=lvl; dev.queue.writeBuffer(ubuf,0,uf); var view; try{ view=ctx.getCurrentTexture().createView(); }catch(e){ raf=RAF(frame); return; } var enc=dev.createCommandEncoder(); var pass=enc.beginRenderPass({colorAttachments:[{view:view,clearValue:{r:0,g:0,b:0,a:0},loadOp:'clear',storeOp:'store'}]}); pass.setPipeline(pipeline); pass.setBindGroup(0,bind); pass.draw(3); pass.end(); dev.queue.submit([enc.finish()]); raf=RAF(frame); }",
+  "  cur+=(base-cur)*0.06; gcur+=(gold-gcur)*0.08; var lvl=Math.max(0.0, cur+osc+live);",
+  "  var now=NOW(); if(lastT){ emaDt=emaDt?emaDt*0.9+(now-lastT)*0.1:(now-lastT); } lastT=now;",
+  "  if(((++fc)%24)===0&&emaDt>0){ var fps=1000/emaDt;",   // frame-time adaptive resolution (the native ladder): drop fast under load, climb slow into SSAA headroom → sharp AND never laggy
+  "    if(fps<50&&scale>0.5){ scale=Math.max(0.5,scale-0.25); resize(); }",
+  "    else if(fps>58&&scale<ssMax){ scale=Math.min(ssMax,scale+0.25); resize(); } }",
+  "  if(dbg&&(fc%15)===0){ try{ self.postMessage({t:'lvl', v:lvl, mode:mode}); }catch(e){} }",
+  "  uf[0]=canvas.width; uf[1]=canvas.height; uf[2]=t; uf[3]=lvl;",
+  "  uf[4]=0; uf[5]=0; uf[6]=0; uf[7]=0; uf[8]=1; uf[9]=0; uf[10]=0; uf[11]=gcur;",   // bass/mid/treble/onset idle at 0 and energy at 1 — the native orb's values when no live meter feeds it
+  "  dev.queue.writeBuffer(ubuf,0,uf); var view; try{ view=ctx.getCurrentTexture().createView(); }catch(e){ raf=RAF(frame); return; } var enc=dev.createCommandEncoder(); var pass=enc.beginRenderPass({colorAttachments:[{view:view,clearValue:{r:0,g:0,b:0,a:0},loadOp:'clear',storeOp:'store'}]}); pass.setPipeline(pipeline); pass.setBindGroup(0,bind); pass.draw(3); pass.end(); dev.queue.submit([enc.finish()]); raf=RAF(frame); }",
   "self.onmessage=async function(e){ var m=e.data||{}; try{",
   "  if(m.t==='probe'){ try{ if(!navigator.gpu) throw new Error('no gpu'); var a=await navigator.gpu.requestAdapter({powerPreference:'high-performance'}); if(!a) throw new Error('no adapter'); var d=await a.requestDevice(); if(d.destroy) d.destroy(); self.postMessage({t:'probe-ok'}); }catch(err){ self.postMessage({t:'fail',err:'probe: '+String(err&&err.message||err)}); } return; }",
   "  if(m.t==='init'){ try{",
-  "    canvas=m.canvas; dpr=m.dpr||1; ss=m.ss||1; cssW=m.cssW||64; cssH=m.cssH||64; dbg=!!m.debug;",
+  "    canvas=m.canvas; dpr=m.dpr||1; ssMax=m.ss||1; scale=1; cssW=m.cssW||64; cssH=m.cssH||64; dbg=!!m.debug;",
   "    var a=await navigator.gpu.requestAdapter({powerPreference:'high-performance'}); if(!a) throw new Error('no adapter'); dev=await a.requestDevice(); if(dev.lost) dev.lost.then(function(){dead=true;});",
   "    ctx=canvas.getContext('webgpu'); if(!ctx) throw new Error('no webgpu ctx'); var fmt=navigator.gpu.getPreferredCanvasFormat(); ctx.configure({device:dev,format:fmt,alphaMode:'premultiplied'});",
-  "    uf=new Float32Array(4); ubuf=dev.createBuffer({size:16,usage:GPUBufferUsage.UNIFORM|GPUBufferUsage.COPY_DST});",
+  "    uf=new Float32Array(12); ubuf=dev.createBuffer({size:48,usage:GPUBufferUsage.UNIFORM|GPUBufferUsage.COPY_DST});",
   "    dev.pushErrorScope('validation'); var mod=dev.createShaderModule({code:WGSL});",
   "    pipeline=dev.createRenderPipeline({layout:'auto',vertex:{module:mod,entryPoint:'vs'},fragment:{module:mod,entryPoint:'fs',targets:[{format:fmt,blend:{color:{srcFactor:'one',dstFactor:'one-minus-src-alpha'},alpha:{srcFactor:'one',dstFactor:'one-minus-src-alpha'}}}]},primitive:{topology:'triangle-list'}});",
   "    var perr=await dev.popErrorScope(); if(perr) throw new Error('wgsl: '+perr.message);",
@@ -199,7 +217,7 @@ function mountGpuOrb(canvas, opts) {
   try { url = URL.createObjectURL(new Blob([WORKER_SRC], { type: "text/javascript" })); worker = new Worker(url); }
   catch (e) { return mountWebglOrb(canvas); }
 
-  const dpr = () => Math.min((typeof window !== "undefined" && window.devicePixelRatio) || 1, 2);
+  const dpr = () => Math.min((typeof window !== "undefined" && window.devicePixelRatio) || 1, 3);   // full device DPR (cap 3) — a small corner orb is cheap, so every edge is razor-sharp
   const cw = () => canvas.clientWidth || 64, ch = () => canvas.clientHeight || 64;
 
   worker.onmessage = (e) => {
@@ -208,7 +226,7 @@ function mountGpuOrb(canvas, opts) {
       if (stopped) return;
       let off; try { off = canvas.transferControlToOffscreen(); transferred = true; }
       catch (err) { toWebgl(); return; }
-      try { worker.postMessage({ t: "init", canvas: off, dpr: dpr(), ss: 1.5, cssW: cw(), cssH: ch(), debug: !!opts.debug }, [off]); }
+      try { worker.postMessage({ t: "init", canvas: off, dpr: dpr(), ss: 2, cssW: cw(), cssH: ch(), debug: !!opts.debug }, [off]); }   // ss = the SSAA ceiling the worker's ladder climbs to with fps headroom (starts at 1× — instant first paint)
       catch (err) { toWebgl(); }
     } else if (m.t === "ready") { if (timer) { clearTimeout(timer); timer = 0; } if (pendingSig) { forwardSig(pendingSig.mode, pendingSig.level); pendingSig = null; } }   // painting on the worker
     else if (m.t === "lvl") { handle.level = m.v; handle.stateMode = m.mode; if (typeof handle.onLevel === "function") { try { handle.onLevel(m.v, m.mode); } catch (e) {} } }   // optional debug readback (opts.debug)
