@@ -839,7 +839,18 @@
 
   // ── Clock + greeting (provider-driven) ──────────────────────────────────────────────────────
   function greetWord(h) { return h < 5 ? "Good night" : h < 12 ? "Good morning" : h < 18 ? "Good afternoon" : "Good evening"; }
-  function whoAmI() { try { return (W.HoloIdentity && (W.HoloIdentity.displayName || (W.HoloIdentity.profile && W.HoloIdentity.profile.name))) || ""; } catch (e) { return ""; } }
+  // whoAmI — the operator's chosen name, from the ONE identity chain: the shell's verified HoloIdentity
+  // (native desktop), else the session presentation the sovereign sign-in gate persists (serverless — κ +
+  // label only, guests excluded), else the non-secret greeting hint from the last ceremony. A default
+  // placeholder ("You"/"operator") reads as unnamed → the widget's own "Explorer" fallback applies.
+  function whoAmI() {
+    var named = function (s) { s = String(s || "").trim(); var l = s.toLowerCase(); return (l && l !== "you" && l !== "operator" && l !== "guest") ? s : ""; };
+    try { var h = named(W.HoloIdentity && (W.HoloIdentity.displayName || (W.HoloIdentity.profile && W.HoloIdentity.profile.name))); if (h) return h; } catch (e) {}
+    // a live session is AUTHORITATIVE: an explicit guest is never dressed in the device operator's name.
+    try { var p = JSON.parse(sessionStorage.getItem("holo.identity") || "null"); if (p) return p.guest ? "" : named(p.label); } catch (e) {}
+    try { var o = JSON.parse(localStorage.getItem("holo.lastOperator") || "null"); if (o && named(o.label)) return named(o.label); } catch (e) {}
+    return "";
+  }
   W.HoloWidgets.define("clock", {
     name: "Clock", icon: "clock", blurb: "The time, with a greeting.", defaultW: 300, minW: 150, maxW: 620,
     defaultConfig: { h24: false, seconds: false, greet: true, name: "" },

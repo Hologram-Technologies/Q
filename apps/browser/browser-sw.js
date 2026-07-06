@@ -266,10 +266,9 @@ async function serveWeb(realUrl, req) {
   const act = dnrAction(realUrl, "main_frame");        // an enabled extension may block/redirect the page itself
   if (act.type === "block") { await broadcast({ type: "ext-blocked", url: realUrl, extId: act.extId, ruleId: act.ruleId, resourceType: "main_frame" }); return blockedPage(realUrl, act); }
   if (act.type === "redirect" && act.redirect && act.redirect.url) return Response.redirect(new URL(VIEW + "w/" + enc(act.redirect.url), self.location.origin).href, 302);
-  let r;
-  try { r = await fetch(WEB_PROXY + encodeURIComponent(realUrl), await proxyInit(req, true)); }   // isDoc → egress may render this top document in a real Chrome
-  catch (e) { return refused("proxy fetch failed: " + (e.message || e)); }
-  if (!r.ok) {
+  const isGet = !req || !req.method || req.method === "GET" || req.method === "HEAD";
+  const { r, via } = await egressFetch(realUrl, await proxyInit(req, true));   // isDoc → egress may render this top document in a real Chrome
+  if (!r || !r.ok) {
     // Google rate-limits/JS-walls proxied /search (no-JS search is retired; the sg_ss JS
     // redemption works only when Google isn't punishing the IP). Never leave the user
     // resultless: fall back to DuckDuckGo's html edition with the SAME query, in-seam.
@@ -278,8 +277,20 @@ async function serveWeb(realUrl, req) {
       if (q && /(^|\.)google\.[a-z.]{2,6}$/.test(gu.hostname) && gu.pathname === "/search")
         return Response.redirect(new URL(VIEW + "w/" + enc("https://html.duckduckgo.com/html/?q=" + encodeURIComponent(q)), self.location.origin).href, 302);
     } catch {}
+    // L3 fallback: the last-known κ snapshot of this URL — a repeat visit paints with ZERO
+    // egress (offline, relay outage, serverless mount with no road out). Re-derived, labeled stale.
+    if (isGet) {
+      const hit = await uServe(realUrl, "text/html; charset=utf-8");
+      if (hit) {
+        let body = hit.bytes;
+        if (/text\/html/i.test(hit.contentType)) body = new TextEncoder().encode(rewriteHtml(new TextDecoder().decode(hit.bytes), realUrl, hit.kappa));
+        await broadcast({ type: "committed", view: VIEW + "w/" + enc(realUrl), kappa: hit.kappa, minted: false, verified: true, stale: true, egress: "kappa-store", scheme: new URL(realUrl).protocol.replace(":", ""), contentType: hit.contentType, source: realUrl });
+        return new Response(body, { status: 200, headers: KHDR(hit.kappa, hit.contentType, { "x-holo-stale": "1", "x-holo-egress": "kappa-store" }) });
+      }
+    }
     // COEPH even on errors — the page is cross-origin isolated, and a document response without
     // CORP is ERR_BLOCKED_BY_RESPONSE (a blank frame instead of an honest upstream error).
+    if (!r) return refused("no egress road reached " + realUrl + " (local proxy absent, origin CORS-closed, relays unreachable) and no κ snapshot is held for it");
     return new Response("Holo Browser: upstream " + r.status + " for " + realUrl, { status: r.status === 0 ? 502 : r.status, headers: { "content-type": "text/plain", ...COEPH } });
   }
   let bytes = new Uint8Array(await r.arrayBuffer());
@@ -287,6 +298,7 @@ async function serveWeb(realUrl, req) {
   const ctype = (r.headers.get("content-type") || mimeByExt(realUrl) || "text/html; charset=utf-8");
   await kPut(kappa, bytes, { contentType: ctype, source: realUrl });
   if (!verifyKappa(kappa, bytes)) return refused("mint re-derivation failed for " + realUrl);
+  if (isGet && r.status === 200) await uPut(realUrl, { kappa, contentType: ctype, ts: Date.now() });   // the L3 edge: url → κ
   let body = bytes;
   if (/text\/html/i.test(ctype)) {
     const text = new TextDecoder().decode(bytes);
@@ -304,21 +316,29 @@ async function serveWeb(realUrl, req) {
     } catch {}
     body = new TextEncoder().encode(rewriteHtml(text, realUrl, kappa));
   }
-  await broadcast({ type: "committed", view: VIEW + "w/" + enc(realUrl), kappa, minted: true, verified: true, scheme: new URL(realUrl).protocol.replace(":", ""), contentType: ctype, source: realUrl });
-  return new Response(body, { status: 200, headers: KHDR(kappa, ctype) });
+  await broadcast({ type: "committed", view: VIEW + "w/" + enc(realUrl), kappa, minted: true, verified: true, egress: via, scheme: new URL(realUrl).protocol.replace(":", ""), contentType: ctype, source: realUrl });
+  return new Response(body, { status: 200, headers: KHDR(kappa, ctype, { "x-holo-egress": via }) });
 }
 
-// ── proxy a subresource of a live page: mint κ + re-derive, serve same-origin ─────────
+// ── serve a subresource of a live page: κ-store FIRST (L3), then the egress ladder ────
 async function serveSub(realUrl, req) {
-  let r;
-  try { r = await fetch(WEB_PROXY + encodeURIComponent(realUrl), await proxyInit(req)); }
-  catch (e) { return refused("subresource proxy failed: " + (e.message || e)); }
+  const isGet = !req || !req.method || req.method === "GET" || req.method === "HEAD";
+  const isRange = !!(req && req.headers && req.headers.get("range"));   // a partial slice must never become the URL's identity
+  // L3: a repeat subresource is a κ-store hit — zero wire bytes, by law not by optimization.
+  // (SEC-3 dedup rides along: one stored copy of a shared lib serves every site that names it.)
+  if (isGet && !isRange) {
+    const hit = await uServe(realUrl, mimeByExt(realUrl) || "application/octet-stream");
+    if (hit) return new Response(hit.bytes, { status: 200, headers: KHDR(hit.kappa, hit.contentType, { "x-holo-egress": "kappa-store" }) });
+  }
+  const { r, via } = await egressFetch(realUrl, await proxyInit(req));
+  if (!r) return refused("subresource egress failed for " + realUrl);
   if (!r.ok) return new Response("", { status: r.status, headers: { "content-type": "text/plain", ...COEPH } });
   const bytes = new Uint8Array(await r.arrayBuffer());
   const kappa = kappaOf(bytes);
   await kPut(kappa, bytes, { source: realUrl });
   const ct = r.headers.get("content-type") || mimeByExt(realUrl) || "application/octet-stream";
-  return new Response(bytes, { status: 200, headers: KHDR(kappa, ct) });
+  if (isGet && !isRange && r.status === 200) await uPut(realUrl, { kappa, contentType: ct, ts: Date.now() });
+  return new Response(bytes, { status: 200, headers: KHDR(kappa, ct, { "x-holo-egress": via }) });
 }
 
 self.addEventListener("fetch", (event) => {

@@ -1307,6 +1307,7 @@ function persistInboxSoon() {
   _persistT = setTimeout(() => { _persistT = 0; persistInbox(); }, wait);
 }
 async function tryBridge(platform, base) {
+  if (!base) return null;   // no bridge endpoint on this origin (BRIDGES is empty on non-loopback mounts) — never fetch "undefined/connect"
   let r; try { r = await fetch(base + "/connect", { method: "POST" }).then((x) => x.json()); } catch { return null; }   // bridge not running → caller falls back
   // OAuth bridges (e.g. Gmail) open the system browser for consent and return {step:"oauth", url, hint}. Surface it so
   // the UI can show "continue in your browser"; the await-loop below then resolves to connected once /status flips.
