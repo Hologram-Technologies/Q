@@ -267,6 +267,17 @@ async function serveWeb(realUrl, req) {
   if (act.type === "block") { await broadcast({ type: "ext-blocked", url: realUrl, extId: act.extId, ruleId: act.ruleId, resourceType: "main_frame" }); return blockedPage(realUrl, act); }
   if (act.type === "redirect" && act.redirect && act.redirect.url) return Response.redirect(new URL(VIEW + "w/" + enc(act.redirect.url), self.location.origin).href, 302);
   const isGet = !req || !req.method || req.method === "GET" || req.method === "HEAD";
+  // Serverless mount (tier-1 known dead): google /search through a relay answers a resultless
+  // JS-wall shell with none of the interstitial tell-tales — route the query straight to
+  // DuckDuckGo's html edition. When the local proxy is alive its cookie-jar + headless-Chrome
+  // doc rendering keeps google first-class, so this path never fires there.
+  if (Date.now() < PROXY_DOWN_UNTIL) {
+    try {
+      const gu = new URL(realUrl); const q = gu.searchParams.get("q");
+      if (q && /(^|\.)google\.[a-z.]{2,6}$/.test(gu.hostname) && gu.pathname === "/search")
+        return Response.redirect(new URL(VIEW + "w/" + enc("https://html.duckduckgo.com/html/?q=" + encodeURIComponent(q)), self.location.origin).href, 302);
+    } catch {}
+  }
   const { r, via } = await egressFetch(realUrl, await proxyInit(req, true));   // isDoc → egress may render this top document in a real Chrome
   if (!r || !r.ok) {
     // Google rate-limits/JS-walls proxied /search (no-JS search is retired; the sg_ss JS
