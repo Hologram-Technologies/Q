@@ -67,9 +67,66 @@ function renderBeacon(caps) {
   }
   const wasmOk = caps.wasm === true;
   const t = (label, ok) => label + " " + (ok ? "✓" : "✗");
+  // hf: silent when the default "/hf" answers; named when upgraded (/.proxy) or blocked (Q→seed).
+  const hf = _hfVerdict === false ? " · hf ✗" : _hfVerdict === "/.proxy/hf" ? " · hf:/.proxy" : "";
+  const q = _q.state ? " · " + _q.state + _q.detail : "";
   el.textContent = "Holo · " + t("wasm", wasmOk) + " · " + t("gpu", !!caps.gpu) + " · " + t("webgl2", !!caps.webgl2) +
-    " · csp:" + _csp.length + (wasmOk ? "" : " (Q→seed)");
-  el.style.borderColor = wasmOk ? "rgba(52,211,166,.45)" : "rgba(255,120,120,.55)";
+    " · csp:" + _csp.length + hf + q + (wasmOk ? "" : " (Q→seed)");
+  el.style.borderColor = _q.ok ? "rgba(52,211,166,.7)" : wasmOk ? "rgba(52,211,166,.45)" : "rgba(255,120,120,.55)";
+}
+
+// ── M3-D1: resolve the REAL /hf prefix. Discord has served external mappings both BARE (/hf) and under
+// /.proxy/ across client versions (both verified answering 2026-07-06, Range forwarded as 206). Probe with a
+// 1-byte Range GET (HEAD is not guaranteed through HF's redirect chain) and keep whichever answers, so Q's
+// weight stream never depends on which proxy scheme this client runs. Fail-soft: neither answering leaves the
+// default "/hf" (the brain ladder degrades to seed and the beacon names it).
+const HF_PROBE_PATH = "/HOLOGRAMTECH/q-bitnet-2b/resolve/main/manifest.json";
+let _hfVerdict = null;   // null=probing · "/hf" | "/.proxy/hf" = answering prefix · false = blocked
+async function resolveHfPrefix() {
+  for (const p of ["/hf", "/.proxy/hf"]) {
+    try {
+      const r = await fetch(p + HF_PROBE_PATH, { headers: { Range: "bytes=0-0" }, cache: "no-store" });
+      if (r.ok || r.status === 206) { _hfVerdict = p; try { window.HOLO_HF_PROXY = p; } catch (e) {} return p; }
+    } catch (e) {}
+  }
+  _hfVerdict = false;
+  return null;
+}
+
+// ── M3-D3: Q readout for the beacon — the phone-side proof the REAL brain is up, visible without devtools.
+// Reads only fail-soft host seams the runtime exposes: window.HoloQ.info()/.stats() and window.__holoQLoad
+// ({done,total,phase} fed by the brain's load(onProgress)). States: q:loading N% → q:ready · ttft · tok/s
+// (stats appear after the first real generation), or q:seed (reason) when the ladder degraded.
+let _q = { state: "", detail: "", ok: false };
+function watchQ() {
+  const t0 = Date.now();
+  const tick = () => {
+    let again = Date.now() - t0 < 360000;   // bounded: 6 min covers a cold 0.69GB stream on slow links
+    try {
+      const HQ = window.HoloQ;
+      const info = HQ && HQ.info ? HQ.info() : null;
+      const load = window.__holoQLoad;
+      const stats = HQ && HQ.stats ? HQ.stats() : null;
+      const caps = window.__holoCaps || {};
+      if (info && info.ready) {
+        _q.ok = info.device === "webgpu" && !!info.resident;
+        _q.state = _q.ok ? "q:ready" : "q:ready·" + (info.device || "cpu");
+        _q.detail = (stats && stats.ttft != null)
+          ? " " + (stats.ttft >= 1000 ? (stats.ttft / 1000).toFixed(1) + "s" : Math.round(stats.ttft) + "ms") + " · " + Math.round(stats.tokps || 0) + " tok/s"
+          : "";
+        if (_q.detail) again = false;   // final form reached — stop polling
+      } else if (load && load.total) {
+        _q.state = "q:loading " + Math.min(99, Math.round((load.done / load.total) * 100)) + "%"; _q.detail = "";
+      } else if (_hfVerdict === false) {
+        _q.state = "q:seed"; _q.detail = " (hf-blocked)"; again = false;
+      } else if (caps.wasm !== undefined && (caps.wasm !== true || !caps.gpu)) {
+        _q.state = "q:seed"; _q.detail = !caps.gpu ? " (no-gpu)" : " (no-wasm)"; again = false;
+      }
+      renderBeacon(window.__holoCaps);
+    } catch (e) {}
+    if (again) setTimeout(tick, 1000);
+  };
+  tick();
 }
 
 function inDiscordActivity() {
@@ -119,10 +176,13 @@ export async function mountDiscord() {
   //     The Q loader (q/core/loader.js) reads this global to rebase its model origin; unset = direct (native).
   window.HOLO_HF_PROXY = "/hf";
 
-  // (2) Kick the capability probe + the Discord handshake in parallel with nothing blocking on them.
-  //     Render the on-device beacon the moment caps resolve — visible even if boot later hangs.
+  // (2) Kick the capability probe + the /hf prefix probe + the Discord handshake in parallel with nothing
+  //     blocking on them. Render the on-device beacon the moment caps resolve — visible even if boot later
+  //     hangs — and start the Q readout watcher (it narrates loading → ready → measured speed).
   const capsP = probeCaps().then((c) => { renderBeacon(c); return c; });
+  const hfP = resolveHfPrefix().then((p) => { try { renderBeacon(window.__holoCaps); } catch (e) {} return p; });
   const sdkP = inDiscordActivity() ? readySDK() : Promise.resolve(null);
+  try { watchQ(); } catch (e) {}
 
   // (3) Load the runtime shell in order (side-effect imports set window.HoloMessengerUI before boot needs it),
   //     then the canonical boot seam. Dynamic import() (not static) guarantees window.HoloBridges is already
@@ -138,7 +198,7 @@ export async function mountDiscord() {
     try { document.body.classList.add("holo-booted"); } catch {}   // fade the splash once the runtime paints
   });
 
-  await Promise.allSettled([capsP, sdkP, bootP]);
+  await Promise.allSettled([capsP, hfP, sdkP, bootP]);
   try { renderBeacon(window.__holoCaps); } catch {}   // final refresh (picks up any CSP violations raised during boot)
   return { ok: true, caps: (typeof window !== "undefined" && window.__holoCaps) || null, csp: _csp.slice() };
 }

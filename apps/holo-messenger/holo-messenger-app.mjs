@@ -2147,7 +2147,7 @@ async function buildQ() {
         // + uploads to the GPU, back to "online · on your device" the instant the engine is resident. Fail-soft.
         qStatus = "waking Q up…"; try { _touch(c.meta.genesis); rebuildSoon(); } catch (e) {}
         try {
-          qBrain.load()
+          qBrain.load((p) => { try { window.__holoQLoad = p; } catch (e) {} })
             .then(() => {
               qStatus = "online · on your device"; try { _touch(c.meta.genesis); rebuildSoon(); } catch (e) {}
               // KV-COMMONS turn-1: pin the EXACT persona we send (persona()+Q_STYLE) once, now, before any turn — so the
@@ -2172,7 +2172,7 @@ async function buildQ() {
         for await (const tok of r.respond([{ role: "user", content: String(prompt) }])) { text += tok; if (text.length > 900) break; }
         return text.trim(); } catch { return ""; }
     }
-    try { window.HoloQ = window.HoloQ || {}; window.HoloQ.generate = async (prompt) => qBrain.chat([{ role: "user", content: String(prompt) }]); window.HoloQ.draftLight = draftLight; window.HoloQ.warm = () => _qBrainRaw.load().catch(() => {}); window.HoloQ.ready = () => _qWarm(); } catch {}
+    try { window.HoloQ = window.HoloQ || {}; window.HoloQ.generate = async (prompt) => qBrain.chat([{ role: "user", content: String(prompt) }]); window.HoloQ.draftLight = draftLight; window.HoloQ.warm = () => _qBrainRaw.load((p) => { try { window.__holoQLoad = p; } catch (e) {} }).catch(() => {}); window.HoloQ.ready = () => _qWarm(); window.HoloQ.info = () => { try { return _qBrainRaw.info(); } catch (e) { return { ready: false }; } }; window.HoloQ.stats = () => qLastStats; } catch {}
     // ── selfTest(): a one-command, real-hardware proof that Q actually replies — warm if needed, run a fixed prompt
     // through the SAME chat() path a real turn uses (off the live thread), then assert the SHIPPED text is non-empty,
     // humanized (no LLM tells), and on-identity (no cloud claim), reporting TTFT + tok/s. Run in the console on real

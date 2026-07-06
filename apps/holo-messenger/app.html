@@ -22,11 +22,9 @@
     --accent:#7defc9;--accent-2:#34d3a6;--ink-dim:rgba(231,237,250,.82);}
   #holo-login *{box-sizing:border-box;}
   #holo-login .hl-wall{position:fixed;inset:0;z-index:0;background:#05070c center/cover no-repeat;}
-  /* frost — a gentle blur + a soft radial scrim (darker at the edges) so the wallpaper breathes and stays the
-     hero, while the sign-in card in the centre stays crisp. Wallpaper-forward, not a black wash. */
-  #holo-login .hl-frost{position:fixed;inset:0;z-index:1;
-    background:radial-gradient(125% 95% at 50% 42%, rgba(5,7,12,.24) 0%, rgba(5,7,12,.40) 55%, rgba(5,7,12,.60) 100%);
-    -webkit-backdrop-filter:blur(22px) saturate(1.12);backdrop-filter:blur(22px) saturate(1.12);}
+  /* the wallpaper shows EXACTLY as the home screen wears it — no blur, no scrim. The layer stays only as
+     the unfog animation target; text/buttons carry their own shadows for legibility. */
+  #holo-login .hl-frost{position:fixed;inset:0;z-index:1;background:transparent;pointer-events:none;}
   #holo-login .hl-lock{position:fixed;inset:0;z-index:2;display:grid;place-items:center;padding:var(--g2);}
   #holo-login .hl-panel{display:flex;flex-direction:column;align-items:center;text-align:center;width:var(--field);max-width:92vw;}
   #holo-login .hl-avatar{width:var(--avatar);height:var(--avatar);border-radius:50%;display:grid;place-items:center;color:#fff;

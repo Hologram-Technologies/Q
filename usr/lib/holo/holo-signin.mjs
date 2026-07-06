@@ -90,7 +90,7 @@ const HL_CSS = `#holo-login{position:fixed;inset:0;z-index:2147483000;color:#f4f
   --u:clamp(16px,1.7vmin,19px);--g1:calc(var(--u)*1.618);--g2:calc(var(--u)*2.618);--avatar:clamp(96px,calc(var(--u)*6.854),128px);--field:min(86vw,calc(var(--avatar)*2.618));--accent:#7defc9;--accent-2:#34d3a6;--ink-dim:rgba(231,237,250,.82)}
 #holo-login *{box-sizing:border-box}
 #holo-login .hl-wall{position:fixed;inset:0;z-index:0;background:#05070c center/cover no-repeat}
-#holo-login .hl-frost{position:fixed;inset:0;z-index:1;background:radial-gradient(125% 95% at 50% 42%,rgba(5,7,12,.24),rgba(5,7,12,.4) 55%,rgba(5,7,12,.6));-webkit-backdrop-filter:blur(22px) saturate(1.12);backdrop-filter:blur(22px) saturate(1.12)}
+#holo-login .hl-frost{position:fixed;inset:0;z-index:1;background:transparent;pointer-events:none}
 #holo-login .hl-lock{position:fixed;inset:0;z-index:2;display:grid;place-items:center;padding:var(--g2);pointer-events:none}
 #holo-login .hl-panel{display:flex;flex-direction:column;align-items:center;text-align:center;width:var(--field);max-width:92vw;pointer-events:auto;animation:hl-rise .7s cubic-bezier(.4,0,.2,1) .05s both}
 #holo-login .hl-avatar{width:var(--avatar);height:var(--avatar);border-radius:50%;display:grid;place-items:center;color:#fff;font-size:calc(var(--avatar)*.37);font-weight:600;box-shadow:0 .6em 1.8em rgba(0,0,0,.4),inset 0 0 0 2px rgba(255,255,255,.6)}
