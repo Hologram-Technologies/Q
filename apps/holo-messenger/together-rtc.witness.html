@@ -1,0 +1,53 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<title>Together RTC — two-endpoint witness</title>
+<style>
+  body { background:#0b1014; color:#e9f1f5; font:15px/1.6 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif; padding:28px; max-width:720px; margin:0 auto; }
+  h1 { font-size:19px; }
+  .verdict { font-size:22px; font-weight:800; padding:14px 18px; border-radius:14px; margin:16px 0; }
+  .pass { background:rgba(0,208,156,.16); border:1px solid rgba(0,208,156,.5); color:#7cf0c8; }
+  .fail { background:rgba(231,111,111,.16); border:1px solid rgba(231,111,111,.5); color:#e76f6f; }
+  .run { background:rgba(123,92,255,.16); border:1px solid rgba(123,92,255,.5); color:#cbb8ff; }
+  pre { background:#121a21; border:1px solid #1f2c35; border-radius:12px; padding:14px 16px; overflow:auto; font-size:12.5px; }
+  .k { color:#8aa0ad; }
+</style>
+</head>
+<body>
+  <h1>Together RTC — two-endpoint witness</h1>
+  <p class="k">Proves the live-join path: two independent peer connections rendezvous through the real
+  <code>/signal</code> relay, complete ICE, open a datachannel, and exchange a live control message (co-drive).
+  Both peers run in this one browser over loopback; a cross-device run additionally exercises NAT/TURN.</p>
+  <div class="verdict run" id="verdict">Running…</div>
+  <pre id="detail">…</pre>
+  <script type="module">
+    import { host, join } from "./holo-together-rtc.mjs";
+    const $ = (id) => document.getElementById(id);
+    const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
+    (async () => {
+      const room = "rmWITNESS" + Date.now();
+      const hphases = [], jphases = []; let hostPeers = 0, hostGotControl = null;
+      const h = await host({ room, control: true,
+        onState: (s) => { if (s) { hphases.push(s.phase + (s.count != null ? "#" + s.count : "")); if (s.phase === "peers") hostPeers = s.count; } },
+        onControl: (m) => { hostGotControl = m; } });
+      await sleep(400);
+      const j = await join({ room, onState: (s) => s && jphases.push(s.phase), onControl: () => {} });
+      await sleep(2600);
+      try { j.send && j.send({ hello: "from-viewer" }); } catch {}
+      await sleep(700);
+      const peers = (typeof h.peers === "function") ? h.peers() : 0;
+      const channelOpen = jphases.includes("channel");
+      const roundtrip = !!(hostGotControl && hostGotControl.hello === "from-viewer");
+      const pass = peers >= 1 && channelOpen && roundtrip;
+      try { j.leave && j.leave(); } catch {} try { h.stop && h.stop(); } catch {}
+      $("verdict").textContent = pass ? "PASS — peers:2, datachannel open, co-drive message delivered" : "FAIL — see detail";
+      $("verdict").className = "verdict " + (pass ? "pass" : "fail");
+      $("detail").textContent = JSON.stringify({
+        peers_host_sees: peers, host_phases: [...new Set(hphases)], join_phases: [...new Set(jphases)],
+        control_datachannel_roundtrip: hostGotControl, relay: location.origin + "/signal",
+      }, null, 2);
+    })().catch((e) => { $("verdict").textContent = "FAIL — " + (e && e.message || e); $("verdict").className = "verdict fail"; });
+  </script>
+</body>
+</html>

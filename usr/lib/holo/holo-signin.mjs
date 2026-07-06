@@ -1,0 +1,370 @@
+// holo-signin.mjs — the ONE sovereign sign-in surface for the whole Hologram system.
+//
+// Every surface — the messenger, any holospace, (next) the OS greeter — mounts THIS, so the entire sign-in
+// stack is a platform primitive, not per-app code:
+//   • TEE ceremony (holo-webauthn: native Windows Hello / Touch ID → localhost broker → WebAuthn PRF)
+//   • sovereign identity (holo-login: BIP-39 seed vault, one did:holo κ, SAME store as the OS greeter)
+//   • Sovereign SSO (holo-sso: adopt the session's operator; silent within the enclave trust-window)
+//   • Guest (explicit, discoverable; ?guest=1 / window.HoloLogin.guest() for agents)
+//   • Identity Roam & Recovery (holo-roam: add a device / restore, same κ, no seed phrase)
+//   • Deep Resume (holo-roam.sealResume: your experience follows you, sealed)
+//   • speculative warm paint (the caller's warmPaint() overlaps the human's look-and-tap)
+//
+// ONE CALL for an app author:  const { operator, principal, secret } = await signIn({ app, root })
+// It resolves ONLY once a principal is established (TEE unlock/enrol, roam/restore, or an explicit Guest) —
+// fail-CLOSED. The signing key + PRF secret NEVER leave the enclave-wrapped vault path. `signOut()` clears
+// presence + realm + session; `stepUp(action)` is the payload-bound biometric for confidential actions.
+//
+// Consumers pass only their specifics: `app` (session label), `appName` (enclave credential label),
+// `nextPath` (the shell to open), `warmPaint` (a thunk to warm their shell during the tap), `chrome`
+// (reserved: "minimal" today; "full" adds the OS greeter's power/session/pair furniture). Same κ everywhere.
+
+import { teeReason, teeName, teeAssert, teeEnroll, teeError } from "./holo-webauthn.mjs";
+import { readPresence, publishPresence, adoptDecision } from "./holo-sso.mjs";
+import * as roam from "./holo-roam.mjs";
+
+const esc = (s) => String(s).replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
+const initials = (n) => (String(n || "").trim().split(/\s+/).map((w) => w[0]).filter(Boolean).slice(0, 2).join("") || "·").toUpperCase();
+const hueOf = (u) => (u && u.avatar && u.avatar.hue != null ? u.avatar.hue : (u && u.hue != null ? u.hue : 210)) | 0;
+
+const I = {
+  fp: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"><path d="M5.5 11a6.5 6.5 0 0 1 13 0"/><path d="M8.5 11a3.5 3.5 0 0 1 7 0v2.6"/><path d="M12 11v4.4"/><path d="M8.6 14.2V16"/><path d="M15.4 15.4V18"/></svg>',
+  person: '<svg viewBox="0 0 24 24" fill="currentColor"><circle cx="12" cy="8.4" r="4.1"/><path d="M3.8 20.4a8.2 8.2 0 0 1 16.4 0z"/></svg>',
+  ghost: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="3.4"/><path d="M5.5 19a6.5 6.5 0 0 1 13 0"/></svg>',
+  arrow: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h13M12 6l6 6-6 6"/></svg>',
+};
+
+function avatarHtml(u) {
+  if (u && u.label) { const h = hueOf(u); return `<div class="hl-avatar" style="background:linear-gradient(140deg,hsl(${h} 52% 46%),hsl(${h + 26} 52% 46%))">${esc(initials(u.label))}</div>`; }
+  return `<div class="hl-avatar" style="background:linear-gradient(140deg,#5b6b86,#3a455c)">${I.person}</div>`;
+}
+// SUPER-CLEAN GATE: two core ways in stay visible — the primary biometric (above) + one "Continue as guest".
+// The recovery doors (another device / restore) are advanced + rare, so they fold behind a quiet "More options"
+// toggle: the screen reads as two choices, yet nothing is lost (both doors stay in the DOM, one tap away).
+const guestBtnHtml = () => `<button class="hl-alt" id="hl-guestbtn">${I.ghost}Continue as guest</button>
+  <button class="hl-alt hl-more" id="hl-more" aria-expanded="false">More options</button>
+  <div class="hl-opts" id="hl-opts" hidden>
+    <button class="hl-alt" id="hl-adddev">Use another device</button>
+    <button class="hl-alt" id="hl-restorebtn">Restore</button>
+  </div>`;
+
+const _linkStyle = "width:100%;font-size:12px;padding:10px;border-radius:8px;background:rgba(255,255,255,.08);color:#cfe;border:1px solid rgba(255,255,255,.15);font-family:inherit";
+function renderAddDevice(panel, url) {
+  panel.innerHTML = `${avatarHtml(null)}<h1 class="hl-name">Add this device</h1>
+    <div class="hl-auth">
+      <div class="status">On a device you're already signed into, open this and approve:</div>
+      <div id="hl-qr" style="width:196px;height:196px;background:#fff;border-radius:12px;padding:8px;box-sizing:border-box;display:none"></div>
+      <input id="hl-adddev-url" readonly value="${esc(url)}" style="${_linkStyle}">
+      <div class="status"><span class="spin"></span><span>Waiting for your other device…</span></div>
+    </div>`;
+  try { import("./holo-qr.js").then((q) => { try { const svg = (q.toSVG || q.encode)(url, { scale: 5, margin: 2, dark: "#06140f", light: "#ffffff" }); const el = panel.querySelector("#hl-qr"); if (el && svg) { el.innerHTML = svg; el.style.display = "block"; const s = el.querySelector("svg"); if (s) { s.style.width = "100%"; s.style.height = "100%"; s.style.imageRendering = "pixelated"; } } } catch {} }).catch(() => {}); } catch {}
+}
+function renderRestore(panel) {
+  panel.innerHTML = `${avatarHtml(null)}<h1 class="hl-name">Restore</h1>
+    <div class="hl-auth">
+      <input id="hl-restore-link" placeholder="Recovery link" style="${_linkStyle}">
+      <input id="hl-restore-code" placeholder="Code" inputmode="numeric" autocomplete="one-time-code" style="${_linkStyle}">
+      <button class="hl-bio" id="hl-restore-go">${I.arrow}Restore</button>
+      <div class="status"></div>
+    </div>`;
+}
+
+// cache a tiny NON-secret greeting hint under the key the OS greeter uses (holo.lastOperator) so a returning
+// operator's name + "It's me" paint at first frame next cold open — zero identity load.
+function cacheOperator(u) {
+  try { if (u && u.label) localStorage.setItem("holo.lastOperator", JSON.stringify({ label: u.label, hue: hueOf(u), cred: (u.cred != null ? (typeof u.cred === "string" ? true : !!u.cred) : true) })); } catch {}
+}
+
+// LATENCY: warm the heavy identity graph (holo-login → WDK vault) + the caller's shell DURING the look-and-tap.
+let _warm = false;
+function prewarm(warmPaint) {
+  if (_warm) return; _warm = true;
+  try { import("./holo-login.mjs"); } catch {}
+  try { if (typeof warmPaint === "function") warmPaint(); } catch {}
+}
+
+// SELF-CONTAINED CSS — so ANY surface can mount the primitive UNSTYLED. Injected ONLY when the primitive
+// creates its own overlay (i.e. the host page did NOT pre-place + style #holo-login). A host that provides
+// #holo-login (the messenger's app.html) owns its own look and this is a no-op — never overrides it.
+const HL_CSS = `#holo-login{position:fixed;inset:0;z-index:2147483000;color:#f4f7fc;font-family:"Segoe UI",system-ui,-apple-system,sans-serif;
+  --u:clamp(16px,1.7vmin,19px);--g1:calc(var(--u)*1.618);--g2:calc(var(--u)*2.618);--avatar:clamp(96px,calc(var(--u)*6.854),128px);--field:min(86vw,calc(var(--avatar)*2.618));--accent:#7defc9;--accent-2:#34d3a6;--ink-dim:rgba(231,237,250,.82)}
+#holo-login *{box-sizing:border-box}
+#holo-login .hl-wall{position:fixed;inset:0;z-index:0;background:#05070c center/cover no-repeat}
+#holo-login .hl-frost{position:fixed;inset:0;z-index:1;background:radial-gradient(125% 95% at 50% 42%,rgba(5,7,12,.24),rgba(5,7,12,.4) 55%,rgba(5,7,12,.6));-webkit-backdrop-filter:blur(22px) saturate(1.12);backdrop-filter:blur(22px) saturate(1.12)}
+#holo-login .hl-lock{position:fixed;inset:0;z-index:2;display:grid;place-items:center;padding:var(--g2);pointer-events:none}
+#holo-login .hl-panel{display:flex;flex-direction:column;align-items:center;text-align:center;width:var(--field);max-width:92vw;pointer-events:auto;animation:hl-rise .7s cubic-bezier(.4,0,.2,1) .05s both}
+#holo-login .hl-avatar{width:var(--avatar);height:var(--avatar);border-radius:50%;display:grid;place-items:center;color:#fff;font-size:calc(var(--avatar)*.37);font-weight:600;box-shadow:0 .6em 1.8em rgba(0,0,0,.4),inset 0 0 0 2px rgba(255,255,255,.6)}
+#holo-login .hl-avatar svg{width:62%;height:62%;opacity:.92}
+#holo-login .hl-name{margin:var(--g1) 0 0;font-size:calc(var(--u)*1.618);font-weight:300;line-height:1.15;text-shadow:0 2px 18px rgba(0,0,0,.45)}
+#holo-login .hl-auth{margin-top:var(--g1);display:flex;flex-direction:column;align-items:center;gap:var(--u);width:100%}
+#holo-login .hl-bio{width:100%;min-height:max(var(--g2),48px);border:0;border-radius:calc(var(--u)*.7);cursor:pointer;display:inline-flex;align-items:center;justify-content:center;gap:calc(var(--u)*.55);font-size:var(--u);font-weight:600;color:#06140f;background:linear-gradient(135deg,var(--accent),var(--accent-2));box-shadow:0 .7em 1.6em rgba(52,211,166,.32);font-family:inherit;transition:transform .12s,box-shadow .18s,filter .18s}
+#holo-login .hl-bio:hover{transform:translateY(-1px);filter:brightness(1.05)}#holo-login .hl-bio:disabled{opacity:.7;cursor:default}
+#holo-login .hl-bio svg{width:1.18em;height:1.18em}
+#holo-login .hl-alt{background:none;border:0;color:var(--ink-dim);font-size:var(--u);font-family:inherit;cursor:pointer;padding:calc(var(--u)*.3) calc(var(--u)*.55);border-radius:calc(var(--u)*.4);display:inline-flex;align-items:center;gap:calc(var(--u)*.4);min-height:44px}
+#holo-login .hl-alt:hover{color:#fff}#holo-login .hl-alt svg{width:1.05em;height:1.05em}
+#holo-login .hl-more{opacity:.72;font-size:calc(var(--u)*.92)}#holo-login .hl-more:hover{opacity:1}
+#holo-login .hl-opts{display:flex;flex-direction:column;align-items:center;gap:var(--u);width:100%}#holo-login .hl-opts[hidden]{display:none}
+#holo-login .status{min-height:calc(var(--u)*1.5);font-size:var(--u);color:#c4f3e2;display:flex;align-items:center;justify-content:center;gap:calc(var(--u)*.5);text-shadow:0 1px 8px rgba(0,0,0,.4)}
+#holo-login .status.err{color:#ffc0c0}
+#holo-login .spin{width:1em;height:1em;border-radius:50%;border:2px solid rgba(125,239,201,.28);border-top-color:var(--accent);animation:hl-spin .7s linear infinite;flex:0 0 auto}
+@keyframes hl-spin{to{transform:rotate(360deg)}}@keyframes hl-rise{from{opacity:0;transform:translateY(10px) scale(.99);filter:blur(2px)}to{opacity:1;transform:none;filter:none}}
+#holo-login.unfog .hl-frost{animation:hl-defog .72s cubic-bezier(.4,0,.2,1) forwards}#holo-login.unfog .hl-panel{animation:hl-lift .68s cubic-bezier(.4,0,.2,1) forwards;pointer-events:none}
+@keyframes hl-defog{to{opacity:0}}@keyframes hl-lift{to{opacity:0;transform:translateY(-10px) scale(1.03)}}
+@media (prefers-reduced-motion:reduce){#holo-login .hl-panel,#holo-login .spin{animation:none}#holo-login.unfog .hl-frost,#holo-login.unfog .hl-panel{animation:hl-defog .3s ease forwards}}`;
+function injectCss() {
+  try { if (document.getElementById("holo-signin-css")) return; const s = document.createElement("style"); s.id = "holo-signin-css"; s.textContent = HL_CSS; document.head.appendChild(s); } catch {}
+}
+// the overlay: a full-bleed lock above #root (created here if the host page's baseline didn't).
+function ensureOverlay() {
+  let ov = document.getElementById("holo-login");
+  if (ov) return ov;                                   // host provided + styled it (e.g. the messenger) → leave it
+  injectCss();                                         // primitive-owned surface → bring our own CSS (self-contained)
+  ov = document.createElement("div");
+  ov.id = "holo-login";
+  ov.innerHTML = `<div class="hl-wall"></div><div class="hl-frost"></div><main class="hl-lock"><div class="hl-panel" id="holo-login-panel"></div></main>`;
+  document.body.appendChild(ov);
+  return ov;
+}
+
+function renderBusy(panel, msg) {
+  panel.innerHTML = `${avatarHtml(null)}<h1 class="hl-name">Welcome</h1><div class="hl-auth"><div class="status"><span class="spin"></span><span>${esc(msg || "")}</span></div></div>`;
+}
+function renderReturning(panel, u) {
+  panel.innerHTML = `${avatarHtml(u)}<h1 class="hl-name">${esc(u.label || "You")}</h1>
+    <div class="hl-auth"><button class="hl-bio" id="hl-bio">${I.fp}It’s me</button>${guestBtnHtml()}<div class="status"></div></div>`;
+}
+function renderFirstRun(panel) {
+  panel.innerHTML = `${avatarHtml(null)}<h1 class="hl-name">Welcome</h1>
+    <div class="hl-auth"><button class="hl-bio" id="hl-signin" title="Sign in — one tap, nothing to set up">${I.fp}Sign in</button>${guestBtnHtml()}<div class="status"></div></div>`;
+}
+function renderNoBio(panel, u, reason) {
+  panel.innerHTML = `${avatarHtml(u)}<h1 class="hl-name">${esc((u && u.label) || "Welcome")}</h1>
+    <div class="hl-auth"><button class="hl-bio" id="hl-guest">${I.ghost}Continue as Guest</button>
+      <div class="status">${esc(reason || "No device biometric here")}</div></div>`;
+}
+
+// signOut() — the missing piece: clear the shared presence, lock the operator realm, drop the session. After
+// this a fresh open shows the full gate again. Exposed on window.holo.signOut.
+export async function signOut() {
+  try { (await import("./holo-sso.mjs")).clearPresence(); } catch {}
+  try { const s = await import("./holo-session.mjs"); if (s.lockOperator) s.lockOperator(); if (s.clearSession) s.clearSession(); } catch {}
+}
+// stepUp(action) — the payload-bound biometric for a CONFIDENTIAL action (send, reveal, spend). One call;
+// SSO gates ENTRY, this gates ACTS. Exposed on window.holo.stepUp.
+export async function stepUp(action) {
+  const m = await import("./holo-stepup.mjs");
+  return m.requireStepUp ? m.requireStepUp(action) : null;
+}
+
+// signIn({ app, root, chrome, appName, nextPath, warmPaint, params }) → Promise<{ operator, principal, secret, guest }>.
+// The ONE sovereign sign-in call. Resolves only once a principal is established (fail-closed).
+// `onEstablished({ principal, secret, guest, operator })` (optional) — a HANDOFF SEAM. When provided, the
+// caller OWNS establishment: the primitive runs the ceremony (TEE/SSO/roam/guest), then hands the verified
+// principal to onEstablished instead of doing its own openSession/publish. This is how a surface with a
+// DIFFERENT session model + a NAVIGATION handoff (the OS greeter: SESSIONS/?next= → OPFS session.json →
+// wallet → stashUnlock → enterShell) mounts the ONE ceremony without the primitive hardcoding its specifics.
+// Omit it (the messenger) and the default same-page establish runs, unchanged.
+export async function signIn({ root, params, app = "holospace", appName = "Hologram", nextPath = "", warmPaint = null, chrome = "minimal", onEstablished = null } = {}) {
+  params = params || new URLSearchParams(location.search);
+  const overlay = ensureOverlay();
+  const panel = document.getElementById("holo-login-panel");
+  const statusEl = () => panel.querySelector(".status");
+  const setStatus = (t, err) => { const el = statusEl(); if (el) { el.className = "status" + (err ? " err" : ""); el.textContent = t || ""; } };
+  const setBusy = (m) => { const el = statusEl(); if (el) { el.className = "status"; el.innerHTML = `<span class="spin"></span><span>${esc(m || "")}</span>`; } };
+
+  return new Promise(async (resolve) => {
+    const done = (auth) => {
+      overlay.classList.add("unfog");
+      setTimeout(() => { try { overlay.remove(); } catch {} }, 720);
+      resolve(auth);
+    };
+
+    const establish = async (principal, secret, guest) => {
+      // HANDOFF SEAM: a caller (e.g. the OS greeter) owns session + navigation. Run the ceremony, hand off,
+      // still cache the greeting hint for next-boot baseline, then reveal. The caller's onEstablished does its
+      // own openSession/persist/publish/enterShell — the primitive does NOT double it.
+      if (typeof onEstablished === "function") {
+        try { await onEstablished({ principal, secret, guest, operator: principal.kappa }); }
+        catch (e) { setStatus(teeError(e), true); return; }
+        try { cacheOperator({ label: principal.label, hue: principal.avatar && principal.avatar.hue, cred: true }); } catch {}
+        setStatus("Opening…");
+        return done({ principal, operator: principal.kappa, secret: guest ? null : secret, guest: !!guest });
+      }
+      try {
+        const id = await import("./holo-identity.mjs");
+        const token = await id.openSession(principal, { session: app, next: nextPath, host: "", guest: guest || undefined });
+        await id.persistSession(token, null);
+      } catch {}
+      if (secret && !guest) {
+        try { const s = await import("./holo-session.mjs"); await s.unlockOperatorKey({ operator: principal.kappa, secret }); } catch {}
+      }
+      cacheOperator({ label: principal.label, hue: principal.avatar && principal.avatar.hue, cred: true });
+      if (!guest) { try { publishPresence({ operator: principal.kappa, label: principal.label, guest: false }); } catch {} }
+      setStatus("Opening…");
+      done({ principal, operator: principal.kappa, secret: guest ? null : secret, guest: !!guest });
+    };
+
+    const guestEnter = async () => {
+      renderBusy(panel, "Entering as guest…");
+      try { const id = await import("./holo-identity.mjs"); const principal = await id.ephemeral({ label: "Guest" }); await establish(principal, null, true); }
+      catch (e) { renderNoBio(panel, null, ""); setStatus("Guest sign-in failed: " + (e && e.message || e), true); const g = panel.querySelector("#hl-guest"); if (g) g.onclick = guestEnter; }
+    };
+
+    // ── IDENTITY ROAM & RECOVERY + DEEP RESUME ─────────────────────────────────────────────────────
+    const bindAndEnter = async (mnemonic, label) => {
+      const L = await import("./holo-login.mjs");
+      let cred = null, credPub = null, secret = null;
+      try { if (!(await teeReason())) { const e = await teeEnroll({ name: appName }); cred = e.credentialId; credPub = e.credPub; secret = e.secret; } } catch {}
+      if (!secret) { try { secret = localStorage.getItem("holo-messenger/id-secret") || ""; } catch {} if (!secret) { secret = btoa(String.fromCharCode(...crypto.getRandomValues(new Uint8Array(32)))); try { localStorage.setItem("holo-messenger/id-secret", secret); } catch {} } }
+      const { principal } = await L.recover({ mnemonic, secret, label: label || "You", cred, credPub });
+      await establish(principal, secret, false);
+    };
+    const joinAndEnter = async () => {
+      try {
+        const off = await roam.newDeviceOffer({ deviceName: "this device", baseUrl: location.origin });
+        renderAddDevice(panel, off.url);
+        const abort = new AbortController(); overlay.__abort = abort;
+        const joined = await roam.awaitDeviceJoin(off.secrets, { base: "", signal: abort.signal, timeoutMs: 180000 });
+        if (!joined) { setStatus("Timed out — Restore or try again", true); return; }
+        setBusy("Adding this device…");
+        try { if (joined.resume) { const rs = await roam.openResume(joined.mnemonic, joined.resume); if (rs && rs.state) sessionStorage.setItem("holo.resume.pending", JSON.stringify(rs.state)); } } catch {}
+        await bindAndEnter(joined.mnemonic, joined.label);
+      } catch (e) { setStatus(teeError(e), true); }
+    };
+    const restoreAndEnter = async () => {
+      renderRestore(panel);
+      const go = panel.querySelector("#hl-restore-go");
+      if (go) go.onclick = async () => {
+        go.disabled = true;
+        try {
+          const link = (panel.querySelector("#hl-restore-link") || {}).value || "";
+          const code = (panel.querySelector("#hl-restore-code") || {}).value || "";
+          setBusy("Restoring…");
+          const { mnemonic } = await roam.restoreFromRecovery(link.trim(), code.trim());
+          await bindAndEnter(mnemonic, "You");
+        } catch (e) { go.disabled = false; setStatus("Restore failed: " + (e && e.message || e), true); }
+      };
+    };
+    const approveFromOperator = async (offerUrl) => {
+      const pres = readPresence(); const op = pres && pres.operator; if (!op) throw new Error("no signed-in operator on this device");
+      const { secret } = await teeAssert({});
+      const L = await import("./holo-login.mjs");
+      const mnemonic = await L.revealMnemonic(op, secret);
+      let resume = null; try { const st = window.__holoResume && window.__holoResume.get && window.__holoResume.get(); if (st) resume = (await roam.sealResume(mnemonic, st, { seq: st.seq })).blob; } catch {}
+      return roam.approveDevice({ offerUrl, mnemonic, label: (pres && pres.label) || "", resume, base: "" });
+    };
+    // window.holo — the callable platform API (sign-in, sign-out, step-up, roam) for any surface / agent.
+    try {
+      window.holo = window.holo || {};
+      window.holo.signIn = (opts) => signIn(opts);
+      window.holo.signOut = signOut;
+      window.holo.stepUp = stepUp;
+      window.holo.roam = {
+        newDeviceOffer: roam.newDeviceOffer, approveDevice: roam.approveDevice, awaitDeviceJoin: roam.awaitDeviceJoin,
+        acceptSeedRoam: roam.acceptSeedRoam, mintRecoveryLink: roam.mintRecoveryLink, restoreFromRecovery: roam.restoreFromRecovery,
+        sealResume: roam.sealResume, openResume: roam.openResume, resumeIsFresh: roam.resumeIsFresh,
+        approveFromOperator,
+        async mintRecovery() { const pres = readPresence(); const op = pres && pres.operator; if (!op) throw new Error("no signed-in operator"); const { secret } = await teeAssert({}); const L = await import("./holo-login.mjs"); const mnemonic = await L.revealMnemonic(op, secret); return roam.mintRecoveryLink(mnemonic, { baseUrl: location.origin }); },
+      };
+    } catch {}
+
+    // window.HoloLogin — the AGENT-facing API (mirrors #holo-agent-login). Guest with ONE call, no human.
+    try {
+      window.HoloLogin = {
+        service: app,
+        options: (() => { try { return JSON.parse(document.getElementById("holo-agent-login").textContent).options; } catch { return []; } })(),
+        guest() { guestEnter(); return "Entering as guest — an instant, private, ephemeral session. Nothing persists."; },
+      };
+    } catch {}
+
+    // ?guest=1 / ?as=guest — the agent / headless door.
+    if (params.get("guest") === "1" || params.get("as") === "guest") { return guestEnter(); }
+
+    // discover the enrolment state from holo-login's roster — the SAME store the OS greeter reads/writes.
+    let roster = [];
+    try { const L = await import("./holo-login.mjs"); roster = await L.roster(); } catch {}
+    let reason = ""; try { reason = await teeReason(); } catch (e) { reason = teeError(e); }
+    const hasBio = !reason;
+    const known = roster.filter((u) => u && u.cred);
+    let selected = known[0] || roster[0] || null;
+    if (selected) cacheOperator(selected);
+
+    // ── SOVEREIGN SSO ──────────────────────────────────────────────────────────────────────────────
+    try {
+      const presence = readPresence();
+      const nativeSilent = (location.protocol === "holo:" && typeof window.cefQuery === "function" && window.__holoHelloSilent === true);
+      const dec = adoptDecision({ presence, roster, nowMs: Date.now(), nativeSilent });
+      window.__sso = { adopted: false, silent: false, reason: dec.reason, operator: dec.adopt ? dec.operator : null };
+      if (dec.adopt) {
+        selected = known.find((u) => u.kappa === dec.operator) || selected;
+        if (dec.silent && hasBio) {
+          try {
+            renderBusy(panel, "Welcome back…");
+            const { secret, credentialId } = await teeAssert({ allowCredentials: [dec.cred] });
+            const op = known.find((u) => u.cred === credentialId) || { kappa: dec.operator };
+            const L = await import("./holo-login.mjs");
+            const principal = await L.unlock(op.kappa, secret);
+            window.__sso = { adopted: true, silent: true, source: "trust-window", reason: "silent", operator: principal.kappa };
+            await establish(principal, secret, false);
+            return;
+          } catch (e) { window.__sso.reason = "silent-failed"; }
+        }
+      }
+    } catch (e) {}
+
+    const wireGuest = () => {
+      const g = panel.querySelector("#hl-guestbtn"); if (g) g.onclick = guestEnter;
+      const a = panel.querySelector("#hl-adddev"); if (a) a.onclick = joinAndEnter;
+      const r = panel.querySelector("#hl-restorebtn"); if (r) r.onclick = restoreAndEnter;
+      // "More options" folds the rare recovery doors away by default; one tap reveals them (kept inside
+      // wireGuest so the reveal is bound on the same paths as guest — no separate wiring pass to forget).
+      const more = panel.querySelector("#hl-more"), opts = panel.querySelector("#hl-opts");
+      if (more && opts) more.onclick = () => { const show = opts.hidden; opts.hidden = !show; more.setAttribute("aria-expanded", String(show)); more.textContent = show ? "Fewer options" : "More options"; };
+    };
+
+    // No enclave here (headless / no biometric) → Guest is the way in.
+    if (!hasBio) { renderNoBio(panel, selected, reason); const g = panel.querySelector("#hl-guest"); if (g) g.onclick = guestEnter; return; }
+
+    // FIRST RUN — one tap enrols a κ bound to this device's enclave.
+    if (!selected || !selected.cred) {
+      renderFirstRun(panel);
+      prewarm(warmPaint);
+      const si = panel.querySelector("#hl-signin");
+      if (si) si.onclick = async () => {
+        si.disabled = true;
+        try {
+          setBusy("Setting up " + teeName() + "…");
+          const { credentialId, secret, credPub } = await teeEnroll({ name: appName });
+          const L = await import("./holo-login.mjs");
+          const { principal } = await L.enroll({ label: "You", secret, cred: credentialId, credPub });
+          await establish(principal, secret, false);
+        } catch (e) { si.disabled = false; setStatus(teeError(e), true); }
+      };
+      wireGuest();
+      setTimeout(() => { try { panel.querySelector("#hl-signin").focus(); } catch {} }, 40);
+      return;
+    }
+
+    // RETURNING OPERATOR — name above one biometric tap; unlock re-derives κ (Law L5).
+    renderReturning(panel, selected);
+    prewarm(warmPaint);
+    const bio = panel.querySelector("#hl-bio");
+    if (bio) bio.onclick = async () => {
+      bio.disabled = true;
+      try {
+        setBusy("Verifying with " + teeName() + "…");
+        const { secret, credentialId } = await teeAssert({ allowCredentials: known.map((k) => k.cred) });
+        const op = known.find((k) => k.cred === credentialId) || selected;
+        const L = await import("./holo-login.mjs");
+        const principal = await L.unlock(op.kappa, secret);
+        await establish(principal, secret, false);
+      } catch (e) { bio.disabled = false; setStatus(teeError(e), true); }
+    };
+    wireGuest();
+    setTimeout(() => { try { bio.focus(); } catch {} }, 40);
+  });
+}
+
+// back-compat alias — existing callers of mountLogin() keep working through the ONE primitive.
+export const mountLogin = signIn;
+export default signIn;
