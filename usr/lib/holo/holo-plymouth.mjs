@@ -10,18 +10,22 @@
 //     store the wallpapers live in (holo-store.js · IDB "holo"/"kappa" · sha256 axis). From then on the
 //     boot splash is content-addressed and fully offline — identity is content (Law L2), lost bytes
 //     self-heal by re-fetch + re-seal (Law L5).
-//   • BOOT CHOREOGRAPHY — cold open: black + the splash dead-center, exactly like the metal. When the
-//     greeter panel rises, the splash recedes into a living wallpaper behind it; the biometric moment
-//     (Plymouth's password prompt) brings it back to attention; success flares it out with the unfog.
-//   • PICKED FROM THE LOGIN SCREEN — a quiet "Boot style" door opens the gallery (upstream's own GIF
-//     previews), pick → streams → sealed → worn. Persisted in holo.plymouth.v1; frame-0 is cached as a
-//     data URL so the NEXT cold boot paints the splash at literal first frame, zero network.
+//   • POWER-ON CHOREOGRAPHY — cold open: pure black + the splash dead-center, exactly like the metal.
+//     Then the machine HANDS YOU THE KEYS: the animation glides up and shrinks into a small living
+//     emblem above your identity while the black dissolves to your own wallpaper — boot becomes login
+//     becomes desktop, one continuous motion. The biometric moment pulses the emblem (Plymouth's
+//     password prompt); success flares it out with the glass unfog.
+//   • PICKED FROM THE LOGIN SCREEN — a quiet "Boot style" door opens the gallery: frame-0 stills
+//     (streamed once, sealed to κ — the gallery itself works offline), the upstream GIF plays on hover,
+//     pick → streams → sealed → worn live behind the sheet. Persisted in holo.plymouth.v1; frame-0 is
+//     cached as a data URL so the NEXT cold boot paints the splash at literal first frame, zero network.
 //
 // Fail-open everywhere: no network + no seal → the wallpaper greeter, unchanged. Reduced motion → the
-// splash holds frame 0. Consumed by holo-signin.mjs (one call: attachPlymouth(overlay)).
+// splash holds frame 0, poses jump instead of glide. Consumed by holo-signin.mjs (attachPlymouth(overlay)).
 
 const KEY = "holo.plymouth.v1";
 const FRK = (t) => "holo.plymouth.frames:" + t;     // per-theme sealed-frame manifest (array of κ)
+const THK = "holo.plymouth.thumbs";                  // theme → κ of its sealed frame-0 still
 const FPS = 25;                                      // the template: 50 Hz refresh / SPEED 2
 const RAW = "https://raw.githubusercontent.com/adi1090x/plymouth-themes/master/";
 const PREVIEW = "https://raw.githubusercontent.com/adi1090x/files/master/plymouth-themes/previews/";
@@ -75,16 +79,25 @@ function store() {
   });
   return _storeP;
 }
+// κ-first bytes: durable store → CDN re-fetch + re-seal (Law L5 self-heal). Returns { bytes, kappa }.
+async function kBytes(kappa, url) {
+  const st = await store();
+  if (kappa) { try { const b = await st.get(kappa); if (b) return { bytes: b, kappa }; } catch {} }
+  try {
+    const r = await fetch(url, { cache: "force-cache" });
+    if (r.ok) { const b = new Uint8Array(await r.arrayBuffer()); let k = kappa; try { k = await st.put(b); } catch {} return { bytes: b, kappa: k }; }
+  } catch {}
+  return null;
+}
 
-// ── frame loading: κ store first (offline), CDN stream + seal on a miss (self-heal, Law L5) ───────────
+// ── frame loading: κ store first (offline), CDN stream + seal on a miss ───────────────────────────────
 // onFrame(i, img) fires as frames become drawable — playback starts on the first one, torrent-style.
 async function loadFrames(theme, onFrame, cancelled) {
   const t = themeOf(theme); if (!t) throw new Error("unknown theme " + theme);
-  const st = await store();
   let manifest = null; try { manifest = JSON.parse(localStorage.getItem(FRK(theme)) || "null"); } catch {}
   const total = (manifest && manifest.length) || t.frames;
   const kappas = new Array(total).fill(null);
-  let firstBytes = null, loaded = 0, missing = 0;
+  let firstBytes = null, loaded = 0;
 
   const toImage = (bytes, i) => new Promise((res) => {
     const img = new Image();
@@ -96,16 +109,12 @@ async function loadFrames(theme, onFrame, cancelled) {
   });
   const one = async (i) => {
     if (cancelled()) return;
-    let bytes = null;
-    if (manifest && manifest[i]) { try { bytes = await st.get(manifest[i]); } catch {} }
-    if (!bytes) {
-      try { const r = await fetch(frameUrl(t, i), { cache: "force-cache" }); if (r.ok) bytes = new Uint8Array(await r.arrayBuffer()); } catch {}
-      if (bytes) { try { kappas[i] = await st.put(bytes); } catch {} }
-    } else kappas[i] = manifest[i];
-    if (!bytes) { missing++; return; }
-    if (i === 0) firstBytes = bytes;
+    const got = await kBytes(manifest && manifest[i], frameUrl(t, i));
+    if (!got) return;
+    kappas[i] = got.kappa;
+    if (i === 0) firstBytes = got.bytes;
     loaded++;
-    await toImage(bytes, i);
+    await toImage(got.bytes, i);
   };
   // ordered small batches so the playable prefix grows monotonically (the loop plays what has landed)
   const CONC = 6;
@@ -129,55 +138,62 @@ async function loadFrames(theme, onFrame, cancelled) {
   return { loaded, total };
 }
 
-// ── styles: the splash layer + its choreography + the gallery — self-contained, injected once ─────────
+// ── styles — self-contained, px-based (immune to host font resets), injected once ─────────────────────
 const CSS = `
-#holo-login .hlp{position:fixed;inset:0;z-index:0;pointer-events:none;background:#000;opacity:0;transition:opacity .5s ease}
+#holo-login .hlp{position:fixed;inset:0;z-index:0;pointer-events:none;background:#000;opacity:0;transition:opacity .5s ease,background-color 1.1s ease}
 #holo-login .hlp.on{opacity:1}
-#holo-login .hlp canvas{position:absolute;inset:0;width:100%;height:100%;transition:opacity .9s ease,filter .9s ease,transform .9s cubic-bezier(.4,0,.2,1)}
-#holo-login .hlp.greet canvas{opacity:.42;filter:blur(1.2px) brightness(.85);transform:scale(1.06)}
-#holo-login .hlp.verify canvas{opacity:.9;filter:none;transform:scale(1)}
-#holo-login .hlp.done canvas{opacity:0;filter:brightness(1.7);transform:scale(1.1);transition:opacity .62s ease,filter .62s ease,transform .62s ease}
+#holo-login .hlp canvas{position:absolute;inset:0;width:100%;height:100%}
+/* greet: the black dissolves — your wallpaper IS the login; the splash lives on as a small emblem above you */
+#holo-login .hlp.greet{background:rgba(0,0,0,0)}
+#holo-login .hlp.verify canvas{animation:hlp-pulse 1.4s ease-in-out infinite}
+@keyframes hlp-pulse{0%,100%{filter:brightness(1)}50%{filter:brightness(1.45)}}
+#holo-login .hlp.done{opacity:0;transition:opacity .62s ease}
+#holo-login .hlp.done canvas{animation:none;filter:brightness(1.7);transition:filter .5s ease}
 #holo-login.hl-boot .hl-panel{opacity:0!important;pointer-events:none!important}
 #holo-login .hl-panel{transition:opacity .55s ease}
 #holo-login .hlp-btn{position:fixed;right:max(20px,env(safe-area-inset-right));bottom:max(18px,env(safe-area-inset-bottom));z-index:4;
-  pointer-events:auto;display:inline-flex;align-items:center;gap:.5em;background:rgba(10,14,20,.42);border:1px solid rgba(255,255,255,.14);
+  pointer-events:auto;display:inline-flex;align-items:center;gap:8px;background:rgba(10,14,20,.42);border:1px solid rgba(255,255,255,.14);
   color:rgba(231,237,250,.78);font:500 12.5px/1 "Segoe UI",system-ui,sans-serif;padding:9px 14px;border-radius:999px;cursor:pointer;
-  backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);transition:color .15s,border-color .15s,background .15s;opacity:0;animation:hlp-in .6s ease 1.1s forwards}
+  backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);transition:color .15s,border-color .15s,background .15s;opacity:0;animation:hlp-in .6s ease 1.2s forwards}
 #holo-login .hlp-btn:hover{color:#fff;border-color:rgba(125,239,201,.55);background:rgba(10,14,20,.62)}
-#holo-login .hlp-btn svg{width:1.1em;height:1.1em}
+#holo-login .hlp-btn svg{width:14px;height:14px}
 @keyframes hlp-in{to{opacity:1}}
-#holo-login .hlp-gal{position:fixed;inset:0;z-index:6;pointer-events:auto;background:rgba(1,4,9,.66);backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);
+#holo-login .hlp-gal{position:fixed;inset:0;z-index:6;pointer-events:auto;background:rgba(1,4,9,.6);backdrop-filter:blur(9px);-webkit-backdrop-filter:blur(9px);
   display:grid;place-items:center;animation:hlp-fade .22s ease}
 @keyframes hlp-fade{from{opacity:0}}
-#holo-login .hlp-sheet{width:min(58rem,94vw);max-height:84vh;display:flex;flex-direction:column;overflow:hidden;background:rgba(8,12,18,.92);
+#holo-login .hlp-sheet{width:min(920px,94vw);max-height:84vh;display:flex;flex-direction:column;overflow:hidden;background:rgba(8,12,18,.94);
   border:1px solid rgba(255,255,255,.12);border-radius:16px;box-shadow:0 28px 80px rgba(0,0,0,.6);color:#e6edf3;font-family:"Segoe UI",system-ui,sans-serif}
-#holo-login .hlp-head{display:flex;align-items:center;gap:12px;padding:16px 18px 10px}
-#holo-login .hlp-title{font-size:1.06rem;font-weight:600}
-#holo-login .hlp-sub{font-size:.78rem;color:#8b949e}
-#holo-login .hlp-x{margin-left:auto;width:30px;height:30px;border:0;border-radius:50%;background:rgba(255,255,255,.08);color:#c9d1d9;cursor:pointer;font-size:15px}
+#holo-login .hlp-head{display:flex;align-items:center;gap:12px;padding:16px 18px 10px;flex:0 0 auto}
+#holo-login .hlp-title{font-size:17px;font-weight:600}
+#holo-login .hlp-sub{font-size:12.5px;color:#8b949e;margin-top:2px}
+#holo-login .hlp-x{margin-left:auto;width:30px;height:30px;flex:0 0 auto;border:0;border-radius:50%;background:rgba(255,255,255,.08);color:#c9d1d9;cursor:pointer;font-size:15px}
 #holo-login .hlp-x:hover{background:rgba(255,255,255,.16)}
-#holo-login .hlp-srch{padding:0 18px 12px}
-#holo-login .hlp-srch input{width:100%;background:rgba(1,4,9,.6);border:1px solid rgba(255,255,255,.12);border-radius:999px;padding:9px 15px;color:#e6edf3;font:inherit;font-size:.85rem;outline:none}
+#holo-login .hlp-srch{padding:0 18px 12px;flex:0 0 auto}
+#holo-login .hlp-srch input{width:100%;box-sizing:border-box;background:rgba(1,4,9,.6);border:1px solid rgba(255,255,255,.12);border-radius:999px;padding:9px 15px;color:#e6edf3;font:inherit;font-size:13.5px;outline:none}
 #holo-login .hlp-srch input:focus{border-color:#34d3a6}
-#holo-login .hlp-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(11.5rem,1fr));gap:12px;padding:4px 18px 16px;overflow:auto}
-#holo-login .hlp-tile{display:flex;flex-direction:column;border:1px solid rgba(255,255,255,.1);border-radius:12px;overflow:hidden;cursor:pointer;background:#05070c;text-align:left;padding:0;color:inherit;font:inherit;transition:transform .1s,border-color .12s;position:relative}
+/* grid-auto-rows is EXPLICIT — Chromium computes a <button> grid item's intrinsic content height as 0,
+   so content-sized rows collapse to the border (the "80 empty bars" failure). Fixed rows are immune. */
+#holo-login .hlp-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(168px,1fr));grid-auto-rows:158px;gap:12px;padding:4px 18px 16px;overflow-y:auto;flex:1 1 auto;min-height:0}
+#holo-login .hlp-tile{appearance:none;-webkit-appearance:none;display:flex;flex-direction:column;height:158px;box-sizing:border-box;border:1px solid rgba(255,255,255,.1);border-radius:12px;overflow:hidden;cursor:pointer;background:#05070c;text-align:left;padding:0;margin:0;color:inherit;font:inherit;transition:transform .1s,border-color .12s;position:relative}
 #holo-login .hlp-tile:hover{transform:translateY(-2px);border-color:#34d3a6}
 #holo-login .hlp-tile.sel{border-color:#34d3a6;box-shadow:0 0 0 2px rgba(52,211,166,.45)}
 #holo-login .hlp-tile.sel::after{content:"\\2713";position:absolute;top:8px;right:8px;width:22px;height:22px;border-radius:50%;background:#34d3a6;color:#06140f;display:grid;place-content:center;font-size:14px;font-weight:700}
-#holo-login .hlp-prev{height:104px;background:#000;display:grid;place-items:center;overflow:hidden}
-#holo-login .hlp-prev img{max-width:100%;max-height:100%;object-fit:contain}
-#holo-login .hlp-prev.off{color:#6e7681;font-size:24px}
-#holo-login .hlp-meta{padding:8px 11px;display:flex;flex-direction:column;gap:2px}
-#holo-login .hlp-name{font-size:.83rem;font-weight:600;color:#e6edf3}
-#holo-login .hlp-k{font-size:.72rem;color:#8b949e;font-family:ui-monospace,monospace}
+#holo-login .hlp-prev{flex:1 1 auto;min-height:0;background:#000;display:grid;place-items:center;overflow:hidden;position:relative}
+#holo-login .hlp-prev img{max-width:92%;max-height:92%;object-fit:contain;display:block}
+#holo-login .hlp-prev .hlp-shim{position:absolute;inset:0;background:linear-gradient(100deg,#05070c 30%,#101722 50%,#05070c 70%);background-size:220% 100%;animation:hlp-shimmer 1.2s ease-in-out infinite}
+@keyframes hlp-shimmer{to{background-position:-220% 0}}
+#holo-login .hlp-prev.off{color:#6e7681;font-size:26px}
+#holo-login .hlp-meta{flex:0 0 auto;padding:8px 11px 9px;display:flex;flex-direction:column;gap:2px;background:rgba(5,7,12,.9)}
+#holo-login .hlp-name{font-size:13px;font-weight:600;color:#e6edf3;line-height:1.25;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+#holo-login .hlp-k{font-size:11px;color:#8b949e;font-family:ui-monospace,monospace;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 #holo-login .hlp-tile.sealed .hlp-k{color:#3fb950}
-#holo-login .hlp-foot{padding:10px 18px 14px;font-size:.72rem;color:#6e7681;border-top:1px solid rgba(255,255,255,.07)}
+#holo-login .hlp-foot{padding:10px 18px 14px;font-size:11.5px;line-height:1.5;color:#6e7681;border-top:1px solid rgba(255,255,255,.07);flex:0 0 auto}
 #holo-login .hlp-foot a{color:#58a6ff;text-decoration:none}
 #holo-login .hlp-toast{position:fixed;left:50%;bottom:70px;transform:translateX(-50%);z-index:7;background:rgba(13,17,23,.95);color:#e6edf3;
-  border:1px solid rgba(255,255,255,.14);border-radius:999px;padding:8px 16px;font:.82rem "Segoe UI",system-ui,sans-serif;box-shadow:0 10px 30px rgba(0,0,0,.6);
+  border:1px solid rgba(255,255,255,.14);border-radius:999px;padding:8px 16px;font:13px "Segoe UI",system-ui,sans-serif;box-shadow:0 10px 30px rgba(0,0,0,.6);
   pointer-events:none;animation:hlp-toast 2.6s ease both}
 @keyframes hlp-toast{0%{opacity:0;transform:translate(-50%,8px)}10%,82%{opacity:1;transform:translate(-50%,0)}100%{opacity:0}}
-@media (prefers-reduced-motion:reduce){#holo-login .hlp canvas,#holo-login .hlp,#holo-login .hlp-btn{transition:none;animation:none;opacity:1}}
+@media (prefers-reduced-motion:reduce){#holo-login .hlp,#holo-login .hlp canvas,#holo-login .hlp-btn,#holo-login .hlp-prev .hlp-shim{transition:none;animation:none;opacity:1}}
 `;
 function injectCss() {
   try { if (document.getElementById("holo-plymouth-css")) return; const s = document.createElement("style"); s.id = "holo-plymouth-css"; s.textContent = CSS; document.head.appendChild(s); } catch {}
@@ -185,32 +201,56 @@ function injectCss() {
 
 const reducedMotion = () => { try { return matchMedia("(prefers-reduced-motion: reduce)").matches; } catch { return false; } };
 
-// ── the player: one canvas, the Plymouth template verbatim (centered sprite, 25 fps, over black) ──────
+// ── the player: one canvas, the Plymouth template + the power-on choreography ──────────────────────────
+// Poses are draw-space (crisp at any scale — CSS transforms would blur the canvas):
+//   boot   — dead-center, up to 62vmin: the machine booting, exactly like the metal
+//   greet  — a small living emblem ABOVE the identity panel: the machine handing you the keys
+//   verify — the emblem leans in slightly while the enclave checks you (CSS pulses brightness)
+const POSES = {
+  boot:   { cy: 0.46, cap: 0.62 },
+  greet:  { cy: 0.215, cap: 0.22 },
+  verify: { cy: 0.215, cap: 0.26 },
+};
 function makePlayer(layer, canvas) {
   const ctx = canvas.getContext("2d");
   const images = [];            // sparse, filled as frames land
   let prefix = 0;               // contiguous playable prefix — the loop only plays what has landed
-  let raf = 0, t0 = 0, lastIdx = -1, alive = true;
+  let raf = 0, t0 = 0, alive = true, last = 0;
+  const pose = { ...POSES.boot };          // current, eased toward target every frame
+  let target = POSES.boot;
   const dpr = Math.min(window.devicePixelRatio || 1, 2);
-  function size() { canvas.width = Math.round(innerWidth * dpr); canvas.height = Math.round(innerHeight * dpr); lastIdx = -1; }
+  function size() { canvas.width = Math.round(innerWidth * dpr); canvas.height = Math.round(innerHeight * dpr); }
   size(); addEventListener("resize", size);
   function draw(idx) {
     const img = images[idx]; if (!img) return;
     const cw = canvas.width / dpr, ch = canvas.height / dpr;
-    // Plymouth centers the sprite at its natural size on the boot display; cap at 62vmin so phones fit
-    const s = Math.min(1, (Math.min(cw, ch) * 0.62) / Math.max(img.naturalWidth, img.naturalHeight));
+    const vmin = Math.min(cw, ch);
+    // Plymouth centers the sprite at its natural size; the pose caps it (boot ≈ the metal, greet = emblem)
+    const s = Math.min(1, (vmin * pose.cap) / Math.max(img.naturalWidth, img.naturalHeight));
     const w = img.naturalWidth * s, h = img.naturalHeight * s;
+    const cx = cw / 2, cy = ch * pose.cy;
     ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
     ctx.clearRect(0, 0, cw, ch);
-    ctx.drawImage(img, (cw - w) / 2, (ch - h) / 2, w, h);
+    // a soft dark halo under the sprite — keeps the emblem legible over ANY wallpaper without a scrim,
+    // so the lock keeps wearing the exact same sharp wallpaper as home
+    const r = Math.max(w, h) * 0.85;
+    const g = ctx.createRadialGradient(cx, cy, r * 0.15, cx, cy, r);
+    g.addColorStop(0, "rgba(0,0,0,.5)"); g.addColorStop(1, "rgba(0,0,0,0)");
+    ctx.fillStyle = g; ctx.fillRect(cx - r, cy - r, r * 2, r * 2);
+    ctx.drawImage(img, cx - w / 2, cy - h / 2, w, h);
   }
   function loop(now) {
     if (!alive) return;
     raf = requestAnimationFrame(loop);
-    if (document.hidden || prefix === 0) return;
+    if (document.hidden || prefix === 0) { last = now; return; }
     if (!t0) t0 = now;
+    const dt = Math.min((now - last) / 1000, 0.1); last = now;
+    // glide the pose toward its target (exp ease ≈ 750ms settle); reduced motion snaps
+    const k = reducedMotion() ? 1 : Math.min(1, dt * 5.5);
+    pose.cy += (target.cy - pose.cy) * k;
+    pose.cap += (target.cap - pose.cap) * k;
     const idx = Math.floor((now - t0) / (1000 / FPS)) % Math.max(prefix, 1);
-    if (idx !== lastIdx) { lastIdx = idx; draw(idx); }
+    draw(idx);
   }
   return {
     frame(i, img) {
@@ -221,12 +261,29 @@ function makePlayer(layer, canvas) {
         if (reducedMotion()) draw(0); else raf = requestAnimationFrame(loop);
       }
     },
-    reset() { images.length = 0; prefix = 0; t0 = 0; lastIdx = -1; },
+    pose(name) { target = POSES[name] || POSES.greet; if (reducedMotion()) { pose.cy = target.cy; pose.cap = target.cap; if (images[0]) draw(0); } },
+    reset() { images.length = 0; prefix = 0; t0 = 0; },
     destroy() { alive = false; cancelAnimationFrame(raf); removeEventListener("resize", size); },
   };
 }
 
-// ── the gallery: pick a boot style from the login screen — upstream's own GIF previews, live apply ────
+// ── gallery thumbnails: each tile wears the theme's REAL frame-0 (streamed once, sealed to κ) — the
+// gallery itself becomes offline-capable. The upstream GIF preview plays on hover only. ────────────────
+let _thumbMap = null;   // ONE shared map — concurrent loaders mutate it; each write persists the whole map
+function thumbMap() { if (!_thumbMap) { try { _thumbMap = JSON.parse(localStorage.getItem(THK) || "{}") || {}; } catch { _thumbMap = {}; } } return _thumbMap; }
+const _thumbURL = new Map();   // theme → objectURL (session)
+async function thumbFor(t) {
+  if (_thumbURL.has(t.name)) return _thumbURL.get(t.name);
+  const m = thumbMap();
+  const got = await kBytes(m[t.name], frameUrl(t, 0));
+  if (!got) return null;
+  if (m[t.name] !== got.kappa) { m[t.name] = got.kappa; try { localStorage.setItem(THK, JSON.stringify(m)); } catch {} }
+  const url = URL.createObjectURL(new Blob([got.bytes], { type: "image/png" }));
+  _thumbURL.set(t.name, url);
+  return url;
+}
+
+// ── the gallery: pick a boot style from the login screen — live apply behind the sheet ────────────────
 function openGallery(overlay, current, onPick) {
   const gal = document.createElement("div"); gal.className = "hlp-gal";
   const sealedSet = new Set(CATALOG.filter((t) => { try { return !!localStorage.getItem(FRK(t.name)); } catch { return false; } }).map((t) => t.name));
@@ -236,27 +293,68 @@ function openGallery(overlay, current, onPick) {
       <button class="hlp-x" aria-label="Close">✕</button></div>
     <div class="hlp-srch"><input type="search" placeholder="Search 80 boot animations — hud, hexagon, seal…" spellcheck="false"></div>
     <div class="hlp-grid"></div>
-    <div class="hlp-foot">Animations: <a href="https://github.com/adi1090x/plymouth-themes" target="_blank" rel="noopener">adi1090x/plymouth-themes</a> · GPL-3.0 · every frame is a content-addressed object (Law L2) — once sealed, your boot works fully offline</div>
+    <div class="hlp-foot">Animations: <a href="https://github.com/adi1090x/plymouth-themes" target="_blank" rel="noopener">adi1090x/plymouth-themes</a> · GPL-3.0 · hover a tile to see it move · every frame is a content-addressed object (Law L2) — once sealed, your boot works fully offline</div>
   </div>`;
   const grid = gal.querySelector(".hlp-grid");
-  const close = () => { gal.remove(); document.removeEventListener("keydown", esc, true); };
+  const close = () => { gal.remove(); document.removeEventListener("keydown", esc, true); try { clearTimeout(sweep); io && io.disconnect(); } catch {} };
   const esc = (e) => { if (e.key === "Escape") { e.preventDefault(); e.stopPropagation(); close(); } };
   document.addEventListener("keydown", esc, true);
   gal.addEventListener("pointerdown", (e) => { if (e.target === gal) close(); });
   gal.querySelector(".hlp-x").onclick = close;
 
+  // thumbnail loader — a small queue (never stampedes the CDN). IntersectionObserver PRIORITIZES what's
+  // on screen; a fallback sweep enqueues the rest regardless (IO callbacks pause in hidden tabs, and 80
+  // frame-0 stills are ~1–2 MB total — worth having them all sealed for the offline gallery anyway).
+  const pending = [];
+  let inFlight = 0;
+  const pump = () => {
+    while (inFlight < 4 && pending.length) {
+      const job = pending.shift();
+      if (job.queued === 2) continue;                     // already loaded via the other path
+      job.queued = 2;
+      const { t, img, shim, kk } = job;
+      inFlight++;
+      thumbFor(t).then((url) => {
+        if (url) { img.src = url; img.dataset.still = url; }
+        if (shim) shim.remove();
+        if (url && kk && !sealedSet.has(t.name)) kk.textContent = t.frames + " frames · ~" + mb(t.kb);
+      }).catch(() => { if (shim) shim.remove(); }).finally(() => { inFlight--; pump(); });
+    }
+  };
+  const allJobs = [];
+  const io = ("IntersectionObserver" in window) ? new IntersectionObserver((entries) => {
+    for (const e of entries) {
+      if (!e.isIntersecting) continue;
+      io.unobserve(e.target);
+      const job = e.target.__hlpJob; if (job && !job.queued) { job.queued = 1; pending.unshift(job); }   // visible first
+    }
+    pump();
+  }, { root: grid, rootMargin: "240px" }) : null;
+  const sweep = setTimeout(() => { for (const j of allJobs) if (!j.queued) { j.queued = 1; pending.push(j); } pump(); }, 900);
+
   function tile(t) {
     const el = document.createElement("button"); el.type = "button";
     el.className = "hlp-tile" + (current === (t ? t.name : null) ? " sel" : "") + (t && sealedSet.has(t.name) ? " sealed" : "");
-    if (!t) el.innerHTML = `<div class="hlp-prev off">◌</div><div class="hlp-meta"><span class="hlp-name">Off</span><span class="hlp-k">wallpaper only</span></div>`;
-    else el.innerHTML = `<div class="hlp-prev"><img loading="lazy" src="${t.preview}" alt=""></div>
-      <div class="hlp-meta"><span class="hlp-name">${pretty(t.name)}</span>
-      <span class="hlp-k">${sealedSet.has(t.name) ? "sealed to κ ✓" : t.frames + " frames · ~" + mb(t.kb)}</span></div>`;
+    if (!t) {
+      el.innerHTML = `<div class="hlp-prev off">◌</div><div class="hlp-meta"><span class="hlp-name">Off</span><span class="hlp-k">wallpaper only</span></div>`;
+    } else {
+      el.innerHTML = `<div class="hlp-prev"><div class="hlp-shim"></div><img alt="" draggable="false"></div>
+        <div class="hlp-meta"><span class="hlp-name">${pretty(t.name)}</span>
+        <span class="hlp-k">${sealedSet.has(t.name) ? "sealed to κ ✓" : t.frames + " frames · ~" + mb(t.kb)}</span></div>`;
+      const img = el.querySelector("img"), shim = el.querySelector(".hlp-shim"), kk = el.querySelector(".hlp-k");
+      el.__hlpJob = { t, img, shim, kk, queued: 0 };
+      allJobs.push(el.__hlpJob);
+      if (io) io.observe(el); else { el.__hlpJob.queued = 1; pending.push(el.__hlpJob); pump(); }
+      // hover = the theme comes alive (upstream GIF); leave = back to the sealed still
+      el.addEventListener("pointerenter", () => { img.src = t.preview; }, { passive: true });
+      el.addEventListener("pointerleave", () => { if (img.dataset.still) img.src = img.dataset.still; }, { passive: true });
+    }
     el.onclick = () => { close(); onPick(t ? t.name : null); };
     return el;
   }
   function draw(q) {
     grid.innerHTML = "";
+    allJobs.length = 0; pending.length = 0;
     grid.appendChild(tile(null));
     const needle = (q || "").toLowerCase().trim();
     for (const t of CATALOG) if (!needle || t.name.includes(needle.replace(/\s+/g, "_")) || pretty(t.name).toLowerCase().includes(needle)) grid.appendChild(tile(t));
@@ -294,19 +392,25 @@ export function attachPlymouth(overlay) {
     const my = ++gen;
     player.reset();
     layer.classList.remove("done");
-    loadFrames(theme, (i, img) => { if (my === gen) player.frame(i, img); }, () => my !== gen)
+    loadFrames(theme, (i, img) => {
+      if (my !== gen) return;
+      player.frame(i, img);
+      if (i === 0) dropBaseline();                        // the live canvas has the frame — the 0-ms still yields
+    }, () => my !== gen)
       .catch(() => { if (my === gen && state.on) layer.classList.remove("on"); });   // no frames at all → wallpaper stays
   }
+  // the host baseline (app.html) may have painted a synchronous frame-0 still; remove it once live
+  function dropBaseline() { try { const b = document.getElementById("hl-plymouth-base"); if (b) { b.style.opacity = "0"; setTimeout(() => b.remove(), 900); } } catch {} }
 
   // the boot beat: a moment of pure splash before the greeter rises — skippable, never a lock-out. Only
   // when the beat is ALREADY running (the host baseline started it at 0 ms) or the panel hasn't painted
   // yet (primitive-owned overlay): a panel the human can already see is never re-hidden.
-  const endBoot = () => { try { overlay.classList.remove("hl-boot"); layer && layer.classList.add("greet"); } catch {} };
+  const endBoot = () => { try { overlay.classList.remove("hl-boot"); if (layer) { layer.classList.add("greet"); player.pose("greet"); } dropBaseline(); } catch {} };
   const panelEl = overlay.querySelector("#holo-login-panel");
   const bootable = overlay.classList.contains("hl-boot") || !panelEl || !panelEl.childElementCount;
   if (state.on && bootable && !reducedMotion()) {
     overlay.classList.add("hl-boot");
-    const t = setTimeout(endBoot, 1000);
+    const t = setTimeout(endBoot, 1100);
     overlay.addEventListener("pointerdown", () => { clearTimeout(t); endBoot(); }, { once: true, capture: true });
     document.addEventListener("keydown", () => { clearTimeout(t); endBoot(); }, { once: true, capture: true });
   } else if (state.on) { setTimeout(endBoot, 0); }
@@ -330,14 +434,14 @@ export function attachPlymouth(overlay) {
       }
       writeState({ ...s, on: true, theme: name, firstFrame: undefined });
       state.on = true; state.theme = name;
-      layer && layer.classList.add("greet");
+      if (layer) { layer.classList.add("greet"); player.pose("greet"); }
       const sealed = (() => { try { return !!localStorage.getItem(FRK(name)); } catch { return false; } })();
       toast(overlay, pretty(name) + (sealed ? " — from your κ store" : " — streaming, sealing to κ…"));
       play(name);
     },
     // choreography hooks for the greeter — all fail-open no-ops when the splash is off
-    verify() { try { layer && layer.classList.add("verify"); } catch {} },
-    calm() { try { layer && layer.classList.remove("verify"); } catch {} },
+    verify() { try { if (layer) { layer.classList.add("verify"); player.pose("verify"); } } catch {} },
+    calm() { try { if (layer) { layer.classList.remove("verify"); player.pose("greet"); } } catch {} },
     complete() { try { endBoot(); if (layer) { layer.classList.remove("verify"); layer.classList.add("done"); } setTimeout(() => api.destroy(), 900); } catch {} },   // overlay is removed right after — stop the loop with it
     destroy() { gen++; try { player && player.destroy(); } catch {} },
   };

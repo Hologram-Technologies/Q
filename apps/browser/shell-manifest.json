@@ -1,7 +1,7 @@
 {
  "v": 1,
- "created": 1783417741360,
- "aggregate": "6aed1b1d27822c7b59b4f32de019eaaa2937ead6cb61516f27287f2cbb852480",
+ "created": 1783417555742,
+ "aggregate": "d9d3922aec2b25cebd9269653a7356e9be37110f21bf4b034f05441dc19b2b19",
  "assets": [
   {
    "path": "/apps/browser/browser-sw.js",
@@ -45,8 +45,8 @@
   },
   {
    "path": "/apps/browser/ipfs-sw.js",
-   "kappa": "f7ab7014228b52f2a56b3af44c58739a68f482b62711e09ed5d4f1151e682fe2",
-   "bytes": 7918
+   "kappa": "d4d19031de6308843829b2e0854d235b69b260c4d06efc5404f35c90a544020a",
+   "bytes": 8198
   },
   {
    "path": "/apps/browser/peer-host.html",
@@ -65,8 +65,8 @@
   },
   {
    "path": "/apps/browser/_shared/holo-dweb.js",
-   "kappa": "9a515e27cc6449974b30d70b52414c96572b41a8ce0e703b426f84db16bc8429",
-   "bytes": 7229
+   "kappa": "7865c6ff3e5fd457aa82d11b329f465051e47f8f6f144104c2d98a8260ec634e",
+   "bytes": 9328
   },
   {
    "path": "/apps/browser/_shared/holo-eth.js",
@@ -79,9 +79,24 @@
    "bytes": 19655
   },
   {
+   "path": "/apps/browser/_shared/holo-ipfs-gateway.mjs",
+   "kappa": "2b0f29c4a4e4500a98f7bb806de22aa7b00897b80bfaa717ddea9107082bb5c5",
+   "bytes": 21066
+  },
+  {
    "path": "/apps/browser/_shared/holo-ipfs.js",
    "kappa": "b3300639bba0f4b676fe17842c5d1793ec8479feee70ce996e50894948847d94",
    "bytes": 37357
+  },
+  {
+   "path": "/apps/browser/_shared/holo-onion-arti.node.mjs",
+   "kappa": "f766cf26a8dc19356adce8bd0cdad9e8c20a96da9dfdba66abe3804fbae4d03b",
+   "bytes": 4691
+  },
+  {
+   "path": "/apps/browser/_shared/holo-onion-exit.mjs",
+   "kappa": "f1e81a4016c6bb5e0a6e99cd4b8a89632459750a0285af0b767fc74aba92cde9",
+   "bytes": 3667
   },
   {
    "path": "/apps/browser/_shared/holo-peer-egress.mjs",
@@ -89,9 +104,29 @@
    "bytes": 7583
   },
   {
+   "path": "/apps/browser/_shared/holo-render-contract.mjs",
+   "kappa": "05c7ca8b1053b670f1bb5cfe92fe19140dadbdf2078c925e233f8f5c40506e29",
+   "bytes": 2751
+  },
+  {
+   "path": "/apps/browser/_shared/holo-routing.mjs",
+   "kappa": "86bbc5e05c381e61a002530f8de5deafa0c5a65a73b3ce38f98ae5e9fd2c6f64",
+   "bytes": 5846
+  },
+  {
    "path": "/apps/browser/_shared/holo-zip.js",
    "kappa": "a0d91c27ca1d5ff0fef3238d9d136aeecc71c1f4aec8d16291abb2b6bf2f8983",
    "bytes": 5546
+  },
+  {
+   "path": "/apps/browser/_spike/onion/onion-probe.worker.mjs",
+   "kappa": "bed2b0d11ed4d559a938ba16d23665d3275a20de91adb4df893703f6407d4b81",
+   "bytes": 3853
+  },
+  {
+   "path": "/apps/browser/_spike/onion/onion-spike.html",
+   "kappa": "5c20d7dfa7c0f3f10cb637f8fe79263fa6a3c19de5fddec1b859309f7c03570e",
+   "bytes": 3018
   }
  ]
 }
