@@ -88,7 +88,9 @@ async function loadFrames(theme, onFrame, cancelled) {
 
   const toImage = (bytes, i) => new Promise((res) => {
     const img = new Image();
-    img.onload = () => { const dec = img.decode ? img.decode().catch(() => {}) : Promise.resolve(); dec.then(() => { onFrame(i, img); res(img); }); };
+    // decode() is a fire-and-forget WARM-UP only — in a hidden tab it never settles (deferred decode), and
+    // drawImage decodes synchronously anyway. Gating on it would freeze the whole splash for background tabs.
+    img.onload = () => { try { if (img.decode) img.decode().catch(() => {}); } catch {} onFrame(i, img); res(img); };
     img.onerror = () => res(null);
     img.src = URL.createObjectURL(new Blob([bytes], { type: "image/png" }));
   });

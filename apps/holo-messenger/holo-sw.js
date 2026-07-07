@@ -12,7 +12,7 @@
 // ES module (shares holo-push-route). The SHELL list mirrors SHELL_MANIFEST in holo-m1-boot.mjs (witness gates drift).
 import { notificationFor, routeFor } from "./holo-push-route.mjs";
 
-const CACHE = "holo-msgr-shell-e4b0beedefb0";                     // bump → old (unverified) caches are purged on activate
+const CACHE = "holo-msgr-shell-936ff0949993";                     // bump → old (unverified) caches are purged on activate
 // BASE-RELOCATABLE: the worker may be served under ANY prefix (OS root, a GitHub Pages /<repo>/ subpath, a
 // static mirror). Every location below derives from where THIS script actually lives; at the OS root BASE is ""
 // and behavior is byte-identical. Manifest paths stay CANONICAL ("/apps/holo-messenger/…" — they are identity,
@@ -54,11 +54,13 @@ let SHELL_KAPPA = new Map();
 
 const _hex = (buf) => [...new Uint8Array(buf)].map((x) => x.toString(16).padStart(2, "0")).join("");
 async function sha256hex(buf) { return _hex(await crypto.subtle.digest("SHA-256", buf)); }
-function setManifest(assets) { try { const m = new Map(); for (const a of assets || []) if (a && a.path && a.kappa) m.set(a.path, a.kappa); if (m.size) SHELL_KAPPA = m; } catch {} }
-async function loadManifest() { try { const r = await fetch(MANIFEST_URL, { cache: "no-store" }); if (r && r.ok) { const j = await r.json(); setManifest(j.assets); return j; } } catch {} return null; }
+// the κ bar covers the shell AND the runtime table (S3.2): holospaces_web builds are verified on fetch
+// exactly like shell assets — bytes that don't re-derive to the committed κ are refused, whatever served them.
+function setManifest(assets, runtime) { try { const m = new Map(); for (const a of [...(assets || []), ...(runtime || [])]) if (a && a.path && a.kappa) m.set(a.path, a.kappa); if (m.size) SHELL_KAPPA = m; } catch {} }
+async function loadManifest() { try { const r = await fetch(MANIFEST_URL, { cache: "no-store" }); if (r && r.ok) { const j = await r.json(); setManifest(j.assets, j.runtime); return j; } } catch {} return null; }
 const expectedKappa = (pathname) => SHELL_KAPPA.get(pathname) || null;
 
-const MIME = { html: "text/html", htm: "text/html", js: "text/javascript", mjs: "text/javascript", css: "text/css", json: "application/json", jpg: "image/jpeg", jpeg: "image/jpeg", png: "image/png", gif: "image/gif", svg: "image/svg+xml", webp: "image/webp", avif: "image/avif", ico: "image/x-icon", woff: "font/woff", woff2: "font/woff2", ttf: "font/ttf", otf: "font/otf" };
+const MIME = { html: "text/html", htm: "text/html", js: "text/javascript", mjs: "text/javascript", css: "text/css", json: "application/json", wasm: "application/wasm", jpg: "image/jpeg", jpeg: "image/jpeg", png: "image/png", gif: "image/gif", svg: "image/svg+xml", webp: "image/webp", avif: "image/avif", ico: "image/x-icon", woff: "font/woff", woff2: "font/woff2", ttf: "font/ttf", otf: "font/otf" };
 const mimeFor = (pathname) => MIME[(pathname.split(".").pop() || "").toLowerCase()] || "application/octet-stream";
 
 // verify bytes against the committed κ, return a fresh SAME-ORIGIN Response with the CORRECT content-type (never
@@ -99,10 +101,10 @@ self.addEventListener("activate", (e) => e.waitUntil((async () => {
 
 // the page hands us the LINK-VERIFIED manifest (its aggregate was checked against the boot link) — trust it over
 // whatever install fetched from the origin.
-self.addEventListener("message", (e) => { const d = e.data || {}; if (d.type === "holo-shell-manifest") setManifest(d.assets); });
+self.addEventListener("message", (e) => { const d = e.data || {}; if (d.type === "holo-shell-manifest") setManifest(d.assets, d.runtime); });
 
-const CACHEABLE = /\.(jpg|jpeg|png|gif|svg|webp|avif|ico|css|js|mjs|woff2?|ttf|otf)$/i;
-const STATIC_DIRS = [SCOPE, BASE + "/apps/ui/", BASE + "/_shared/", BASE + "/usr/share/", BASE + "/usr/lib/holo/"];
+const CACHEABLE = /\.(jpg|jpeg|png|gif|svg|webp|avif|ico|css|js|mjs|wasm|woff2?|ttf|otf)$/i;
+const STATIC_DIRS = [SCOPE, BASE + "/apps/ui/", BASE + "/_shared/", BASE + "/usr/share/", BASE + "/usr/lib/holo/", BASE + "/apps/q/pkg/", BASE + "/apps/workspace/pkg/", BASE + "/usr/lib/pkg/"];
 
 // cache-first, with κ-verified refill. A cached hit was verified when stored → served directly (0 net). A miss on a
 // MANIFESTED shell asset must pass verification (origin → κ-store) or is REFUSED (502). Non-manifested statics keep

@@ -1,7 +1,7 @@
 {
  "v": 1,
- "created": 1783413277060,
- "aggregate": "871444d88ae7b189620f2be2505baf4b6704863b06d62a4ae52ca715e7e036bf",
+ "created": 1783414115946,
+ "aggregate": "649a4eb4bf7333cdc2954a083c3f9cc2194e3cc114a038d4323bf7436e907334",
  "assets": [
   {
    "path": "/apps/browser/browser-sw.js",
@@ -40,18 +40,13 @@
   },
   {
    "path": "/apps/browser/index.html",
-   "kappa": "276b9e8159d42967621e32a86692d0d76d34d0fc5aecdfd5c62646e93f615124",
-   "bytes": 78052
+   "kappa": "64384d794ab21b02a680abbe2a0d23bc7b1bc16bdf40d9dc4577dfc29f24e46e",
+   "bytes": 77723
   },
   {
    "path": "/apps/browser/ipfs-sw.js",
    "kappa": "f7ab7014228b52f2a56b3af44c58739a68f482b62711e09ed5d4f1151e682fe2",
    "bytes": 7918
-  },
-  {
-   "path": "/apps/browser/peer-egress.witness.html",
-   "kappa": "266a3759d8fe8200979f5a9557dc83d1f270859dc2d7ba39c74ff13d70122342",
-   "bytes": 4689
   },
   {
    "path": "/apps/browser/peer-host.html",
