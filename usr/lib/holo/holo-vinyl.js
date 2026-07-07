@@ -747,7 +747,7 @@
     W.HoloWidgets.define("vinyl", {
       name: "Vinyl Player", icon: "disc", blurb: "A music disc that plays across the shell.",
       defaultW: 84, minW: SIZE_MIN, maxW: SIZE_MAX,
-      defaultConfig: JSON.parse(JSON.stringify(BENBOHMER)),
+      defaultConfig: JSON.parse(JSON.stringify(KAPPA_SESSIONS)),
       render: function (hostObj) {
         injectCss();
         hostObj.body.style.cssText = "width:100%;aspect-ratio:1/1";
@@ -841,7 +841,7 @@
     injectCss();
     if (!DOCKP) {
       var saved = loadDock();
-      DOCKP = { id: "dock", idx: (saved && saved.idx) || 0, playing: false, config: (saved && saved.config) || JSON.parse(JSON.stringify(BENBOHMER)) };
+      DOCKP = { id: "dock", idx: (saved && saved.idx) || 0, playing: false, config: (saved && saved.config) || JSON.parse(JSON.stringify(KAPPA_SESSIONS)) };
       DOCKP._touched = !!saved;
       DOCKP.audio = new Audio(); DOCKP.audio.preload = "auto";       // warm-buffer the stream → low-latency first play
       DOCKP.audio.addEventListener("ended", function () { next(DOCKP); });
@@ -903,7 +903,7 @@
       var raw = W.localStorage.getItem(LS);
       if (raw && W.HoloWidgets && W.HoloWidgets.add) {
         var arr = []; try { arr = JSON.parse(raw) || []; } catch (e) { arr = []; }
-        arr.forEach(function (s) { if (s && !s.hidden) W.HoloWidgets.add("vinyl", s.config || JSON.parse(JSON.stringify(BENBOHMER)), { x: s.x, y: s.y }); });
+        arr.forEach(function (s) { if (s && !s.hidden) W.HoloWidgets.add("vinyl", s.config || JSON.parse(JSON.stringify(KAPPA_SESSIONS)), { x: s.x, y: s.y }); });
       }
       if (raw) W.localStorage.removeItem(LS);
       W.localStorage.setItem(MIGRATED_LS, "1");

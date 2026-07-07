@@ -38,6 +38,21 @@ function avatarHtml(u) {
   if (u && u.label) { const h = hueOf(u); return `<div class="hl-avatar" style="background:linear-gradient(140deg,hsl(${h} 52% 46%),hsl(${h + 26} 52% 46%))">${esc(initials(u.label))}</div>`; }
   return `<div class="hl-avatar" style="background:linear-gradient(140deg,#5b6b86,#3a455c)">${I.person}</div>`;
 }
+// THE SOVEREIGN FACE on the gate: the initials paint instantly (never block first frame), then the operator's
+// verified portrait — resolved through the SAME one door every surface uses (messenger rail, wallet pill,
+// identity card: holo-portrait.mjs) — takes their place. u.kappa resolves the bound record; the κ-less greeting
+// hint uses the last-operator hint record. Both verify by re-derivation (Law L5): tampered bytes simply leave
+// the initials standing. An explicit guest never hydrates (guest law).
+async function hydrateFace(panel, u) {
+  try {
+    if (!u || u.guest) return;
+    const P = await import("./holo-portrait.mjs");
+    const p = u.kappa ? await P.resolvePortrait(u.kappa) : await P.resolveHintPortrait();
+    const el = panel && panel.querySelector(".hl-avatar");
+    if (!p || !el) return;
+    el.innerHTML = `<img src="${p.url}" alt="" style="width:100%;height:100%;object-fit:cover;border-radius:50%">`;
+  } catch {}
+}
 // SUPER-CLEAN GATE: two core ways in stay visible — the primary biometric (above) + one "Continue as guest".
 // The recovery doors (another device / restore) are advanced + rare, so they fold behind a quiet "More options"
 // toggle: the screen reads as two choices, yet nothing is lost (both doors stay in the DOM, one tap away).
@@ -105,9 +120,12 @@ const HL_CSS = `#holo-login{position:fixed;inset:0;z-index:2147483000;color:var(
 #holo-login .hl-avatar svg{width:62%;height:62%;opacity:.92}
 #holo-login .hl-name{margin:var(--g1) 0 0;font-size:var(--u);font-weight:600;line-height:1.15;text-shadow:var(--shadow)}
 #holo-login .hl-auth{margin-top:var(--g1);display:flex;flex-direction:column;align-items:center;gap:var(--u);width:100%}
-#holo-login .hl-bio{width:100%;min-height:max(var(--g2),48px);border:0;border-radius:calc(var(--u)*.7);cursor:pointer;display:inline-flex;align-items:center;justify-content:center;gap:calc(var(--u)*.55);font-size:var(--u);font-weight:600;color:#06140f;background:linear-gradient(135deg,var(--accent),var(--accent-2));box-shadow:0 .7em 1.6em rgba(52,211,166,.32);font-family:inherit;transition:transform .12s,box-shadow .18s,filter .18s}
-#holo-login .hl-bio:hover{transform:translateY(-1px);filter:brightness(1.05)}#holo-login .hl-bio:disabled{opacity:.7;cursor:default}
-#holo-login .hl-bio svg{width:1.18em;height:1.18em}
+#holo-login .hl-bio{position:relative;overflow:hidden;width:100%;min-height:max(var(--g2),52px);border:0;border-radius:calc(var(--u)*.7);cursor:pointer;display:inline-flex;align-items:center;justify-content:center;gap:calc(var(--u)*.55);font-size:var(--u);font-weight:600;color:#06140f;background:linear-gradient(135deg,var(--accent),var(--accent-2));box-shadow:inset 0 1px 0 rgba(255,255,255,.4),0 .7em 1.6em rgba(52,211,166,.32);font-family:inherit;transition:transform .12s,box-shadow .18s,filter .18s}
+#holo-login .hl-bio:hover{transform:translateY(-1px);filter:brightness(1.05)}
+#holo-login .hl-bio:disabled{cursor:progress;filter:saturate(.9)}
+#holo-login .hl-bio:disabled::after{content:"";position:absolute;inset:0;background:linear-gradient(105deg,transparent 32%,rgba(255,255,255,.55) 50%,transparent 68%);transform:translateX(-100%);animation:hl-scan 1.15s cubic-bezier(.4,0,.2,1) infinite}
+@keyframes hl-scan{to{transform:translateX(100%)}}
+#holo-login .hl-bio svg{width:1.3em;height:1.3em;flex:0 0 auto}
 #holo-login .hl-alt{background:none;border:0;color:var(--ink-dim);font-size:var(--u);font-family:inherit;cursor:pointer;padding:calc(var(--u)*.3) calc(var(--u)*.55);border-radius:calc(var(--u)*.4);display:inline-flex;align-items:center;gap:calc(var(--u)*.4);min-height:44px}
 #holo-login .hl-alt:hover{color:var(--ink)}#holo-login .hl-alt svg{width:1.05em;height:1.05em}
 #holo-login .hl-more{opacity:.72}#holo-login .hl-more:hover{opacity:1}
@@ -119,7 +137,7 @@ const HL_CSS = `#holo-login{position:fixed;inset:0;z-index:2147483000;color:var(
 @keyframes hl-spin{to{transform:rotate(360deg)}}@keyframes hl-rise{from{opacity:0;transform:translateY(10px) scale(.99);filter:blur(2px)}to{opacity:1;transform:none;filter:none}}
 #holo-login.unfog .hl-frost{animation:hl-defog .72s cubic-bezier(.4,0,.2,1) forwards}#holo-login.unfog .hl-panel{animation:hl-lift .68s cubic-bezier(.4,0,.2,1) forwards;pointer-events:none}
 @keyframes hl-defog{to{opacity:0}}@keyframes hl-lift{to{opacity:0;transform:translateY(-10px) scale(1.03)}}
-@media (prefers-reduced-motion:reduce){#holo-login .hl-panel,#holo-login .spin{animation:none}#holo-login.unfog .hl-frost,#holo-login.unfog .hl-panel{animation:hl-defog .3s ease forwards}}`;
+@media (prefers-reduced-motion:reduce){#holo-login .hl-panel,#holo-login .spin,#holo-login .hl-bio:disabled::after{animation:none}#holo-login.unfog .hl-frost,#holo-login.unfog .hl-panel{animation:hl-defog .3s ease forwards}}`;
 function injectCss() {
   try { if (document.getElementById("holo-signin-css")) return; const s = document.createElement("style"); s.id = "holo-signin-css"; s.textContent = HL_CSS; document.head.appendChild(s); } catch {}
 }
@@ -135,73 +153,28 @@ function ensureOverlay() {
   return ov;
 }
 
-// ── APPEARANCE — Dark · Light · Immersive, chosen ON the lock, worn by the whole OS. ──────────────────
-// ONE source of truth: the switch reads and writes the SAME holo.theme.v1 row the home screen wears
-// (the HoloTheme.setMode contract: dark/light pin the palette and drop the backdrop; immersive turns the
-// backdrop on). The lock's entire look is one token set flipped by [data-appearance] — no second theme
-// system, no login-only state. Immersive = the exact home wallpaper; dark/light = flat, shadowless ink.
-const THEME_MODES = ["dark", "light", "immersive"];
-function themeMode() {
-  try { const t = JSON.parse(localStorage.getItem("holo.theme.v1") || "{}") || {}; return t.immersive === false ? (t.palette === "light" ? "light" : "dark") : "immersive"; } catch { return "immersive"; }
-}
-function themeWallSrc() {
-  let w = ""; try { w = (JSON.parse(localStorage.getItem("holo.theme.v1") || "{}") || {}).wallpaper || ""; } catch {}
-  const m = String(w).match(/^(sha256|blake3|sha512):([0-9a-f]+)$/i);
-  let src = m ? ("/.holo/" + m[1].toLowerCase() + "/" + m[2]) : ((!w || w === "plain" || /^live:/i.test(w)) ? "" : w);
-  if (!src) { try { src = localStorage.getItem("holo-messenger/wallpaper-src") || ""; } catch {} }
-  return src || "/apps/holo-messenger/_vendor/wallpaper-default.jpg";
-}
-function applyMode(overlay, m) {
-  try {
-    if (window.HoloTheme && window.HoloTheme.setMode) window.HoloTheme.setMode(m);
-    else { const t = JSON.parse(localStorage.getItem("holo.theme.v1") || "{}") || {}; if (m === "immersive") t.immersive = true; else { t.palette = m; t.immersive = false; } localStorage.setItem("holo.theme.v1", JSON.stringify(t)); }
-  } catch {}
-  overlay.setAttribute("data-appearance", m);
-  const wall = overlay.querySelector(".hl-wall");
-  if (wall) wall.style.backgroundImage = m === "immersive" ? 'url("' + themeWallSrc() + '")' : "none";
-}
-const HL_THEME_CSS = `#holo-login .hl-theme{position:fixed;left:max(20px,env(safe-area-inset-left));bottom:max(18px,env(safe-area-inset-bottom));z-index:4;
-  pointer-events:auto;display:inline-flex;gap:4px;padding:4px;border-radius:999px;background:var(--glass,rgba(10,14,20,.42));border:1px solid var(--glass-border,rgba(255,255,255,.14));
-  backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);opacity:0;animation:hl-theme-in .6s ease 1.2s forwards}
-#holo-login .hl-theme button{border:0;background:none;color:var(--glass-ink,rgba(231,237,250,.8));font:500 var(--u,16px)/1 "Segoe UI",system-ui,sans-serif;
-  padding:9px 15px;border-radius:999px;cursor:pointer;transition:color .15s,background .15s}
-#holo-login .hl-theme button:hover{color:var(--ink,#fff)}
-#holo-login .hl-theme button.on{background:var(--ink,#f4f7fc);color:var(--wall,#05070c);font-weight:600}
-@keyframes hl-theme-in{to{opacity:1}}
-@media (prefers-reduced-motion:reduce){#holo-login .hl-theme{animation:none;opacity:1}}`;
-function mountAppearance(overlay) {
-  if (!overlay || overlay.querySelector(".hl-theme")) return;
-  try { if (!document.getElementById("holo-appearance-css")) { const s = document.createElement("style"); s.id = "holo-appearance-css"; s.textContent = HL_THEME_CSS; document.head.appendChild(s); } } catch {}
-  if (!overlay.getAttribute("data-appearance")) overlay.setAttribute("data-appearance", themeMode());
-  const wrap = document.createElement("div");
-  wrap.className = "hl-theme"; wrap.setAttribute("role", "radiogroup"); wrap.setAttribute("aria-label", "Appearance");
-  const draw = () => { const cur = themeMode(); wrap.querySelectorAll("button").forEach((b) => { const on = b.dataset.mode === cur; b.classList.toggle("on", on); b.setAttribute("aria-checked", String(on)); }); };
-  for (const m of THEME_MODES) {
-    const b = document.createElement("button");
-    b.type = "button"; b.dataset.mode = m; b.setAttribute("role", "radio");
-    b.textContent = m.charAt(0).toUpperCase() + m.slice(1);
-    b.onclick = () => { applyMode(overlay, m); draw(); };
-    wrap.appendChild(b);
-  }
-  draw();
-  overlay.appendChild(wrap);
-}
-
+// ── THE ONE IDENTITY CONTROL — your name IS the sign-in. ──────────────────────────────────────────────
+// No heading, no separate label: the emblem (or your portrait) above, then ONE button that carries the
+// fingerprint and your name — who you are and the act of proving it are the same object. While the enclave
+// checks you, the button scans (pure CSS on :disabled — every door gets it for free). Appearance and boot
+// style live behind the ⋯ door (holo-plymouth's Appearance panel), so the lock itself stays two choices.
 function renderBusy(panel, msg) {
-  panel.innerHTML = `${avatarHtml(null)}<h1 class="hl-name">Welcome</h1><div class="hl-auth"><div class="status"><span class="spin"></span><span>${esc(msg || "")}</span></div></div>`;
+  panel.innerHTML = `${avatarHtml(null)}<div class="hl-auth"><div class="status"><span class="spin"></span><span>${esc(msg || "")}</span></div></div>`;
 }
 function renderReturning(panel, u) {
-  panel.innerHTML = `${avatarHtml(u)}<h1 class="hl-name">${esc(u.label || "You")}</h1>
-    <div class="hl-auth"><button class="hl-bio" id="hl-bio">${I.fp}It’s me</button>${guestBtnHtml()}<div class="status"></div></div>`;
+  panel.innerHTML = `${avatarHtml(u)}
+    <div class="hl-auth"><button class="hl-bio" id="hl-bio" aria-label="Sign in as ${esc(u.label || "you")}">${I.fp}<span>${esc(u.label || "It’s me")}</span></button>${guestBtnHtml()}<div class="status"></div></div>`;
+  hydrateFace(panel, u);
 }
 function renderFirstRun(panel) {
-  panel.innerHTML = `${avatarHtml(null)}<h1 class="hl-name">Welcome</h1>
-    <div class="hl-auth"><button class="hl-bio" id="hl-signin" title="Sign in — one tap, nothing to set up">${I.fp}Sign in</button>${guestBtnHtml()}<div class="status"></div></div>`;
+  panel.innerHTML = `${avatarHtml(null)}
+    <div class="hl-auth"><button class="hl-bio" id="hl-signin" title="One tap, nothing to set up">${I.fp}<span>Sign in</span></button>${guestBtnHtml()}<div class="status"></div></div>`;
 }
 function renderNoBio(panel, u, reason) {
-  panel.innerHTML = `${avatarHtml(u)}<h1 class="hl-name">${esc((u && u.label) || "Welcome")}</h1>
-    <div class="hl-auth"><button class="hl-bio" id="hl-guest">${I.ghost}Continue as Guest</button>
+  panel.innerHTML = `${avatarHtml(u)}
+    <div class="hl-auth"><button class="hl-bio" id="hl-guest">${I.ghost}<span>Continue as guest</span></button>
       <div class="status">${esc(reason || "No device biometric here")}</div></div>`;
+  hydrateFace(panel, u);
 }
 
 // ── THE NAME CEREMONY — authenticate first, name second (the holo-login.relabel seam, now wired). ─────────
@@ -271,8 +244,6 @@ export async function signIn({ root, params, app = "holospace", appName = "Holog
   // module can't load or no frame ever lands, this greeter is exactly what it was.
   let plymouth = null;
   try { import("./holo-plymouth.mjs").then((m) => { plymouth = m.attachPlymouth(overlay); }).catch(() => {}); } catch {}
-  // APPEARANCE — Dark · Light · Immersive on the lock; writes the SAME holo.theme.v1 home wears. Fail-open.
-  try { mountAppearance(overlay); } catch {}
   const panel = document.getElementById("holo-login-panel");
   const statusEl = () => panel.querySelector(".status");
   const setStatus = (t, err) => { if (err) { try { plymouth && plymouth.calm(); } catch {} } const el = statusEl(); if (el) { el.className = "status" + (err ? " err" : ""); el.textContent = t || ""; } };

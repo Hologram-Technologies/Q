@@ -135,13 +135,14 @@ export function makeNameResolver({ fetchFn, hashers = {}, mirrors = [], lruSize 
     if (rec.kind === "refused" || rec.kind === "empty") return { ok: false, kind: rec.kind, why: rec.note || rec.kind };
     if (caps && Array.isArray(caps.kinds) && !caps.kinds.includes(rec.kind)) return { ok: false, kind: rec.kind, why: "kind-not-admitted" };   // SEC-2/5
     const admitted = caps && Array.isArray(caps.transports) ? mirrors.filter((m) => caps.transports.includes(m.name)) : mirrors;
-    const axes = rec.axis ? [rec.axis] : rec.hex ? Object.keys(AXES).filter((a) => AXES[a] === rec.hex.length) : [];
-    if (!axes.length || !rec.hex) return { ok: false, kind: rec.kind, needsIngest: true, why: "mutable pointer — dereference at the ingest boundary (name-records, S3)" };
-    for (const axis of axes) { const hit = lru.get(axis + ":" + rec.hex); if (hit) return { ok: true, kind: rec.kind, kappa: axis + ":" + rec.hex, bytes: hit, source: "cache" }; }
+    const hex = rec.hex || (rec.kappa ? rec.kappa.split(":")[1] : null);   // translated names (CID/SRI/eth) carry κ, not raw hex
+    const axes = rec.axis ? [rec.axis] : hex ? Object.keys(AXES).filter((a) => AXES[a] === hex.length) : [];
+    if (!axes.length || !hex) return { ok: false, kind: rec.kind, needsIngest: true, why: "mutable pointer — dereference at the ingest boundary (name-records, S3)" };
+    for (const axis of axes) { const hit = lru.get(axis + ":" + hex); if (hit) return { ok: true, kind: rec.kind, kappa: axis + ":" + hex, bytes: hit, source: "cache" }; }
     const whys = [];
     for (const axis of axes) {                                        // bare hex tries the registry in axis order
-      const r = await fetchVerified(axis, rec.hex, admitted);
-      if (r.ok) { remember(axis + ":" + rec.hex, r.bytes); return { ok: true, kind: rec.kind, kappa: axis + ":" + rec.hex, bytes: r.bytes, source: r.source }; }
+      const r = await fetchVerified(axis, hex, admitted);
+      if (r.ok) { remember(axis + ":" + hex, r.bytes); return { ok: true, kind: rec.kind, kappa: axis + ":" + hex, bytes: r.bytes, source: r.source }; }
       whys.push(axis + "(" + r.why + ")");
     }
     return { ok: false, kind: rec.kind, why: whys.join(" · ") };

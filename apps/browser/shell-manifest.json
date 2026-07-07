@@ -1,7 +1,7 @@
 {
  "v": 1,
- "created": 1783434869681,
- "aggregate": "2fee9c2d8744e471542bf6b113ed0e51b1fac50e6b5cbdf6e1fd2f9d609f219b",
+ "created": 1783435155946,
+ "aggregate": "19fa772d8c6f1ef053d4852d945a5316af4c15116d927ab5500184f2972c2cfe",
  "assets": [
   {
    "path": "/apps/browser/browser-sw.js",
@@ -50,13 +50,13 @@
   },
   {
    "path": "/apps/browser/index.html",
-   "kappa": "b22f3133984464e00ce54240c030fa2a2c035e792ae5f51126b9e8453db689c4",
-   "bytes": 89648
+   "kappa": "ea717e678fc6882705e1c3702025e389f252ccbdbfde13bf85ac81037a3440a9",
+   "bytes": 89775
   },
   {
    "path": "/apps/browser/ipfs-sw.js",
-   "kappa": "d4d19031de6308843829b2e0854d235b69b260c4d06efc5404f35c90a544020a",
-   "bytes": 8198
+   "kappa": "5abca336babd03891a531fd7869d6bebb3d4f00e7484501edc121cdb5d8e5c6b",
+   "bytes": 8846
   },
   {
    "path": "/apps/browser/peer-host.html",
@@ -140,8 +140,8 @@
   },
   {
    "path": "/apps/browser/_shared/holo-rendezvous.mjs",
-   "kappa": "ab8f9c7c5558c8c1c8a8107ce89bc2c5b062247f29fe336e55c16de6f5038876",
-   "bytes": 20453
+   "kappa": "63093be0be41b4338f8f5cce526e7f19bc4a6e4dfc0ce0a40ef5440894271483",
+   "bytes": 20969
   },
   {
    "path": "/apps/browser/_shared/holo-routing.mjs",
@@ -172,6 +172,11 @@
    "path": "/apps/browser/_spike/onion/onion-spike.html",
    "kappa": "5c20d7dfa7c0f3f10cb637f8fe79263fa6a3c19de5fddec1b859309f7c03570e",
    "bytes": 3018
+  },
+  {
+   "path": "/apps/browser/_spike/onion/serve-parity.mjs",
+   "kappa": "c08e98ca026288a01b736df80a3b39f9e3e7e09d333168a48480923f3236b21a",
+   "bytes": 3899
   },
   {
    "path": "/apps/browser/_spike/onion/serve.mjs",

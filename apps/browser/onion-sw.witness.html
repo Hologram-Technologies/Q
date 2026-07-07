@@ -1,0 +1,68 @@
+<!doctype html><meta charset="utf-8"><title>onion SW witness</title>
+<body style="font:14px/1.5 system-ui;background:#0b141a;color:#e8eef5;padding:1.5rem">
+<h1 style="font-size:1rem">Holo Browser — onion through the REAL service worker (deploy gate)</h1>
+<pre id="out">running…</pre>
+<iframe id="view" style="width:100%;height:55vh;border:1px solid #22303a;border-radius:8px;background:#fff;margin-top:1rem"></iframe>
+<script type="module">
+// Prove the SHIPPED browser-sw.js routes a .onion end to end: register the real SW, drive an IN-SCOPE
+// navigation to an onion, assert it committed with egress=onion-host (the loopback Tor bridge) and painted
+// real content. Mirrors peer-ladder.witness.html; onion needs no peer — the onion-host tier is the same-origin
+// /apps/browser/onion endpoint this parity server mounts. Serve via _spike/onion/serve-parity.mjs on :8474.
+const out = document.getElementById("out"); const log = (m) => { out.textContent += "\n" + m; };
+const results = []; const ok = (n, c, extra) => { results.push([n, c]); log((c ? "✓ " : "✗ ") + n + (extra ? "  " + extra : "")); };
+const VIEW = "/apps/browser/webview/";
+const enc = (s) => btoa(unescape(encodeURIComponent(s))).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
+const TARGET = "http://2gzyxa5ihm7nsggfxnu52rck2vv4rvmdlkiu3zzui5du4xyclen53wid.onion/";   // Tor Project onion (stable)
+
+(async () => {
+  try {
+    // 0 · the onion host must be reachable on loopback (this parity server)
+    const h = await fetch("/apps/browser/onion?url=data:probe").then((r) => r.headers.get("x-holo-onion")).catch(() => null);
+    ok("onion host present on loopback (x-holo-onion)", h === "ready", "hdr=" + h);
+
+    // 1 · register the REAL shipped service worker at its real scope
+    const reg = await navigator.serviceWorker.register("/apps/browser/browser-sw.js", { type: "module", scope: VIEW });
+    if (!reg.active) { const w0 = reg.installing || reg.waiting; if (w0) await new Promise((res) => { w0.addEventListener("statechange", () => w0.state === "activated" && res()); setTimeout(res, 6000); }); }
+    ok("browser-sw.js active", !!(reg.active || reg.waiting));
+
+    // 2 · drive a REAL in-scope navigation to the onion (only a controlled client's request fires the SW)
+    const committed = new Promise((res) => {
+      const t = setTimeout(() => res({ timeout: true }), 45000);   // cold Tor circuit + subresources
+      navigator.serviceWorker.addEventListener("message", function hh(e) {
+        if (e.data && e.data.type === "committed" && e.data.source === TARGET) { navigator.serviceWorker.removeEventListener("message", hh); clearTimeout(t); res(e.data); }
+      });
+    });
+    const ifr = document.getElementById("view");
+    const tNav = performance.now();
+    ifr.src = VIEW + "w/" + enc(TARGET);
+    const c = await committed;
+    ok("navigation committed (not timeout)", !c.timeout, "egress=" + (c && c.egress));
+    ok("carried by the Tor bridge (egress=onion-host)", c && c.egress === "onion-host");
+    ok("committed: minted + κ", !!(c && c.kappa), "κ=" + ((c && c.kappa || "").slice(0, 12)));
+
+    // 3 · the page PAINTS real content + its IMAGES actually load (the thing that looked broken)
+    await new Promise((r) => { ifr.addEventListener("load", r, { once: true }); setTimeout(r, 40000); });
+    await new Promise((r) => setTimeout(r, 3500));   // let images finish streaming over Tor
+    const tFull = performance.now() - tNav;
+    let painted = false, imgs = 0, imgOk = 0;
+    try { const d = ifr.contentDocument; const txt = d && d.body ? (d.body.innerText || "") : ""; painted = /tor|anonymity|defend|privacy/i.test(txt);
+      const list = [...(d ? d.images : [])]; imgs = list.length; imgOk = list.filter((i) => i.complete && i.naturalWidth > 0).length; } catch { painted = "cross-origin"; }
+    ok("onion page painted real content", !!painted);
+    ok("images actually loaded over Tor (" + imgOk + "/" + imgs + ")", imgs > 0 && imgOk >= Math.ceil(imgs * 0.8), imgOk + "/" + imgs + " in " + (tFull / 1000).toFixed(1) + "s");
+
+    // 4 · κ-STORE cache — the web2-feel win: a SECOND visit paints from the store with ZERO Tor.
+    const committed2 = new Promise((res) => { const t = setTimeout(() => res({ timeout: true }), 15000);
+      navigator.serviceWorker.addEventListener("message", function h2(e) { if (e.data && e.data.type === "committed" && e.data.source === TARGET) { navigator.serviceWorker.removeEventListener("message", h2); clearTimeout(t); res(e.data); } }); });
+    const t2 = performance.now(); ifr.src = "about:blank"; await new Promise((r) => setTimeout(r, 200)); ifr.src = VIEW + "w/" + enc(TARGET);
+    const c2 = await committed2; const tCache = performance.now() - t2;
+    ok("2nd visit served from κ-store (egress=kappa-store)", c2 && c2.egress === "kappa-store", "egress=" + (c2 && c2.egress));
+    ok("cache reload is fast (<1.5s)", !c2.timeout && tCache < 1500, "reload " + tCache.toFixed(0) + "ms vs first " + tFull.toFixed(0) + "ms");
+
+    const pass = results.filter((r) => r[1]).length;
+    log("\nfirst paint+images " + (tFull / 1000).toFixed(1) + "s · cached reload " + tCache.toFixed(0) + "ms · images " + imgOk + "/" + imgs);
+    log(pass + "/" + results.length + (pass === results.length ? "  ALL GREEN — safe to deploy" : "  — NOT GREEN, do not deploy"));
+    window.__witness = { pass, total: results.length, results, first_ms: Math.round(tFull), cache_ms: Math.round(tCache), images: imgOk + "/" + imgs };
+  } catch (e) { log("FATAL " + (e && e.stack || e)); window.__witness = { fatal: String(e) }; }
+})();
+</script>
+</body>

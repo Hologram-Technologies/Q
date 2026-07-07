@@ -145,13 +145,19 @@ const CSS = `
 #holo-login .hlp.done canvas{animation:none;filter:brightness(1.7);transition:filter .5s ease}
 #holo-login.hl-boot .hl-panel{opacity:0!important;pointer-events:none!important}
 #holo-login .hl-panel{transition:opacity .55s ease}
-#holo-login .hlp-btn{position:fixed;right:max(20px,env(safe-area-inset-right));bottom:max(18px,env(safe-area-inset-bottom));z-index:4;
-  pointer-events:auto;display:inline-flex;align-items:center;gap:9px;background:var(--glass,rgba(10,14,20,.42));border:1px solid var(--glass-border,rgba(255,255,255,.14));
-  color:var(--glass-ink,rgba(231,237,250,.8));font:500 var(--u,16px)/1 "Segoe UI",system-ui,sans-serif;padding:11px 18px;border-radius:999px;cursor:pointer;
+/* the ⋯ door — the SAME quiet affordance the home screen wears, top-right: everything about how this
+   computer looks and wakes lives behind it. One circle, no words. */
+#holo-login .hlp-btn{position:fixed;right:max(20px,env(safe-area-inset-right));top:max(18px,env(safe-area-inset-top));z-index:4;
+  pointer-events:auto;display:grid;place-items:center;width:44px;height:44px;background:var(--glass,rgba(10,14,20,.42));border:1px solid var(--glass-border,rgba(255,255,255,.14));
+  color:var(--glass-ink,rgba(231,237,250,.8));border-radius:50%;cursor:pointer;font-size:var(--u,16px);
   backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);transition:color .15s,border-color .15s,background .15s;opacity:0;animation:hlp-in .6s ease 1.2s forwards}
 #holo-login .hlp-btn:hover{color:var(--ink,#fff);border-color:rgba(52,211,166,.55)}
-#holo-login .hlp-btn svg{width:17px;height:17px}
+#holo-login .hlp-btn svg{width:20px;height:20px}
 @keyframes hlp-in{to{opacity:1}}
+#holo-login .hlp-modes{display:flex;gap:4px;margin:0 22px 16px;padding:4px;border-radius:999px;background:var(--field-bg,rgba(255,255,255,.07));border:1px solid var(--field-border,rgba(255,255,255,.12));flex:0 0 auto}
+#holo-login .hlp-modes button{flex:1 1 0;border:0;background:none;color:var(--muted,#9fb3d0);font:500 var(--u,16px)/1 "Segoe UI",system-ui,sans-serif;padding:10px 0;border-radius:999px;cursor:pointer;transition:color .15s,background .15s}
+#holo-login .hlp-modes button:hover{color:var(--ink,#fff)}
+#holo-login .hlp-modes button.on{background:var(--ink,#f4f7fc);color:var(--wall,#05070c);font-weight:600}
 #holo-login .hlp-gal{position:fixed;inset:0;z-index:6;pointer-events:auto;background:var(--glass,rgba(1,4,9,.6));backdrop-filter:blur(9px);-webkit-backdrop-filter:blur(9px);
   display:grid;place-items:center;animation:hlp-fade .22s ease}
 @keyframes hlp-fade{from{opacity:0}}
@@ -207,9 +213,21 @@ const reducedMotion = () => { try { return matchMedia("(prefers-reduced-motion: 
 // behavior. Force a rung: ?emblem=gpu | ?emblem=2d.
 const POSES = {
   boot:   { cx: 0.5, cy: 0.46, cap: 0.62 },
-  greet:  { cx: 0.5, cy: 0.215, cap: 0.22, anchor: true, mult: 1.5 },
-  verify: { cx: 0.5, cy: 0.215, cap: 0.26, anchor: true, mult: 1.7 },
+  greet:  { cx: 0.5, cy: 0.20, cap: 0.30, anchor: true, mult: 2.0 },
+  verify: { cx: 0.5, cy: 0.20, cap: 0.34, anchor: true, mult: 2.2 },
 };
+// anchored poses GROW UPWARD from the avatar slot: the emblem's bottom edge stays pinned to the slot's
+// bottom, so a larger emblem rises toward the sky and never crowds the identity button beneath it.
+function anchorTarget(overlay, p, fallback) {
+  try {
+    const a = overlay.querySelector(".hl-avatar");
+    if (a) {
+      const r = a.getBoundingClientRect();
+      if (r.width) { const cap = r.width * (p.mult || 2.0); return { cx: r.left + r.width / 2, cy: r.top + r.height - cap / 2, cap }; }
+    }
+  } catch {}
+  return fallback;
+}
 // Plymouth sprites bake their black screen into the PNG; over the wallpaper that black must be AIR.
 // The GPU backend keys in the fragment shader (zero main-thread cost); this CPU twin serves the 2D floor.
 // `ink` = the light appearance: a mostly-white sprite would vanish on paper, so the keyed emblem is
@@ -246,17 +264,10 @@ function make2dPlayer(overlay, layer, canvas, onLive) {
   // anchored poses resolve to the avatar slot's live rect (panel rise/resize tracked every frame)
   function liveTarget() {
     if (!target.anchor) return target;
-    try {
-      const a = overlay.querySelector(".hl-avatar");
-      if (a) {
-        const r = a.getBoundingClientRect();
-        if (r.width) {
-          const cw = canvas.width / dpr, ch = canvas.height / dpr, vmin = Math.min(cw, ch);
-          return { cx: (r.left + r.width / 2) / cw, cy: (r.top + r.height / 2) / ch, cap: (r.width * (target.mult || 1.5)) / vmin };
-        }
-      }
-    } catch {}
-    return target;
+    const cw = canvas.width / dpr, ch = canvas.height / dpr, vmin = Math.min(cw, ch);
+    const px = anchorTarget(overlay, target, null);
+    if (!px) return target;
+    return { cx: px.cx / cw, cy: px.cy / ch, cap: px.cap / vmin };
   }
   function draw(idx) {
     const img = images[idx]; if (!img) return;
@@ -432,12 +443,7 @@ async function makeGpuPlayer(overlay, layer, canvas, onLive) {
   const send = () => {
     const p = target, cw = innerWidth, ch = innerHeight, vmin = Math.min(cw, ch);
     let t = { cx: cw * p.cx, cy: ch * p.cy, cap: vmin * p.cap };
-    if (p.anchor) {
-      try {
-        const a = overlay.querySelector(".hl-avatar");
-        if (a) { const r = a.getBoundingClientRect(); if (r.width) t = { cx: r.left + r.width / 2, cy: r.top + r.height / 2, cap: r.width * (p.mult || 1.5) }; }
-      } catch {}
-    }
+    if (p.anchor) t = anchorTarget(overlay, p, t);
     if (!last || Math.abs(t.cx - last.cx) > 0.25 || Math.abs(t.cy - last.cy) > 0.25 || Math.abs(t.cap - last.cap) > 0.25) {
       last = t;
       try { worker.postMessage({ t: "pose", cx: t.cx, cy: t.cy, cap: t.cap }); } catch {}
@@ -498,16 +504,51 @@ async function thumbFor(t) {
   return url;
 }
 
-// ── the gallery: pick a boot style from the login screen — live apply behind the sheet ────────────────
+// ── APPEARANCE — the ONE panel behind the ⋯ door: how your computer looks (Dark · Light · Immersive,
+// the SAME holo.theme.v1 row home wears, via the canonical HoloTheme.setMode contract) and how it wakes
+// (the boot styles). No login-only state anywhere: pick here, the whole OS follows. ────────────────────
+const THEME_MODES = ["dark", "light", "immersive"];
+function themeMode() {
+  try { const t = JSON.parse(localStorage.getItem("holo.theme.v1") || "{}") || {}; return t.immersive === false ? (t.palette === "light" ? "light" : "dark") : "immersive"; } catch { return "immersive"; }
+}
+function themeWallSrc() {
+  let w = ""; try { w = (JSON.parse(localStorage.getItem("holo.theme.v1") || "{}") || {}).wallpaper || ""; } catch {}
+  const m = String(w).match(/^(sha256|blake3|sha512):([0-9a-f]+)$/i);
+  let src = m ? ("/.holo/" + m[1].toLowerCase() + "/" + m[2]) : ((!w || w === "plain" || /^live:/i.test(w)) ? "" : w);
+  if (!src) { try { src = localStorage.getItem("holo-messenger/wallpaper-src") || ""; } catch {} }
+  return src || "/apps/holo-messenger/_vendor/wallpaper-default.jpg";
+}
+function applyMode(overlay, m) {
+  try {
+    if (window.HoloTheme && window.HoloTheme.setMode) window.HoloTheme.setMode(m);
+    else { const t = JSON.parse(localStorage.getItem("holo.theme.v1") || "{}") || {}; if (m === "immersive") t.immersive = true; else { t.palette = m; t.immersive = false; } localStorage.setItem("holo.theme.v1", JSON.stringify(t)); }
+  } catch {}
+  overlay.setAttribute("data-appearance", m);
+  const wall = overlay.querySelector(".hl-wall");
+  if (wall) wall.style.backgroundImage = m === "immersive" ? 'url("' + themeWallSrc() + '")' : "none";
+}
+
+// ── the panel: modes on top, boot styles beneath — everything applies LIVE behind the sheet ───────────
 function openGallery(overlay, current, onPick) {
   const gal = document.createElement("div"); gal.className = "hlp-gal";
-  gal.innerHTML = `<div class="hlp-sheet" role="dialog" aria-label="Boot style">
-    <div class="hlp-head"><div class="hlp-title">Boot style</div>
+  gal.innerHTML = `<div class="hlp-sheet" role="dialog" aria-label="Appearance">
+    <div class="hlp-head"><div class="hlp-title">Appearance</div>
       <button class="hlp-x" aria-label="Close">✕</button></div>
+    <div class="hlp-modes" role="radiogroup" aria-label="Theme"></div>
     <div class="hlp-srch"><input type="search" placeholder="Search" spellcheck="false"></div>
     <div class="hlp-grid"></div>
     <div class="hlp-foot">Animations by <a href="https://github.com/adi1090x/plymouth-themes" target="_blank" rel="noopener">adi1090x</a> · GPL 3.0</div>
   </div>`;
+  const modes = gal.querySelector(".hlp-modes");
+  const drawModes = () => { const cur = themeMode(); modes.querySelectorAll("button").forEach((b) => { const on = b.dataset.mode === cur; b.classList.toggle("on", on); b.setAttribute("aria-checked", String(on)); }); };
+  for (const m of THEME_MODES) {
+    const b = document.createElement("button");
+    b.type = "button"; b.dataset.mode = m; b.setAttribute("role", "radio");
+    b.textContent = m.charAt(0).toUpperCase() + m.slice(1);
+    b.onclick = () => { applyMode(overlay, m); drawModes(); };   // live — the lock re-inks behind the sheet
+    modes.appendChild(b);
+  }
+  drawModes();
   const grid = gal.querySelector(".hlp-grid");
   const close = () => { gal.remove(); document.removeEventListener("keydown", esc, true); try { clearTimeout(sweep); io && io.disconnect(); } catch {} };
   const esc = (e) => { if (e.key === "Escape") { e.preventDefault(); e.stopPropagation(); close(); } };
@@ -587,6 +628,7 @@ export function attachPlymouth(overlay) {
   injectCss();
   const state = readState();
   try { if (!localStorage.getItem(KEY)) writeState(state); } catch {}   // persist the default → next cold boot gets the 0-ms baseline
+  try { if (!overlay.getAttribute("data-appearance")) overlay.setAttribute("data-appearance", themeMode()); } catch {}   // primitive overlays get the mode too
   let layer = null, canvas = null, player = null, gen = 0;
 
   function ensureLayer() {
@@ -641,10 +683,10 @@ export function attachPlymouth(overlay) {
   } else if (state.on) { setTimeout(endBoot, 0); }
   if (state.on) play(state.theme);
 
-  // the door: pick the boot style right here, on the login screen
+  // the ⋯ door — appearance + boot style in ONE panel, same affordance as the home screen
   const btn = document.createElement("button");
-  btn.type = "button"; btn.className = "hlp-btn"; btn.title = "Choose how this computer boots";
-  btn.innerHTML = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"><path d="M12 3v4M12 17v4M3 12h4M17 12h4M5.6 5.6l2.8 2.8M15.6 15.6l2.8 2.8M18.4 5.6l-2.8 2.8M8.4 15.6l-2.8 2.8"/></svg>Boot style`;
+  btn.type = "button"; btn.className = "hlp-btn"; btn.title = "Appearance"; btn.setAttribute("aria-label", "Appearance");
+  btn.innerHTML = `<svg viewBox="0 0 24 24" fill="currentColor"><circle cx="5" cy="12" r="1.7"/><circle cx="12" cy="12" r="1.7"/><circle cx="19" cy="12" r="1.7"/></svg>`;
   btn.onclick = () => openGallery(overlay, readState().on ? readState().theme : null, (name) => api.setTheme(name));
   btn.addEventListener("pointerenter", () => { try { store(); } catch {} }, { passive: true, once: true });   // warm the κ store during hover intent
   overlay.appendChild(btn);

@@ -662,6 +662,16 @@
         $("walletDid").textContent = did || ""; $("walletDid").onclick = () => copy(did);
         $("setDid").textContent = did ? short(did, 12) : "";
         $("acctAv").textContent = (did || "◈").replace("did:key:z", "").slice(0, 1).toUpperCase() || "◈";
+        // THE SOVEREIGN FACE — the same one resolver as the messenger rail + login gate: the operator's
+        // verified portrait (κ re-derived on every render, Law L5) replaces the letter; refused/absent → letter.
+        (async () => {
+          try {
+            if (!hi || !hi.operator) return;
+            const { resolvePortrait } = await import("../../../_shared/holo-portrait.mjs");
+            const p = await resolvePortrait({ operator: hi.operator, guest: !!hi.guest });
+            if (p) $("acctAv").innerHTML = `<img src="${p.url}" alt="" style="width:100%;height:100%;object-fit:cover;border-radius:50%">`;
+          } catch {}
+        })();
         // anchor the account name in the one identity (its label · pc/npc) rather than a generic number
         if (hi && hi.label) $("acctName").textContent = hi.label + (hi.subjectType === "npc" ? " · agent" : "");
         $("settingsBtn").classList.remove("hidden");
