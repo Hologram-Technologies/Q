@@ -16,6 +16,7 @@
 // past this device to arti-wasm. STATUS: UNVERIFIED in this build env (no Arti daemon here).
 
 import { nodeArtiFetch } from "./holo-onion-arti.node.mjs";
+import { rewriteHtml, rewriteCss, defaultProxy } from "./holo-onion-rewrite.mjs";
 
 export function onionRequestHandler({ socksHost = "127.0.0.1", socksPort = 9150 } = {}) {
   const onionFetch = nodeArtiFetch({ socksHost, socksPort });
@@ -32,9 +33,24 @@ export function onionRequestHandler({ socksHost = "127.0.0.1", socksPort = 9150 
       const headers = Object.assign({}, r.headers || {});
       headers["x-holo-onion"] = "routed";
       headers["x-holo-onion-verified"] = r.verified ? "1" : "0";
-      delete headers["content-length"]; // we set our own from the buffer
+
+      // Rewrite HTML/CSS so the WHOLE resource graph (css, img, links) routes back through Tor — the page
+      // renders like web2 and its links are browsable. `proxy` maps onion URLs to this same /onion endpoint.
+      let bytes = Buffer.from(r.bytes);
+      const ct = (headers["content-type"] || "").toLowerCase();
+      const proxy = defaultProxy;
+      let rewritten = false;
+      if (ct.includes("text/html")) { bytes = Buffer.from(rewriteHtml(bytes.toString("utf8"), target, proxy), "utf8"); rewritten = true; }
+      else if (ct.includes("text/css")) { bytes = Buffer.from(rewriteCss(bytes.toString("utf8"), target, proxy), "utf8"); rewritten = true; }
+
+      // framing headers are ours to set now that body length may have changed; strip content-encoding only
+      // when we re-encoded text (identity was requested, so there should be none anyway).
+      delete headers["content-length"]; delete headers["transfer-encoding"];
+      if (rewritten) delete headers["content-encoding"];
+      // let onion pages frame + script inside our iframe (they can't reach out — every onion URL is proxied)
+      delete headers["content-security-policy"]; delete headers["x-frame-options"];
       res.writeHead(r.status || 200, headers);
-      res.end(Buffer.from(r.bytes));
+      res.end(bytes);
     } catch (e) {
       // Arti down or onion unreachable → 502 so the caller's hostOnionFetch throws and the ladder falls past.
       res.writeHead(502, { "content-type": "text/plain", "x-holo-onion": "unavailable" });

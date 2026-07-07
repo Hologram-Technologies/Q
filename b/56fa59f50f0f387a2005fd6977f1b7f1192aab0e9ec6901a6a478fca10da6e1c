@@ -297,18 +297,28 @@ function emptyOrWalled(bytes, text) {
   return false;
 }
 // (b) any other page that yields a dead paint → an HONEST, useful interstitial (not a blank frame):
-// the URL, the tier that tried, and one-tap actions (retry · search this · open via your device).
+// the URL, the tier that tried, and one-tap actions (retry · search this · carry via your device).
+// The interstitial must name the FIX, not just the problem: when no device-mesh peer is armed, its
+// primary escape is "Use my own device", which messages the browser page (same-origin parent) to
+// open the pairing flow. It also broadcasts dead-paint so the page can nudge once per session.
 function interstitialPage(realUrl, info = {}) {
+  broadcast({ type: "dead-paint", url: realUrl, via: info.via || "none", peer: PEER_READY });   // fire-and-forget — the page decides whether to nudge
   const safe = String(realUrl).replace(/[<&"]/g, (c) => ({ "<": "&lt;", "&": "&amp;", '"': "&quot;" }[c]));
   const ddg = "https://html.duckduckgo.com/html/?q=" + encodeURIComponent(realUrl.replace(/^https?:\/\//, ""));
   const via = info.via ? String(info.via).replace(/[<&"]/g, "") : "the network";
+  // an armed peer that STILL dead-painted is a different story than an unpaired mount — say the true one.
+  const fix = PEER_READY
+    ? `<p>Your device mesh is connected, but this site still answered empty — it may be down or refusing automated fetches.</p>`
+    : `<p>Your own computer can carry this request instead — pair a Hologram host once and pages load through <b>your</b> device, not a public relay.</p>`;
+  const peerBtn = PEER_READY ? "" : `<a class="btn p" id=peer href="#">Use my own device</a>`;
   const html = `<!doctype html><meta charset=utf-8><meta name=viewport content="width=device-width,initial-scale=1">
 <title>${safe}</title><style>:root{color-scheme:dark}body{font:15px/1.6 system-ui;background:#0b141a;color:#e8eef5;margin:0;min-height:100vh;display:grid;place-items:center}.c{max-width:560px;padding:2.2rem;text-align:center}h1{font-size:1.1rem;font-weight:600;margin:.2rem 0 .5rem}p{opacity:.75;margin:.5rem 0}code{background:#11151c;padding:.15rem .45rem;border-radius:6px;color:#9db7ff;word-break:break-all}.row{display:flex;gap:.6rem;justify-content:center;flex-wrap:wrap;margin-top:1.3rem}a.btn{display:inline-block;padding:.6rem 1.1rem;border-radius:10px;background:#1b2330;color:#e8eef5;text-decoration:none;border:1px solid #2a3546;font-weight:500}a.btn.p{background:linear-gradient(135deg,#7b68ee,#3b6ee0);border:none}.k{opacity:.4;font-size:.82rem;margin-top:1.4rem}</style>
 <div class=c><div style="font-size:2rem">🌐</div><h1>This page didn't send anything to show</h1>
 <p>Hologram reached it through <b>${via}</b>, but the site returned an empty or script-walled response — common on the serverless web without your own device carrying the request.</p>
-<p><code>${safe}</code></p>
-<div class=row><a class="btn p" href="${inScope(realUrl)}">Retry</a><a class=btn href="${inScope(ddg)}">Search this instead</a></div>
-<p class=k>Content-addressed · verified before paint · nothing left your device but the request.</p></div>`;
+${fix}<p><code>${safe}</code></p>
+<div class=row>${peerBtn}<a class="btn${PEER_READY ? " p" : ""}" href="${inScope(realUrl)}">Retry</a><a class=btn href="${inScope(ddg)}">Search this instead</a></div>
+<p class=k>Content-addressed · verified before paint · nothing left your device but the request.</p></div>
+<script>var b=document.getElementById('peer');if(b)b.onclick=function(e){e.preventDefault();parent.postMessage({type:'holo-peer-setup',url:document.querySelector('code').textContent},'*')}</script>`;
   return new Response(html, { status: 200, headers: { "content-type": "text/html; charset=utf-8", "x-holo-egress": info.via || "none", "x-holo-interstitial": "1", ...COEPH } });
 }
 
@@ -335,14 +345,27 @@ async function serveKappa(kappa, path) {
 
 // pass a non-GET (a rewritten <form method=post> — consent saves, searches) through with its
 // body; the /web proxy forwards POST upstream. GET/HEAD stay plain proxy fetches.
-// isDoc tags the MAIN-FRAME navigation (not subresources) with x-holo-doc so the egress can
-// answer just the top document through a real headless Chrome (JS + persistent cookies),
-// leaving css/js/img subresources on the cheap byte pipe.
-let EGRESS_OPERATOR = "";   // the signed-in operator κ (page posts it via {type:"setop"}); keys the per-identity egress Chrome
+// isDoc tags the MAIN-FRAME navigation with x-holo-doc so the egress renders it in a real Chrome.
+// x-holo-operator rides EVERY request (doc AND subresource): the top document runs as the operator,
+// and the route also fetches that page's SAME-ORIGIN subresources/XHR through the operator's Chrome
+// so an authenticated page renders its logged-in content (its data XHRs would otherwise 401). The
+// route decides which subresources are authenticated (same origin as a page the operator rendered);
+// public cross-origin assets fall to the cheap byte pipe. (The ladder strips these headers beyond
+// tier 1 — they'd force a CORS preflight — and re-encodes doc/op in the host-tier query instead.)
+// The signed-in operator κ (page posts it via {type:"setop"}); keys the per-identity egress Chrome.
+// A SW is TERMINATED and restarted by the browser at will, which would zero an in-memory var and
+// silently log the operator out until the page next re-pushes — so it is MIRRORED into the Cache
+// and re-read on demand. The page relay is the source of truth; the cache is the crash-survivor.
+let EGRESS_OPERATOR = "";
+const OPSTORE = "holo-browser-op-v1";
+async function persistOp(op) { try { const c = await caches.open(OPSTORE); await c.put("/op", new Response(op || "")); } catch {} }
+async function loadOp() { if (EGRESS_OPERATOR) return EGRESS_OPERATOR; try { const c = await caches.open(OPSTORE); const r = await c.match("/op"); if (r) EGRESS_OPERATOR = (await r.text()) || ""; } catch {} return EGRESS_OPERATOR; }
 async function proxyInit(req, isDoc) {
   const init = { redirect: "follow" };
   const headers = {};
-  if (isDoc) { headers["x-holo-doc"] = "1"; if (EGRESS_OPERATOR) headers["x-holo-operator"] = EGRESS_OPERATOR; }
+  const op = await loadOp();
+  if (op) headers["x-holo-operator"] = op;
+  if (isDoc) headers["x-holo-doc"] = "1";
   if (req && req.method && req.method !== "GET" && req.method !== "HEAD") {
     init.method = req.method;
     try { init.body = await req.arrayBuffer(); } catch {}
@@ -481,8 +504,27 @@ async function serveSub(realUrl, req) {
   return new Response(bytes, { status: 200, headers: KHDR(kappa, ct, { "x-holo-egress": via }) });
 }
 
+// content-addressed asset route: /.holo/<algo>/<κ>[.ext] — the OS host serves it natively, a mounted
+// static host has no such route. Serve from the local κ-store first, then the bundle's same-origin
+// b/<κ> store; MIME comes from the REQUESTED extension (strict MIME checking refuses octet-stream
+// module scripts and stylesheets, and b/ objects are extensionless).
+const KROUTE = /\/\.holo\/(?:sha256|blake3)\/([0-9a-f]{64})(?:\.([a-z0-9]+))?$/i;
+async function serveDotHolo(kappa, ext) {
+  const mime = mimeByExt("x." + ext) || "application/octet-stream";
+  const own = await kGet(kappa);
+  if (own) return new Response(own, { status: 200, headers: { "content-type": mime, ...COEPH } });
+  const r = await fetch(APP_BASE.replace(/apps\/browser\/$/, "") + "b/" + kappa);
+  if (!r.ok) return r;
+  return new Response(r.body, { status: 200, headers: { "content-type": mime, ...COEPH } });
+}
+
 self.addEventListener("fetch", (event) => {
   const url = new URL(event.request.url);
+  // 0 · same-origin κ-route → κ-store / b/ (see serveDotHolo above)
+  if (url.origin === self.location.origin) {
+    const km = url.pathname.match(KROUTE);
+    if (km) { event.respondWith(serveDotHolo(km[1].toLowerCase(), km[2] || "").catch(() => fetch(event.request))); return; }
+  }
   // 1 · navigations + documents inside our renderer scope
   if (url.origin === self.location.origin && url.pathname.startsWith(VIEW)) {
     const rest = url.pathname.slice(VIEW.length);
@@ -527,7 +569,7 @@ self.addEventListener("message", (e) => {
   if (m.type === "setext") { EXT = { dnr: Array.isArray(m.dnr) ? m.dnr : [], contentScripts: Array.isArray(m.contentScripts) ? m.contentScripts : [] }; if (e.ports && e.ports[0]) e.ports[0].postMessage({ ok: true, dnr: EXT.dnr.length, contentScripts: EXT.contentScripts.length }); }
   // the page tells the seam WHO is signed in (operator κ from the TEE presence) → the egress
   // gives each identity its own persistent Chrome. A SW can't read localStorage, so the page pushes it.
-  if (m.type === "setop") { EGRESS_OPERATOR = typeof m.operator === "string" ? m.operator : ""; if (e.ports && e.ports[0]) e.ports[0].postMessage({ ok: true }); }
+  if (m.type === "setop") { EGRESS_OPERATOR = typeof m.operator === "string" ? m.operator : ""; persistOp(EGRESS_OPERATOR); if (e.ports && e.ports[0]) e.ports[0].postMessage({ ok: true }); }
   // the page's device-mesh peer link came up/down → enable/disable the host-peer egress tier.
   if (m.type === "peer-ready") { PEER_READY = !!m.ready; if (typeof m.only === "boolean") PEER_ONLY = m.only; if (e.ports && e.ports[0]) e.ports[0].postMessage({ ok: true, peer: PEER_READY, only: PEER_ONLY }); }
   // the page answers a proxied peer fetch: a synthesized Response for egressFetch (bytes structured-cloned).

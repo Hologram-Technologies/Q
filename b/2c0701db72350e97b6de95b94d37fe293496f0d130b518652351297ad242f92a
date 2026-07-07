@@ -15,23 +15,38 @@
      holo-login κ). This is the never-blank baseline first-paint; the module ENHANCES it (real biometric
      wiring). φ-proportioned, black-on-teal, glass-unfog on success — the same vocabulary as holo://login. -->
 <style>
-  #holo-login{position:fixed;inset:0;z-index:2147483000;color:#f4f7fc;
+  #holo-login{position:fixed;inset:0;z-index:2147483000;color:var(--ink);
     font-family:"Segoe UI",system-ui,-apple-system,"Oxygen",sans-serif;--phi:1.618;
     --u:clamp(16px,1.7vmin,19px);--g1:calc(var(--u)*1.618);--g2:calc(var(--u)*2.618);
     --avatar:clamp(96px,calc(var(--u)*6.854),128px);--field:min(86vw,calc(var(--avatar)*2.618));
-    --accent:#7defc9;--accent-2:#34d3a6;--ink-dim:rgba(231,237,250,.82);}
+    --accent:#7defc9;--accent-2:#34d3a6;
+    /* ONE appearance token set — every element reads these; [data-appearance] flips them.
+       immersive (default) = the home wallpaper behind soft-shadowed ink · dark/light = flat, shadowless, high contrast */
+    --ink:#f4f7fc;--ink-dim:rgba(231,237,250,.82);--status:#c4f3e2;
+    --shadow:0 2px 18px rgba(0,0,0,.45);--wall:#05070c;
+    --glass:rgba(10,14,20,.42);--glass-border:rgba(255,255,255,.14);--glass-ink:rgba(231,237,250,.8);
+    --sheet:rgba(8,12,18,.94);--muted:#8b949e;--link:#58a6ff;--field-bg:rgba(255,255,255,.09);--field-border:rgba(255,255,255,.22);}
+  #holo-login[data-appearance="dark"]{--shadow:none;}
+  #holo-login[data-appearance="light"]{--ink:#0b1220;--ink-dim:rgba(11,18,32,.74);--status:#0e6f5c;
+    --shadow:none;--wall:#eef1f6;
+    --glass:rgba(255,255,255,.66);--glass-border:rgba(11,18,32,.18);--glass-ink:rgba(11,18,32,.8);
+    --sheet:rgba(250,252,255,.97);--muted:#5a6572;--link:#0969da;--field-bg:rgba(11,18,32,.06);--field-border:rgba(11,18,32,.22);}
   #holo-login *{box-sizing:border-box;}
-  #holo-login .hl-wall{position:fixed;inset:0;z-index:0;background:#05070c center/cover no-repeat;}
+  #holo-login .hl-wall{position:fixed;inset:0;z-index:0;background:var(--wall) center/cover no-repeat;}
   /* the wallpaper shows EXACTLY as the home screen wears it — no blur, no scrim. The layer stays only as
      the unfog animation target; text/buttons carry their own shadows for legibility. */
   #holo-login .hl-frost{position:fixed;inset:0;z-index:1;background:transparent;pointer-events:none;}
-  #holo-login .hl-lock{position:fixed;inset:0;z-index:2;display:grid;place-items:center;padding:var(--g2);}
+  /* GOLDEN SECTION: the identity mark (emblem/avatar) centers on the 38.2% line — 1/φ² of the screen above,
+     1/φ below. All gaps are already φ-scaled (--g1/--g2), so the whole column derives from one number. */
+  #holo-login .hl-lock{position:fixed;inset:0;z-index:2;display:grid;justify-items:center;align-items:start;
+    padding:calc(38.2vh - var(--avatar)/2) var(--g2) var(--g2);}
+  @media (max-height:620px){#holo-login .hl-lock{padding-top:calc(28vh - var(--avatar)/2);}}
   #holo-login .hl-panel{display:flex;flex-direction:column;align-items:center;text-align:center;width:var(--field);max-width:92vw;}
   #holo-login .hl-avatar{width:var(--avatar);height:var(--avatar);border-radius:50%;display:grid;place-items:center;color:#fff;
     font-size:calc(var(--avatar)*.37);font-weight:600;letter-spacing:.02em;user-select:none;
     box-shadow:0 .6em 1.8em rgba(0,0,0,.4),inset 0 0 0 2px rgba(255,255,255,.6);}
   #holo-login .hl-avatar svg{width:62%;height:62%;opacity:.92;}
-  #holo-login .hl-name{margin:var(--g1) 0 0;font-size:calc(var(--u)*1.618);font-weight:300;line-height:1.15;text-shadow:0 2px 18px rgba(0,0,0,.45);}
+  #holo-login .hl-name{margin:var(--g1) 0 0;font-size:var(--u);font-weight:600;line-height:1.15;text-shadow:var(--shadow);}
   #holo-login .hl-auth{margin-top:var(--g1);display:flex;flex-direction:column;align-items:center;gap:var(--u);width:100%;}
   #holo-login .hl-bio{width:100%;min-height:max(var(--g2),48px);border:0;border-radius:calc(var(--u)*.7);cursor:pointer;
     display:inline-flex;align-items:center;justify-content:center;gap:calc(var(--u)*.55);font-size:var(--u);font-weight:600;color:#06140f;
@@ -43,14 +58,14 @@
   #holo-login .hl-bio svg{width:1.18em;height:1.18em;}
   #holo-login .hl-alt{background:none;border:0;color:var(--ink-dim);font-size:var(--u);font-family:inherit;cursor:pointer;
     padding:calc(var(--u)*.3) calc(var(--u)*.55);border-radius:calc(var(--u)*.4);display:inline-flex;align-items:center;gap:calc(var(--u)*.4);transition:color .15s;min-height:44px;}
-  #holo-login .hl-alt:hover{color:#fff;}
+  #holo-login .hl-alt:hover{color:var(--ink);}
   #holo-login .hl-alt svg{width:1.05em;height:1.05em;}
-  /* "More options" is subordinate to the two core actions — quieter, smaller, brightening on hover. */
-  #holo-login .hl-more{opacity:.72;font-size:calc(var(--u)*.92);}
+  /* "More options" is subordinate to the two core actions — quieter (same size, ONE type size everywhere). */
+  #holo-login .hl-more{opacity:.72;}
   #holo-login .hl-more:hover{opacity:1;}
   #holo-login .hl-opts{display:flex;gap:calc(var(--u)*.3);justify-content:center;flex-wrap:wrap;}
   #holo-login .hl-opts[hidden]{display:none;}
-  #holo-login .status{min-height:calc(var(--u)*1.5);font-size:var(--u);color:#c4f3e2;display:flex;align-items:center;justify-content:center;gap:calc(var(--u)*.5);text-shadow:0 1px 8px rgba(0,0,0,.4);}
+  #holo-login .status{min-height:calc(var(--u)*1.5);font-size:var(--u);color:var(--status);display:flex;align-items:center;justify-content:center;gap:calc(var(--u)*.5);text-shadow:var(--shadow);}
   #holo-login .status.err{color:#ffc0c0;}
   #holo-login .spin{width:1em;height:1em;border-radius:50%;border:2px solid rgba(125,239,201,.28);border-top-color:var(--accent);animation:hl-spin .7s linear infinite;flex:0 0 auto;}
   @keyframes hl-spin{to{transform:rotate(360deg);}}
@@ -118,7 +133,13 @@
   // sign-in is never a black void. A live-sim / none / plain falls back to the shipped default photo — the SAME
   // default the home shows — so login and home always match. κ → content route; a path/url passes through.
   try {
-    var _tw = ""; try { _tw = (JSON.parse(localStorage.getItem("holo.theme.v1") || "{}") || {}).wallpaper || ""; } catch (e) {}
+    // APPEARANCE at 0 ms — the lock wears the SAME holo.theme.v1 row home wears: immersive (wallpaper),
+    // dark, or light. One data attribute flips the whole token set; flat modes never fetch the photo.
+    var _thm = {}; try { _thm = JSON.parse(localStorage.getItem("holo.theme.v1") || "{}") || {}; } catch (e) {}
+    var _mode = (_thm.immersive === false) ? (_thm.palette === "light" ? "light" : "dark") : "immersive";
+    var _lv = document.getElementById("holo-login");
+    if (_lv) _lv.setAttribute("data-appearance", _mode);
+    var _tw = _thm.wallpaper || "";
     var _km = String(_tw).match(/^(sha256|blake3|sha512):([0-9a-f]+)$/i);
     var _wp = _km ? ("/.holo/" + _km[1].toLowerCase() + "/" + _km[2]) : ((!_tw || _tw === "plain" || /^live:/i.test(_tw)) ? "" : _tw);
     // MATCH THE HOME EXACTLY: the messenger home resolves its wallpaper as holo.theme.v1 → the messenger's own
@@ -128,7 +149,7 @@
     if (!_wp) { try { _wp = localStorage.getItem("holo-messenger/wallpaper-src") || ""; } catch (e) {} }
     if (!_wp) _wp = "./_vendor/wallpaper-default.jpg";
     var _wall = document.querySelector("#holo-login .hl-wall");
-    if (_wall) _wall.style.backgroundImage = 'url("' + _wp + '")';
+    if (_wall && _mode === "immersive") _wall.style.backgroundImage = 'url("' + _wp + '")';
     // PLYMOUTH BOOT SPLASH baseline (holo-plymouth.mjs owns the real player; this is the 0-ms frame). Once a
     // boot style has been worn (holo.plymouth.v1 persisted), a cold open paints a dedicated BLACK layer with
     // the sealed frame-0 synchronously — the machine boots like a machine — and the panel holds for one boot
@@ -171,6 +192,10 @@
      through the same-origin /sc/* routes the dev server now answers (holo-sc-route.mjs → yt-dlp). holo-fx.js
      drives the live equalizer; holo-vinyl lazily pulls holo-audio.js for the Hi-Fi chain. Each self-guards on the
      widgets/dock runtime, so they run standalone here. Classic defer → they set their globals before the bundle boots. -->
+<script src="../../usr/lib/holo/holo-fx.js" defer></script>
+<script src="../../usr/lib/holo/holo-vinyl.js" defer></script>
+<script src="../../usr/lib/holo/holo-video.js" defer></script>
+
 <script type="module">
   // ?v=N - bump on each deploy so the browser can never serve a stale cached bundle (the cause of a frozen/old build).
   import "./_vendor/ui/chat-ui.bundle.js?v=81a1870b63cf";   // → window.HoloMessengerUI

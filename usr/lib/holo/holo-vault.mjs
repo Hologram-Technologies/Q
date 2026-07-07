@@ -114,7 +114,7 @@ export async function openVault(operator, secret) {
     const pt = await (await ek(e.epoch)).open(unb64(e.sealed));
     if (!pt) throw new Error("vault: payload decrypt failed (SEC-1/SEC-5)");
     const p = JSON.parse(td.decode(pt));
-    proj.set(t, { id: t, origin: p.origin, kind: p.ck, username: p.username || null, label: p.label || null, secret: p.secret, updatedAt: e.ts });
+    proj.set(t, { id: t, origin: p.origin, kind: p.ck, username: p.username || null, label: p.label || null, secret: p.secret, favorite: !!p.favorite, folder: p.folder || null, fields: p.fields || null, totp: p.totp || null, updatedAt: e.ts });
   }
   let epoch = rec.epoch | 0;
   let head = rec.events.length ? rec.events[rec.events.length - 1].id : null;
@@ -136,8 +136,25 @@ export async function openVault(operator, secret) {
     operator,
     headKappa() { return head; },                                  // the head κ attests the whole chain
     epoch() { return epoch; },
-    list() { return [...proj.values()].map((e) => ({ id: e.id, origin: e.origin, kind: e.kind, username: e.username, label: e.label, updatedAt: e.updatedAt })); }, // metadata only — no secret
+    list() { return [...proj.values()].map((e) => ({ id: e.id, origin: e.origin, kind: e.kind, username: e.username, label: e.label, favorite: e.favorite, folder: e.folder, hasTotp: !!(e.totp || e.kind === "totp"), updatedAt: e.updatedAt })); }, // metadata only — no secret
     get(idOrOrigin) { for (const e of proj.values()) if (e.id === idOrOrigin || e.origin === idOrOrigin) return { ...e }; return null; }, // full cred for host autofill
+    // folders present in the live set (Bitwarden-parity grouping) — metadata only.
+    folders() { const s = new Set(); for (const e of proj.values()) if (e.folder) s.add(e.folder); return [...s].sort(); },
+    // current 2FA code for a totp-kind entry, or for a login carrying an inline `totp` seed. Read, not reveal:
+    // the CODE is ephemeral and non-reusable, so it is not consent-gated (the seed behind it never leaves).
+    async code(idOrOrigin) {
+      const e = handle.get(idOrOrigin); if (!e) return null;
+      const seed = e.kind === "totp" ? e.secret : e.totp; if (!seed) return null;
+      const { codeForEntry } = await import("./holo-totp.mjs");
+      return codeForEntry({ kind: "totp", secret: seed });
+    },
+    // password history for an entry (Bitwarden keeps prior secrets). Timestamps are metadata (returned freely);
+    // the old secrets themselves are step-up gated via revealHistory (SEC-2). Scans the signed chain (L5).
+    history(idOrOrigin) {
+      const e = handle.get(idOrOrigin); if (!e) return [];
+      const out = []; for (const ev of rec.events) if (ev.target === e.id && ev.kind === "credential.put") out.push({ at: ev.ts, epoch: ev.epoch });
+      return out.slice(0, -1).reverse(); // exclude the live one; newest-first
+    },
     // host-autofill subset: { origin -> {u,p} } for fillable kinds only (password/web3); never totp/note/card/identity.
     autofillMap() { const m = {}; for (const e of proj.values()) if ((e.kind === "password" || e.kind === "web3") && e.secret != null) m[e.origin] = { u: e.username || "", p: e.secret }; return m; },
     // push the subset to the native κ-host credential store. Browser + holo:// only (the factory gates the
@@ -146,15 +163,15 @@ export async function openVault(operator, secret) {
       if (typeof location === "undefined" || location.protocol !== "holo:" || typeof fetch !== "function") return false;
       try { const r = await fetch("holo://os/.pass/publish", { method: "POST", body: JSON.stringify(handle.autofillMap()) }); return r.ok; } catch { return false; }
     },
-    async put({ origin, kind = "password", username = null, secret: cred = null, label = null }) {
+    async put({ origin, kind = "password", username = null, secret: cred = null, label = null, favorite = false, folder = null, fields = null, totp = null }) {
       if (!origin) throw new Error("vault.put: origin required");
       if (!CRED_KINDS.has(kind)) throw new Error("vault.put: bad kind " + kind);
       const target = await targetKappa(origin, kind, username);
-      const sealed = await (await ek(epoch)).seal(te.encode(JSON.stringify({ origin, ck: kind, username, label, secret: cred })));
+      const sealed = await (await ek(epoch)).seal(te.encode(JSON.stringify({ origin, ck: kind, username, label, secret: cred, favorite: !!favorite, folder, fields, totp })));
       const ev = await append("credential.put", target, b64(sealed), epoch);
-      proj.set(target, { id: target, origin, kind, username, label, secret: cred, updatedAt: ev.ts });
+      proj.set(target, { id: target, origin, kind, username, label, secret: cred, favorite: !!favorite, folder, fields, totp, updatedAt: ev.ts });
       handle.publishAutofill();                                       // keep the host store current
-      return { id: target, origin, kind, username, label, updatedAt: ev.ts };
+      return { id: target, origin, kind, username, label, favorite: !!favorite, folder, updatedAt: ev.ts };
     },
     async remove(idOrOrigin) {
       const e = handle.get(idOrOrigin); if (!e) return 0;
@@ -170,6 +187,26 @@ export async function openVault(operator, secret) {
       const token = await requireStepUp({ kind: "vault.reveal", operator, appId: "holo://os", payload: { entry: e.id, origin: e.origin }, reason: "Reveal the saved secret for " + e.origin }, { credentialId });
       if (!token) throw new Error("vault: reveal denied");
       return { origin: e.origin, kind: e.kind, username: e.username, secret: e.secret, stepup: token.id };
+    },
+    // export the WHOLE vault in the clear (leaving must be as easy as arriving) — the single most consent-
+    // bearing act there is, so it is payload-bound step-up gated (SEC-2, fail-closed). Shape is portable JSON
+    // (Bitwarden-compatible field names) so another manager can import it. Never called by autofill.
+    async exportItems({ credentialId } = {}) {
+      const { requireStepUp } = await import("./holo-stepup.mjs");
+      const token = await requireStepUp({ kind: "vault.export", operator, appId: "holo://os", payload: { count: proj.size }, reason: "Export every saved login and secret in the clear" }, { credentialId });
+      if (!token) throw new Error("vault: export denied");
+      const items = [...proj.values()].map((e) => ({ id: e.id, type: e.kind, name: e.label || e.origin, origin: e.origin, username: e.username, secret: e.secret, favorite: e.favorite, folder: e.folder, fields: e.fields, totp: e.totp }));
+      return { format: "holo-pass/v1", exportedAt: new Date().toISOString(), stepup: token.id, items };
+    },
+    // import portable items into the vault (each becomes a signed put on the chain). Returns the count added.
+    async importItems(items) {
+      let n = 0;
+      for (const it of (items || [])) {
+        if (!it || !(it.origin || it.name)) continue;
+        await handle.put({ origin: it.origin || it.name, kind: CRED_KINDS.has(it.type) ? it.type : "password", username: it.username || null, secret: it.secret != null ? it.secret : null, label: it.name || null, favorite: !!it.favorite, folder: it.folder || null, fields: it.fields || null, totp: it.totp || null });
+        n++;
+      }
+      return n;
     },
   };
   handle.publishAutofill();                                          // publish on unlock (browser/holo:// only)

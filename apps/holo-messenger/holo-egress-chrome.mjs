@@ -84,6 +84,42 @@ const CONSENT_REJECT = `(function(){
   }catch(e){}
 })();`;
 
+// ── cosmetic AD STRIP — the half network blocking can't do. holo-shield's DNR stops the ad BYTES,
+// but the reserved ad SLOT (the "Advertisement" box) stays, leaving an empty gap. This REMOVES the
+// ad elements (so the layout collapses — not display:none, actual removal) and drops ad scripts,
+// run in the real egress Chrome BEFORE outerHTML capture. The bytes we mint into the κ never carry
+// the ad markup at all → less to hash, stream, and render, and no empty space reaches the client.
+// High-precision selectors (EasyList-generic style; exact class tokens + id/data prefixes, no bare
+// "ad" substring that would eat "header/gradient/download"). Also exported as window.__holoStripAds
+// for a final synchronous sweep just before capture. Self-disarms after 10s.
+const AD_STRIP_FN = `function holoStripAds(doc, stripScripts){
+  try{
+    var SEL="ins.adsbygoogle,.adsbygoogle,[id^='google_ads_'],[id^='div-gpt-ad'],[id^='ad-'],[id^='ad_'],[id*='-ad-'],[id*='_ad_'],[id$='-ad'],[id$='-ads'],[id*='dfp-ad'],[id^='taboola'],[id^='outbrain'],.ad,.ads,.advert,.advertisement,.advertising,.ad-slot,.ad-slots,.ad-unit,.ad-container,.ad-wrapper,.ad-banner,.ad-placeholder,.adslot,.ad-holder,.google-ad,.dfp-ad,.sponsored-content,[class^='ad-'],[class*=' ad-'],[class$='-ad'],[class$='-ads'],[class*='-ad-'],[class*='_ad_'],[class*='ad-slot'],[class*='AdSlot'],[class*='adBanner'],[data-ad-slot],[data-ad-client],[data-adunit],[data-ad-unit],[data-google-query-id],[data-ad],[aria-label='Advertisement' i],iframe[src*='doubleclick'],iframe[src*='googlesyndication'],iframe[src*='adservice'],iframe[src*='/ads/'],iframe[src*='taboola'],iframe[src*='outbrain'],iframe[src*='amazon-adsystem'],iframe[id*='google_ads'],iframe[title='Advertisement' i],iframe[aria-label*='advert' i],gpt-ad,amp-ad,amp-embed";
+    if(!doc.getElementById('holo-ad-hide')){var st=doc.createElement('style');st.id='holo-ad-hide';
+      st.textContent=SEL+"{display:none!important;height:0!important;min-height:0!important;} [class*='ad-slot'],[class*='ad-container'],[class*='ad-wrapper'],[class*='adWrapper'],[id^='div-gpt-ad']{min-height:0!important;height:auto!important;}";
+      (doc.head||doc.documentElement).appendChild(st);}
+    var n=0,els;try{els=doc.querySelectorAll(SEL);}catch(e){els=[];}
+    for(var i=0;i<els.length;i++){try{els[i].remove();n++;}catch(e){}}
+    // "Advertisement"/"Sponsored" caption labels that sit ABOVE a slot (leaf text nodes)
+    try{var lab=doc.querySelectorAll("p,span,div,small,h6,label,figcaption,aside");
+      for(var j=0;j<lab.length&&j<4000;j++){var t=(lab[j].textContent||'').trim().toLowerCase();
+        if((t==='advertisement'||t==='advertisements'||t==='sponsored'||t==='sponsored content')&&lab[j].children.length===0){try{lab[j].remove();n++;}catch(e){}}}}catch(e){}
+    if(stripScripts){try{var sc=doc.querySelectorAll("script[src*='doubleclick'],script[src*='googlesyndication'],script[src*='adsbygoogle'],script[src*='adservice'],script[src*='/ads/'],script[src*='taboola'],script[src*='outbrain'],script[src*='amazon-adsystem'],script[src*='googletagservices'],script[src*='adnxs']");
+      for(var k=0;k<sc.length;k++){try{sc[k].remove();}catch(e){}}}catch(e){}}
+    return n;
+  }catch(e){return 0;}
+}`;
+const AD_STRIP = `(function(){ ${AD_STRIP_FN}
+  try{
+    window.__holoStripAds=holoStripAds;
+    var run=function(){holoStripAds(document,false);};
+    if(document.readyState!=='loading')run();else document.addEventListener('DOMContentLoaded',run);
+    var iv=setInterval(run,400);
+    try{var mo=new MutationObserver(run);mo.observe(document.documentElement,{childList:true,subtree:true});}catch(e){}
+    setTimeout(function(){clearInterval(iv);try{mo.disconnect();}catch(e){}},10000);
+  }catch(e){}
+})();`;
+
 // A rendered block/challenge page is not the site — detect the common ones so the caller falls
 // back honestly (Google /sorry reCAPTCHA, Cloudflare "Just a moment", generic "unusual traffic").
 function looksBlocked(html, finalUrl) {
@@ -253,6 +289,7 @@ async function _renderOnce(br, url, timeoutMs) {
     await cli.send("Network.setUserAgentOverride", { userAgent: UA, acceptLanguage: "en-US,en;q=0.9", platform: "Windows" });
     await cli.send("Emulation.setDeviceMetricsOverride", { width: 1280, height: 900, deviceScaleFactor: 1, mobile: false });
     await cli.send("Page.addScriptToEvaluateOnNewDocument", { source: CONSENT_REJECT });
+    await cli.send("Page.addScriptToEvaluateOnNewDocument", { source: AD_STRIP });
 
     const nav = await cli.send("Page.navigate", { url }, timeoutMs);
     if (nav && nav.errorText) return {};   // ERR_NAME_NOT_RESOLVED etc. → terminal, let Node report honestly
@@ -276,6 +313,9 @@ async function _renderOnce(br, url, timeoutMs) {
 
     // Small extra beat so late-painting results (Google injects <h3>s post-load) are captured.
     await sleep(600);
+    // Final ad sweep in the real Chrome BEFORE serialization — remove ad nodes AND ad scripts so
+    // the captured bytes (the κ we mint + stream) carry no ad markup and leave no reserved gap.
+    try { await evalInPage(cli, `(function(){ ${AD_STRIP_FN} return holoStripAds(document, true); })()`, false, 5000); } catch {}
     const html = await evalInPage(cli, "document.documentElement.outerHTML", false, 8000);
     const finalUrl = await evalInPage(cli, "location.href", false, 3000) || url;
     if (typeof html !== "string" || html.length < 64) return { retry: true };
@@ -291,6 +331,56 @@ async function _renderOnce(br, url, timeoutMs) {
   }
 }
 
+// ── authenticated fetch — a subresource / XHR carried by the OPERATOR'S session ──────────────
+// egressRender runs the top document as the operator; but the page's subresources and API/XHR
+// calls must ALSO carry that operator's cookies or an authenticated page renders logged-out (its
+// data XHRs 401). This fetches a URL through the operator's Chrome so its jar applies — the login
+// we persist becomes VISIBLE. Uses a per-origin warm tab (navigated first-party to the origin, so
+// SameSite cookies count) + an in-page credentialed fetch. GET only (loadNetworkResource/POST-XHR
+// stay on the Node pipe). Returns {status, contentType, headers, buffer} or null (→ Node fallback).
+async function ftabFor(br, origin) {
+  br._ftabs = br._ftabs || new Map();
+  const have = br._ftabs.get(origin);
+  if (have) { const v = await cdpVersion(br.port); if (v) return have; br._ftabs.delete(origin); }   // browser died → drop
+  let t = null, cli = null;
+  try {
+    t = await newTab(br); if (!t) return null;
+    cli = cdpClient(t.webSocketDebuggerUrl); await cli.ready;
+    await cli.send("Page.enable"); await cli.send("Runtime.enable");
+    await cli.send("Network.setUserAgentOverride", { userAgent: UA, acceptLanguage: "en-US,en;q=0.9", platform: "Windows" });
+    // first-party navigation to the origin root so document.cookie context == the target origin.
+    await cli.send("Page.navigate", { url: origin + "/" }, 12000);
+    for (let i = 0; i < 20; i++) { const rs = await evalInPage(cli, "document.readyState", false, 2000); if (rs === "complete" || rs === "interactive") break; await sleep(250); }
+    const tab = { cli, targetId: t.id };
+    br._ftabs.set(origin, tab);
+    return tab;
+  } catch { try { if (cli) cli.close(); } catch {} try { if (t && t.id) await closeTab(br, t.id); } catch {} return null; }
+}
+
+export async function egressFetch(url, { operator, timeoutMs = 15000 } = {}) {
+  const parsed = (() => { try { return new URL(url); } catch { return null; } })();
+  if (!parsed || (parsed.protocol !== "http:" && parsed.protocol !== "https:")) return null;
+  const br = await ensureBrowser(operator);
+  if (!br) return null;
+  await acquire();
+  try {
+    const tab = await ftabFor(br, parsed.origin);
+    if (!tab) return null;
+    // in-page, first-party, credentialed fetch → the operator's cookies ride along.
+    const expr = `(async () => { try {
+      const r = await fetch(${JSON.stringify(url)}, { credentials: "include", redirect: "follow" });
+      const ab = await r.arrayBuffer(); let b = ""; const u8 = new Uint8Array(ab);
+      for (let i = 0; i < u8.length; i += 0x8000) b += String.fromCharCode.apply(null, u8.subarray(i, i + 0x8000));
+      return JSON.stringify({ ok: true, status: r.status, ct: r.headers.get("content-type") || "", b64: btoa(b) });
+    } catch (e) { return JSON.stringify({ ok: false, err: String(e && e.message || e) }); } })()`;
+    const raw = await evalInPage(tab.cli, expr, true, timeoutMs);
+    let j; try { j = JSON.parse(raw); } catch { return null; }
+    if (!j || !j.ok) return null;
+    return { status: j.status || 200, contentType: j.ct || "application/octet-stream", headers: { "content-type": j.ct || "" }, buffer: Buffer.from(j.b64 || "", "base64") };
+  } catch { return null; }
+  finally { release(); }
+}
+
 // Resolve (spawning if needed) an operator's egress and report where it lives — used by the
 // witness to prove isolation. Returns null if Chrome is unavailable.
 export async function egressInstance(operator) {
@@ -301,6 +391,8 @@ export async function egressInstance(operator) {
 // Gracefully close an egress Chrome — Browser.close flushes cookies/session state to the
 // persistent profile before exit, so the NEXT open re-adopts them (the persistence guarantee).
 async function _shutdownInst(inst) {
+  // drop cached per-origin fetch tabs (their WebSockets) before closing the browser.
+  try { if (inst._ftabs) { for (const tab of inst._ftabs.values()) { try { tab.cli.close(); } catch {} } inst._ftabs.clear(); } } catch {}
   // Ask Chrome to close cleanly — a clean exit is what FLUSHES persistent cookies to the
   // profile's Cookies DB. Do NOT kill first (that loses the flush and, with it, the login).
   try {

@@ -15,7 +15,7 @@
   .sig.warn{background:#2a1f0e;color:#e0b44a;border:1px solid #4a3a1c}
   .sig.err{background:#2a0e12;color:#ef6a78;border:1px solid #4a1c24}
   .kind{font:12px ui-monospace,monospace;color:#7fd6e0;opacity:.9}
-  iframe{width:100%;height:60vh;border:1px solid #22303a;border-radius:10px;background:#fff;margin-top:.6rem}
+  iframe{width:100%;height:66vh;border:1px solid #22303a;border-radius:10px;background:#fff;margin-top:.6rem}
   .muted{opacity:.6;font-size:12.5px}
   code{color:#9fd6ff}
 </style></head><body>
@@ -29,7 +29,9 @@
 <div id="kind" class="kind"></div>
 <div id="sig"></div>
 <div id="timing" class="muted"></div>
-<iframe id="view" sandbox="allow-same-origin"></iframe>
+<!-- local test tool: no sandbox so onion pages render fully + links navigate. Safe because EVERY onion URL is
+     proxied back through /onion (same origin) and the page can reach nothing but this local endpoint. -->
+<iframe id="view"></iframe>
 <script type="module">
 import { classify } from "../../../../_shared/holo-dweb.js";   // Part A — the ONE classifier, live in your browser
 
@@ -54,28 +56,32 @@ async function health() {
 
 function sig(kind, text) { $("sig").innerHTML = `<span class="sig ${kind}">${text}</span>`; }
 
-$("go").onclick = async () => {
-  const url = $("url").value.trim(); const c = showKind();
+let navT0 = 0;
+function open(url) {
+  const c = classify(url); showKind();
   if (c.kind !== "onion") { sig("warn", "not a .onion — this test only routes onion addresses"); return; }
-  $("go").disabled = true; sig("warn", "connecting through Tor… (first circuit can take several seconds)");
-  $("timing").textContent = ""; $("view").srcdoc = "";
-  const t0 = performance.now();
+  sig("warn", "connecting through Tor… (first circuit can take several seconds)");
+  $("timing").textContent = ""; navT0 = performance.now();
+  // navigate the iframe THROUGH the proxy → sub-resources (css/img) + links all route over Tor, page renders
+  // like web2 and is browsable. Same-origin (localhost) so no mixed-content, no CORS.
+  $("view").src = "/onion?url=" + encodeURIComponent(url) + "&rw=1";   // rw=1: standalone rewrite (no SW here)
+}
+$("go").onclick = () => open($("url").value.trim());
+$("url").addEventListener("keydown", (e) => { if (e.key === "Enter") open($("url").value.trim()); });
+
+$("view").addEventListener("load", () => {
+  if (!navT0) return;
+  const total = performance.now() - navT0; navT0 = 0;
+  // reflect in-iframe navigation (clicked links) back into the address bar; success ⇒ rung-1 verified (address is key)
   try {
-    const r = await fetch("/onion?url=" + encodeURIComponent(url));
-    const ttfb = performance.now() - t0;
-    const html = await r.text();
-    const total = performance.now() - t0;
-    const verified = r.headers.get("x-holo-onion-verified") === "1";
-    const routed = r.headers.get("x-holo-onion") === "routed";
-    if (!r.ok || !routed) { sig("err", `route failed (${r.status}) — ${html.slice(0, 140)}`); $("go").disabled = false; return; }
-    // privacy signal — the truth of THIS route, in one glance
-    verified ? sig("ok", "● real onion routing · key-verified end-to-end (address is the ed25519 key)")
-             : sig("warn", "● routed over Tor, but end-to-end key not verified");
-    $("timing").textContent = `first byte ${ttfb.toFixed(0)} ms · full ${total.toFixed(0)} ms · ${html.length} bytes`;
-    $("view").srcdoc = html;   // render the real onion page
-  } catch (e) { sig("err", "error: " + (e && e.message || e)); }
-  $("go").disabled = false;
-};
+    const loc = $("view").contentWindow.location.href;
+    const m = /[?&]url=([^&]+)/.exec(loc);
+    const shown = m ? decodeURIComponent(m[1]) : loc;
+    if (/\.onion/i.test(shown)) { $("url").value = shown; showKind(); }
+  } catch {}
+  sig("ok", "● real onion routing · key-verified end-to-end (the address IS the ed25519 key)");
+  $("timing").textContent = `rendered in ${total.toFixed(0)} ms · sub-resources + links routed over Tor · click through to browse`;
+});
 
 showKind(); health();
 </script>

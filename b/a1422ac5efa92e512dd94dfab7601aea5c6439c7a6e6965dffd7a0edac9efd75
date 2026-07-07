@@ -64,7 +64,7 @@ function httpOverSocket(socket, { host, path }) {
     socket.on("data", onData);
     socket.once("error", (e) => reject(e));
     socket.once("end", () => resolve({ status, headers, bytes: new Uint8Array(Buffer.concat(chunks, total)) }));
-    socket.write(`GET ${path} HTTP/1.1\r\nHost: ${host}\r\nConnection: close\r\nUser-Agent: Hologram/onion\r\nAccept: */*\r\n\r\n`);
+    socket.write(`GET ${path} HTTP/1.1\r\nHost: ${host}\r\nConnection: close\r\nUser-Agent: Hologram/onion\r\nAccept: */*\r\nAccept-Encoding: identity\r\n\r\n`);
   });
 }
 

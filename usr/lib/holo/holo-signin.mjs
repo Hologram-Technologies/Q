@@ -86,26 +86,35 @@ function prewarm(warmPaint) {
 // SELF-CONTAINED CSS — so ANY surface can mount the primitive UNSTYLED. Injected ONLY when the primitive
 // creates its own overlay (i.e. the host page did NOT pre-place + style #holo-login). A host that provides
 // #holo-login (the messenger's app.html) owns its own look and this is a no-op — never overrides it.
-const HL_CSS = `#holo-login{position:fixed;inset:0;z-index:2147483000;color:#f4f7fc;font-family:"Segoe UI",system-ui,-apple-system,sans-serif;
-  --u:clamp(16px,1.7vmin,19px);--g1:calc(var(--u)*1.618);--g2:calc(var(--u)*2.618);--avatar:clamp(96px,calc(var(--u)*6.854),128px);--field:min(86vw,calc(var(--avatar)*2.618));--accent:#7defc9;--accent-2:#34d3a6;--ink-dim:rgba(231,237,250,.82)}
+const HL_CSS = `#holo-login{position:fixed;inset:0;z-index:2147483000;color:var(--ink);font-family:"Segoe UI",system-ui,-apple-system,sans-serif;
+  --u:clamp(16px,1.7vmin,19px);--g1:calc(var(--u)*1.618);--g2:calc(var(--u)*2.618);--avatar:clamp(96px,calc(var(--u)*6.854),128px);--field:min(86vw,calc(var(--avatar)*2.618));--accent:#7defc9;--accent-2:#34d3a6;
+  --ink:#f4f7fc;--ink-dim:rgba(231,237,250,.82);--status:#c4f3e2;--shadow:0 2px 18px rgba(0,0,0,.45);--wall:#05070c;
+  --glass:rgba(10,14,20,.42);--glass-border:rgba(255,255,255,.14);--glass-ink:rgba(231,237,250,.8);
+  --sheet:rgba(8,12,18,.94);--muted:#8b949e;--link:#58a6ff;--field-bg:rgba(255,255,255,.09);--field-border:rgba(255,255,255,.22)}
+#holo-login[data-appearance="dark"]{--shadow:none}
+#holo-login[data-appearance="light"]{--ink:#0b1220;--ink-dim:rgba(11,18,32,.74);--status:#0e6f5c;--shadow:none;--wall:#eef1f6;
+  --glass:rgba(255,255,255,.66);--glass-border:rgba(11,18,32,.18);--glass-ink:rgba(11,18,32,.8);
+  --sheet:rgba(250,252,255,.97);--muted:#5a6572;--link:#0969da;--field-bg:rgba(11,18,32,.06);--field-border:rgba(11,18,32,.22)}
 #holo-login *{box-sizing:border-box}
-#holo-login .hl-wall{position:fixed;inset:0;z-index:0;background:#05070c center/cover no-repeat}
+#holo-login .hl-wall{position:fixed;inset:0;z-index:0;background:var(--wall) center/cover no-repeat}
 #holo-login .hl-frost{position:fixed;inset:0;z-index:1;background:transparent;pointer-events:none}
-#holo-login .hl-lock{position:fixed;inset:0;z-index:2;display:grid;place-items:center;padding:var(--g2);pointer-events:none}
+#holo-login .hl-lock{position:fixed;inset:0;z-index:2;display:grid;justify-items:center;align-items:start;padding:calc(38.2vh - var(--avatar)/2) var(--g2) var(--g2);pointer-events:none}
+@media (max-height:620px){#holo-login .hl-lock{padding-top:calc(28vh - var(--avatar)/2)}}
 #holo-login .hl-panel{display:flex;flex-direction:column;align-items:center;text-align:center;width:var(--field);max-width:92vw;pointer-events:auto;animation:hl-rise .7s cubic-bezier(.4,0,.2,1) .05s both}
 #holo-login .hl-avatar{width:var(--avatar);height:var(--avatar);border-radius:50%;display:grid;place-items:center;color:#fff;font-size:calc(var(--avatar)*.37);font-weight:600;box-shadow:0 .6em 1.8em rgba(0,0,0,.4),inset 0 0 0 2px rgba(255,255,255,.6)}
 #holo-login .hl-avatar svg{width:62%;height:62%;opacity:.92}
-#holo-login .hl-name{margin:var(--g1) 0 0;font-size:calc(var(--u)*1.618);font-weight:300;line-height:1.15;text-shadow:0 2px 18px rgba(0,0,0,.45)}
+#holo-login .hl-name{margin:var(--g1) 0 0;font-size:var(--u);font-weight:600;line-height:1.15;text-shadow:var(--shadow)}
 #holo-login .hl-auth{margin-top:var(--g1);display:flex;flex-direction:column;align-items:center;gap:var(--u);width:100%}
 #holo-login .hl-bio{width:100%;min-height:max(var(--g2),48px);border:0;border-radius:calc(var(--u)*.7);cursor:pointer;display:inline-flex;align-items:center;justify-content:center;gap:calc(var(--u)*.55);font-size:var(--u);font-weight:600;color:#06140f;background:linear-gradient(135deg,var(--accent),var(--accent-2));box-shadow:0 .7em 1.6em rgba(52,211,166,.32);font-family:inherit;transition:transform .12s,box-shadow .18s,filter .18s}
 #holo-login .hl-bio:hover{transform:translateY(-1px);filter:brightness(1.05)}#holo-login .hl-bio:disabled{opacity:.7;cursor:default}
 #holo-login .hl-bio svg{width:1.18em;height:1.18em}
 #holo-login .hl-alt{background:none;border:0;color:var(--ink-dim);font-size:var(--u);font-family:inherit;cursor:pointer;padding:calc(var(--u)*.3) calc(var(--u)*.55);border-radius:calc(var(--u)*.4);display:inline-flex;align-items:center;gap:calc(var(--u)*.4);min-height:44px}
-#holo-login .hl-alt:hover{color:#fff}#holo-login .hl-alt svg{width:1.05em;height:1.05em}
-#holo-login .hl-more{opacity:.72;font-size:calc(var(--u)*.92)}#holo-login .hl-more:hover{opacity:1}
+#holo-login .hl-alt:hover{color:var(--ink)}#holo-login .hl-alt svg{width:1.05em;height:1.05em}
+#holo-login .hl-more{opacity:.72}#holo-login .hl-more:hover{opacity:1}
 #holo-login .hl-opts{display:flex;flex-direction:column;align-items:center;gap:var(--u);width:100%}#holo-login .hl-opts[hidden]{display:none}
-#holo-login .status{min-height:calc(var(--u)*1.5);font-size:var(--u);color:#c4f3e2;display:flex;align-items:center;justify-content:center;gap:calc(var(--u)*.5);text-shadow:0 1px 8px rgba(0,0,0,.4)}
+#holo-login .status{min-height:calc(var(--u)*1.5);font-size:var(--u);color:var(--status);display:flex;align-items:center;justify-content:center;gap:calc(var(--u)*.5);text-shadow:var(--shadow)}
 #holo-login .status.err{color:#ffc0c0}
+#holo-login[data-appearance="light"] .status.err{color:#b3261e}
 #holo-login .spin{width:1em;height:1em;border-radius:50%;border:2px solid rgba(125,239,201,.28);border-top-color:var(--accent);animation:hl-spin .7s linear infinite;flex:0 0 auto}
 @keyframes hl-spin{to{transform:rotate(360deg)}}@keyframes hl-rise{from{opacity:0;transform:translateY(10px) scale(.99);filter:blur(2px)}to{opacity:1;transform:none;filter:none}}
 #holo-login.unfog .hl-frost{animation:hl-defog .72s cubic-bezier(.4,0,.2,1) forwards}#holo-login.unfog .hl-panel{animation:hl-lift .68s cubic-bezier(.4,0,.2,1) forwards;pointer-events:none}
@@ -124,6 +133,58 @@ function ensureOverlay() {
   ov.innerHTML = `<div class="hl-wall"></div><div class="hl-frost"></div><main class="hl-lock"><div class="hl-panel" id="holo-login-panel"></div></main>`;
   document.body.appendChild(ov);
   return ov;
+}
+
+// ── APPEARANCE — Dark · Light · Immersive, chosen ON the lock, worn by the whole OS. ──────────────────
+// ONE source of truth: the switch reads and writes the SAME holo.theme.v1 row the home screen wears
+// (the HoloTheme.setMode contract: dark/light pin the palette and drop the backdrop; immersive turns the
+// backdrop on). The lock's entire look is one token set flipped by [data-appearance] — no second theme
+// system, no login-only state. Immersive = the exact home wallpaper; dark/light = flat, shadowless ink.
+const THEME_MODES = ["dark", "light", "immersive"];
+function themeMode() {
+  try { const t = JSON.parse(localStorage.getItem("holo.theme.v1") || "{}") || {}; return t.immersive === false ? (t.palette === "light" ? "light" : "dark") : "immersive"; } catch { return "immersive"; }
+}
+function themeWallSrc() {
+  let w = ""; try { w = (JSON.parse(localStorage.getItem("holo.theme.v1") || "{}") || {}).wallpaper || ""; } catch {}
+  const m = String(w).match(/^(sha256|blake3|sha512):([0-9a-f]+)$/i);
+  let src = m ? ("/.holo/" + m[1].toLowerCase() + "/" + m[2]) : ((!w || w === "plain" || /^live:/i.test(w)) ? "" : w);
+  if (!src) { try { src = localStorage.getItem("holo-messenger/wallpaper-src") || ""; } catch {} }
+  return src || "/apps/holo-messenger/_vendor/wallpaper-default.jpg";
+}
+function applyMode(overlay, m) {
+  try {
+    if (window.HoloTheme && window.HoloTheme.setMode) window.HoloTheme.setMode(m);
+    else { const t = JSON.parse(localStorage.getItem("holo.theme.v1") || "{}") || {}; if (m === "immersive") t.immersive = true; else { t.palette = m; t.immersive = false; } localStorage.setItem("holo.theme.v1", JSON.stringify(t)); }
+  } catch {}
+  overlay.setAttribute("data-appearance", m);
+  const wall = overlay.querySelector(".hl-wall");
+  if (wall) wall.style.backgroundImage = m === "immersive" ? 'url("' + themeWallSrc() + '")' : "none";
+}
+const HL_THEME_CSS = `#holo-login .hl-theme{position:fixed;left:max(20px,env(safe-area-inset-left));bottom:max(18px,env(safe-area-inset-bottom));z-index:4;
+  pointer-events:auto;display:inline-flex;gap:4px;padding:4px;border-radius:999px;background:var(--glass,rgba(10,14,20,.42));border:1px solid var(--glass-border,rgba(255,255,255,.14));
+  backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);opacity:0;animation:hl-theme-in .6s ease 1.2s forwards}
+#holo-login .hl-theme button{border:0;background:none;color:var(--glass-ink,rgba(231,237,250,.8));font:500 var(--u,16px)/1 "Segoe UI",system-ui,sans-serif;
+  padding:9px 15px;border-radius:999px;cursor:pointer;transition:color .15s,background .15s}
+#holo-login .hl-theme button:hover{color:var(--ink,#fff)}
+#holo-login .hl-theme button.on{background:var(--ink,#f4f7fc);color:var(--wall,#05070c);font-weight:600}
+@keyframes hl-theme-in{to{opacity:1}}
+@media (prefers-reduced-motion:reduce){#holo-login .hl-theme{animation:none;opacity:1}}`;
+function mountAppearance(overlay) {
+  if (!overlay || overlay.querySelector(".hl-theme")) return;
+  try { if (!document.getElementById("holo-appearance-css")) { const s = document.createElement("style"); s.id = "holo-appearance-css"; s.textContent = HL_THEME_CSS; document.head.appendChild(s); } } catch {}
+  if (!overlay.getAttribute("data-appearance")) overlay.setAttribute("data-appearance", themeMode());
+  const wrap = document.createElement("div");
+  wrap.className = "hl-theme"; wrap.setAttribute("role", "radiogroup"); wrap.setAttribute("aria-label", "Appearance");
+  const draw = () => { const cur = themeMode(); wrap.querySelectorAll("button").forEach((b) => { const on = b.dataset.mode === cur; b.classList.toggle("on", on); b.setAttribute("aria-checked", String(on)); }); };
+  for (const m of THEME_MODES) {
+    const b = document.createElement("button");
+    b.type = "button"; b.dataset.mode = m; b.setAttribute("role", "radio");
+    b.textContent = m.charAt(0).toUpperCase() + m.slice(1);
+    b.onclick = () => { applyMode(overlay, m); draw(); };
+    wrap.appendChild(b);
+  }
+  draw();
+  overlay.appendChild(wrap);
 }
 
 function renderBusy(panel, msg) {
@@ -210,6 +271,8 @@ export async function signIn({ root, params, app = "holospace", appName = "Holog
   // module can't load or no frame ever lands, this greeter is exactly what it was.
   let plymouth = null;
   try { import("./holo-plymouth.mjs").then((m) => { plymouth = m.attachPlymouth(overlay); }).catch(() => {}); } catch {}
+  // APPEARANCE — Dark · Light · Immersive on the lock; writes the SAME holo.theme.v1 home wears. Fail-open.
+  try { mountAppearance(overlay); } catch {}
   const panel = document.getElementById("holo-login-panel");
   const statusEl = () => panel.querySelector(".status");
   const setStatus = (t, err) => { if (err) { try { plymouth && plymouth.calm(); } catch {} } const el = statusEl(); if (el) { el.className = "status" + (err ? " err" : ""); el.textContent = t || ""; } };

@@ -50,18 +50,21 @@ export const APPS = [
 ];
 
 // ── classify any omnibox input → a destination across all the webs ──────────────────
+// The UNIVERSAL kinds (κ labels · did · CID⇄κ · eth · SRI · onion · truename · model tags · weak-axis
+// refusals) are decided by the ONE name plane, holo-names.mjs — the resolver matrix flagged this
+// classify as a forked parallel path (L4); the delegation heals the OS side. holo-names returns null
+// for what THIS surface owns (@demo, web, dnslink, the app directory, free-text search) — those keep
+// their behavior below, byte-for-byte.
+import { classify as universalClassify } from "./holo-names.mjs";
 const CID_RE = /^(Qm[1-9A-HJ-NP-Za-km-z]{44}|b[a-z2-7]{50,}|z[1-9A-HJ-NP-Za-km-z]{40,}|f[0-9a-f]{60,})$/;
 export function classify(raw) {
   let s = String(raw || "").trim();
   if (!s) return { kind: "empty" };
   if (/^@demo$/i.test(s)) return { kind: "demo", target: "@demo" };
-  if (/^did:/i.test(s)) return { kind: "did", target: s };
-  if (/^ipfs:\/\//i.test(s) || /^\/ipfs\//i.test(s)) return { kind: "ipfs", target: s };
-  if (/^ipns:\/\//i.test(s) || /^\/ipns\//i.test(s)) return { kind: "ipns", target: s };
+  try { const u = universalClassify(s); if (u) return u; } catch {}
   if (/^https?:\/\//i.test(s)) return { kind: "web", target: s };               // a web2 URL (gateway/DNSLink/save-to-dweb)
   const head = s.split("/")[0];
-  if (CID_RE.test(head)) { try { parseCID(head); return { kind: "ipfs", target: s }; } catch {} }
-  if (/^[a-z0-9-]+(\.[a-z0-9-]+)*\.eth$/i.test(head)) return { kind: "ens", target: s };
+  if (CID_RE.test(head)) { try { parseCID(head); return { kind: "ipfs", target: s }; } catch {} }   // multibase forms the name plane doesn't translate (z…/f…)
   if (/^[a-z0-9.-]+\.[a-z]{2,}$/i.test(head)) return { kind: "dnslink", target: s };
   return { kind: "search", target: s };                                          // free text → search the directory
 }

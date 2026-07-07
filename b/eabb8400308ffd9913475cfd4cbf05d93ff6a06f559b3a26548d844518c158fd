@@ -64,7 +64,7 @@ function open(url) {
   $("timing").textContent = ""; navT0 = performance.now();
   // navigate the iframe THROUGH the proxy → sub-resources (css/img) + links all route over Tor, page renders
   // like web2 and is browsable. Same-origin (localhost) so no mixed-content, no CORS.
-  $("view").src = "/onion?url=" + encodeURIComponent(url) + "&rw=1";   // rw=1: standalone rewrite (no SW here)
+  $("view").src = "/onion?url=" + encodeURIComponent(url);
 }
 $("go").onclick = () => open($("url").value.trim());
 $("url").addEventListener("keydown", (e) => { if (e.key === "Enter") open($("url").value.trim()); });

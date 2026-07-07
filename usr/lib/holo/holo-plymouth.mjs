@@ -90,7 +90,8 @@ async function kBytes(kappa, url) {
 }
 
 // ── frame loading: κ store first (offline), CDN stream + seal on a miss ───────────────────────────────
-// onFrame(i, img) fires as frames become drawable — playback starts on the first one, torrent-style.
+// onFrame(i, bytes) fires with raw PNG bytes as frames land — the PLAYER decodes on its own thread
+// (worker createImageBitmap, or the 2D floor's Image path); playback starts on the first drawable one.
 async function loadFrames(theme, onFrame, cancelled) {
   const t = themeOf(theme); if (!t) throw new Error("unknown theme " + theme);
   let manifest = null; try { manifest = JSON.parse(localStorage.getItem(FRK(theme)) || "null"); } catch {}
@@ -98,14 +99,6 @@ async function loadFrames(theme, onFrame, cancelled) {
   const kappas = new Array(total).fill(null);
   let firstBytes = null, loaded = 0;
 
-  const toImage = (bytes, i) => new Promise((res) => {
-    const img = new Image();
-    // decode() is a fire-and-forget WARM-UP only — in a hidden tab it never settles (deferred decode), and
-    // drawImage decodes synchronously anyway. Gating on it would freeze the whole splash for background tabs.
-    img.onload = () => { try { if (img.decode) img.decode().catch(() => {}); } catch {} onFrame(i, img); res(img); };
-    img.onerror = () => res(null);
-    img.src = URL.createObjectURL(new Blob([bytes], { type: "image/png" }));
-  });
   const one = async (i) => {
     if (cancelled()) return;
     const got = await kBytes(manifest && manifest[i], frameUrl(t, i));
@@ -113,7 +106,7 @@ async function loadFrames(theme, onFrame, cancelled) {
     kappas[i] = got.kappa;
     if (i === 0) firstBytes = got.bytes;
     loaded++;
-    await toImage(got.bytes, i);
+    onFrame(i, got.bytes);
   };
   // ordered small batches so the playable prefix grows monotonically (the loop plays what has landed)
   const CONC = 6;
@@ -153,23 +146,23 @@ const CSS = `
 #holo-login.hl-boot .hl-panel{opacity:0!important;pointer-events:none!important}
 #holo-login .hl-panel{transition:opacity .55s ease}
 #holo-login .hlp-btn{position:fixed;right:max(20px,env(safe-area-inset-right));bottom:max(18px,env(safe-area-inset-bottom));z-index:4;
-  pointer-events:auto;display:inline-flex;align-items:center;gap:9px;background:rgba(10,14,20,.42);border:1px solid rgba(255,255,255,.14);
-  color:rgba(231,237,250,.8);font:500 16px/1 "Segoe UI",system-ui,sans-serif;padding:11px 18px;border-radius:999px;cursor:pointer;
+  pointer-events:auto;display:inline-flex;align-items:center;gap:9px;background:var(--glass,rgba(10,14,20,.42));border:1px solid var(--glass-border,rgba(255,255,255,.14));
+  color:var(--glass-ink,rgba(231,237,250,.8));font:500 var(--u,16px)/1 "Segoe UI",system-ui,sans-serif;padding:11px 18px;border-radius:999px;cursor:pointer;
   backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);transition:color .15s,border-color .15s,background .15s;opacity:0;animation:hlp-in .6s ease 1.2s forwards}
-#holo-login .hlp-btn:hover{color:#fff;border-color:rgba(125,239,201,.55);background:rgba(10,14,20,.62)}
+#holo-login .hlp-btn:hover{color:var(--ink,#fff);border-color:rgba(52,211,166,.55)}
 #holo-login .hlp-btn svg{width:17px;height:17px}
 @keyframes hlp-in{to{opacity:1}}
-#holo-login .hlp-gal{position:fixed;inset:0;z-index:6;pointer-events:auto;background:rgba(1,4,9,.6);backdrop-filter:blur(9px);-webkit-backdrop-filter:blur(9px);
+#holo-login .hlp-gal{position:fixed;inset:0;z-index:6;pointer-events:auto;background:var(--glass,rgba(1,4,9,.6));backdrop-filter:blur(9px);-webkit-backdrop-filter:blur(9px);
   display:grid;place-items:center;animation:hlp-fade .22s ease}
 @keyframes hlp-fade{from{opacity:0}}
-#holo-login .hlp-sheet{width:min(920px,94vw);max-height:84vh;display:flex;flex-direction:column;overflow:hidden;background:rgba(8,12,18,.94);
-  border:1px solid rgba(255,255,255,.12);border-radius:16px;box-shadow:0 28px 80px rgba(0,0,0,.6);color:#e6edf3;font-family:"Segoe UI",system-ui,sans-serif}
+#holo-login .hlp-sheet{width:min(920px,94vw);max-height:84vh;display:flex;flex-direction:column;overflow:hidden;background:var(--sheet,rgba(8,12,18,.94));
+  border:1px solid var(--glass-border,rgba(255,255,255,.12));border-radius:16px;box-shadow:0 28px 80px rgba(0,0,0,.6);color:var(--ink,#e6edf3);font-family:"Segoe UI",system-ui,sans-serif}
 #holo-login .hlp-head{display:flex;align-items:center;gap:12px;padding:20px 22px 14px;flex:0 0 auto}
-#holo-login .hlp-title{font-size:20px;font-weight:600}
-#holo-login .hlp-x{margin-left:auto;width:34px;height:34px;flex:0 0 auto;border:0;border-radius:50%;background:rgba(255,255,255,.08);color:#c9d1d9;cursor:pointer;font-size:16px}
-#holo-login .hlp-x:hover{background:rgba(255,255,255,.16)}
+#holo-login .hlp-title{font-size:var(--u,16px);font-weight:700}
+#holo-login .hlp-x{margin-left:auto;width:34px;height:34px;flex:0 0 auto;border:0;border-radius:50%;background:var(--field-bg,rgba(255,255,255,.08));color:var(--ink,#c9d1d9);cursor:pointer;font-size:var(--u,16px)}
+#holo-login .hlp-x:hover{background:var(--field-border,rgba(255,255,255,.16))}
 #holo-login .hlp-srch{padding:0 22px 16px;flex:0 0 auto}
-#holo-login .hlp-srch input{width:100%;box-sizing:border-box;background:rgba(1,4,9,.6);border:1px solid rgba(255,255,255,.12);border-radius:999px;padding:11px 18px;color:#e6edf3;font:inherit;font-size:16px;outline:none}
+#holo-login .hlp-srch input{width:100%;box-sizing:border-box;background:var(--field-bg,rgba(1,4,9,.6));border:1px solid var(--field-border,rgba(255,255,255,.12));border-radius:999px;padding:11px 18px;color:var(--ink,#e6edf3);font:inherit;font-size:var(--u,16px);outline:none}
 #holo-login .hlp-srch input:focus{border-color:#34d3a6}
 /* grid-auto-rows is EXPLICIT — Chromium computes a <button> grid item's intrinsic content height as 0,
    so content-sized rows collapse to the border (the "80 empty bars" failure). Fixed rows are immune. */
@@ -183,11 +176,11 @@ const CSS = `
 #holo-login .hlp-prev .hlp-shim{position:absolute;inset:0;background:linear-gradient(100deg,#05070c 30%,#101722 50%,#05070c 70%);background-size:220% 100%;animation:hlp-shimmer 1.2s ease-in-out infinite}
 @keyframes hlp-shimmer{to{background-position:-220% 0}}
 #holo-login .hlp-prev.off{color:#6e7681;font-size:30px}
-#holo-login .hlp-name{flex:0 0 auto;padding:11px 14px 12px;background:rgba(5,7,12,.9);font-size:16px;font-weight:600;color:#e6edf3;line-height:1.25;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-#holo-login .hlp-foot{padding:12px 22px 16px;font-size:16px;color:#6e7681;border-top:1px solid rgba(255,255,255,.07);flex:0 0 auto}
-#holo-login .hlp-foot a{color:#58a6ff;text-decoration:none}
-#holo-login .hlp-toast{position:fixed;left:50%;bottom:74px;transform:translateX(-50%);z-index:7;background:rgba(13,17,23,.95);color:#e6edf3;
-  border:1px solid rgba(255,255,255,.14);border-radius:999px;padding:10px 20px;font:16px "Segoe UI",system-ui,sans-serif;box-shadow:0 10px 30px rgba(0,0,0,.6);
+#holo-login .hlp-name{flex:0 0 auto;padding:11px 14px 12px;background:rgba(5,7,12,.9);font-size:var(--u,16px);font-weight:600;color:#e6edf3;line-height:1.25;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+#holo-login .hlp-foot{padding:12px 22px 16px;font-size:var(--u,16px);color:var(--muted,#6e7681);border-top:1px solid var(--glass-border,rgba(255,255,255,.07));flex:0 0 auto}
+#holo-login .hlp-foot a{color:var(--link,#58a6ff);text-decoration:none}
+#holo-login .hlp-toast{position:fixed;left:50%;bottom:74px;transform:translateX(-50%);z-index:7;background:var(--sheet,rgba(13,17,23,.95));color:var(--ink,#e6edf3);
+  border:1px solid var(--glass-border,rgba(255,255,255,.14));border-radius:999px;padding:10px 20px;font:var(--u,16px) "Segoe UI",system-ui,sans-serif;box-shadow:0 10px 30px rgba(0,0,0,.6);
   pointer-events:none;animation:hlp-toast 2.6s ease both}
 @keyframes hlp-toast{0%{opacity:0;transform:translate(-50%,8px)}10%,82%{opacity:1;transform:translate(-50%,0)}100%{opacity:0}}
 @media (prefers-reduced-motion:reduce){#holo-login .hlp,#holo-login .hlp canvas,#holo-login .hlp-btn,#holo-login .hlp-prev .hlp-shim{transition:none;animation:none;opacity:1}}
@@ -198,22 +191,31 @@ function injectCss() {
 
 const reducedMotion = () => { try { return matchMedia("(prefers-reduced-motion: reduce)").matches; } catch { return false; } };
 
-// ── the player: one canvas, the Plymouth template + the power-on choreography ──────────────────────────
+// ── the player: ONE facade, two backends, the same choreography ────────────────────────────────────────
 // Poses are draw-space (crisp at any scale — CSS transforms would blur the canvas):
 //   boot   — dead-center, up to 62vmin: the machine booting, exactly like the metal
 //   greet  — the living emblem IS your identity: it lands on the avatar slot (anchored, a touch larger)
 //   verify — the emblem leans in slightly while the enclave checks you (CSS pulses brightness)
 // Anchored poses track the .hl-avatar rect live (the circle itself is hidden — the animation replaces it);
 // the fraction values are only the fallback for a greeter without an avatar in its panel.
+//
+// GPU backend (default): decode + chroma-key + temporal blend + present live on an OffscreenCanvas in a
+// dedicated Worker — the main thread never decodes or keys a pixel (the witnessed source of boot-beat
+// jank), and consecutive 25 fps sprite frames are crossfaded by fractional phase so motion presents at
+// the display's own rate. dpr up to 3 for device-pixel sharpness. Probe-BEFORE-transfer (a transferred
+// canvas is consumed); any missing capability falls open to the proven 2D player below, byte-identical
+// behavior. Force a rung: ?emblem=gpu | ?emblem=2d.
 const POSES = {
   boot:   { cx: 0.5, cy: 0.46, cap: 0.62 },
   greet:  { cx: 0.5, cy: 0.215, cap: 0.22, anchor: true, mult: 1.5 },
   verify: { cx: 0.5, cy: 0.215, cap: 0.26, anchor: true, mult: 1.7 },
 };
 // Plymouth sprites bake their black screen into the PNG; over the wallpaper that black must be AIR.
-// Key near-black to transparent once per frame at load — boot (over the black layer) looks identical,
-// greet shows only the living pixels. Fail-open: any canvas trouble keeps the original image.
-function keyBlack(img) {
+// The GPU backend keys in the fragment shader (zero main-thread cost); this CPU twin serves the 2D floor.
+// `ink` = the light appearance: a mostly-white sprite would vanish on paper, so the keyed emblem is
+// PRINTED — every pixel darkened to ink weight with its hue kept (white → near-black, green → deep green).
+// Fail-open: any canvas trouble keeps the original image.
+function keyBlack(img, ink) {
   try {
     const w = img.naturalWidth, h = img.naturalHeight;
     if (!w || !h) return img;
@@ -224,16 +226,18 @@ function keyBlack(img) {
     for (let i = 0; i < p.length; i += 4) {
       const v = Math.max(p[i], p[i + 1], p[i + 2]);
       if (v < 48) p[i + 3] = Math.min(p[i + 3], Math.max(0, ((v - 12) / 36) * 255) | 0);
+      if (ink && v > 0) { const f = 46 / Math.max(v, 31); p[i] = (p[i] * f) | 0; p[i + 1] = (p[i + 1] * f) | 0; p[i + 2] = (p[i + 2] * f) | 0; }
     }
     x.putImageData(d, 0, 0);
     return c;
   } catch { return img; }
 }
-function makePlayer(overlay, layer, canvas) {
+// ── the 2D floor: the proven player, unchanged physics (25 fps stepped, CPU key, dpr ≤ 2) ─────────────
+function make2dPlayer(overlay, layer, canvas, onLive) {
   const ctx = canvas.getContext("2d");
   const images = [];            // sparse, filled as frames land
   let prefix = 0;               // contiguous playable prefix — the loop only plays what has landed
-  let raf = 0, t0 = 0, alive = true, last = 0;
+  let raf = 0, t0 = 0, alive = true, last = 0, started = false, inkOn = false;
   const pose = { ...POSES.boot };          // current, eased toward target every frame
   let target = POSES.boot;
   const dpr = Math.min(window.devicePixelRatio || 1, 2);
@@ -282,18 +286,199 @@ function makePlayer(overlay, layer, canvas) {
     const idx = Math.floor((now - t0) / (1000 / FPS)) % Math.max(prefix, 1);
     draw(idx);
   }
+  function wake() {
+    while (images[prefix]) prefix++;
+    if (!started && prefix > 0) {                          // first drawable frame → the splash is alive
+      started = true;
+      try { onLive(); } catch {}
+      if (reducedMotion()) draw(0); else raf = requestAnimationFrame(loop);
+    }
+  }
   return {
-    frame(i, img) {
-      images[i] = keyBlack(img);
-      while (images[prefix]) prefix++;
-      if (prefix === 1) {                                  // first drawable frame → the splash is alive
-        layer.classList.add("on");
-        if (reducedMotion()) draw(0); else raf = requestAnimationFrame(loop);
-      }
+    mode: "2d",
+    frame(i, bytes) {
+      const img = new Image();
+      img.onload = () => { try { URL.revokeObjectURL(img.src); } catch {} if (!alive) return; images[i] = keyBlack(img, inkOn); wake(); };
+      img.onerror = () => { try { URL.revokeObjectURL(img.src); } catch {} };
+      img.src = URL.createObjectURL(new Blob([bytes], { type: "image/png" }));
     },
     pose(name) { target = POSES[name] || POSES.greet; if (reducedMotion()) { const t = liveTarget(); pose.cx = t.cx; pose.cy = t.cy; pose.cap = t.cap; if (images[0]) draw(0); } },
-    reset() { images.length = 0; prefix = 0; t0 = 0; },
+    ink(on) { const flip = inkOn !== !!on; inkOn = !!on; return flip && started; },   // true → frames need a re-key (caller replays)
+    reset() { images.length = 0; prefix = 0; t0 = 0; started = false; },
     destroy() { alive = false; cancelAnimationFrame(raf); removeEventListener("resize", size); },
+  };
+}
+
+// ── the GPU worker: decode (createImageBitmap — no hidden-tab decode() trap), shader chroma-key,
+// frame-pair temporal blend to display rate, pose easing, present. Classic worker from a Blob URL
+// (no import map, no extra manifest asset — works on any mount). No template literals inside. ─────────
+const GPU_WORKER_SRC =
+  '"use strict";\n' +
+  "var device=null,ctx=null,canvas=null,pipeline=null,sampler=null,ubuf=null;\n" +
+  "var dpr=1,reduced=false,cw=0,chh=0;\n" +
+  "var tex=[],pend=[];\n" +
+  "var prefix=0,started=false,t0=0,raf=0,last=0;\n" +
+  "var pose={cx:0,cy:0,cap:0},target=null,ink=0;\n" +
+  "var WGSL=''+\n" +
+  "'struct U { rect: vec4<f32>, misc: vec4<f32> };\\n'+\n" +
+  "'@group(0) @binding(0) var<uniform> u: U;\\n'+\n" +
+  "'@group(0) @binding(1) var smp: sampler;\\n'+\n" +
+  "'@group(0) @binding(2) var texA: texture_2d<f32>;\\n'+\n" +
+  "'@group(0) @binding(3) var texB: texture_2d<f32>;\\n'+\n" +
+  "'struct VOut { @builtin(position) pos: vec4<f32>, @location(0) uv: vec2<f32> };\\n'+\n" +
+  "'@vertex fn vs(@builtin(vertex_index) vi: u32) -> VOut {\\n'+\n" +
+  "'  var c = array<vec2<f32>,6>(vec2<f32>(-1.,-1.), vec2<f32>(1.,-1.), vec2<f32>(-1.,1.), vec2<f32>(-1.,1.), vec2<f32>(1.,-1.), vec2<f32>(1.,1.));\\n'+\n" +
+  "'  let k = c[vi];\\n'+\n" +
+  "'  let px = u.rect.xy + k * u.rect.zw * 0.5;\\n'+\n" +
+  "'  var o: VOut;\\n'+\n" +
+  "'  o.pos = vec4<f32>(px.x / u.misc.y * 2. - 1., 1. - px.y / u.misc.z * 2., 0., 1.);\\n'+\n" +
+  "'  o.uv = k * 0.5 + vec2<f32>(0.5, 0.5);\\n'+\n" +
+  "'  return o;\\n'+\n" +
+  "'}\\n'+\n" +
+  "'@fragment fn fs(i: VOut) -> @location(0) vec4<f32> {\\n'+\n" +
+  "'  let a = textureSample(texA, smp, i.uv);\\n'+\n" +
+  "'  let b = textureSample(texB, smp, i.uv);\\n'+\n" +
+  "'  let c = mix(a, b, u.misc.x);\\n'+\n" +
+  "'  let v = max(c.r, max(c.g, c.b));\\n'+\n" +
+  "'  let alpha = min(c.a, clamp((v - 0.047) / 0.141, 0., 1.));\\n'+\n" +
+  "'  var rgb = c.rgb;\\n'+\n" +
+  "'  if (u.misc.w > 0.5) { rgb = rgb * (0.18 / max(v, 0.12)); }\\n'+\n" +
+  "'  return vec4<f32>(rgb * alpha, alpha);\\n'+\n" +
+  "'}\\n';\n" +
+  "self.onmessage=function(e){var d=e.data||{};\n" +
+  " if(d.t==='probe'){Promise.resolve().then(async function(){var ok=false;try{ok=!!(self.navigator&&navigator.gpu&&await navigator.gpu.requestAdapter());}catch(err){}self.postMessage({t:'probe',ok:ok});});}\n" +
+  " else if(d.t==='init'){init(d).catch(function(err){self.postMessage({t:'err',m:String(err)});});}\n" +
+  " else if(d.t==='frame'){frame(d.i,d.buf);}\n" +
+  " else if(d.t==='pose'){target={cx:d.cx,cy:d.cy,cap:d.cap};if(!pose.cap){pose.cx=d.cx;pose.cy=d.cy;pose.cap=d.cap;}if(reduced&&started){pose.cx=d.cx;pose.cy=d.cy;pose.cap=d.cap;render(0,0,0.016,0);}}\n" +
+  " else if(d.t==='ink'){ink=d.on?1:0;if(reduced&&started)render(0,0,0.016,0);}\n" +
+ " else if(d.t==='resize'){dpr=d.dpr;cw=d.w;chh=d.h;if(canvas&&ctx){canvas.width=Math.max(1,Math.round(cw*dpr));canvas.height=Math.max(1,Math.round(chh*dpr));}}\n" +
+  " else if(d.t==='reset'){for(var i=0;i<tex.length;i++){if(tex[i]){try{tex[i].tex.destroy();}catch(err){}}}tex.length=0;pend.length=0;prefix=0;started=false;t0=0;}\n" +
+  "};\n" +
+  "async function init(d){\n" +
+  " canvas=d.canvas;dpr=d.dpr;reduced=!!d.reduced;cw=d.w;chh=d.h;\n" +
+  " var adapter=await navigator.gpu.requestAdapter();\n" +
+  " device=await adapter.requestDevice();\n" +
+  " ctx=canvas.getContext('webgpu');\n" +
+  " var format=navigator.gpu.getPreferredCanvasFormat();\n" +
+  " canvas.width=Math.max(1,Math.round(cw*dpr));canvas.height=Math.max(1,Math.round(chh*dpr));\n" +
+  " ctx.configure({device:device,format:format,alphaMode:'premultiplied'});\n" +
+  " sampler=device.createSampler({magFilter:'linear',minFilter:'linear'});\n" +
+  " ubuf=device.createBuffer({size:32,usage:GPUBufferUsage.UNIFORM|GPUBufferUsage.COPY_DST});\n" +
+  " var mod=device.createShaderModule({code:WGSL});\n" +
+  " pipeline=device.createRenderPipeline({layout:'auto',vertex:{module:mod,entryPoint:'vs'},fragment:{module:mod,entryPoint:'fs',targets:[{format:format,blend:{color:{srcFactor:'one',dstFactor:'one-minus-src-alpha'},alpha:{srcFactor:'one',dstFactor:'one-minus-src-alpha'}}}]},primitive:{topology:'triangle-list'}});\n" +
+  " var p=pend.splice(0,pend.length);\n" +
+  " for(var j=0;j<p.length;j++)frame(p[j][0],p[j][1]);\n" +
+  "}\n" +
+  "async function frame(i,buf){\n" +
+  " if(!device){pend.push([i,buf]);return;}\n" +
+  " var bmp=null;\n" +
+  " try{bmp=await createImageBitmap(new Blob([buf],{type:'image/png'}),{premultiplyAlpha:'none',colorSpaceConversion:'none'});}catch(err){return;}\n" +
+  " var t=device.createTexture({size:[bmp.width,bmp.height],format:'rgba8unorm',usage:GPUTextureUsage.TEXTURE_BINDING|GPUTextureUsage.COPY_DST|GPUTextureUsage.RENDER_ATTACHMENT});\n" +
+  " device.queue.copyExternalImageToTexture({source:bmp},{texture:t,premultipliedAlpha:false},[bmp.width,bmp.height]);\n" +
+  " var rec={tex:t,w:bmp.width,h:bmp.height};\n" +
+  " try{bmp.close();}catch(err){}\n" +
+  " tex[i]=rec;\n" +
+  " while(tex[prefix])prefix++;\n" +
+  " if(!started&&prefix>0){started=true;self.postMessage({t:'first'});if(reduced){render(0,0,0.016,0);}else{raf=requestAnimationFrame(loop);}}\n" +
+  "}\n" +
+  "function loop(now){\n" +
+  " raf=requestAnimationFrame(loop);\n" +
+  " if(prefix===0){last=now;return;}\n" +
+  " if(!t0)t0=now;\n" +
+  " var dt=Math.min((now-last)/1000,0.1);last=now;\n" +
+  " var tt=(now-t0)/40;\n" +
+  " var idx=Math.floor(tt)%prefix;\n" +
+  " var phase=tt-Math.floor(tt);\n" +
+  " render(idx,prefix>1?(idx+1)%prefix:idx,dt,phase);\n" +
+  "}\n" +
+  "function render(idx,nxt,dt,phase){\n" +
+  " var a=tex[idx];if(!a||!ctx||!pipeline)return;\n" +
+  " var b=tex[nxt]||a;\n" +
+  " if(target){var k=reduced?1:Math.min(1,(dt||0.016)*5.5);\n" +
+  "  pose.cx+=(target.cx-pose.cx)*k;pose.cy+=(target.cy-pose.cy)*k;pose.cap+=(target.cap-pose.cap)*k;}\n" +
+  " var s=Math.min(1,pose.cap/Math.max(a.w,a.h));\n" +
+  " var w=a.w*s*dpr,h=a.h*s*dpr;\n" +
+  " var u=new Float32Array([pose.cx*dpr,pose.cy*dpr,w,h,phase||0,canvas.width,canvas.height,ink]);\n" +
+  " device.queue.writeBuffer(ubuf,0,u);\n" +
+  " var bg=device.createBindGroup({layout:pipeline.getBindGroupLayout(0),entries:[{binding:0,resource:{buffer:ubuf}},{binding:1,resource:sampler},{binding:2,resource:a.tex.createView()},{binding:3,resource:b.tex.createView()}]});\n" +
+  " var enc=device.createCommandEncoder();\n" +
+  " var pass=enc.beginRenderPass({colorAttachments:[{view:ctx.getCurrentTexture().createView(),loadOp:'clear',clearValue:{r:0,g:0,b:0,a:0},storeOp:'store'}]});\n" +
+  " pass.setPipeline(pipeline);pass.setBindGroup(0,bg);pass.draw(6);pass.end();\n" +
+  " device.queue.submit([enc.finish()]);\n" +
+  "}\n";
+
+// main-side controller: probes the worker's adapter BEFORE transferring the canvas (a consumed canvas
+// can't fall back), then only reads the avatar rect + posts pose targets — the sole main-thread work.
+async function makeGpuPlayer(overlay, layer, canvas, onLive) {
+  if (typeof Worker === "undefined" || !("gpu" in navigator) || !canvas.transferControlToOffscreen || typeof createImageBitmap === "undefined") return null;
+  let worker = null, url = null;
+  try {
+    url = URL.createObjectURL(new Blob([GPU_WORKER_SRC], { type: "text/javascript" }));
+    worker = new Worker(url);
+  } catch { try { if (url) URL.revokeObjectURL(url); } catch {} return null; }
+  const ok = await new Promise((res) => {
+    const to = setTimeout(() => res(false), 4500);
+    const h = (e) => { if (e.data && e.data.t === "probe") { worker.removeEventListener("message", h); clearTimeout(to); res(!!e.data.ok); } };
+    worker.addEventListener("message", h);
+    try { worker.postMessage({ t: "probe" }); } catch { clearTimeout(to); res(false); }
+  });
+  try { URL.revokeObjectURL(url); } catch {}
+  if (!ok) { try { worker.terminate(); } catch {} return null; }
+  const off = canvas.transferControlToOffscreen();       // point of no return — the worker owns the pixels
+  const dpr = () => Math.min(window.devicePixelRatio || 1, 3);
+  worker.postMessage({ t: "init", canvas: off, w: innerWidth, h: innerHeight, dpr: dpr(), reduced: reducedMotion() }, [off]);
+  worker.addEventListener("message", (e) => { if (e.data && e.data.t === "first") { try { onLive(); } catch {} } });
+  let target = POSES.boot, watch = 0, last = null;
+  const send = () => {
+    const p = target, cw = innerWidth, ch = innerHeight, vmin = Math.min(cw, ch);
+    let t = { cx: cw * p.cx, cy: ch * p.cy, cap: vmin * p.cap };
+    if (p.anchor) {
+      try {
+        const a = overlay.querySelector(".hl-avatar");
+        if (a) { const r = a.getBoundingClientRect(); if (r.width) t = { cx: r.left + r.width / 2, cy: r.top + r.height / 2, cap: r.width * (p.mult || 1.5) }; }
+      } catch {}
+    }
+    if (!last || Math.abs(t.cx - last.cx) > 0.25 || Math.abs(t.cy - last.cy) > 0.25 || Math.abs(t.cap - last.cap) > 0.25) {
+      last = t;
+      try { worker.postMessage({ t: "pose", cx: t.cx, cy: t.cy, cap: t.cap }); } catch {}
+    }
+  };
+  const tick = () => { watch = requestAnimationFrame(tick); send(); };   // one rect read per frame — nothing else
+  send(); watch = requestAnimationFrame(tick);
+  const onRs = () => { try { worker.postMessage({ t: "resize", w: innerWidth, h: innerHeight, dpr: dpr() }); } catch {} };
+  addEventListener("resize", onRs);
+  return {
+    mode: "gpu-worker",
+    frame(i, bytes) { try { const buf = bytes.slice().buffer; worker.postMessage({ t: "frame", i, buf }, [buf]); } catch {} },
+    pose(name) { target = POSES[name] || POSES.greet; last = null; send(); },
+    ink(on) { try { worker.postMessage({ t: "ink", on: !!on }); } catch {} return false; },   // shader-side — never needs a replay
+    reset() { try { worker.postMessage({ t: "reset" }); } catch {} },
+    destroy() { cancelAnimationFrame(watch); removeEventListener("resize", onRs); try { worker.terminate(); } catch {} },
+  };
+}
+
+// the facade: same synchronous API the choreography uses; the backend resolves async (frames queue).
+function makePlayer(overlay, layer, canvas, onLive) {
+  let backend = null, queue = [], lastPose = null, lastInk = null, dead = false;
+  let forced = null; try { forced = new URLSearchParams(location.search).get("emblem"); } catch {}
+  (async () => {
+    let b = null;
+    if (forced !== "2d") { try { b = await makeGpuPlayer(overlay, layer, canvas, onLive); } catch { b = null; } }
+    if (!b) b = make2dPlayer(overlay, layer, canvas, onLive);
+    if (dead) { try { b.destroy(); } catch {} return; }
+    backend = b;
+    if (lastInk != null && b.ink) b.ink(lastInk);
+    if (lastPose) b.pose(lastPose);
+    const q = queue; queue = [];
+    for (const [i, bytes] of q) b.frame(i, bytes);
+  })();
+  return {
+    mode: () => (backend ? backend.mode : "pending"),
+    frame(i, bytes) { if (backend) backend.frame(i, bytes); else queue.push([i, bytes]); },
+    pose(name) { lastPose = name; if (backend) backend.pose(name); },
+    ink(on) { lastInk = !!on; return backend && backend.ink ? backend.ink(on) : false; },   // truthy → caller replays (2D re-key)
+    reset() { queue = []; if (backend) backend.reset(); },
+    destroy() { dead = true; if (backend) backend.destroy(); },
   };
 }
 
@@ -411,19 +596,28 @@ export function attachPlymouth(overlay) {
     layer.appendChild(canvas);
     const wall = overlay.querySelector(".hl-wall");
     if (wall && wall.nextSibling) overlay.insertBefore(layer, wall.nextSibling); else overlay.prepend(layer);
-    player = makePlayer(overlay, layer, canvas);
+    // onLive fires at the backend's FIRST drawable frame (whichever backend won the ladder):
+    // the splash is alive — it wears the avatar slot and the 0-ms baseline still yields.
+    player = makePlayer(overlay, layer, canvas, () => {
+      try { layer.classList.add("on"); overlay.classList.add("hlp-anchor"); dropBaseline(); } catch {}
+    });
+    player.ink(isInk());
   }
+  // the LIGHT appearance prints the emblem in ink (a white sprite on paper would vanish). The signal is
+  // the overlay's [data-appearance] — the appearance switch flips it; observing keeps the modules decoupled.
+  const isInk = () => { try { return overlay.getAttribute("data-appearance") === "light"; } catch { return false; } };
+  try {
+    new MutationObserver(() => {
+      if (!player) return;
+      if (player.ink(isInk())) play(state.theme);          // 2D floor re-keys by replaying (κ-local, fast)
+    }).observe(overlay, { attributes: true, attributeFilter: ["data-appearance"] });
+  } catch {}
   function play(theme) {
     ensureLayer();
     const my = ++gen;
     player.reset();
     layer.classList.remove("done");
-    loadFrames(theme, (i, img) => {
-      if (my !== gen) return;
-      player.frame(i, img);
-      overlay.classList.add("hlp-anchor");                // emblem is alive → it wears the avatar slot
-      if (i === 0) dropBaseline();                        // the live canvas has the frame — the 0-ms still yields
-    }, () => my !== gen)
+    loadFrames(theme, (i, bytes) => { if (my === gen) player.frame(i, bytes); }, () => my !== gen)
       .catch(() => { if (my === gen && state.on) { layer.classList.remove("on"); overlay.classList.remove("hlp-anchor"); } });   // no frames at all → wallpaper + circle stay
   }
   // the host baseline (app.html) may have painted a synchronous frame-0 still; remove it once live
@@ -477,7 +671,7 @@ export function attachPlymouth(overlay) {
     complete() { try { endBoot(); if (layer) { layer.classList.remove("verify"); layer.classList.add("done"); } setTimeout(() => api.destroy(), 900); } catch {} },   // overlay is removed right after — stop the loop with it
     destroy() { gen++; try { player && player.destroy(); } catch {} },
   };
-  try { window.HoloPlymouth = { open: () => btn.click(), set: (n) => api.setTheme(n), themes: CATALOG.map((t) => t.name), state: readState }; } catch {}
+  try { window.HoloPlymouth = { open: () => btn.click(), set: (n) => api.setTheme(n), themes: CATALOG.map((t) => t.name), state: readState, mode: () => (player ? player.mode() : "none") }; } catch {}
   return api;
 }
 export default attachPlymouth;

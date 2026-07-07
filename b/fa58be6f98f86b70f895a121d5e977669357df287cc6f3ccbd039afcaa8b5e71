@@ -1,10 +1,6 @@
 // holo-rendezvous.mjs — TWO DEVICES THAT HOLD THE SAME κ FIND EACH OTHER, WITH NO SERVER.
-// CANONICAL HOME: holo-os/system/os/usr/lib/holo/ (T1, L4 — ONE module). The browser closure receives a
-// byte-identical assembly copy at apps/browser/_shared/ — never hand-fork; edit HERE, re-copy there.
-// R1+R2 (proven live over public relays) + T2: the sealed offer may carry the sharer's SIGNED share token
-// (holo-teleport, SEC-4) and the answerer verifies WHO shared before any channel is created — possession
-// of the link (SEC-5 seal) stops being enough to impersonate a sharer. This "first hello" lights up the
-// browser's device-mesh exit peer AND teleport/dial cross-device — a phone on cellular pairs to a desktop
+// This is R1+R2 of HOLO-SERVERLESS-RENDEZVOUS: the missing "first hello" that lights up the browser's
+// device-mesh exit peer (holo-peer-egress.mjs) from ANY network — a phone on cellular pairs to a desktop
 // at home with one tap, no IP, no LAN, no operator signaling server.
 //
 // THE LAWS, made concrete:
@@ -31,11 +27,7 @@
 // halves are touched only at call time, exactly like holo-webrtc-link.mjs, so the pure parts witness in Node).
 
 import { blake3, toHex, toBytes, fromHex, concat } from "./holo-ipfs.js";
-// webrtc-link loads LAZILY and location-agnostically, so this ONE file runs byte-identical from
-// usr/lib/holo (link lives in ../../../sbin), from the browser closure's _shared (link is a sibling
-// copy), and under Node from the OS root. RTC is touched only at call time, as before.
-let _link = null;
-const loadLink = () => (_link ||= import("./holo-webrtc-link.mjs").catch(() => import("../../../sbin/holo-webrtc-link.mjs")));
+import { createOfferer, createAnswerer } from "./holo-webrtc-link.mjs";
 
 const SUBTLE = (globalThis.crypto && globalThis.crypto.subtle) || null;
 const RDV_TAG = "holo-rdv/v1";
@@ -171,8 +163,8 @@ async function pollGet(mailbox, coord, pairKappa, wantRole, { timeoutMs = 30000,
     while (Date.now() < deadline) {
       const list = sub ? sub.collected.slice() : (Array.isArray(staticList) ? (await mailbox.get(coord)) : []);
       for (const blob of list) {
-        const obj = await unseal(pairKappa, blob);          // refuses non-holder blobs (seal capability) silently
-        if (obj && obj.role === wantRole && obj.sdp && (!accept || (await accept(obj)))) return obj;   // accept may be async (T2 token verify)
+        const obj = await unseal(pairKappa, blob);          // refuses non-holder blobs (SEC-4) silently
+        if (obj && obj.role === wantRole && obj.sdp && (!accept || accept(obj))) return obj;
       }
       await sleep(intervalMs);
     }
@@ -182,14 +174,11 @@ async function pollGet(mailbox, coord, pairKappa, wantRole, { timeoutMs = 30000,
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 
 // A (requester / browsing device): make offer → PUT → wait for the answer → accept → channel opens.
-// T2: `token` (a SIGNED holo-teleport share token, or any signed provenance object) rides INSIDE the
-// sealed offer — the mailbox never sees it (SEC-7); the answerer may demand it (verifyToken below).
-export async function offerSide({ pairKappa, mailbox, onChannel, timeoutMs = 30000, iceServers, token = null } = {}) {
+export async function offerSide({ pairKappa, mailbox, onChannel, timeoutMs = 30000, iceServers } = {}) {
   const coord = coordinate(pairKappa);
   let channel = null;
-  const { createOfferer } = await loadLink();
   const offerer = await createOfferer({ onChannel: (dc) => { channel = dc; onChannel && onChannel(dc); }, iceServers });
-  await mailbox.put(coord, await seal(pairKappa, { role: "offer", sdp: offerer.offer, ts: Date.now(), ...(token ? { token } : {}) }), Math.ceil(timeoutMs / 1000) + 30);
+  await mailbox.put(coord, await seal(pairKappa, { role: "offer", sdp: offerer.offer, ts: Date.now() }), Math.ceil(timeoutMs / 1000) + 30);
   const ans = await pollGet(mailbox, coord, pairKappa, "answer", { timeoutMs });
   if (!ans) { offerer.close(); throw new Error("rendezvous: no answer within " + timeoutMs + "ms (is the other device armed on this pairing?)"); }
   await offerer.accept(ans.sdp);
@@ -198,19 +187,11 @@ export async function offerSide({ pairKappa, mailbox, onChannel, timeoutMs = 300
 
 // B (answerer / exit device): wait for an offer → verify(unseal) → make answer → PUT → channel opens.
 // Re-arm the caller re-invokes; each completed handshake yields one channel (one served viewer).
-// T2 (SEC-4): pass `verifyToken: async (token) → boolean` to demand WHO shared, not just link-possession —
-// an offer whose token is absent, tampered, or wrong-signer is REFUSED here, before createAnswerer ever
-// runs. Composes with `accept` (the served-offer dedup predicate); both must pass. Omit → R1 behaviour.
-export async function answerSide({ pairKappa, mailbox, onChannel, timeoutMs = 60000, iceServers, accept = null, verifyToken = null } = {}) {
+export async function answerSide({ pairKappa, mailbox, onChannel, timeoutMs = 60000, iceServers, accept = null } = {}) {
   const coord = coordinate(pairKappa);
-  const gate = !verifyToken ? accept : async (obj) => {
-    if (accept && !(await accept(obj))) return false;
-    try { return !!(await verifyToken(obj.token || null)); } catch { return false; }   // fail-closed (SEC-4)
-  };
-  const off = await pollGet(mailbox, coord, pairKappa, "offer", { timeoutMs, accept: gate });
+  const off = await pollGet(mailbox, coord, pairKappa, "offer", { timeoutMs, accept });
   if (!off) throw new Error("rendezvous: no offer within " + timeoutMs + "ms");
   let channel = null;
-  const { createAnswerer } = await loadLink();
   const answerer = await createAnswerer(off.sdp, { onChannel: (dc) => { channel = dc; onChannel && onChannel(dc); }, iceServers });
   await mailbox.put(coord, await seal(pairKappa, { role: "answer", sdp: answerer.answer, ts: Date.now() }), Math.ceil(timeoutMs / 1000) + 30);
   return { coord, close: () => answerer.close(), channel: () => channel, pc: answerer.pc };

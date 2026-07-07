@@ -1047,9 +1047,10 @@
         $("totalNum").textContent = "40.23";
         $("netChg").innerHTML = '<span class="chg up">+$0.04 (+0.09%)</span>';
         const rows = [
-          { sym: "USDC", name: "USDC", glyphBg: "#2775ca", netColor: "#2775ca", usd: "35.56", amount: "35.559", change: 0.02 },
-          { sym: "ETH", name: "Ethereum", glyphBg: "#627eea", netColor: "#627eea", usd: "4.60", amount: "0.00259", change: 0.60, earn: true },
-          { sym: "SOL", name: "Solana", glyphBg: "#14f195", netColor: "#9945ff", usd: "0.07", amount: "0.000891", change: 1.18 },
+          { sym: "USDC", name: "USDC", glyphBg: "#2775ca", netColor: "#2775ca", usd: "35.56", amount: "35.559", change: 0.02,
+            logo: "https://cdn.jsdelivr.net/gh/trustwallet/assets@master/blockchains/ethereum/assets/0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48/logo.png" },
+          { sym: "ETH", name: "Ethereum", glyphBg: "#627eea", netColor: "#627eea", usd: "4.60", amount: "0.00259", change: 0.60, earn: true, logo: chainLogo("ethereum") },
+          { sym: "SOL", name: "Solana", glyphBg: "#14f195", netColor: "#9945ff", usd: "0.07", amount: "0.000891", change: 1.18, logo: chainLogo("solana") },
         ];
         $("chainList").innerHTML = rows.map(holdingRowHTML).join("");
       }
