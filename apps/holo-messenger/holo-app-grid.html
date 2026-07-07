@@ -104,7 +104,10 @@
   async function load() {
     let ds = [];
     try {
-      const j = await (await fetch("/apps/index.jsonld", { cache: "no-store" })).json();
+      // document-relative FIRST (exact at any mount point — root or /<repo>/, no service worker needed),
+      // then the canonical OS-root path (native host, holo://). Same file both ways.
+      const j = await fetch(new URL("../index.jsonld", location.href), { cache: "no-store" }).then((r) => r.ok ? r.json() : Promise.reject(r.status))
+        .catch(() => fetch("/apps/index.jsonld", { cache: "no-store" }).then((r) => r.json()));
       ds = j["dcat:dataset"] || j.dataset || [];
     } catch (e) { grid.innerHTML = '<div class="empty">Could not load the app catalog.</div>'; return; }
     apps = ds.map((d) => {
@@ -114,7 +117,7 @@
         kappa: k,
         did: d["holo:root"] || (k && "did:holo:sha256:" + k),
         name: d["schema:name"] || (k ? "holo://" + k.slice(0, 8) : "app"),
-        img: d["schema:image"] ? "/" + String(d["schema:image"]).replace(/^\/+/, "") : null,
+        img: d["schema:image"] ? new URL("../../" + String(d["schema:image"]).replace(/^\/+/, ""), location.href).pathname : null,
         cat: cats[0] || "Other",
         words: [d["schema:name"], d["schema:description"], d["schema:alternateName"]]
           .concat(d["schema:keywords"] || [], d["holo:words"] || []).filter(Boolean).join(" ").toLowerCase(),
