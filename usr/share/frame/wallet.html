@@ -635,6 +635,7 @@
       import { qrSvg } from "../../../_shared/btc-wallet/wallet.js";
       import * as login from "../../../_shared/holo-login.mjs";
       import { teeAvailable, teeAssert, teeEnroll } from "../../../_shared/holo-webauthn.mjs";
+      import { attachWindowSeam } from "../../../_shared/holo-wallet-resident.mjs";   // A1: the seam's answerer is RESIDENT now; this window defers to it
 
       // Solana spot tokens for the Swap sheet (Solana-only — the live Jupiter Swidge provider).
       const TOKENS = {
@@ -1389,8 +1390,10 @@
       // requesting origin. Sandboxed/opaque frames report origin "null" and fall back to "*" (there the byWin
       // host assertion is the real control).
       window.addEventListener("message", (e) => handleSignRequest(e.data, (p) => e.source && e.source.postMessage({ type: "holo-wallet:sign-result", id: e.data?.id, ...p }, (e.origin && e.origin !== "null") ? e.origin : "*"), e.origin));
-      const seamBus = new BroadcastChannel("holo-wallet");
-      seamBus.addEventListener("message", (e) => handleSignRequest(e.data, (p) => seamBus.postMessage({ type: "holo-wallet:sign-result", id: e.data?.id, ...p }), "this device (same-origin)"));
+      // A1 (holo-wallet-resident): the BroadcastChannel seam is answered by the RESIDENT wallet the shell
+      // boots at sign-in; this window attaches only as a fallback and stands down the moment a resident is
+      // alive (claim protocol) — so a request is answered exactly once, window open or not.
+      attachWindowSeam({ respond: handleSignRequest, bus: new BroadcastChannel("holo-wallet") });
 
       $("fsBtn").onclick = () => { document.fullscreenElement ? document.exitFullscreen() : document.documentElement.requestFullscreen?.(); };
       addEventListener("keydown", (e) => { if (e.key === "f" && !/INPUT|TEXTAREA/.test(document.activeElement?.tagName || "")) $("fsBtn").click(); if (e.key === "Escape") { if ($("view-approve").classList.contains("on")) closeGate(false); else closeSheet(); } });

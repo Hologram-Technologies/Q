@@ -1,7 +1,7 @@
 {
  "v": 1,
- "created": 1783417555742,
- "aggregate": "d9d3922aec2b25cebd9269653a7356e9be37110f21bf4b034f05441dc19b2b19",
+ "created": 1783418186335,
+ "aggregate": "f4ae93ed5986ed96f1d0161b05e57e78d52f5204bed0a3134245678d85ff16b4",
  "assets": [
   {
    "path": "/apps/browser/browser-sw.js",
@@ -50,8 +50,8 @@
   },
   {
    "path": "/apps/browser/peer-host.html",
-   "kappa": "3bb50aaffd21aed61367769160488989aa6cfc7f301d0854946d76ef16c237ab",
-   "bytes": 2416
+   "kappa": "8f7e1234b3eb4ead9297532b306fe659408f356ee309b6eda1703f20c4fd9ac1",
+   "bytes": 2795
   },
   {
    "path": "/apps/browser/_shared/holo-browser.js",
@@ -94,9 +94,14 @@
    "bytes": 4691
   },
   {
+   "path": "/apps/browser/_shared/holo-onion-endpoint.node.mjs",
+   "kappa": "e3ff4e25c66d6185ccfc1fbd5d8cd5c95dbd179b225cab7e168c173ea69be210",
+   "bytes": 2675
+  },
+  {
    "path": "/apps/browser/_shared/holo-onion-exit.mjs",
-   "kappa": "f1e81a4016c6bb5e0a6e99cd4b8a89632459750a0285af0b767fc74aba92cde9",
-   "bytes": 3667
+   "kappa": "f1ec04f90b6449173284c1b2daddf0cf00f59dc48df4596927da37eb7f04c98b",
+   "bytes": 4923
   },
   {
    "path": "/apps/browser/_shared/holo-peer-egress.mjs",

@@ -15,14 +15,18 @@
 // signal relay + owner identity that name the rendezvous room. Auth hook (holo-direct) is wired by the OS
 // shell in production; here same-identity is trusted (it is your own device).
 import { serveAsExitPeer } from "./_shared/holo-peer-egress.mjs";
+import { onionExitFetch, hostOnionFetch } from "./_shared/holo-onion-exit.mjs";
 const u = new URL(location.href);
 const signal = u.searchParams.get("peer-signal") || location.origin;
 const id = u.searchParams.get("peer-id") || (function () { try { return JSON.parse(localStorage.getItem("holo.identity.presentation") || "null")?.operator || ""; } catch { return ""; } })() || "device-mesh-default";
 const el = document.getElementById("state");
 let peers = 0;
+// Onion-aware exit peer (rung 1): a .onion routes through this host's Arti (via the /onion endpoint);
+// clearnet stays on the host's own /web. If Arti isn't mounted, onion requests fall past to arti-wasm.
+const fetchImpl = onionExitFetch({ onionFetch: hostOnionFetch("/onion?url=") });
 (async () => {
   try {
-    const peer = await serveAsExitPeer({ identKappa: id, signal, onState: (s) => { if (s && typeof s.count === "number") { peers = s.count; el.textContent = peers ? (peers + " device" + (peers > 1 ? "s" : "") + " connected · reachable") : "reachable · waiting for your devices"; } } });
+    const peer = await serveAsExitPeer({ identKappa: id, signal, fetchImpl, onState: (s) => { if (s && typeof s.count === "number") { peers = s.count; el.textContent = peers ? (peers + " device" + (peers > 1 ? "s" : "") + " connected · reachable") : "reachable · waiting for your devices"; } } });
     el.textContent = peer.ok ? "reachable · waiting for your devices" : "could not start (is a /web host serving this page?)";
     window.__peerHost = peer;
   } catch (e) { el.textContent = "error: " + (e && e.message || e); }

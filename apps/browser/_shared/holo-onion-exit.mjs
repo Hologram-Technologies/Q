@@ -58,4 +58,20 @@ export function onionExitFetch({ onionFetch, webFetch = webViaHost() } = {}) {
   };
 }
 
-export default { isOnionUrl, webViaHost, onionExitFetch };
+// hostOnionFetch(base) → onionFetch for the BROWSER page half of rung 1. RTC lives in the page; raw sockets
+// (SOCKS5 to Arti) live in the host PROCESS. So the page's onion transport is a thin call to a same-origin
+// host endpoint (`/onion?url=…`) that runs nodeArtiFetch (holo-onion-arti.node.mjs). If the endpoint is
+// absent (no Arti wired on this host), it THROWS — the exit peer replies error and browser-sw's ladder
+// falls past this device to the next rung (arti-wasm), exactly as intended.
+export function hostOnionFetch(base = "/onion?url=") {
+  return async (url, { doc, op } = {}) => {
+    const q = encodeURIComponent(url) + (doc ? "&doc=1" : "") + (op ? "&op=" + encodeURIComponent(op) : "");
+    let r;
+    try { r = await fetch(base + q); } catch (e) { throw new Error("onion endpoint unreachable — no Arti on this host? (" + (e && e.message || e) + ")"); }
+    if (r.status === 404 || r.status === 501) throw new Error("onion endpoint not mounted on this host (status " + r.status + ")");
+    const headers = {}; r.headers.forEach((v, k) => { headers[k] = v; });
+    return { status: r.status, headers, bytes: new Uint8Array(await r.arrayBuffer()), verified: headers["x-holo-onion-verified"] === "1" };
+  };
+}
+
+export default { isOnionUrl, webViaHost, onionExitFetch, hostOnionFetch };

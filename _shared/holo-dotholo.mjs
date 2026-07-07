@@ -129,13 +129,28 @@ export function openHolo({ kappa = null, manifest, result }) {
 
 // packHolo(sealed) / unpackHolo(bytes) → a single self-describing wire blob (manifest + result) for the
 // κ-cache / fabric to store + stream as one object. JSON envelope (result base64) — simple + verifiable.
+// ISOMORPHIC base64 (SS-P0): `Buffer` is a Node global — in the browser/service-worker the .holo must pack
+// and unpack identically (OPFS warm tier, static κ-registry), so base64 goes via btoa/atob there. Chunked:
+// String.fromCharCode.apply blows the arg limit on multi-MB results.
+export const b64encode = (bytes) => {
+  if (typeof Buffer !== "undefined") return Buffer.from(bytes).toString("base64");
+  let s = ""; const CH = 0x8000;
+  for (let i = 0; i < bytes.length; i += CH) s += String.fromCharCode.apply(null, bytes.subarray(i, i + CH));
+  return btoa(s);
+};
+export const b64decode = (b64) => {
+  if (typeof Buffer !== "undefined") return new Uint8Array(Buffer.from(b64, "base64"));
+  const s = atob(b64); const u = new Uint8Array(s.length);
+  for (let i = 0; i < s.length; i++) u[i] = s.charCodeAt(i);
+  return u;
+};
 export function packHolo({ kappa, manifest, result }) {
-  const b64 = Buffer.from(typeof result === "string" ? enc(result) : result).toString("base64");
+  const b64 = b64encode(typeof result === "string" ? enc(result) : result);
   return JSON.stringify({ kappa, manifest, result_b64: b64 });
 }
 export function unpackHolo(bytes) {
   const o = JSON.parse(typeof bytes === "string" ? bytes : new TextDecoder().decode(bytes));
-  const result = new TextDecoder().decode(Buffer.from(o.result_b64, "base64"));
+  const result = new TextDecoder().decode(b64decode(o.result_b64));
   return { kappa: o.kappa, manifest: o.manifest, result };
 }
 
