@@ -1,7 +1,7 @@
 {
  "v": 1,
- "created": 1783422970188,
- "aggregate": "ef7559bdfce33440acee0cadd85b95d6499119887404259a6c2997ef39ae4d65",
+ "created": 1783431699372,
+ "aggregate": "23a01afa88dcd1418afaa772e9878daffa05371d9d64b6637b23c1a03d8ccdbb",
  "assets": [
   {
    "path": "/apps/browser/browser-sw.js",
@@ -45,8 +45,8 @@
   },
   {
    "path": "/apps/browser/index.html",
-   "kappa": "43d7749c70b040e029d3ae712fe80a86bbbaf8e2cd3940f87839691f298a942e",
-   "bytes": 79725
+   "kappa": "aaeff2105b63181e04a93dff554a1dda7ccb21dc83f4bf7c8371568ffecd187b",
+   "bytes": 89977
   },
   {
    "path": "/apps/browser/ipfs-sw.js",
@@ -147,6 +147,16 @@
    "path": "/apps/browser/_spike/onion/serve.mjs",
    "kappa": "e772c266ecc9f8e2a3f63fac39d25d68c182ae5275f6388215f5a179090e2a07",
    "bytes": 3506
+  },
+  {
+   "path": "/apps/browser/home.html",
+   "kappa": "b8c64928aad279729fc4e45c7685142e742a7d035ddb8f65a0687f7d527d7c47",
+   "bytes": 6965
+  },
+  {
+   "path": "/apps/browser/_shared/holo-front-page.mjs",
+   "kappa": "ce8634806a0f3fe0925880e0bd64515b08f0d145af62cfdeb32d74abbc50a3f8",
+   "bytes": 4398
   }
  ]
 }
