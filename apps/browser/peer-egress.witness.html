@@ -1,0 +1,73 @@
+<!doctype html><meta charset="utf-8"><title>peer-egress witness</title>
+<body style="font:14px/1.5 system-ui;background:#0b141a;color:#e8eef5;padding:1.5rem">
+<h1 style="font-size:1rem">Holo peer-egress witness (S0/S1)</h1>
+<pre id="out">running…</pre>
+<script type="module">
+// S0: request/response over the together-rtc ctl channel — reqId correlation, byte-exact, cap, concurrency.
+// S1: the answerer serves REAL /web?url= (this page is served by a dev host that mounts the route).
+import { serveAsExitPeer, connectExitPeer, egressRoom } from "./_shared/holo-peer-egress.mjs";
+const out = document.getElementById("out"); const log = (m) => { out.textContent += "\n" + m; };
+const results = []; const ok = (n, c) => { results.push([n, c]); log((c ? "✓ " : "✗ ") + n); };
+const signal = location.origin;   // dev-serve mounts /signal at origin (parity with the bundle's default)
+const ident = "witness-identity-" + Math.random().toString(36).slice(2, 8);
+
+// S0 echo transport — the answerer's fetchImpl is injected: a request "echo:<n>:<tag>" returns <n> bytes of a
+// tag-derived pattern, WITHOUT touching /web. This exercises the real framing/chunk/cap code in isolation, so a
+// small request can request a large RESPONSE (never embedding size in the request URL — that would blow the SCTP cap).
+function echoImpl(url) {
+  const m = /^echo:(\d+):(.*)$/.exec(url);
+  if (!m) return Promise.resolve({ status: 400, headers: {}, bytes: new Uint8Array() });
+  const n = +m[1], tag = m[2]; const u = new Uint8Array(n);
+  for (let i = 0; i < n; i++) u[i] = (tag.charCodeAt(i % (tag.length || 1)) + i) & 0xff;
+  return Promise.resolve({ status: 200, headers: { "x-echo": tag }, bytes: u });
+}
+const rebuild = (n, tag) => { const u = new Uint8Array(n); for (let i = 0; i < n; i++) u[i] = (tag.charCodeAt(i % (tag.length || 1)) + i) & 0xff; return u; };
+const eq = (a, b) => a.length === b.length && a.every((v, i) => v === b[i]);
+
+(async () => {
+  try {
+    // S0 rig — echo answerer + client (pure transport, no /web)
+    const peer = await serveAsExitPeer({ identKappa: ident, signal, fetchImpl: echoImpl });
+    ok("exit peer hosting", peer.ok);
+    const client = await connectExitPeer({ identKappa: ident, signal, timeoutMs: 20000 });
+    ok("client dialed room", client.ok && client.room === peer.room);
+    await new Promise((r) => setTimeout(r, 1800));   // let the RTC channel open
+
+    // S0.a — a small body round-trips byte-exact through the framing
+    const probe = await client.peerFetch("echo:16:hi");
+    ok("small body byte-exact", eq(probe.bytes, rebuild(16, "hi")) && probe.headers["x-echo"] === "hi");
+
+    // S0.b — 100 concurrent reqIds correlate to the RIGHT reply (distinct tag+size per request)
+    const n = 100;
+    const got = await Promise.all(Array.from({ length: n }, (_, i) =>
+      client.peerFetch("echo:" + (32 + i) + ":t" + i).then((r) => eq(r.bytes, rebuild(32 + i, "t" + i))).catch(() => false)));
+    ok("100 concurrent reqIds correlate", got.every(Boolean));
+
+    // S0.c — a ~2MB RESPONSE reassembles from chunked base64 under the cap (small request!)
+    const bigR = await client.peerFetch("echo:" + (2 * 1024 * 1024) + ":Z");
+    ok("2MB response reassembles", eq(bigR.bytes, rebuild(2 * 1024 * 1024, "Z")));
+
+    // S0.d — over-cap is refused, not silently truncated (SEC-8)
+    try { await client.peerFetch("echo:" + (25 * 1024 * 1024) + ":Q"); ok("over-cap refused (SEC-8)", false); }
+    catch (e) { ok("over-cap refused (SEC-8)", /over cap/i.test(e.message)); }
+
+    // S1 — a SECOND peer whose fetchImpl is the DEFAULT /web serves a real live page
+    try {
+      const ident2 = ident + "-web";
+      const webPeer = await serveAsExitPeer({ identKappa: ident2, signal });   // default fetchImpl = /web
+      const webClient = await connectExitPeer({ identKappa: ident2, signal, timeoutMs: 20000 });
+      await new Promise((r) => setTimeout(r, 1800));
+      const live = await webClient.peerFetch("https://example.com/");
+      const html = new TextDecoder().decode(live.bytes);
+      ok("S1: real web via peer /web (example.com)", live.status === 200 && /Example Domain/i.test(html));
+      webClient.leave(); webPeer.stop();
+    } catch (e) { ok("S1: real web via peer /web (example.com) — " + (e.message||e), false); }
+
+    client.leave(); peer.stop();
+    const pass = results.filter((r) => r[1]).length;
+    log("\n" + pass + "/" + results.length + (pass === results.length ? "  ALL GREEN" : "  — FAIL"));
+    window.__witness = { pass, total: results.length, room: peer.room, results };
+  } catch (e) { log("FATAL " + (e && e.stack || e)); window.__witness = { fatal: String(e) }; }
+})();
+</script>
+</body>

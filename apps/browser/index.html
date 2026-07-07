@@ -282,6 +282,7 @@
         } catch (e) { swReady = false; }
         navigator.serviceWorker.addEventListener("message", onSwMessage);
         pushOperator();   // tell the seam who is signed in → per-identity egress Chrome
+        establishPeer();  // bring up the device-mesh exit peer if a signal relay + identity are configured
       }
       // Read the signed-in operator κ (TEE presence, written by holo-sso) and push it to the SW,
       // so the live-web egress runs in a Chrome profile bound to THIS identity — logins persist
@@ -309,10 +310,47 @@
         });
       }
 
+      // ── device-mesh exit peer (holo-peer-egress): RTC lives HERE (the page), and the SW proxies each
+      // peer fetch to us. Establish the link when a signal relay + owner identity are configured; a bare
+      // static origin has neither, so this is a fail-open no-op there (the loopback + relay tiers cover it).
+      let _peerLink = null;
+      async function swPost(msg, transfer) {
+        try { const reg = await navigator.serviceWorker.getRegistration(VIEW); const w = reg && (reg.active || reg.waiting); if (w) w.postMessage(msg, transfer || []); } catch {}
+      }
+      function peerConfig() {
+        const u = new URL(location.href);
+        const ls = (k) => { try { return localStorage.getItem(k) || ""; } catch { return ""; } };
+        const signal = u.searchParams.get("peer-signal") || ls("holo.browser.peer.signal");
+        const id = u.searchParams.get("peer-id") || readOperator() || ls("holo.browser.peer.id");
+        const only = u.searchParams.get("peer-only") === "1" || ls("holo.browser.peer.only") === "1";
+        return { signal, id, only };
+      }
+      async function establishPeer() {
+        const { signal, id, only } = peerConfig();
+        if (!signal || !id) return;   // not configured → no mesh tier (honest)
+        try {
+          const { connectExitPeer } = await import(BASE + "_shared/holo-peer-egress.mjs");
+          const link = await connectExitPeer({ identKappa: id, signal });
+          if (!link || !link.ok) return;
+          _peerLink = link;
+          setTimeout(() => swPost({ type: "peer-ready", ready: true, only }), 1500);   // let the channel open, then arm the tier
+        } catch {}
+      }
+
       // the SW tells us what committed (κ + mint/verify) → update the HUD + history.
       let pendingByView = new Map();   // view-url → { tab, t0, input }
       function onSwMessage(e) {
-        const m = e.data || {}; if (m.type !== "committed") return;
+        const m = e.data || {};
+        // SW-proxied device-mesh fetch: run it over our peer link, hand the framed bytes back to the SW.
+        if (m.type === "peer-fetch" && m.id) {
+          (async () => {
+            if (!_peerLink) return swPost({ type: "peer-fetch-res", id: m.id, error: "no peer link" });
+            try { const r = await _peerLink.peerFetch(m.url, { doc: m.doc, op: m.op }); swPost({ type: "peer-fetch-res", id: m.id, status: r.status, headers: r.headers, bytes: r.bytes }); }
+            catch (err) { swPost({ type: "peer-fetch-res", id: m.id, error: String(err && err.message || err) }); }
+          })();
+          return;
+        }
+        if (m.type !== "committed") return;
         const p = pendingByView.get(m.view); const tab = p ? p.tab : browser.activeTab; if (!tab) return;
         tab.lastKappa = m.kappa; tab.lastMinted = !!m.minted;
         tab.securityState = m.refused ? "dangerous" : (m.verified ? (m.scheme === "holo" || m.scheme === "ipfs" ? "secure" : (m.scheme === "https" ? "secure" : "warning")) : "warning");

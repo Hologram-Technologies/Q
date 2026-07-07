@@ -30,6 +30,8 @@ export const SHELL_MANIFEST = [
   "/apps/holo-messenger/messenger-skins.css",
   "/apps/holo-messenger/messenger-sw-register.mjs",
   "/apps/holo-messenger/holo-m1-boot.mjs",
+  "/apps/holo-messenger/holo-release-boot.mjs",
+  "/apps/holo-messenger/holo-release-verify.mjs",
   "/apps/holo-messenger/mail/holo-mail-attach.mjs",
   "/apps/holo-messenger/_vendor/wallpaper-default.jpg",
 ];

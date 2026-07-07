@@ -97,6 +97,21 @@ const RELAYS = [
 // is known dead), remembered 5 min. Doc/operator ride the QUERY (headers would preflight).
 const HOST_PORTS = [8474, 8472, 8493, 8596];
 let HOSTS = null, HOSTS_AT = 0;
+// ── tier 1.6: your device MESH — a Hologram host on ANOTHER device (your desktop at home) answers
+// the same web?url= contract over an authenticated holo-together-rtc data channel (holo-peer-egress).
+// RTC lives in the PAGE, so the SW proxies each peer fetch to a controlled client and awaits the
+// framed reply. PEER_READY is posted by the page once its link is up (mirrors setop/setext). This is
+// the cross-network SEC-7 exit peer: on cellular, your phone still exits through your own machine. ──
+let PEER_READY = false, PEER_ONLY = false;   // PEER_ONLY: exit ONLY through your own device mesh (privacy max; no relay ever)
+const peerPending = new Map();
+function peerFetchViaPage(url, opts) {
+  return new Promise((resolve, reject) => {
+    const id = "pf" + Math.random().toString(36).slice(2, 10);
+    const timer = setTimeout(() => { peerPending.delete(id); reject(new Error("peer page timeout")); }, 15000);
+    peerPending.set(id, { resolve, reject, timer });
+    broadcast({ type: "peer-fetch", id, url, doc: !!opts.doc, op: opts.op || "" });
+  });
+}
 async function probeHosts() {
   if (HOSTS && Date.now() - HOSTS_AT < 300_000) return HOSTS;
   HOSTS_AT = Date.now();
@@ -113,6 +128,13 @@ async function egressFetch(realUrl, init) {
   const tiers = [];
   const isDoc = !!(init && init.headers && init.headers["x-holo-doc"] === "1");
   const op = (init && init.headers && init.headers["x-holo-operator"]) || "";
+  // PEER_ONLY (privacy max): your own device mesh is the ONLY carrier — no proxy, no direct, no relay ever.
+  if (PEER_ONLY) {
+    if (PEER_READY) tiers.push(["host-peer", () => peerFetchViaPage(realUrl, { doc: isDoc, op })]);
+    let up = null;
+    for (const [via, go] of tiers) { let r; try { r = await go(); } catch { continue; } if (via === "host-peer" && !r.headers.get("x-holo-web")) continue; if (r.ok) return { r, via }; if (!up) up = { r, via }; }
+    return up || { r: null, via: "none" };
+  }
   if (Date.now() >= PROXY_DOWN_UNTIL) tiers.push(["proxy", () => fetch(WEB_PROXY + encodeURIComponent(realUrl), init)]);
   // seam-private headers would force a CORS preflight neither a host nor a third party answers — strip beyond tier 1
   const dinit = { ...init };
@@ -120,6 +142,8 @@ async function egressFetch(realUrl, init) {
   if (Date.now() < PROXY_DOWN_UNTIL) {
     const hostQ = encodeURIComponent(realUrl) + (isDoc ? "&doc=1" : "") + (op ? "&op=" + encodeURIComponent(op) : "");
     for (const h of await probeHosts()) tiers.push(["host", () => fetch(h + hostQ, dinit)]);
+    // your device-mesh peer (another of YOUR machines) — above direct/relay, below same-LAN loopback
+    if (PEER_READY) tiers.push(["host-peer", () => peerFetchViaPage(realUrl, { doc: isDoc, op })]);
   }
   tiers.push(["direct", () => fetch(realUrl, dinit)]);
   for (const relay of RELAYS) tiers.push(["relay", () => fetch(relay(realUrl), dinit)]);
@@ -128,6 +152,7 @@ async function egressFetch(realUrl, init) {
     let r; try { r = await go(); } catch { if (via === "proxy") PROXY_DOWN_UNTIL = Date.now() + 60_000; continue; }
     if (via === "proxy" && !r.headers.get("x-holo-web")) { PROXY_DOWN_UNTIL = Date.now() + 60_000; continue; }   // a static host's 404, not the proxy
     if (via === "host" && !r.headers.get("x-holo-web")) continue;   // some other localhost server — never trust it as a Hologram host
+    if (via === "host-peer" && !r.headers.get("x-holo-web")) continue;   // the peer must have carried a real /web answer (its forwarded marker), else fall past
     if (r.ok) return { r, via };
     if (via === "proxy") return { r, via };          // the proxy relays the upstream's real status — authoritative
     if (!upstream) upstream = { r, via };
@@ -425,5 +450,14 @@ self.addEventListener("message", (e) => {
   // the page tells the seam WHO is signed in (operator κ from the TEE presence) → the egress
   // gives each identity its own persistent Chrome. A SW can't read localStorage, so the page pushes it.
   if (m.type === "setop") { EGRESS_OPERATOR = typeof m.operator === "string" ? m.operator : ""; if (e.ports && e.ports[0]) e.ports[0].postMessage({ ok: true }); }
+  // the page's device-mesh peer link came up/down → enable/disable the host-peer egress tier.
+  if (m.type === "peer-ready") { PEER_READY = !!m.ready; if (typeof m.only === "boolean") PEER_ONLY = m.only; if (e.ports && e.ports[0]) e.ports[0].postMessage({ ok: true, peer: PEER_READY, only: PEER_ONLY }); }
+  // the page answers a proxied peer fetch: a synthesized Response for egressFetch (bytes structured-cloned).
+  if (m.type === "peer-fetch-res" && m.id) {
+    const p = peerPending.get(m.id);
+    if (p) { clearTimeout(p.timer); peerPending.delete(m.id);
+      if (m.error) p.reject(new Error(m.error));
+      else p.resolve(new Response(m.bytes || new Uint8Array(), { status: m.status || 200, headers: m.headers || {} })); }
+  }
   if (m.type === "ping" && e.ports && e.ports[0]) e.ports[0].postMessage({ ok: true, view: VIEW });
 });

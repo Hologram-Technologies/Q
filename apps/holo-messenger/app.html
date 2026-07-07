@@ -62,6 +62,10 @@
   @keyframes hl-defog{to{opacity:0;}}
   @keyframes hl-lift{to{opacity:0;transform:translateY(-10px) scale(1.03);}}
   @media (prefers-reduced-motion:reduce){#holo-login .hl-panel,#holo-login .spin{animation:none;}#holo-login.unfog .hl-frost,#holo-login.unfog .hl-panel{animation:hl-defog .3s ease forwards;}}
+  /* PLYMOUTH BOOT BEAT — while .hl-boot, the machine is booting: pure splash, panel held. holo-plymouth.mjs
+     lifts it (or the baseline's own 1.8s timer does — never a lock-out). Must live HERE for the 0-ms frame. */
+  #holo-login.hl-boot .hl-panel{opacity:0!important;pointer-events:none!important;}
+  #holo-login .hl-panel{transition:opacity .55s ease;}
 </style>
 </head><body>
 <div id="root"></div>
@@ -121,6 +125,21 @@
     if (!_wp) _wp = "./_vendor/wallpaper-default.jpg";
     var _wall = document.querySelector("#holo-login .hl-wall");
     if (_wall) _wall.style.backgroundImage = 'url("' + _wp + '")';
+    // PLYMOUTH BOOT SPLASH baseline (holo-plymouth.mjs owns the real player; this is the 0-ms frame). Once a
+    // boot style has been worn (holo.plymouth.v1 persisted), a cold open paints BLACK + the sealed frame-0
+    // synchronously — the machine boots like a machine — and the panel holds for one boot beat behind
+    // .hl-boot. Fail-open: a timer lifts the beat even if the module never arrives; first-ever boot (no
+    // state yet) keeps the wallpaper baseline untouched.
+    try {
+      var _pl = JSON.parse(localStorage.getItem("holo.plymouth.v1") || "null");
+      if (_pl && _pl.on && _wall) {
+        _wall.style.background = "#000";
+        if (_pl.firstFrame) { _wall.style.backgroundImage = 'url("' + _pl.firstFrame + '")'; _wall.style.backgroundRepeat = "no-repeat"; _wall.style.backgroundPosition = "center"; _wall.style.backgroundSize = "auto"; }
+        var _rm = false; try { _rm = matchMedia("(prefers-reduced-motion: reduce)").matches; } catch (e) {}
+        var _ov = document.getElementById("holo-login");
+        if (_ov && !_rm) { _ov.classList.add("hl-boot"); setTimeout(function () { try { _ov.classList.remove("hl-boot"); } catch (e) {} }, 1800); }
+      }
+    } catch (e) {}
   } catch (e) {}
   var fp = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"><path d="M5.5 11a6.5 6.5 0 0 1 13 0"/><path d="M8.5 11a3.5 3.5 0 0 1 7 0v2.6"/><path d="M12 11v4.4"/><path d="M8.6 14.2V16"/><path d="M15.4 15.4V18"/></svg>';
   var person = '<svg viewBox="0 0 24 24" fill="currentColor"><circle cx="12" cy="8.4" r="4.1"/><path d="M3.8 20.4a8.2 8.2 0 0 1 16.4 0z"/></svg>';

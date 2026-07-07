@@ -34,5 +34,8 @@
     // on a mounted static host (e.g. GitHub Pages /<repo>/) — one registrar, every mount point.
     await navigator.serviceWorker.register(new URL("./holo-sw.js", import.meta.url), { type: "module", scope: new URL("./", import.meta.url).pathname });
     console.log("[msgr-sw] one worker active (push + shell cache) — repeat opens serve the shell network-free");
+    // S3: verify the SIGNED release pointer off the critical path — the standing trust bar for the worker
+    // (what an #m1 link used to grant, now on every open). Fail-soft here; fail-closed inside the module.
+    try { await import("./holo-release-boot.mjs"); } catch {}
   } catch (e) { /* never block boot */ }
 })();

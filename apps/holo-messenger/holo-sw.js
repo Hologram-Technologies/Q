@@ -12,7 +12,7 @@
 // ES module (shares holo-push-route). The SHELL list mirrors SHELL_MANIFEST in holo-m1-boot.mjs (witness gates drift).
 import { notificationFor, routeFor } from "./holo-push-route.mjs";
 
-const CACHE = "holo-msgr-shell-4b86f880e3f9";                     // bump → old (unverified) caches are purged on activate
+const CACHE = "holo-msgr-shell-e4b0beedefb0";                     // bump → old (unverified) caches are purged on activate
 // BASE-RELOCATABLE: the worker may be served under ANY prefix (OS root, a GitHub Pages /<repo>/ subpath, a
 // static mirror). Every location below derives from where THIS script actually lives; at the OS root BASE is ""
 // and behavior is byte-identical. Manifest paths stay CANONICAL ("/apps/holo-messenger/…" — they are identity,
@@ -42,6 +42,8 @@ const SHELL = [
   "/apps/holo-messenger/messenger-skins.css",
   "/apps/holo-messenger/messenger-sw-register.mjs",
   "/apps/holo-messenger/holo-m1-boot.mjs",
+  "/apps/holo-messenger/holo-release-boot.mjs",
+  "/apps/holo-messenger/holo-release-verify.mjs",
   "/apps/holo-messenger/mail/holo-mail-attach.mjs",
   "/apps/holo-messenger/_vendor/wallpaper-default.jpg",
 ];

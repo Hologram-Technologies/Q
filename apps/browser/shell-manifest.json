@@ -1,12 +1,12 @@
 {
  "v": 1,
- "created": 1783410102698,
- "aggregate": "c470aa9cdb70a06ae263b8fbef7ef30af86c70b6a6087323e6f26e80b66ad967",
+ "created": 1783413277060,
+ "aggregate": "871444d88ae7b189620f2be2505baf4b6704863b06d62a4ae52ca715e7e036bf",
  "assets": [
   {
    "path": "/apps/browser/browser-sw.js",
-   "kappa": "93d2894a2df4a1e2de51c38044b792ee53addf19e27cf6f2e420afb4afacea2e",
-   "bytes": 35665
+   "kappa": "f194d96c67ff41629dd3511b550bed3a180181cacbb66826d47ccf4f5ca4e025",
+   "bytes": 38387
   },
   {
    "path": "/apps/browser/ext/holo-shield.crx",
@@ -40,13 +40,23 @@
   },
   {
    "path": "/apps/browser/index.html",
-   "kappa": "df7ac2cd15ad86d36fc2423379036ed203e6a0a2ad182a79062365d742a269b9",
-   "bytes": 75634
+   "kappa": "276b9e8159d42967621e32a86692d0d76d34d0fc5aecdfd5c62646e93f615124",
+   "bytes": 78052
   },
   {
    "path": "/apps/browser/ipfs-sw.js",
    "kappa": "f7ab7014228b52f2a56b3af44c58739a68f482b62711e09ed5d4f1151e682fe2",
    "bytes": 7918
+  },
+  {
+   "path": "/apps/browser/peer-egress.witness.html",
+   "kappa": "266a3759d8fe8200979f5a9557dc83d1f270859dc2d7ba39c74ff13d70122342",
+   "bytes": 4689
+  },
+  {
+   "path": "/apps/browser/peer-host.html",
+   "kappa": "3bb50aaffd21aed61367769160488989aa6cfc7f301d0854946d76ef16c237ab",
+   "bytes": 2416
   },
   {
    "path": "/apps/browser/_shared/holo-browser.js",
@@ -77,6 +87,11 @@
    "path": "/apps/browser/_shared/holo-ipfs.js",
    "kappa": "b3300639bba0f4b676fe17842c5d1793ec8479feee70ce996e50894948847d94",
    "bytes": 37357
+  },
+  {
+   "path": "/apps/browser/_shared/holo-peer-egress.mjs",
+   "kappa": "a2e6aee744426166919fc6a8cf74c20af75b316dcde9e88c746124cce9616fca",
+   "bytes": 7583
   },
   {
    "path": "/apps/browser/_shared/holo-zip.js",

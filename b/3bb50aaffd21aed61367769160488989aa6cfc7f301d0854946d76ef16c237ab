@@ -1,0 +1,31 @@
+<!doctype html><meta charset="utf-8"><title>Holo — this device is an exit peer</title>
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<body style="font:15px/1.6 system-ui;background:#0a0e14;color:#e8eef5;margin:0;display:grid;place-items:center;min-height:100vh">
+<div style="max-width:520px;padding:2rem;text-align:center">
+  <h1 style="font-size:1.15rem;font-weight:600">This device is an exit peer</h1>
+  <p style="opacity:.75">Your other devices — a phone on the road, a tablet on café Wi-Fi — can browse the real web
+     <b>through this machine</b>, over an authenticated peer link. The bytes never touch a third party.</p>
+  <p id="state" style="margin-top:1.25rem;font-variant-numeric:tabular-nums;opacity:.9">starting…</p>
+  <p style="opacity:.5;font-size:.85rem;margin-top:1.5rem">Runs on the Hologram host that answers <code>/web</code>.
+     Keep this open to stay reachable. Content-blind: it forwards bytes, it never reads them.</p>
+</div>
+<script type="module">
+// This device serves the web?url= contract to the owner's OTHER devices over holo-together-rtc (SEC-7).
+// It calls its OWN /web (same origin — this page is served by the host), so it needs no config beyond the
+// signal relay + owner identity that name the rendezvous room. Auth hook (holo-direct) is wired by the OS
+// shell in production; here same-identity is trusted (it is your own device).
+import { serveAsExitPeer } from "./_shared/holo-peer-egress.mjs";
+const u = new URL(location.href);
+const signal = u.searchParams.get("peer-signal") || location.origin;
+const id = u.searchParams.get("peer-id") || (function () { try { return JSON.parse(localStorage.getItem("holo.identity.presentation") || "null")?.operator || ""; } catch { return ""; } })() || "device-mesh-default";
+const el = document.getElementById("state");
+let peers = 0;
+(async () => {
+  try {
+    const peer = await serveAsExitPeer({ identKappa: id, signal, onState: (s) => { if (s && typeof s.count === "number") { peers = s.count; el.textContent = peers ? (peers + " device" + (peers > 1 ? "s" : "") + " connected · reachable") : "reachable · waiting for your devices"; } } });
+    el.textContent = peer.ok ? "reachable · waiting for your devices" : "could not start (is a /web host serving this page?)";
+    window.__peerHost = peer;
+  } catch (e) { el.textContent = "error: " + (e && e.message || e); }
+})();
+</script>
+</body>

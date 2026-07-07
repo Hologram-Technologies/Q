@@ -121,6 +121,9 @@ function watchQ() {
         _q.state = "q:seed"; _q.detail = " (hf-blocked)"; again = false;
       } else if (caps.wasm !== undefined && (caps.wasm !== true || !caps.gpu)) {
         _q.state = "q:seed"; _q.detail = !caps.gpu ? " (no-gpu)" : " (no-wasm)"; again = false;
+      } else if (HQ && info) {
+        // brain constructed, κ-stream in flight (this load path reports no byte progress — stay honest, not fake %)
+        _q.state = "q:warming…"; _q.detail = "";
       }
       renderBeacon(window.__holoCaps);
     } catch (e) {}

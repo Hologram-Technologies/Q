@@ -205,13 +205,19 @@ export async function stepUp(action) {
 export async function signIn({ root, params, app = "holospace", appName = "Hologram", nextPath = "", warmPaint = null, chrome = "minimal", onEstablished = null } = {}) {
   params = params || new URLSearchParams(location.search);
   const overlay = ensureOverlay();
+  // PLYMOUTH BOOT SPLASH — the boot-animation layer + the "Boot style" door (holo-plymouth: real Plymouth
+  // themes, streamed once + sealed to κ, played by one canvas). Purely additive and fail-open: if the
+  // module can't load or no frame ever lands, this greeter is exactly what it was.
+  let plymouth = null;
+  try { import("./holo-plymouth.mjs").then((m) => { plymouth = m.attachPlymouth(overlay); }).catch(() => {}); } catch {}
   const panel = document.getElementById("holo-login-panel");
   const statusEl = () => panel.querySelector(".status");
-  const setStatus = (t, err) => { const el = statusEl(); if (el) { el.className = "status" + (err ? " err" : ""); el.textContent = t || ""; } };
-  const setBusy = (m) => { const el = statusEl(); if (el) { el.className = "status"; el.innerHTML = `<span class="spin"></span><span>${esc(m || "")}</span>`; } };
+  const setStatus = (t, err) => { if (err) { try { plymouth && plymouth.calm(); } catch {} } const el = statusEl(); if (el) { el.className = "status" + (err ? " err" : ""); el.textContent = t || ""; } };
+  const setBusy = (m) => { try { plymouth && plymouth.verify(); } catch {} const el = statusEl(); if (el) { el.className = "status"; el.innerHTML = `<span class="spin"></span><span>${esc(m || "")}</span>`; } };
 
   return new Promise(async (resolve) => {
     const done = (auth) => {
+      try { plymouth && plymouth.complete(); } catch {}   // the splash flares out with the unfog — boot complete
       overlay.classList.add("unfog");
       setTimeout(() => { try { overlay.remove(); } catch {} }, 720);
       resolve(auth);

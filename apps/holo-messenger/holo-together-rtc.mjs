@@ -51,8 +51,10 @@ export async function host({ room, stream = null, control = false, onState = () 
   onState({ phase: "hosting", count: 0 });
   if (media) media.getVideoTracks().forEach((t) => t.addEventListener("ended", () => stop()));   // user stops sharing → end
   function broadcast(msg) { const s = JSON.stringify(msg); for (const [, ch] of channels) { if (ch.readyState === "open") { try { ch.send(s); } catch {} } else (ch._q || (ch._q = [])).push(s); } }
+  // per-viewer send — request/response users (peer egress) answer ONE peer; broadcast would leak the reply to the room.
+  function send(viewer, msg) { const ch = channels.get(viewer); if (!ch) return false; const s = JSON.stringify(msg); if (ch.readyState === "open") { try { ch.send(s); } catch { return false; } } else (ch._q || (ch._q = [])).push(s); return true; }
   function stop() { for (const [, pc] of pcs) try { pc.close(); } catch {} pcs.clear(); channels.clear(); try { if (media && !stream) media.getTracks().forEach((t) => t.stop()); } catch {} sig.close(); onState({ phase: "ended" }); }
-  return { ok: true, live: true, stop, peers: () => pcs.size, broadcast };
+  return { ok: true, live: true, stop, peers: () => pcs.size, broadcast, send };
 }
 
 // JOIN (view-only): receive the host's stream + control channel. Returns { leave, send(msg) }.
