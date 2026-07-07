@@ -18,9 +18,9 @@
     <meta name="application-name" content="Hologram" />
     <link rel="apple-touch-icon" href="/icon-192.png" />
     <!-- Shared mobile-conformance layer every shipped holospace adopts (enforce-witnesses gate). -->
-    <link rel="stylesheet" href="../../_shared/holo-mobile.css" data-holo-shared="holo-mobile.css" />
-    <link rel="stylesheet" href="../../_shared/holo-phi.css" data-holo-shared="holo-phi.css" />
-    <script type="module" src="../../_shared/holo-ux.js" data-holo-shared="holo-ux.js"></script>
+    <link rel="stylesheet" href="/.holo/sha256/b2bfa104b9ee8e3bb631dcd0ec0e6f7017b8898c4304666f5b3dfeeebc926eb9.css" data-holo-shared="holo-mobile.css" />
+    <link rel="stylesheet" href="/.holo/sha256/af0f2b5ff47f414281246d8e8e786edc6302bed6731174897f74f105dd2f93f3.css" data-holo-shared="holo-phi.css" />
+    <script type="module" src="/.holo/sha256/f06225898cce8ded3bddebb5abf6a4f2478e40b7eac828905d38290cebb820de.js" data-holo-shared="holo-ux.js"></script>
     <link rel="stylesheet" href="../../_shared/holo-dock.css" data-holo-shared="holo-dock.css" />
     <style>
       :root {
@@ -211,7 +211,7 @@
 
     <div id="toast" role="status" aria-live="polite"></div>
 
-    <script src="../../_shared/teleport.js" data-holo-shared="teleport.js" defer></script>
+    <script src="/.holo/sha256/a0ebbc696bda5154727b76b42c11921231cbc652de3e705dd6b632456e6f34aa.js" data-holo-shared="teleport.js" defer></script>
     <script type="module">
       import * as B from "../../_shared/holo-browser.js";
       import { blake3, toHex, toBytes } from "../../_shared/holo-ipfs.js";
@@ -261,6 +261,17 @@
         });
       }
       const browser = new B.Browser();
+      // Persist visit history on-device so Holo Search can rank over YOUR own κ-graph (and history
+      // survives a reload). Plain JSON, same-origin only, capped — SEC-7: it never leaves the device.
+      const HIST_LS = "holo.browser.history.v1";
+      try { const saved = JSON.parse(localStorage.getItem(HIST_LS) || "[]"); if (Array.isArray(saved)) browser.history = saved.slice(0, 500); } catch {}
+      function persistHistory() { try { localStorage.setItem(HIST_LS, JSON.stringify(browser.history.slice(0, 500))); } catch {} }
+      // Holo Search (loaded same-origin in the webview) posts navigation intent back here — it can't
+      // drive the loading seam itself. Same-origin only; anything else is ignored.
+      window.addEventListener("message", (e) => {
+        if (e.origin !== location.origin) return;
+        const m = e.data || {}; if (m.type === "holonav" && typeof m.url === "string") { try { go(m.url); } catch {} }
+      });
 
       let toastT; const toast = (m) => { const el = $("toast"); el.textContent = m; el.classList.add("show"); clearTimeout(toastT); toastT = setTimeout(() => el.classList.remove("show"), 2600); };
       const short = (s, n = 10) => { s = String(s || ""); return s.length > 2 * n + 1 ? s.slice(0, n) + "…" + s.slice(-n) : s; };
@@ -431,7 +442,11 @@
 
       // ── navigation (NavigationController.navigate → the loading seam → the renderer) ──
       const HOME = "https://www.google.com/";                                         // default landing + home = Google
-      const GOOGLE = { name: "Google", url: "https://www.google.com/search?q=%s" };   // omnibox searches → Google
+      // The default engine of the Hologram browser is HOLOGRAM. A plain query → Holo Search: your own
+      // ranked κ-graph (history + the app universe), instant, on-device, with a one-tap web escape — a
+      // bare query never needs a third party to paint. `holo-search.html` is served by the browser app.
+      const HOLO_SEARCH = { name: "Holo Search", url: BASE + "holo-search.html?q=%s" };
+      const GOOGLE = HOLO_SEARCH;   // omnibox free-text → Holo Search (the web escape lives inside it)
       let demoKappa = null;
       async function go(input, { record = true } = {}) {
         const a = $("addr");
@@ -447,6 +462,11 @@
 
         // chrome://newtab → the NTP
         if (cls.scheme === "chrome" || cls.kind === "demo" && !demoKappa) { showNTP(true); setVerify(null); t.title = "New Tab"; renderTabs(); return; }
+
+        // a plain query → HOLO SEARCH: a same-origin results page ranked over YOUR κ-graph, loaded
+        // DIRECTLY (not through the /web seam — it's ours, no egress). A bare query never leaves the
+        // device to paint; the page itself offers a one-tap web escape for the long tail.
+        if (cls.kind === "search") { t.title = cls.query; renderTabs(); setVerify({ verified: true, scheme: "holo" }); loadFrame(BASE + "holo-search.html?q=" + encodeURIComponent(cls.query), t, t0, "holo"); return; }
 
         // a recognized media watch URL (YouTube/Vimeo/Twitch/…) → project it through Holo Video via
         // /sc/vstream instead of loading the platform's player. Same-origin holo:// route, fail-open.
@@ -488,7 +508,7 @@
           invoke("tab_navigate", { id: tab.id, url: abs }).catch((e) => toast("Couldn't open that page"));
           tab.loading = false;
           if (scheme === "holo" && tab.lastKappa == null) setVerify({ verified: true, kappa: (B.classifyInput(tab.url).kappa || ""), minted: false, scheme: "holo" });
-          browser.recordVisit(tab.url, tab.title, tab.lastKappa); syncNav();
+          if (!/holo-search\.html/.test(tab.url || "")) { browser.recordVisit(tab.url, tab.title, tab.lastKappa); persistHistory(); } syncNav();
           return;
         }
         pendingByView.set(viewUrl, { tab, t0, input: viewUrl });
@@ -498,7 +518,7 @@
           try { const d = f.contentDocument; if (d && d.title) { tab.title = d.title; renderTabs(); } } catch {}
           tab.loading = false;
           if (scheme === "holo" && tab.lastKappa == null) { setVerify({ verified: true, kappa: (B.classifyInput(tab.url).kappa || ""), minted: false, scheme: "holo" }); }
-          browser.recordVisit(tab.url, tab.title, tab.lastKappa); syncNav();
+          if (!/holo-search\.html/.test(tab.url || "")) { browser.recordVisit(tab.url, tab.title, tab.lastKappa); persistHistory(); } syncNav();
         };
         f.src = viewUrl;
       }
@@ -907,8 +927,8 @@
       render(); hydrate().then(autoInstallShield);
       } catch (err) { console.error("[holo-ext] store init failed:", err); }
     </script>
-    <script src="../../_shared/holo-theme.js" data-holo-shared="holo-theme.js"></script>
-    <script src="../../_shared/holo-manage.js" data-holo-shared="holo-manage.js" defer></script>
+    <script src="/.holo/sha256/b4dbe84b9234d9b4672a632159fc7cbafb94c0af6da7cec9eedf2c325fe1667b.js" data-holo-shared="holo-theme.js"></script>
+    <script src="/.holo/sha256/92dcac0de44530fe7a198607bd3daf734e02119a3c9c1ba15b871f8fc3c0782f.js" data-holo-shared="holo-manage.js" defer></script>
     <!-- The dock is Holo Browser's shortcut bar (ADR-0059): a tap opens that object in a tab. -->
     <script defer src="../../_shared/holo-dock.js" data-holo-shared="holo-dock.js"></script>
     <script defer src="./holo-install.js" data-holo-shared="holo-install.js"></script>

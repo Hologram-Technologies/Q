@@ -1,7 +1,7 @@
 {
  "v": 1,
- "created": 1783418186335,
- "aggregate": "f4ae93ed5986ed96f1d0161b05e57e78d52f5204bed0a3134245678d85ff16b4",
+ "created": 1783418746415,
+ "aggregate": "f6f753496e1f913e287779fb788f7150f3408d723d9b869e1adca4abffe9f3b6",
  "assets": [
   {
    "path": "/apps/browser/browser-sw.js",
@@ -40,8 +40,8 @@
   },
   {
    "path": "/apps/browser/index.html",
-   "kappa": "64384d794ab21b02a680abbe2a0d23bc7b1bc16bdf40d9dc4577dfc29f24e46e",
-   "bytes": 77723
+   "kappa": "27dcaa3699cf9adbfb5885ae7e7180a11958d8da1fc285c4d1671f9104b7e700",
+   "bytes": 80054
   },
   {
    "path": "/apps/browser/ipfs-sw.js",
@@ -132,6 +132,11 @@
    "path": "/apps/browser/_spike/onion/onion-spike.html",
    "kappa": "5c20d7dfa7c0f3f10cb637f8fe79263fa6a3c19de5fddec1b859309f7c03570e",
    "bytes": 3018
+  },
+  {
+   "path": "/apps/browser/holo-search.html",
+   "kappa": "aa1e33c7300bad57e3260bd41ce08d56427dc6b0b1fc27f9bc08c8f3deaa9819",
+   "bytes": 10915
   }
  ]
 }
