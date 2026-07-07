@@ -57,7 +57,6 @@ export const PLYMOUTH_THEMES = CATALOG;
 const themeOf = (name) => CATALOG.find((t) => t.name === name) || null;
 const frameUrl = (t, i) => RAW + "pack_" + t.pack + "/" + t.name + "/progress-" + i + ".png";
 const pretty = (n) => n.replace(/_/g, " ").replace(/\b\w/g, (c) => c.toUpperCase());
-const mb = (kb) => (kb >= 1000 ? (kb / 1024).toFixed(1) + " MB" : kb + " KB");
 
 // ── persisted state — tiny, non-secret, read synchronously by the greeter baseline for 0-ms paint ─────
 export function readState() {
@@ -152,45 +151,41 @@ const CSS = `
 #holo-login.hl-boot .hl-panel{opacity:0!important;pointer-events:none!important}
 #holo-login .hl-panel{transition:opacity .55s ease}
 #holo-login .hlp-btn{position:fixed;right:max(20px,env(safe-area-inset-right));bottom:max(18px,env(safe-area-inset-bottom));z-index:4;
-  pointer-events:auto;display:inline-flex;align-items:center;gap:8px;background:rgba(10,14,20,.42);border:1px solid rgba(255,255,255,.14);
-  color:rgba(231,237,250,.78);font:500 12.5px/1 "Segoe UI",system-ui,sans-serif;padding:9px 14px;border-radius:999px;cursor:pointer;
+  pointer-events:auto;display:inline-flex;align-items:center;gap:9px;background:rgba(10,14,20,.42);border:1px solid rgba(255,255,255,.14);
+  color:rgba(231,237,250,.8);font:500 16px/1 "Segoe UI",system-ui,sans-serif;padding:11px 18px;border-radius:999px;cursor:pointer;
   backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);transition:color .15s,border-color .15s,background .15s;opacity:0;animation:hlp-in .6s ease 1.2s forwards}
 #holo-login .hlp-btn:hover{color:#fff;border-color:rgba(125,239,201,.55);background:rgba(10,14,20,.62)}
-#holo-login .hlp-btn svg{width:14px;height:14px}
+#holo-login .hlp-btn svg{width:17px;height:17px}
 @keyframes hlp-in{to{opacity:1}}
 #holo-login .hlp-gal{position:fixed;inset:0;z-index:6;pointer-events:auto;background:rgba(1,4,9,.6);backdrop-filter:blur(9px);-webkit-backdrop-filter:blur(9px);
   display:grid;place-items:center;animation:hlp-fade .22s ease}
 @keyframes hlp-fade{from{opacity:0}}
 #holo-login .hlp-sheet{width:min(920px,94vw);max-height:84vh;display:flex;flex-direction:column;overflow:hidden;background:rgba(8,12,18,.94);
   border:1px solid rgba(255,255,255,.12);border-radius:16px;box-shadow:0 28px 80px rgba(0,0,0,.6);color:#e6edf3;font-family:"Segoe UI",system-ui,sans-serif}
-#holo-login .hlp-head{display:flex;align-items:center;gap:12px;padding:16px 18px 10px;flex:0 0 auto}
-#holo-login .hlp-title{font-size:17px;font-weight:600}
-#holo-login .hlp-sub{font-size:12.5px;color:#8b949e;margin-top:2px}
-#holo-login .hlp-x{margin-left:auto;width:30px;height:30px;flex:0 0 auto;border:0;border-radius:50%;background:rgba(255,255,255,.08);color:#c9d1d9;cursor:pointer;font-size:15px}
+#holo-login .hlp-head{display:flex;align-items:center;gap:12px;padding:20px 22px 14px;flex:0 0 auto}
+#holo-login .hlp-title{font-size:20px;font-weight:600}
+#holo-login .hlp-x{margin-left:auto;width:34px;height:34px;flex:0 0 auto;border:0;border-radius:50%;background:rgba(255,255,255,.08);color:#c9d1d9;cursor:pointer;font-size:16px}
 #holo-login .hlp-x:hover{background:rgba(255,255,255,.16)}
-#holo-login .hlp-srch{padding:0 18px 12px;flex:0 0 auto}
-#holo-login .hlp-srch input{width:100%;box-sizing:border-box;background:rgba(1,4,9,.6);border:1px solid rgba(255,255,255,.12);border-radius:999px;padding:9px 15px;color:#e6edf3;font:inherit;font-size:13.5px;outline:none}
+#holo-login .hlp-srch{padding:0 22px 16px;flex:0 0 auto}
+#holo-login .hlp-srch input{width:100%;box-sizing:border-box;background:rgba(1,4,9,.6);border:1px solid rgba(255,255,255,.12);border-radius:999px;padding:11px 18px;color:#e6edf3;font:inherit;font-size:16px;outline:none}
 #holo-login .hlp-srch input:focus{border-color:#34d3a6}
 /* grid-auto-rows is EXPLICIT — Chromium computes a <button> grid item's intrinsic content height as 0,
    so content-sized rows collapse to the border (the "80 empty bars" failure). Fixed rows are immune. */
-#holo-login .hlp-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(168px,1fr));grid-auto-rows:158px;gap:12px;padding:4px 18px 16px;overflow-y:auto;flex:1 1 auto;min-height:0}
-#holo-login .hlp-tile{appearance:none;-webkit-appearance:none;display:flex;flex-direction:column;height:158px;box-sizing:border-box;border:1px solid rgba(255,255,255,.1);border-radius:12px;overflow:hidden;cursor:pointer;background:#05070c;text-align:left;padding:0;margin:0;color:inherit;font:inherit;transition:transform .1s,border-color .12s;position:relative}
+#holo-login .hlp-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(198px,1fr));grid-auto-rows:186px;gap:14px;padding:4px 22px 20px;overflow-y:auto;flex:1 1 auto;min-height:0}
+#holo-login .hlp-tile{appearance:none;-webkit-appearance:none;display:flex;flex-direction:column;height:186px;box-sizing:border-box;border:1px solid rgba(255,255,255,.1);border-radius:14px;overflow:hidden;cursor:pointer;background:#05070c;text-align:left;padding:0;margin:0;color:inherit;font:inherit;transition:transform .1s,border-color .12s;position:relative}
 #holo-login .hlp-tile:hover{transform:translateY(-2px);border-color:#34d3a6}
 #holo-login .hlp-tile.sel{border-color:#34d3a6;box-shadow:0 0 0 2px rgba(52,211,166,.45)}
-#holo-login .hlp-tile.sel::after{content:"\\2713";position:absolute;top:8px;right:8px;width:22px;height:22px;border-radius:50%;background:#34d3a6;color:#06140f;display:grid;place-content:center;font-size:14px;font-weight:700}
+#holo-login .hlp-tile.sel::after{content:"\\2713";position:absolute;top:10px;right:10px;width:26px;height:26px;border-radius:50%;background:#34d3a6;color:#06140f;display:grid;place-content:center;font-size:16px;font-weight:700}
 #holo-login .hlp-prev{flex:1 1 auto;min-height:0;background:#000;display:grid;place-items:center;overflow:hidden;position:relative}
-#holo-login .hlp-prev img{max-width:92%;max-height:92%;object-fit:contain;display:block}
+#holo-login .hlp-prev img{max-width:90%;max-height:90%;object-fit:contain;display:block}
 #holo-login .hlp-prev .hlp-shim{position:absolute;inset:0;background:linear-gradient(100deg,#05070c 30%,#101722 50%,#05070c 70%);background-size:220% 100%;animation:hlp-shimmer 1.2s ease-in-out infinite}
 @keyframes hlp-shimmer{to{background-position:-220% 0}}
-#holo-login .hlp-prev.off{color:#6e7681;font-size:26px}
-#holo-login .hlp-meta{flex:0 0 auto;padding:8px 11px 9px;display:flex;flex-direction:column;gap:2px;background:rgba(5,7,12,.9)}
-#holo-login .hlp-name{font-size:13px;font-weight:600;color:#e6edf3;line-height:1.25;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-#holo-login .hlp-k{font-size:11px;color:#8b949e;font-family:ui-monospace,monospace;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-#holo-login .hlp-tile.sealed .hlp-k{color:#3fb950}
-#holo-login .hlp-foot{padding:10px 18px 14px;font-size:11.5px;line-height:1.5;color:#6e7681;border-top:1px solid rgba(255,255,255,.07);flex:0 0 auto}
+#holo-login .hlp-prev.off{color:#6e7681;font-size:30px}
+#holo-login .hlp-name{flex:0 0 auto;padding:11px 14px 12px;background:rgba(5,7,12,.9);font-size:16px;font-weight:600;color:#e6edf3;line-height:1.25;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+#holo-login .hlp-foot{padding:12px 22px 16px;font-size:16px;color:#6e7681;border-top:1px solid rgba(255,255,255,.07);flex:0 0 auto}
 #holo-login .hlp-foot a{color:#58a6ff;text-decoration:none}
-#holo-login .hlp-toast{position:fixed;left:50%;bottom:70px;transform:translateX(-50%);z-index:7;background:rgba(13,17,23,.95);color:#e6edf3;
-  border:1px solid rgba(255,255,255,.14);border-radius:999px;padding:8px 16px;font:13px "Segoe UI",system-ui,sans-serif;box-shadow:0 10px 30px rgba(0,0,0,.6);
+#holo-login .hlp-toast{position:fixed;left:50%;bottom:74px;transform:translateX(-50%);z-index:7;background:rgba(13,17,23,.95);color:#e6edf3;
+  border:1px solid rgba(255,255,255,.14);border-radius:999px;padding:10px 20px;font:16px "Segoe UI",system-ui,sans-serif;box-shadow:0 10px 30px rgba(0,0,0,.6);
   pointer-events:none;animation:hlp-toast 2.6s ease both}
 @keyframes hlp-toast{0%{opacity:0;transform:translate(-50%,8px)}10%,82%{opacity:1;transform:translate(-50%,0)}100%{opacity:0}}
 @media (prefers-reduced-motion:reduce){#holo-login .hlp,#holo-login .hlp canvas,#holo-login .hlp-btn,#holo-login .hlp-prev .hlp-shim{transition:none;animation:none;opacity:1}}
@@ -286,14 +281,12 @@ async function thumbFor(t) {
 // ── the gallery: pick a boot style from the login screen — live apply behind the sheet ────────────────
 function openGallery(overlay, current, onPick) {
   const gal = document.createElement("div"); gal.className = "hlp-gal";
-  const sealedSet = new Set(CATALOG.filter((t) => { try { return !!localStorage.getItem(FRK(t.name)); } catch { return false; } }).map((t) => t.name));
   gal.innerHTML = `<div class="hlp-sheet" role="dialog" aria-label="Boot style">
-    <div class="hlp-head"><div><div class="hlp-title">Boot style</div>
-      <div class="hlp-sub">how this computer wakes up — streamed once, then sealed to κ on this device</div></div>
+    <div class="hlp-head"><div class="hlp-title">Boot style</div>
       <button class="hlp-x" aria-label="Close">✕</button></div>
-    <div class="hlp-srch"><input type="search" placeholder="Search 80 boot animations — hud, hexagon, seal…" spellcheck="false"></div>
+    <div class="hlp-srch"><input type="search" placeholder="Search" spellcheck="false"></div>
     <div class="hlp-grid"></div>
-    <div class="hlp-foot">Animations: <a href="https://github.com/adi1090x/plymouth-themes" target="_blank" rel="noopener">adi1090x/plymouth-themes</a> · GPL-3.0 · hover a tile to see it move · every frame is a content-addressed object (Law L2) — once sealed, your boot works fully offline</div>
+    <div class="hlp-foot">Animations by <a href="https://github.com/adi1090x/plymouth-themes" target="_blank" rel="noopener">adi1090x</a> · GPL 3.0</div>
   </div>`;
   const grid = gal.querySelector(".hlp-grid");
   const close = () => { gal.remove(); document.removeEventListener("keydown", esc, true); try { clearTimeout(sweep); io && io.disconnect(); } catch {} };
@@ -312,12 +305,11 @@ function openGallery(overlay, current, onPick) {
       const job = pending.shift();
       if (job.queued === 2) continue;                     // already loaded via the other path
       job.queued = 2;
-      const { t, img, shim, kk } = job;
+      const { t, img, shim } = job;
       inFlight++;
       thumbFor(t).then((url) => {
         if (url) { img.src = url; img.dataset.still = url; }
         if (shim) shim.remove();
-        if (url && kk && !sealedSet.has(t.name)) kk.textContent = t.frames + " frames · ~" + mb(t.kb);
       }).catch(() => { if (shim) shim.remove(); }).finally(() => { inFlight--; pump(); });
     }
   };
@@ -334,15 +326,14 @@ function openGallery(overlay, current, onPick) {
 
   function tile(t) {
     const el = document.createElement("button"); el.type = "button";
-    el.className = "hlp-tile" + (current === (t ? t.name : null) ? " sel" : "") + (t && sealedSet.has(t.name) ? " sealed" : "");
+    el.className = "hlp-tile" + (current === (t ? t.name : null) ? " sel" : "");
     if (!t) {
-      el.innerHTML = `<div class="hlp-prev off">◌</div><div class="hlp-meta"><span class="hlp-name">Off</span><span class="hlp-k">wallpaper only</span></div>`;
+      el.innerHTML = `<div class="hlp-prev off">◌</div><div class="hlp-name">Off</div>`;
     } else {
       el.innerHTML = `<div class="hlp-prev"><div class="hlp-shim"></div><img alt="" draggable="false"></div>
-        <div class="hlp-meta"><span class="hlp-name">${pretty(t.name)}</span>
-        <span class="hlp-k">${sealedSet.has(t.name) ? "sealed to κ ✓" : t.frames + " frames · ~" + mb(t.kb)}</span></div>`;
-      const img = el.querySelector("img"), shim = el.querySelector(".hlp-shim"), kk = el.querySelector(".hlp-k");
-      el.__hlpJob = { t, img, shim, kk, queued: 0 };
+        <div class="hlp-name">${pretty(t.name)}</div>`;
+      const img = el.querySelector("img"), shim = el.querySelector(".hlp-shim");
+      el.__hlpJob = { t, img, shim, queued: 0 };
       allJobs.push(el.__hlpJob);
       if (io) io.observe(el); else { el.__hlpJob.queued = 1; pending.push(el.__hlpJob); pump(); }
       // hover = the theme comes alive (upstream GIF); leave = back to the sealed still
@@ -421,6 +412,7 @@ export function attachPlymouth(overlay) {
   btn.type = "button"; btn.className = "hlp-btn"; btn.title = "Choose how this computer boots";
   btn.innerHTML = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"><path d="M12 3v4M12 17v4M3 12h4M17 12h4M5.6 5.6l2.8 2.8M15.6 15.6l2.8 2.8M18.4 5.6l-2.8 2.8M8.4 15.6l-2.8 2.8"/></svg>Boot style`;
   btn.onclick = () => openGallery(overlay, readState().on ? readState().theme : null, (name) => api.setTheme(name));
+  btn.addEventListener("pointerenter", () => { try { store(); } catch {} }, { passive: true, once: true });   // warm the κ store during hover intent
   overlay.appendChild(btn);
 
   const api = {
@@ -429,14 +421,13 @@ export function attachPlymouth(overlay) {
       if (!name) {
         writeState({ ...s, on: false, firstFrame: undefined });
         gen++; if (layer) layer.classList.remove("on");
-        toast(overlay, "Boot splash off — wallpaper only");
+        toast(overlay, "Boot splash off");
         return;
       }
       writeState({ ...s, on: true, theme: name, firstFrame: undefined });
       state.on = true; state.theme = name;
       if (layer) { layer.classList.add("greet"); player.pose("greet"); }
-      const sealed = (() => { try { return !!localStorage.getItem(FRK(name)); } catch { return false; } })();
-      toast(overlay, pretty(name) + (sealed ? " — from your κ store" : " — streaming, sealing to κ…"));
+      toast(overlay, pretty(name));
       play(name);
     },
     // choreography hooks for the greeter — all fail-open no-ops when the splash is off
