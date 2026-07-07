@@ -53,15 +53,10 @@ async function hydrateFace(panel, u) {
     el.innerHTML = `<img src="${p.url}" alt="" style="width:100%;height:100%;object-fit:cover;border-radius:50%">`;
   } catch {}
 }
-// SUPER-CLEAN GATE: two core ways in stay visible — the primary biometric (above) + one "Continue as guest".
-// The recovery doors (another device / restore) are advanced + rare, so they fold behind a quiet "More options"
-// toggle: the screen reads as two choices, yet nothing is lost (both doors stay in the DOM, one tap away).
-const guestBtnHtml = () => `<button class="hl-alt" id="hl-guestbtn">${I.ghost}Continue as guest</button>
-  <button class="hl-alt hl-more" id="hl-more" aria-expanded="false">More options</button>
-  <div class="hl-opts" id="hl-opts" hidden>
-    <button class="hl-alt" id="hl-adddev">Use another device</button>
-    <button class="hl-alt" id="hl-restorebtn">Restore</button>
-  </div>`;
+// SUPER-CLEAN GATE: two choices on the face — the biometric (your name) + "Continue as guest". The rare
+// recovery doors (another device / restore) live behind the SAME ⋯ the appearance does (holo-plymouth's
+// panel renders whatever actions the primitive offers it) — one quiet door for everything secondary.
+const guestBtnHtml = () => `<button class="hl-alt" id="hl-guestbtn">${I.ghost}Continue as guest</button>`;
 
 const _linkStyle = "width:100%;font-size:12px;padding:10px;border-radius:8px;background:rgba(255,255,255,.08);color:#cfe;border:1px solid rgba(255,255,255,.15);font-family:inherit";
 function renderAddDevice(panel, url) {
@@ -129,7 +124,6 @@ const HL_CSS = `#holo-login{position:fixed;inset:0;z-index:2147483000;color:var(
 #holo-login .hl-alt{background:none;border:0;color:var(--ink-dim);font-size:var(--u);font-family:inherit;cursor:pointer;padding:calc(var(--u)*.3) calc(var(--u)*.55);border-radius:calc(var(--u)*.4);display:inline-flex;align-items:center;gap:calc(var(--u)*.4);min-height:44px}
 #holo-login .hl-alt:hover{color:var(--ink)}#holo-login .hl-alt svg{width:1.05em;height:1.05em}
 #holo-login .hl-more{opacity:.72}#holo-login .hl-more:hover{opacity:1}
-#holo-login .hl-opts{display:flex;flex-direction:column;align-items:center;gap:var(--u);width:100%}#holo-login .hl-opts[hidden]{display:none}
 #holo-login .status{min-height:calc(var(--u)*1.5);font-size:var(--u);color:var(--status);display:flex;align-items:center;justify-content:center;gap:calc(var(--u)*.5);text-shadow:var(--shadow)}
 #holo-login .status.err{color:#ffc0c0}
 #holo-login[data-appearance="light"] .status.err{color:#b3261e}
@@ -243,7 +237,8 @@ export async function signIn({ root, params, app = "holospace", appName = "Holog
   // themes, streamed once + sealed to κ, played by one canvas). Purely additive and fail-open: if the
   // module can't load or no frame ever lands, this greeter is exactly what it was.
   let plymouth = null;
-  try { import("./holo-plymouth.mjs").then((m) => { plymouth = m.attachPlymouth(overlay); }).catch(() => {}); } catch {}
+  const plymouthHost = { actions: [] };   // the seam: signIn OFFERS its rare doors; the ⋯ panel renders them
+  try { import("./holo-plymouth.mjs").then((m) => { plymouth = m.attachPlymouth(overlay, plymouthHost); }).catch(() => {}); } catch {}
   const panel = document.getElementById("holo-login-panel");
   const statusEl = () => panel.querySelector(".status");
   const setStatus = (t, err) => { if (err) { try { plymouth && plymouth.calm(); } catch {} } const el = statusEl(); if (el) { el.className = "status" + (err ? " err" : ""); el.textContent = t || ""; } };
@@ -395,13 +390,13 @@ export async function signIn({ root, params, app = "holospace", appName = "Holog
 
     const wireGuest = () => {
       const g = panel.querySelector("#hl-guestbtn"); if (g) g.onclick = guestEnter;
-      const a = panel.querySelector("#hl-adddev"); if (a) a.onclick = joinAndEnter;
-      const r = panel.querySelector("#hl-restorebtn"); if (r) r.onclick = restoreAndEnter;
-      // "More options" folds the rare recovery doors away by default; one tap reveals them (kept inside
-      // wireGuest so the reveal is bound on the same paths as guest — no separate wiring pass to forget).
-      const more = panel.querySelector("#hl-more"), opts = panel.querySelector("#hl-opts");
-      if (more && opts) more.onclick = () => { const show = opts.hidden; opts.hidden = !show; more.setAttribute("aria-expanded", String(show)); more.textContent = show ? "Fewer options" : "More options"; };
     };
+    // OFFER the recovery doors to the ⋯ panel — holo-plymouth renders them under its Appearance content.
+    // Read lazily at panel-open, so they are live the moment these flows exist. Fail-open both ways.
+    plymouthHost.actions = [
+      { label: "Use another device", run: () => joinAndEnter() },
+      { label: "Restore", run: () => restoreAndEnter() },
+    ];
 
     // No enclave here (headless / no biometric) → Guest is the way in.
     if (!hasBio) { renderNoBio(panel, selected, reason); const g = panel.querySelector("#hl-guest"); if (g) g.onclick = guestEnter; return; }

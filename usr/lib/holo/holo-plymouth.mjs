@@ -183,6 +183,9 @@ const CSS = `
 @keyframes hlp-shimmer{to{background-position:-220% 0}}
 #holo-login .hlp-prev.off{color:#6e7681;font-size:30px}
 #holo-login .hlp-name{flex:0 0 auto;padding:11px 14px 12px;background:rgba(5,7,12,.9);font-size:var(--u,16px);font-weight:600;color:#e6edf3;line-height:1.25;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+#holo-login .hlp-acts{display:flex;gap:10px;justify-content:center;flex-wrap:wrap;padding:2px 22px 16px;flex:0 0 auto}
+#holo-login .hlp-acts button{border:1px solid var(--field-border,rgba(255,255,255,.14));background:var(--field-bg,rgba(255,255,255,.06));color:var(--glass-ink,rgba(231,237,250,.8));font:500 var(--u,16px)/1 "Segoe UI",system-ui,sans-serif;padding:11px 20px;border-radius:999px;cursor:pointer;transition:color .15s,border-color .15s}
+#holo-login .hlp-acts button:hover{color:var(--ink,#fff);border-color:rgba(52,211,166,.55)}
 #holo-login .hlp-foot{padding:12px 22px 16px;font-size:var(--u,16px);color:var(--muted,#6e7681);border-top:1px solid var(--glass-border,rgba(255,255,255,.07));flex:0 0 auto}
 #holo-login .hlp-foot a{color:var(--link,#58a6ff);text-decoration:none}
 #holo-login .hlp-toast{position:fixed;left:50%;bottom:74px;transform:translateX(-50%);z-index:7;background:var(--sheet,rgba(13,17,23,.95));color:var(--ink,#e6edf3);
@@ -532,8 +535,10 @@ function applyMode(overlay, m) {
   if (wall) wall.style.backgroundImage = m === "immersive" ? 'url("' + themeWallSrc() + '")' : "none";
 }
 
-// ── the panel: modes on top, boot styles beneath — everything applies LIVE behind the sheet ───────────
-function openGallery(overlay, current, onPick) {
+// ── the panel: modes on top, boot styles beneath, the host's rare doors at the bottom — everything
+// applies LIVE behind the sheet. `host.actions` is whatever the greeter offers (recovery flows today);
+// read at open time, rendered as one quiet row, gone when empty. ───────────────────────────────────────
+function openGallery(overlay, current, onPick, host) {
   const gal = document.createElement("div"); gal.className = "hlp-gal";
   gal.innerHTML = `<div class="hlp-sheet" role="dialog" aria-label="Appearance">
     <div class="hlp-head"><div class="hlp-title">Appearance</div>
@@ -541,8 +546,18 @@ function openGallery(overlay, current, onPick) {
     <div class="hlp-modes" role="radiogroup" aria-label="Theme"></div>
     <div class="hlp-srch"><input type="search" placeholder="Search" spellcheck="false"></div>
     <div class="hlp-grid"></div>
+    <div class="hlp-acts"></div>
     <div class="hlp-foot">Animations by <a href="https://github.com/adi1090x/plymouth-themes" target="_blank" rel="noopener">adi1090x</a> · GPL 3.0</div>
   </div>`;
+  const acts = gal.querySelector(".hlp-acts");
+  const hostActs = (host && Array.isArray(host.actions)) ? host.actions : [];
+  if (!hostActs.length) acts.remove();
+  else for (const a of hostActs) {
+    const b = document.createElement("button");
+    b.type = "button"; b.textContent = a.label;
+    b.onclick = () => { close(); try { a.run(); } catch {} };
+    acts.appendChild(b);
+  }
   const modes = gal.querySelector(".hlp-modes");
   const drawModes = () => { const cur = themeMode(); modes.querySelectorAll("button").forEach((b) => { const on = b.dataset.mode === cur; b.classList.toggle("on", on); b.setAttribute("aria-checked", String(on)); }); };
   for (const m of THEME_MODES) {
@@ -626,8 +641,9 @@ function toast(overlay, msg) {
   try { const t = document.createElement("div"); t.className = "hlp-toast"; t.textContent = msg; overlay.appendChild(t); setTimeout(() => t.remove(), 2600); } catch {}
 }
 
-// ── attachPlymouth(overlay) — the ONE call the greeter makes. Returns the choreography controller. ────
-export function attachPlymouth(overlay) {
+// ── attachPlymouth(overlay, host) — the ONE call the greeter makes. Returns the choreography controller.
+// `host.actions` (optional, read lazily at panel-open) = rare doors the greeter wants inside the ⋯ panel. ──
+export function attachPlymouth(overlay, host) {
   if (!overlay || overlay.querySelector(".hlp-btn")) return null;
   injectCss();
   const state = readState();
@@ -691,7 +707,7 @@ export function attachPlymouth(overlay) {
   const btn = document.createElement("button");
   btn.type = "button"; btn.className = "hlp-btn"; btn.title = "Appearance"; btn.setAttribute("aria-label", "Appearance");
   btn.innerHTML = `<svg viewBox="0 0 24 24" fill="currentColor"><circle cx="5" cy="12" r="1.7"/><circle cx="12" cy="12" r="1.7"/><circle cx="19" cy="12" r="1.7"/></svg>`;
-  btn.onclick = () => openGallery(overlay, readState().on ? readState().theme : null, (name) => api.setTheme(name));
+  btn.onclick = () => openGallery(overlay, readState().on ? readState().theme : null, (name) => api.setTheme(name), host);
   btn.addEventListener("pointerenter", () => { try { store(); } catch {} }, { passive: true, once: true });   // warm the κ store during hover intent
   overlay.appendChild(btn);
 

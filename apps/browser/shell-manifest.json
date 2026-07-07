@@ -1,7 +1,7 @@
 {
  "v": 1,
- "created": 1783440513768,
- "aggregate": "de07596351c40d11157bcbd984ea7b8366a0f0b93d0aed48914faaa0142722dc",
+ "created": 1783447729498,
+ "aggregate": "5e752e9410801cbca1e30acd4cc2233df6aa35a478896745c2c9bbde88b5a84f",
  "assets": [
   {
    "path": "/apps/browser/browser-sw.js",
@@ -59,6 +59,11 @@
    "bytes": 8846
   },
   {
+   "path": "/apps/browser/onion-browse.html",
+   "kappa": "12dce1c3caee6555fe41acb2ab58bbe5d6f84c5e406b08bd4cf6c8dffdd6295f",
+   "bytes": 7530
+  },
+  {
    "path": "/apps/browser/peer-host.html",
    "kappa": "27cdae8c6ed427844dc41b41c95d19beb05f446181becb821edbe105273c4062",
    "bytes": 4953
@@ -95,8 +100,8 @@
   },
   {
    "path": "/apps/browser/_shared/holo-ipfs-gateway.mjs",
-   "kappa": "2b0f29c4a4e4500a98f7bb806de22aa7b00897b80bfaa717ddea9107082bb5c5",
-   "bytes": 21066
+   "kappa": "67ff89dd5efe112834607744fee25b0b66ec7a5daffb33c6bc540992f6df8b43",
+   "bytes": 26074
   },
   {
    "path": "/apps/browser/_shared/holo-ipfs.js",
