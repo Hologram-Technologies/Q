@@ -13,12 +13,18 @@ const HOUR = 36e5, DAY = 864e5;
 
 function hostOf(u) { try { return new URL(u).hostname.replace(/^www\./, ""); } catch { return String(u || ""); } }
 function cleanTitle(t, u) { const s = String(t || "").trim(); return s && s !== u ? s : hostOf(u); }
+// a search-engine HOME is not a "continue where you were" tile — you go there to search, and the
+// browser's search IS Holo Search now. Exclude them so the front page shows real destinations, not a
+// search box you already have. (Also drops the legacy google→DDG redirect artifact from old history.)
+const SEARCH_HOME = /^(www\.)?(google|bing|duckduckgo|html\.duckduckgo|search\.brave|ecosia|startpage)\.[a-z.]+$/i;
+function isSearchHome(u) { try { const x = new URL(u); return SEARCH_HOME.test(x.hostname) && (x.pathname === "/" || x.pathname === "" || x.pathname === "/html/"); } catch { return false; } }
 
 // collapse raw visits → one candidate per URL with visit stats (count, last ts, per-hour histogram).
 export function foldHistory(history) {
   const by = new Map();
   for (const e of Array.isArray(history) ? history : []) {
     if (!e || !e.url || !/^https?:\/\//.test(e.url)) continue;
+    if (isSearchHome(e.url)) continue;   // search-engine home → not a destination tile
     let c = by.get(e.url);
     if (!c) { c = { url: e.url, title: cleanTitle(e.title, e.url), host: hostOf(e.url), visits: 0, last: 0, hours: new Array(24).fill(0) }; by.set(e.url, c); }
     c.visits++; c.last = Math.max(c.last, e.ts || 0);
