@@ -86,6 +86,7 @@ async function uServe(realUrl, fallbackCt) {
 //       bytes that arrive and the seal is labeled "relay", honest and visible.
 // Every tier's product is minted + re-derived identically; only who carried the bytes differs. ──
 let PROXY_DOWN_UNTIL = 0;                            // a dead tier-1 is remembered for 60s, then re-probed
+let PROXY_SEEN_ALIVE = false;                        // has a real /web proxy (headless Chrome, renders google) answered THIS session?
 const RELAYS = [
   (u) => "https://api.allorigins.win/raw?url=" + encodeURIComponent(u),
   (u) => "https://corsproxy.io/?url=" + encodeURIComponent(u),
@@ -151,6 +152,7 @@ async function egressFetch(realUrl, init) {
   for (const [via, go] of tiers) {
     let r; try { r = await go(); } catch { if (via === "proxy") PROXY_DOWN_UNTIL = Date.now() + 60_000; continue; }
     if (via === "proxy" && !r.headers.get("x-holo-web")) { PROXY_DOWN_UNTIL = Date.now() + 60_000; continue; }   // a static host's 404, not the proxy
+    if (via === "proxy" && r.headers.get("x-holo-web")) PROXY_SEEN_ALIVE = true;   // a real /web (renders google natively) is present this session
     if (via === "host" && !r.headers.get("x-holo-web")) continue;   // some other localhost server — never trust it as a Hologram host
     if (via === "host-peer" && !r.headers.get("x-holo-web")) continue;   // the peer must have carried a real /web answer (its forwarded marker), else fall past
     if (r.ok) return { r, via };
@@ -267,6 +269,49 @@ const COEPH = { "cross-origin-embedder-policy": "credentialless", "cross-origin-
 const refused = (why) => new Response("Holo Browser refused this resource (Law L5):\n" + why, { status: 502, headers: { "content-type": "text/plain", ...COEPH } });
 const KHDR = (kappa, ct, extra = {}) => ({ "content-type": ct, "x-holo-cid": kappa, "x-holo-verified": "L5", "cache-control": "no-store", ...COEPH, ...extra });
 
+// ── S1 — NO DEAD PAGES. On the serverless mount the only carrier is often a public relay, and some
+// origins (Google chief among them) answer it with EMPTY bytes or a JS-wall shell. Never mint that into
+// a blank white frame: give the user a REAL destination instead.
+// (a) Google is a search engine → route ANY google page to a working search (DDG html), carrying the
+//     query if there is one. The user asked to search; they get a search box + results, not a void.
+function googleAlt(realUrl) {
+  try {
+    const gu = new URL(realUrl);
+    if (!/(^|\.)google\.[a-z.]{2,6}$/.test(gu.hostname)) return null;
+    if (gu.pathname === "/search" || gu.pathname === "/") {
+      const q = gu.searchParams.get("q");
+      return "https://html.duckduckgo.com/html/" + (q ? "?q=" + encodeURIComponent(q) : "");
+    }
+  } catch {}
+  return null;
+}
+const inScope = (u) => new URL(VIEW + "w/" + enc(u), self.location.origin).href;
+// a document response is a DEAD PAINT if it has (almost) no bytes or is a proof-of-JS wall with no content.
+function emptyOrWalled(bytes, text) {
+  if (!bytes || bytes.length < 256) return true;
+  if (text == null) return false;
+  const head = text.slice(0, 4000);
+  if (/id="?recaptcha|our systems have detected unusual traffic|enablejs|please click here if you are not redirected/i.test(head)) return true;
+  // a shell with no visible body text (scripts only) — strip tags on the first 20k, see if anything remains
+  if (bytes.length < 60000 && text.replace(/<script[\s\S]*?<\/script>/gi, "").replace(/<[^>]+>/g, "").replace(/\s+/g, "").length < 24) return true;
+  return false;
+}
+// (b) any other page that yields a dead paint → an HONEST, useful interstitial (not a blank frame):
+// the URL, the tier that tried, and one-tap actions (retry · search this · open via your device).
+function interstitialPage(realUrl, info = {}) {
+  const safe = String(realUrl).replace(/[<&"]/g, (c) => ({ "<": "&lt;", "&": "&amp;", '"': "&quot;" }[c]));
+  const ddg = "https://html.duckduckgo.com/html/?q=" + encodeURIComponent(realUrl.replace(/^https?:\/\//, ""));
+  const via = info.via ? String(info.via).replace(/[<&"]/g, "") : "the network";
+  const html = `<!doctype html><meta charset=utf-8><meta name=viewport content="width=device-width,initial-scale=1">
+<title>${safe}</title><style>:root{color-scheme:dark}body{font:15px/1.6 system-ui;background:#0b141a;color:#e8eef5;margin:0;min-height:100vh;display:grid;place-items:center}.c{max-width:560px;padding:2.2rem;text-align:center}h1{font-size:1.1rem;font-weight:600;margin:.2rem 0 .5rem}p{opacity:.75;margin:.5rem 0}code{background:#11151c;padding:.15rem .45rem;border-radius:6px;color:#9db7ff;word-break:break-all}.row{display:flex;gap:.6rem;justify-content:center;flex-wrap:wrap;margin-top:1.3rem}a.btn{display:inline-block;padding:.6rem 1.1rem;border-radius:10px;background:#1b2330;color:#e8eef5;text-decoration:none;border:1px solid #2a3546;font-weight:500}a.btn.p{background:linear-gradient(135deg,#7b68ee,#3b6ee0);border:none}.k{opacity:.4;font-size:.82rem;margin-top:1.4rem}</style>
+<div class=c><div style="font-size:2rem">🌐</div><h1>This page didn't send anything to show</h1>
+<p>Hologram reached it through <b>${via}</b>, but the site returned an empty or script-walled response — common on the serverless web without your own device carrying the request.</p>
+<p><code>${safe}</code></p>
+<div class=row><a class="btn p" href="${inScope(realUrl)}">Retry</a><a class=btn href="${inScope(ddg)}">Search this instead</a></div>
+<p class=k>Content-addressed · verified before paint · nothing left your device but the request.</p></div>`;
+  return new Response(html, { status: 200, headers: { "content-type": "text/html; charset=utf-8", "x-holo-egress": info.via || "none", "x-holo-interstitial": "1", ...COEPH } });
+}
+
 // ── serve a holo://<κ> document from the κ-store, re-derived (Law L5) ────────────────
 async function serveKappa(kappa, path) {
   const bytes = await kGet(kappa);
@@ -318,27 +363,25 @@ async function serveWeb(realUrl, req) {
   if (act.type === "block") { await broadcast({ type: "ext-blocked", url: realUrl, extId: act.extId, ruleId: act.ruleId, resourceType: "main_frame" }); return blockedPage(realUrl, act); }
   if (act.type === "redirect" && act.redirect && act.redirect.url) return Response.redirect(new URL(VIEW + "w/" + enc(act.redirect.url), self.location.origin).href, 302);
   const isGet = !req || !req.method || req.method === "GET" || req.method === "HEAD";
+  const isDoc = true;   // serveWeb only handles /w/ navigations — always a top document (subresources go to serveSub)
   // Serverless mount (tier-1 known dead): google /search through a relay answers a resultless
   // JS-wall shell with none of the interstitial tell-tales — route the query straight to
   // DuckDuckGo's html edition. When the local proxy is alive its cookie-jar + headless-Chrome
   // doc rendering keeps google first-class, so this path never fires there.
-  if (Date.now() < PROXY_DOWN_UNTIL) {
-    try {
-      const gu = new URL(realUrl); const q = gu.searchParams.get("q");
-      if (q && /(^|\.)google\.[a-z.]{2,6}$/.test(gu.hostname) && gu.pathname === "/search")
-        return Response.redirect(new URL(VIEW + "w/" + enc("https://html.duckduckgo.com/html/?q=" + encodeURIComponent(q)), self.location.origin).href, 302);
-    } catch {}
+  // Unless a real /web proxy (headless Chrome, which renders google natively) has answered this session,
+  // route ANY google page (home OR /search) straight to a working search: google hands a relay/direct
+  // fetch an empty or JS-walled shell that would paint blank. This is the serverless default — the moment
+  // a capable proxy is seen, google renders natively instead.
+  if (!PROXY_SEEN_ALIVE) {
+    const alt = googleAlt(realUrl);
+    if (alt) return Response.redirect(inScope(alt), 302);
   }
   const { r, via } = await egressFetch(realUrl, await proxyInit(req, true));   // isDoc → egress may render this top document in a real Chrome
   if (!r || !r.ok) {
-    // Google rate-limits/JS-walls proxied /search (no-JS search is retired; the sg_ss JS
-    // redemption works only when Google isn't punishing the IP). Never leave the user
-    // resultless: fall back to DuckDuckGo's html edition with the SAME query, in-seam.
-    try {
-      const gu = new URL(realUrl); const q = gu.searchParams.get("q");
-      if (q && /(^|\.)google\.[a-z.]{2,6}$/.test(gu.hostname) && gu.pathname === "/search")
-        return Response.redirect(new URL(VIEW + "w/" + enc("https://html.duckduckgo.com/html/?q=" + encodeURIComponent(q)), self.location.origin).href, 302);
-    } catch {}
+    // No tier could serve it. Google (home OR /search) → a working search in-seam; never leave the
+    // user resultless. googleAlt carries the query if there is one.
+    const alt = googleAlt(realUrl);
+    if (alt) return Response.redirect(inScope(alt), 302);
     // L3 fallback: the last-known κ snapshot of this URL — a repeat visit paints with ZERO
     // egress (offline, relay outage, serverless mount with no road out). Re-derived, labeled stale.
     if (isGet) {
@@ -350,8 +393,9 @@ async function serveWeb(realUrl, req) {
         return new Response(body, { status: 200, headers: KHDR(hit.kappa, hit.contentType, { "x-holo-stale": "1", "x-holo-egress": "kappa-store" }) });
       }
     }
-    // COEPH even on errors — the page is cross-origin isolated, and a document response without
-    // CORP is ERR_BLOCKED_BY_RESPONSE (a blank frame instead of an honest upstream error).
+    // S1 — no dead frame: an honest, actionable interstitial instead of blank/plain-text error.
+    // (COEPH inside interstitialPage — a doc without CORP is ERR_BLOCKED_BY_RESPONSE, i.e. still blank.)
+    if (isDoc) return interstitialPage(realUrl, { via: r ? via : "none" });
     if (!r) return refused("no egress road reached " + realUrl + " (local proxy absent, origin CORS-closed, relays unreachable) and no κ snapshot is held for it");
     return new Response("Holo Browser: upstream " + r.status + " for " + realUrl, { status: r.status === 0 ? 502 : r.status, headers: { "content-type": "text/plain", ...COEPH } });
   }
@@ -364,18 +408,15 @@ async function serveWeb(realUrl, req) {
   let body = bytes;
   if (/text\/html/i.test(ctype)) {
     const text = new TextDecoder().decode(bytes);
-    // A Google /search doc that came back as the JS-wall interstitial as a 200 (proof-of-JS
-    // bounce, no results) — the egress couldn't clear the IP block and the raw fetch only sees
-    // the wall. The !r.ok DDG fallback above catches the 429 case; this catches the 200 case.
-    // Redirect (not re-serve) so the iframe's base becomes DuckDuckGo and its result links work.
-    try {
-      const gu = new URL(realUrl);
-      if (/(^|\.)google\.[a-z.]{2,6}$/.test(gu.hostname) && gu.pathname === "/search"
-          && /not redirected|enablejs|id="recaptcha|please click here|our systems have detected unusual traffic/i.test(text.slice(0, 4000))) {
-        const q = gu.searchParams.get("q");
-        if (q) return Response.redirect(new URL(VIEW + "w/" + enc("https://html.duckduckgo.com/html/?q=" + encodeURIComponent(q)), self.location.origin).href, 302);
-      }
-    } catch {}
+    // S1 — NO DEAD PAINT. A main-frame document that came back empty or as a proof-of-JS wall would
+    // mint into a blank white frame. Never serve that: google → a working search; anything else → an
+    // honest, actionable interstitial. (Subresources are exempt — an empty script/img is not a dead tab.)
+    if (isDoc && emptyOrWalled(bytes, text)) {
+      const alt = googleAlt(realUrl);
+      if (alt) return Response.redirect(inScope(alt), 302);
+      await broadcast({ type: "committed", view: VIEW + "w/" + enc(realUrl), kappa, minted: true, verified: true, egress: via, blank: true, scheme: new URL(realUrl).protocol.replace(":", ""), contentType: ctype, source: realUrl });
+      return interstitialPage(realUrl, { via });
+    }
     body = new TextEncoder().encode(rewriteHtml(text, realUrl, kappa));
   }
   await broadcast({ type: "committed", view: VIEW + "w/" + enc(realUrl), kappa, minted: true, verified: true, egress: via, scheme: new URL(realUrl).protocol.replace(":", ""), contentType: ctype, source: realUrl });
