@@ -54,11 +54,11 @@
 </main>
 
 <script type="module">
-import names, { classify, makeNameResolver, sriToKappa } from "../../usr/lib/holo/holo-names.mjs";
+import names, { classify } from "../../usr/lib/holo/holo-names.mjs";
+import { makeHostResolver } from "../../usr/lib/holo/holo-names-host.mjs";
 
 const $ = (id) => document.getElementById(id);
 const BASE = new URL("../../", location.href);                     // the bundle root, on ANY mount (root or /Q/)
-const hex2 = (buf) => Array.from(new Uint8Array(buf), (b) => b.toString(16).padStart(2, "0")).join("");
 const KIND_WORDS = {
   kappa: "a content address", did: "a sovereign object id", holo: "a holospace member", ipfs: "an IPFS name",
   ipns: "a mutable IPFS name", ens: "an Ethereum name", "eth-tx": "an Ethereum transaction hash",
@@ -66,25 +66,10 @@ const KIND_WORDS = {
   truename: "a speakable κ alias", model: "an AI model tag", refused: "refused", empty: "",
 };
 
-// ── the host binding: sha256 = WebCrypto; blake3 = the UPSTREAM HOLOSPACES RUNTIME (lazy) ────────────
-let _wasm = null;
-async function blake3hex(bytes) {
-  if (!_wasm) {
-    const mod = await import("../q/pkg/holospaces_web.js");     // κ-committed by the release strand; SW-recoverable by hash
-    if (mod.default) await mod.default();
-    _wasm = mod;
-  }
-  return String(_wasm.kappa(bytes)).replace(/^blake3:/, "");        // upstream kappa(bytes) → "blake3:<hex>"
-}
-const hashers = {
-  sha256: async (b) => hex2(await crypto.subtle.digest("SHA-256", b)),
-  blake3: blake3hex,
-};
-const mirrors = [
-  { name: "this bundle", url: ({ axis, hex }) => (axis === "sha256" ? new URL("b/" + hex, BASE).href : null) },
-  { name: "HF κ-mirror", url: ({ axis, hex }) => (axis === "sha256" ? "https://huggingface.co/HOLOGRAMTECH/holo-messenger-shell/resolve/main/b/" + hex : null) },
-];
-const R = makeNameResolver({ fetchFn: (u) => fetch(u), hashers, mirrors, lruSize: 64 });
+// ── THE ONE HOST BINDING (holo-names-host): store answers first (zero network on warm), then the
+// raced rungs; blake3 >256KB verifies through the UPSTREAM HOLOSPACES RUNTIME's own kappa() (lazy,
+// κ-committed by the release strand). This page ships no wiring of its own — that is the point.
+const R = makeHostResolver({ base: BASE, wasmGlue: new URL("../q/pkg/holospaces_web.js", location.href).href });
 
 // ── classify as you type (microseconds — show the truth live) ────────────────────────────────────────
 $("name").addEventListener("input", () => {
