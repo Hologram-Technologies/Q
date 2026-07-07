@@ -144,7 +144,8 @@ $("name").addEventListener("keydown", (e) => { if (e.key === "Enter") go(); });
   try {
     const rel = await (await fetch(new URL("release.json", BASE), { cache: "no-store" })).json();
     const idHex = String(rel.id || "").split(":").pop();
-    if (idHex) chips.push(["today's signed release", "sha256:" + idHex]);
+    // only offer the chip if this deployment's κ-store actually holds the entry body (older seals don't)
+    if (idHex && (await R.resolve("sha256:" + idHex)).ok) chips.push(["today's signed release", "sha256:" + idHex]);
   } catch {}
   try {
     const mf = await (await fetch(new URL("apps/holo-messenger/shell-manifest.json", BASE), { cache: "no-store" })).json();

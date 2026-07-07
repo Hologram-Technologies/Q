@@ -1,12 +1,12 @@
 {
  "v": 1,
- "created": 1783435155946,
- "aggregate": "19fa772d8c6f1ef053d4852d945a5316af4c15116d927ab5500184f2972c2cfe",
+ "created": 1783440513768,
+ "aggregate": "de07596351c40d11157bcbd984ea7b8366a0f0b93d0aed48914faaa0142722dc",
  "assets": [
   {
    "path": "/apps/browser/browser-sw.js",
-   "kappa": "fe60b0cdb0bdc5ff0b37b7901702a07e430bc74daf002cd8b7b6631df4c933fe",
-   "bytes": 51411
+   "kappa": "3eaa05c2a7d4309e6d61fac0da4a3c35fef706cd043734bfd321ca7c79b44bde",
+   "bytes": 54383
   },
   {
    "path": "/apps/browser/ext/holo-shield.crx",
@@ -50,8 +50,8 @@
   },
   {
    "path": "/apps/browser/index.html",
-   "kappa": "ea717e678fc6882705e1c3702025e389f252ccbdbfde13bf85ac81037a3440a9",
-   "bytes": 89775
+   "kappa": "3cbdd32b15961c4e2da172adf79c9e1737d8dbdaf60646d70aff95a1b4ce4e85",
+   "bytes": 89971
   },
   {
    "path": "/apps/browser/ipfs-sw.js",
@@ -105,8 +105,8 @@
   },
   {
    "path": "/apps/browser/_shared/holo-onion-arti.node.mjs",
-   "kappa": "a1422ac5efa92e512dd94dfab7601aea5c6439c7a6e6965dffd7a0edac9efd75",
-   "bytes": 4720
+   "kappa": "2507e49bb3f1f8d73ed948182043f0f0532547b3c1a3b6a323f3a6f6de55b2a6",
+   "bytes": 8777
   },
   {
    "path": "/apps/browser/_shared/holo-onion-endpoint.node.mjs",

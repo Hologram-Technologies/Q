@@ -213,17 +213,21 @@ const reducedMotion = () => { try { return matchMedia("(prefers-reduced-motion: 
 // behavior. Force a rung: ?emblem=gpu | ?emblem=2d.
 const POSES = {
   boot:   { cx: 0.5, cy: 0.46, cap: 0.62 },
-  greet:  { cx: 0.5, cy: 0.20, cap: 0.30, anchor: true, mult: 2.0 },
-  verify: { cx: 0.5, cy: 0.20, cap: 0.34, anchor: true, mult: 2.2 },
+  greet:  { cx: 0.5, cy: 0.20, cap: 0.38, anchor: true, mult: 2.6 },
+  verify: { cx: 0.5, cy: 0.20, cap: 0.42, anchor: true, mult: 2.8 },
 };
 // anchored poses GROW UPWARD from the avatar slot: the emblem's bottom edge stays pinned to the slot's
-// bottom, so a larger emblem rises toward the sky and never crowds the identity button beneath it.
+// bottom, so a larger emblem rises toward the sky and never crowds the identity button beneath it. The
+// clamp keeps its top on screen on short windows (it can never grow past the slot-bottom-to-sky span).
 function anchorTarget(overlay, p, fallback) {
   try {
     const a = overlay.querySelector(".hl-avatar");
     if (a) {
       const r = a.getBoundingClientRect();
-      if (r.width) { const cap = r.width * (p.mult || 2.0); return { cx: r.left + r.width / 2, cy: r.top + r.height - cap / 2, cap }; }
+      if (r.width) {
+        const cap = Math.min(r.width * (p.mult || 2.6), Math.max(r.width, r.top + r.height - 24));
+        return { cx: r.left + r.width / 2, cy: r.top + r.height - cap / 2, cap };
+      }
     }
   } catch {}
   return fallback;
