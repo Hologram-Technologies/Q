@@ -352,8 +352,24 @@ async function proxyInit(req, isDoc) {
   return init;
 }
 
-// ── serve a live http(s) page: proxy → mint κ → cache → re-derive → serve ────────────
-async function serveWeb(realUrl, req) {
+// ── κ-verified stale-while-revalidate for documents (the S2 line: a repeat visit paints from
+// the store INSTANTLY — L3 — and the wire runs in the background so the NEXT visit paints fresh).
+// Window-bounded: beyond SWR_TTL_MS the wire leads again (a day-old front page must not paint
+// stale-first). Dead paints (empty/JS-walled shells) never enter the url→κ memory at all. ──────
+const SWR_TTL_MS = 10 * 60_000;
+async function revalidate(realUrl, req) {
+  const { r } = await egressFetch(realUrl, await proxyInit(req, true));
+  if (!r || !r.ok || r.status !== 200) return;
+  const bytes = new Uint8Array(await r.arrayBuffer());
+  const ctype = r.headers.get("content-type") || mimeByExt(realUrl) || "text/html; charset=utf-8";
+  if (/text\/html/i.test(ctype) && emptyOrWalled(bytes, new TextDecoder().decode(bytes))) return;   // never remember a dead paint
+  const kappa = kappaOf(bytes);
+  await kPut(kappa, bytes, { contentType: ctype, source: realUrl });
+  await uPut(realUrl, { kappa, contentType: ctype, ts: Date.now() });
+}
+
+// ── serve a live http(s) page: κ-store first (SWR window) → proxy → mint κ → cache → re-derive → serve ─
+async function serveWeb(realUrl, req, event) {
   // NOTE on Google search: /search is JS-walled (no-JS search was retired). Google first
   // answers with an interstitial whose JS proves execution and re-navigates with a one-shot
   // sg_ss token. That JS RUNS in our renderer, the relative location update stays on the
@@ -375,6 +391,25 @@ async function serveWeb(realUrl, req) {
   if (!PROXY_SEEN_ALIVE) {
     const alt = googleAlt(realUrl);
     if (alt) return Response.redirect(inScope(alt), 302);
+  }
+  // L3 FIRST for the document too: a repeat GET inside the SWR window paints from the κ-store
+  // (re-derived, Law L5) with ZERO wire wait; the egress refetch rides event.waitUntil in the
+  // background so the next visit paints the fresh mint. A held dead paint is skipped (wire decides).
+  if (isGet) {
+    const u = await uGet(realUrl);
+    if (u && u.kappa && Date.now() - (u.ts || 0) < SWR_TTL_MS) {
+      const bytes = await kGet(u.kappa);
+      if (bytes && verifyKappa(u.kappa, bytes)) {
+        const ct = u.contentType || "text/html; charset=utf-8";
+        const text = /text\/html/i.test(ct) ? new TextDecoder().decode(bytes) : null;
+        if (!(text != null && emptyOrWalled(bytes, text))) {
+          const body = text != null ? new TextEncoder().encode(rewriteHtml(text, realUrl, u.kappa)) : bytes;
+          if (event && event.waitUntil) event.waitUntil(revalidate(realUrl, req).catch(() => {}));
+          await broadcast({ type: "committed", view: VIEW + "w/" + enc(realUrl), kappa: u.kappa, minted: false, verified: true, egress: "kappa-store", swr: true, scheme: new URL(realUrl).protocol.replace(":", ""), contentType: ct, source: realUrl });
+          return new Response(body, { status: 200, headers: KHDR(u.kappa, ct, { "x-holo-egress": "kappa-store", "x-holo-swr": "revalidating" }) });
+        }
+      }
+    }
   }
   const { r, via } = await egressFetch(realUrl, await proxyInit(req, true));   // isDoc → egress may render this top document in a real Chrome
   if (!r || !r.ok) {
@@ -404,13 +439,14 @@ async function serveWeb(realUrl, req) {
   const ctype = (r.headers.get("content-type") || mimeByExt(realUrl) || "text/html; charset=utf-8");
   await kPut(kappa, bytes, { contentType: ctype, source: realUrl });
   if (!verifyKappa(kappa, bytes)) return refused("mint re-derivation failed for " + realUrl);
-  if (isGet && r.status === 200) await uPut(realUrl, { kappa, contentType: ctype, ts: Date.now() });   // the L3 edge: url → κ
   let body = bytes;
   if (/text\/html/i.test(ctype)) {
     const text = new TextDecoder().decode(bytes);
     // S1 — NO DEAD PAINT. A main-frame document that came back empty or as a proof-of-JS wall would
     // mint into a blank white frame. Never serve that: google → a working search; anything else → an
     // honest, actionable interstitial. (Subresources are exempt — an empty script/img is not a dead tab.)
+    // NOTE: this check runs BEFORE uPut so a walled shell never becomes the URL's remembered face
+    // (the SWR fast path above would otherwise re-paint it on every repeat).
     if (isDoc && emptyOrWalled(bytes, text)) {
       const alt = googleAlt(realUrl);
       if (alt) return Response.redirect(inScope(alt), 302);
@@ -419,6 +455,7 @@ async function serveWeb(realUrl, req) {
     }
     body = new TextEncoder().encode(rewriteHtml(text, realUrl, kappa));
   }
+  if (isGet && r.status === 200) await uPut(realUrl, { kappa, contentType: ctype, ts: Date.now() });   // the L3 edge: url → κ (healthy paints only)
   await broadcast({ type: "committed", view: VIEW + "w/" + enc(realUrl), kappa, minted: true, verified: true, egress: via, scheme: new URL(realUrl).protocol.replace(":", ""), contentType: ctype, source: realUrl });
   return new Response(body, { status: 200, headers: KHDR(kappa, ctype, { "x-holo-egress": via }) });
 }
@@ -457,7 +494,7 @@ self.addEventListener("fetch", (event) => {
       // the b64 token encodes only the action URL, and the submit replaces the wrapper's search.
       // Carry them onto the real URL or the query never reaches the site (Google → no results).
       if (url.search) { try { const ru = new URL(real); ru.search = url.search; real = ru.href; } catch {} }
-      event.respondWith(serveWeb(real, event.request).catch((e) => refused(String(e)))); return;
+      event.respondWith(serveWeb(real, event.request, event).catch((e) => refused(String(e)))); return;
     }
     return;   // unknown webview path → default
   }

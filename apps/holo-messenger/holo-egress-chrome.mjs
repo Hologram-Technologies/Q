@@ -154,6 +154,7 @@ async function ensureBrowser(operator) {
     if (!v) { try { proc.kill(); } catch {} return null; }
     rememberPort(profile, port);
     const inst = { proc, port, profile };
+    await warmup(inst);   // prime the renderer so the FIRST real render doesn't settle-timeout on a cold browser
     _instances.set(key, inst);
     return inst;
   })();
@@ -200,6 +201,20 @@ async function newTab(br) {
 }
 async function closeTab(br, targetId) { try { await fetch(`http://127.0.0.1:${br.port}/json/close/${targetId}`); } catch {} }
 
+// Prime a freshly-spawned browser: the FIRST navigation brings up the renderer/GPU process and
+// is slow; a throwaway about:blank load pays that cost ONCE, so the first real render settles fast.
+async function warmup(br) {
+  let t = null, cli = null;
+  try {
+    t = await newTab(br); if (!t) { await sleep(600); return; }
+    cli = cdpClient(t.webSocketDebuggerUrl); await cli.ready;
+    await cli.send("Page.enable");
+    await cli.send("Page.navigate", { url: "about:blank" }, 6000);
+    for (let i = 0; i < 12; i++) { const rs = await evalInPage(cli, "document.readyState", false, 2000); if (rs === "complete" || rs === "interactive") break; await sleep(250); }
+  } catch { await sleep(600); }
+  finally { try { if (cli) cli.close(); } catch {} try { if (t && t.id) await closeTab(br, t.id); } catch {} }
+}
+
 /**
  * Render a live document in a real headless Chrome and return its settled outerHTML.
  * @param {string} url
@@ -214,10 +229,22 @@ export async function egressRender(url, { timeoutMs = 22000, operator } = {}) {
   const br = await ensureBrowser(operator);
   if (!br) return null;
   await acquire();
-  let cli = null;
+  try {
+    // Up to 3 attempts: a cold/contended Chrome's render can settle-timeout or lose a /json/new
+    // race; a warm retry is reliable. `terminal` failures (dead host, blocked page) never retry.
+    let out = await _renderOnce(br, url, timeoutMs);
+    for (let i = 0; i < 2 && out.retry; i++) { await sleep(400); out = await _renderOnce(br, url, timeoutMs); }
+    return out.data || null;
+  } finally { release(); }
+}
+
+// One render attempt. Returns { data } on success, { retry:true } on a transient/cold-start miss,
+// or {} on a terminal miss (nav error / blocked / dead) that must NOT be retried.
+async function _renderOnce(br, url, timeoutMs) {
+  let t = null, cli = null;
   try {
     t = await newTab(br);
-    if (!t) return null;
+    if (!t) return { retry: true };
     cli = cdpClient(t.webSocketDebuggerUrl);
     await cli.ready;
     await cli.send("Page.enable");
@@ -228,7 +255,7 @@ export async function egressRender(url, { timeoutMs = 22000, operator } = {}) {
     await cli.send("Page.addScriptToEvaluateOnNewDocument", { source: CONSENT_REJECT });
 
     const nav = await cli.send("Page.navigate", { url }, timeoutMs);
-    if (nav && nav.errorText) return null;   // ERR_NAME_NOT_RESOLVED etc. → let Node path report honestly
+    if (nav && nav.errorText) return {};   // ERR_NAME_NOT_RESOLVED etc. → terminal, let Node report honestly
 
     // Settle: poll until the document is complete, off any consent host, and its URL is stable
     // for ~1s (the consent reject + sg_ss redemption both resolve as real navigations here).
@@ -245,24 +272,22 @@ export async function egressRender(url, { timeoutMs = 22000, operator } = {}) {
         if (stable >= 2) break;
       } else { stable = 0; prev = s.href; }
     }
-    if (!sawComplete) return null;
+    if (!sawComplete) return { retry: true };   // settle-timeout — usually a cold renderer; retry warm
 
     // Small extra beat so late-painting results (Google injects <h3>s post-load) are captured.
     await sleep(600);
     const html = await evalInPage(cli, "document.documentElement.outerHTML", false, 8000);
     const finalUrl = await evalInPage(cli, "location.href", false, 3000) || url;
-    if (typeof html !== "string" || html.length < 64) return null;
+    if (typeof html !== "string" || html.length < 64) return { retry: true };
     // A real Chrome still can't pass an IP-level block / interactive CAPTCHA / CF challenge — a
-    // rendered "sorry" page is a dead end, so treat it as a soft miss and let the caller fall
-    // back (DuckDuckGo html). Never serve a challenge page as if it were the site.
-    if (looksBlocked(html, finalUrl)) return null;
-    return { status: 200, contentType: "text/html; charset=utf-8", buffer: Buffer.from("<!doctype html>\n" + html), finalUrl };
+    // rendered "sorry" page is a dead end (terminal), so let the caller fall back (DuckDuckGo html).
+    if (looksBlocked(html, finalUrl)) return {};
+    return { data: { status: 200, contentType: "text/html; charset=utf-8", buffer: Buffer.from("<!doctype html>\n" + html), finalUrl } };
   } catch {
-    return null;
+    return { retry: true };
   } finally {
     try { if (cli) cli.close(); } catch {}
     try { if (t && t.id) await closeTab(br, t.id); } catch {}
-    release();
   }
 }
 
@@ -276,11 +301,20 @@ export async function egressInstance(operator) {
 // Gracefully close an egress Chrome — Browser.close flushes cookies/session state to the
 // persistent profile before exit, so the NEXT open re-adopts them (the persistence guarantee).
 async function _shutdownInst(inst) {
+  // Ask Chrome to close cleanly — a clean exit is what FLUSHES persistent cookies to the
+  // profile's Cookies DB. Do NOT kill first (that loses the flush and, with it, the login).
   try {
     const v = await cdpVersion(inst.port);
-    if (v && v.webSocketDebuggerUrl) { const cli = cdpClient(v.webSocketDebuggerUrl); await cli.ready; await cli.send("Browser.close", {}, 4000); cli.close(); }
+    if (v && v.webSocketDebuggerUrl) { const cli = cdpClient(v.webSocketDebuggerUrl); await cli.ready; cli.send("Browser.close", {}, 2000); cli.close(); }
   } catch {}
-  try { if (inst.proc) inst.proc.kill(); } catch {}
+  if (inst.proc) {
+    // wait for the real exit (flush done); hard-kill only as a last resort after 6s.
+    await new Promise((res) => { let done = false; const fin = () => { if (!done) { done = true; res(); } };
+      inst.proc.once("exit", fin); setTimeout(() => { try { inst.proc.kill(); } catch {} fin(); }, 6000); });
+  } else {
+    // adopted instance (no child handle) — poll until the CDP endpoint is gone.
+    for (let i = 0; i < 24; i++) { if (!(await cdpVersion(inst.port))) break; await sleep(300); }
+  }
 }
 export async function egressShutdown(operator) {
   const key = opKey(operator);

@@ -6,7 +6,7 @@
      ?guest=1. Full machine-readable contract in script#holo-agent-login (JSON). Mirrors holo://login. -->
 <meta name="ai-agent-login" content="Guest mode: act now with window.HoloLogin.guest() or ?guest=1 (ephemeral, no human). Biometric ('It's me') needs the person. See script#holo-agent-login.">
 
-<link rel="stylesheet" href="./_vendor/ui/chat-ui.bundle.css?v=e0b2a13d7c38">
+<link rel="stylesheet" href="./_vendor/ui/chat-ui.bundle.css?v=7c6fe4ba0afc">
 <style>html,body{height:100%;margin:0;background:#0b141a;color-scheme:dark}#root{height:100vh}</style>
 <link rel="preload" as="image" href="./_vendor/wallpaper-default.jpg" fetchpriority="high">
 <!-- ── TEE SIGN-IN GATE (holo-messenger-login.mjs) ─────────────────────────────────────────────────
@@ -63,7 +63,7 @@
   @keyframes hl-lift{to{opacity:0;transform:translateY(-10px) scale(1.03);}}
   @media (prefers-reduced-motion:reduce){#holo-login .hl-panel,#holo-login .spin{animation:none;}#holo-login.unfog .hl-frost,#holo-login.unfog .hl-panel{animation:hl-defog .3s ease forwards;}}
   /* PLYMOUTH BOOT BEAT — while .hl-boot, the machine is booting: pure splash, panel held. holo-plymouth.mjs
-     lifts it (or the baseline's own 1.8s timer does — never a lock-out). Must live HERE for the 0-ms frame.
+     lifts it (or the baseline's own 5s timer does — never a lock-out). Must live HERE for the 0-ms frame.
      When the beat lifts, the baseline splash layer dissolves to the wallpaper by CSS alone — so even a
      never-arriving module leaves the classic wallpaper lock, not a black void. */
   #holo-login.hl-boot .hl-panel{opacity:0!important;pointer-events:none!important;}
@@ -134,7 +134,7 @@
     // the sealed frame-0 synchronously — the machine boots like a machine — and the panel holds for one boot
     // beat behind .hl-boot. The wallpaper underneath is NEVER touched: the module dissolves this layer into
     // it (boot → your OS). Fail-open twice over: the module drops the layer when its canvas is live, and if
-    // the module never arrives the 1.8s timer lifts .hl-boot and CSS fades the layer to the wallpaper lock.
+    // the module never arrives the 5s timer lifts .hl-boot and CSS fades the layer to the wallpaper lock.
     try {
       var _pl = JSON.parse(localStorage.getItem("holo.plymouth.v1") || "null");
       if (_pl && _pl.on && _wall) {
@@ -145,7 +145,7 @@
         _wall.parentNode.insertBefore(_base, _wall.nextSibling);
         var _rm = false; try { _rm = matchMedia("(prefers-reduced-motion: reduce)").matches; } catch (e) {}
         var _ov = document.getElementById("holo-login");
-        if (_ov && !_rm) { _ov.classList.add("hl-boot"); setTimeout(function () { try { _ov.classList.remove("hl-boot"); } catch (e) {} }, 1800); }
+        if (_ov && !_rm) { _ov.classList.add("hl-boot"); window.__hlBootT0 = Date.now(); setTimeout(function () { try { _ov.classList.remove("hl-boot"); } catch (e) {} }, 5000); }
       }
     } catch (e) {}
   } catch (e) {}
@@ -173,7 +173,7 @@
      widgets/dock runtime, so they run standalone here. Classic defer → they set their globals before the bundle boots. -->
 <script type="module">
   // ?v=N - bump on each deploy so the browser can never serve a stale cached bundle (the cause of a frozen/old build).
-  import "./_vendor/ui/chat-ui.bundle.js?v=5deebbd5a4fd";   // → window.HoloMessengerUI
+  import "./_vendor/ui/chat-ui.bundle.js?v=81a1870b63cf";   // → window.HoloMessengerUI
   // Opt-in: render the WhatsApp UX from STREAMING shadcn κ-components instead of the chatscope bundle.
   // Lazy — the module loads ONLY when opted in (?ui=shadcn or holo.ui.shadcn=1); the default boot never
   // parses it. Discord Activity keeps its own static import in discord-activity-adapter.mjs.
@@ -181,7 +181,7 @@
     if (new URLSearchParams(location.search).get("ui") === "shadcn" || localStorage.getItem("holo.ui.shadcn") === "1")
       await import("./messenger-shadcn-ui.mjs");
   } catch {}
-  import { boot } from "./holo-messenger-app.mjs?v=adeea1b4a160";
+  import { boot } from "./holo-messenger-app.mjs?v=d1fdc38c3e96";
 
   const root = document.getElementById("root");
   // TEE GATE + SPECULATIVE WARM PAINT, one motion. The gate (holo-webauthn + holo-login) renders the lock and

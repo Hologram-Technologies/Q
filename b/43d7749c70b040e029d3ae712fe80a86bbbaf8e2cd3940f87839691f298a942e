@@ -18,9 +18,9 @@
     <meta name="application-name" content="Hologram" />
     <link rel="apple-touch-icon" href="/icon-192.png" />
     <!-- Shared mobile-conformance layer every shipped holospace adopts (enforce-witnesses gate). -->
-    <link rel="stylesheet" href="/.holo/sha256/b2bfa104b9ee8e3bb631dcd0ec0e6f7017b8898c4304666f5b3dfeeebc926eb9.css" data-holo-shared="holo-mobile.css" />
-    <link rel="stylesheet" href="/.holo/sha256/af0f2b5ff47f414281246d8e8e786edc6302bed6731174897f74f105dd2f93f3.css" data-holo-shared="holo-phi.css" />
-    <script type="module" src="/.holo/sha256/f06225898cce8ded3bddebb5abf6a4f2478e40b7eac828905d38290cebb820de.js" data-holo-shared="holo-ux.js"></script>
+    <link rel="stylesheet" href="../../_shared/holo-mobile.css" data-holo-shared="holo-mobile.css" />
+    <link rel="stylesheet" href="../../_shared/holo-phi.css" data-holo-shared="holo-phi.css" />
+    <script type="module" src="../../_shared/holo-ux.js" data-holo-shared="holo-ux.js"></script>
     <link rel="stylesheet" href="../../_shared/holo-dock.css" data-holo-shared="holo-dock.css" />
     <style>
       :root {
@@ -211,7 +211,7 @@
 
     <div id="toast" role="status" aria-live="polite"></div>
 
-    <script src="/.holo/sha256/a0ebbc696bda5154727b76b42c11921231cbc652de3e705dd6b632456e6f34aa.js" data-holo-shared="teleport.js" defer></script>
+    <script src="../../_shared/teleport.js" data-holo-shared="teleport.js" defer></script>
     <script type="module">
       import * as B from "../../_shared/holo-browser.js";
       import { blake3, toHex, toBytes } from "../../_shared/holo-ipfs.js";
@@ -927,8 +927,8 @@
       render(); hydrate().then(autoInstallShield);
       } catch (err) { console.error("[holo-ext] store init failed:", err); }
     </script>
-    <script src="/.holo/sha256/b4dbe84b9234d9b4672a632159fc7cbafb94c0af6da7cec9eedf2c325fe1667b.js" data-holo-shared="holo-theme.js"></script>
-    <script src="/.holo/sha256/92dcac0de44530fe7a198607bd3daf734e02119a3c9c1ba15b871f8fc3c0782f.js" data-holo-shared="holo-manage.js" defer></script>
+    <script src="../../_shared/holo-theme.js" data-holo-shared="holo-theme.js"></script>
+    <script src="../../_shared/holo-manage.js" data-holo-shared="holo-manage.js" defer></script>
     <!-- The dock is Holo Browser's shortcut bar (ADR-0059): a tap opens that object in a tab. -->
     <script defer src="../../_shared/holo-dock.js" data-holo-shared="holo-dock.js"></script>
     <script defer src="./holo-install.js" data-holo-shared="holo-install.js"></script>

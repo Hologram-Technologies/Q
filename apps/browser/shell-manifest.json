@@ -1,12 +1,12 @@
 {
  "v": 1,
- "created": 1783418746415,
- "aggregate": "f6f753496e1f913e287779fb788f7150f3408d723d9b869e1adca4abffe9f3b6",
+ "created": 1783422970188,
+ "aggregate": "ef7559bdfce33440acee0cadd85b95d6499119887404259a6c2997ef39ae4d65",
  "assets": [
   {
    "path": "/apps/browser/browser-sw.js",
-   "kappa": "65a8dd368bba6a07f2d084a65a83eae18f2267a2c4c8c92a8c85a66840b9c38e",
-   "bytes": 42372
+   "kappa": "f4a7e62ac492ffbcb48ce1e32f9204215bc81a29d7da51fdfafa3d0b5343732d",
+   "bytes": 45029
   },
   {
    "path": "/apps/browser/ext/holo-shield.crx",
@@ -17,6 +17,11 @@
    "path": "/apps/browser/holo-install.js",
    "kappa": "4984144bf06a60ba77f92754913b0dc25376a4d00a16914c4c0c2e82d87893f9",
    "bytes": 9722
+  },
+  {
+   "path": "/apps/browser/holo-search.html",
+   "kappa": "aa1e33c7300bad57e3260bd41ce08d56427dc6b0b1fc27f9bc08c8f3deaa9819",
+   "bytes": 10915
   },
   {
    "path": "/apps/browser/holo-splash.js",
@@ -40,8 +45,8 @@
   },
   {
    "path": "/apps/browser/index.html",
-   "kappa": "27dcaa3699cf9adbfb5885ae7e7180a11958d8da1fc285c4d1671f9104b7e700",
-   "bytes": 80054
+   "kappa": "43d7749c70b040e029d3ae712fe80a86bbbaf8e2cd3940f87839691f298a942e",
+   "bytes": 79725
   },
   {
    "path": "/apps/browser/ipfs-sw.js",
@@ -124,6 +129,11 @@
    "bytes": 5546
   },
   {
+   "path": "/apps/browser/_spike/onion/onion-live.html",
+   "kappa": "fd56472a65e2a0940500a120e589ae5f349cd5ed71a610ef1e3ca45f36503eec",
+   "bytes": 4959
+  },
+  {
    "path": "/apps/browser/_spike/onion/onion-probe.worker.mjs",
    "kappa": "bed2b0d11ed4d559a938ba16d23665d3275a20de91adb4df893703f6407d4b81",
    "bytes": 3853
@@ -134,9 +144,9 @@
    "bytes": 3018
   },
   {
-   "path": "/apps/browser/holo-search.html",
-   "kappa": "aa1e33c7300bad57e3260bd41ce08d56427dc6b0b1fc27f9bc08c8f3deaa9819",
-   "bytes": 10915
+   "path": "/apps/browser/_spike/onion/serve.mjs",
+   "kappa": "e772c266ecc9f8e2a3f63fac39d25d68c182ae5275f6388215f5a179090e2a07",
+   "bytes": 3506
   }
  ]
 }

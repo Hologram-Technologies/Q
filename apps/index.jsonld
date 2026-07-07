@@ -194,6 +194,42 @@
       ]
     },
     {
+      "@id": "did:holo:sha256:7d953e7dd69946145fa724cae5f37c72f3ed0cf554b50effe7dfc67a833a3016",
+      "holo:root": "did:holo:sha256:7d953e7dd69946145fa724cae5f37c72f3ed0cf554b50effe7dfc67a833a3016",
+      "@type": [
+        "schema:SoftwareApplication",
+        "schema:WebApplication"
+      ],
+      "schema:name": "Holo Player",
+      "schema:identifier": "org.hologram.HoloPlayer",
+      "holo:words": "river.wheat.skin",
+      "schema:alternateName": "river.wheat.skin",
+      "schema:description": "A verified media library for your movies and shows, with no server.",
+      "schema:applicationCategory": "MultimediaApplication",
+      "holo:categories": [
+        "AudioVideo",
+        "Video",
+        "Player"
+      ],
+      "schema:keywords": [
+        "media",
+        "library",
+        "jellyfin",
+        "movies",
+        "shows",
+        "player"
+      ],
+      "dcat:landingPage": "apps/player/index.html",
+      "schema:image": "apps/player/icon.svg",
+      "schema:softwareRequirements": [
+        "holo-jellyfin.js",
+        "holo-manage.js",
+        "holo-mobile.css",
+        "holo-theme.js",
+        "teleport.js"
+      ]
+    },
+    {
       "@id": "did:holo:sha256:c614f527b4b21e000ff2e1cde6d3d1324381881437e3ae4b4c80ee9a34ceca69",
       "holo:root": "did:holo:sha256:c614f527b4b21e000ff2e1cde6d3d1324381881437e3ae4b4c80ee9a34ceca69",
       "@type": [

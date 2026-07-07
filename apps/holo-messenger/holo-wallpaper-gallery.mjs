@@ -96,6 +96,13 @@ async function ensureWall() {
   const current = keptOwnPick ? cur.current : defaultWallK(items);
   const s = { seedV: SEED_V, current, items }; wallWrite(s); return s;
 }
+// Pre-warm off the click path: the import itself pays the module parse; this pays the first-run κ-seed
+// sealing (fetch + hash + IndexedDB of the seed/curated set). After it, openWallpaperGallery()'s own
+// ensureCurated(ensureWall()) is a pure cache hit — "Change wallpaper…" opens instantly. Idempotent.
+let _warmed = null;
+export function warmWallpaperGallery() {
+  return (_warmed = _warmed || ensureWall().then(ensureCurated).then(() => true).catch(() => { _warmed = null; return false; }));
+}
 
 // the durable cross-surface reference for a pick: local path → κ route (when this origin resolves /.holo) → source URL
 let _kappaRouteOk = null;

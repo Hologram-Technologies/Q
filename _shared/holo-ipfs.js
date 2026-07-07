@@ -187,36 +187,70 @@ export async function cidOf(bytes, codec = CODEC.RAW, hashCode = HASH.SHA2_256) 
 const B3_IV = Uint32Array.from([0x6a09e667, 0xbb67ae85, 0x3c6ef372, 0xa54ff53a, 0x510e527f, 0x9b05688c, 0x1f83d9ab, 0x5be0cd19]);
 const B3_PERM = [2, 6, 3, 10, 7, 0, 4, 13, 1, 11, 12, 5, 9, 14, 15, 8];
 const CHUNK_START = 1, CHUNK_END = 2, PARENT = 4, ROOT = 8;
-const rotr = (x, n) => ((x >>> n) | (x << (32 - n))) >>> 0;
-function b3g(s, a, b, c, d, mx, my) {
-  s[a] = (s[a] + s[b] + mx) >>> 0; s[d] = rotr(s[d] ^ s[a], 16);
-  s[c] = (s[c] + s[d]) >>> 0; s[b] = rotr(s[b] ^ s[c], 12);
-  s[a] = (s[a] + s[b] + my) >>> 0; s[d] = rotr(s[d] ^ s[a], 8);
-  s[c] = (s[c] + s[d]) >>> 0; s[b] = rotr(s[b] ^ s[c], 7);
-}
-function b3compress(cv, block, counter, blockLen, flags) {
-  const s = new Uint32Array(16);
-  for (let i = 0; i < 8; i++) s[i] = cv[i];
-  s[8] = B3_IV[0]; s[9] = B3_IV[1]; s[10] = B3_IV[2]; s[11] = B3_IV[3];
-  s[12] = counter >>> 0; s[13] = Math.floor(counter / 4294967296) >>> 0; s[14] = blockLen >>> 0; s[15] = flags >>> 0;
-  let m = block;
-  for (let r = 0; r < 7; r++) {
-    b3g(s, 0, 4, 8, 12, m[0], m[1]); b3g(s, 1, 5, 9, 13, m[2], m[3]); b3g(s, 2, 6, 10, 14, m[4], m[5]); b3g(s, 3, 7, 11, 15, m[6], m[7]);
-    b3g(s, 0, 5, 10, 15, m[8], m[9]); b3g(s, 1, 6, 11, 12, m[10], m[11]); b3g(s, 2, 7, 8, 13, m[12], m[13]); b3g(s, 3, 4, 9, 14, m[14], m[15]);
-    if (r < 6) { const pm = new Uint32Array(16); for (let i = 0; i < 16; i++) pm[i] = m[B3_PERM[i]]; m = pm; }
+// Hot path: the compression below is the flat/unrolled form of the reference b3g round — state in
+// LOCALS, message-word order via precomputed per-round schedules (σ[r+1][i] = σ[r][PERM[i]]), zero
+// allocations per block. Byte-identical to the reference (gated by tools/holo-blake3-parity-vectors.json,
+// the official `i % 251` vectors re-derived by the Rust blake3 crate). ~25× the naive per-round-permute
+// form — content-addressing at the ingest boundary (Law L2) has to run at line rate.
+const B3_SIGMA = (() => {
+  const s = new Uint8Array(7 * 16); let cur = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15];
+  for (let r = 0; r < 7; r++) { for (let i = 0; i < 16; i++) s[r * 16 + i] = cur[i]; cur = B3_PERM.map((p) => cur[p]); }
+  return s;
+})();
+function b3compress(cv, m, counter, blockLen, flags, out8) {
+  const S = B3_SIGMA;
+  let w0 = cv[0], w1 = cv[1], w2 = cv[2], w3 = cv[3], w4 = cv[4], w5 = cv[5], w6 = cv[6], w7 = cv[7];
+  let w8 = B3_IV[0], w9 = B3_IV[1], w10 = B3_IV[2], w11 = B3_IV[3];
+  let w12 = counter >>> 0, w13 = Math.floor(counter / 4294967296) >>> 0, w14 = blockLen >>> 0, w15 = flags >>> 0;
+  for (let o = 0; o < 112; o += 16) {
+    w0 = (w0 + w4 + m[S[o]]) >>> 0; w12 ^= w0; w12 = (w12 >>> 16 | w12 << 16) >>> 0; w8 = (w8 + w12) >>> 0; w4 ^= w8; w4 = (w4 >>> 12 | w4 << 20) >>> 0;
+    w0 = (w0 + w4 + m[S[o + 1]]) >>> 0; w12 ^= w0; w12 = (w12 >>> 8 | w12 << 24) >>> 0; w8 = (w8 + w12) >>> 0; w4 ^= w8; w4 = (w4 >>> 7 | w4 << 25) >>> 0;
+    w1 = (w1 + w5 + m[S[o + 2]]) >>> 0; w13 ^= w1; w13 = (w13 >>> 16 | w13 << 16) >>> 0; w9 = (w9 + w13) >>> 0; w5 ^= w9; w5 = (w5 >>> 12 | w5 << 20) >>> 0;
+    w1 = (w1 + w5 + m[S[o + 3]]) >>> 0; w13 ^= w1; w13 = (w13 >>> 8 | w13 << 24) >>> 0; w9 = (w9 + w13) >>> 0; w5 ^= w9; w5 = (w5 >>> 7 | w5 << 25) >>> 0;
+    w2 = (w2 + w6 + m[S[o + 4]]) >>> 0; w14 ^= w2; w14 = (w14 >>> 16 | w14 << 16) >>> 0; w10 = (w10 + w14) >>> 0; w6 ^= w10; w6 = (w6 >>> 12 | w6 << 20) >>> 0;
+    w2 = (w2 + w6 + m[S[o + 5]]) >>> 0; w14 ^= w2; w14 = (w14 >>> 8 | w14 << 24) >>> 0; w10 = (w10 + w14) >>> 0; w6 ^= w10; w6 = (w6 >>> 7 | w6 << 25) >>> 0;
+    w3 = (w3 + w7 + m[S[o + 6]]) >>> 0; w15 ^= w3; w15 = (w15 >>> 16 | w15 << 16) >>> 0; w11 = (w11 + w15) >>> 0; w7 ^= w11; w7 = (w7 >>> 12 | w7 << 20) >>> 0;
+    w3 = (w3 + w7 + m[S[o + 7]]) >>> 0; w15 ^= w3; w15 = (w15 >>> 8 | w15 << 24) >>> 0; w11 = (w11 + w15) >>> 0; w7 ^= w11; w7 = (w7 >>> 7 | w7 << 25) >>> 0;
+    w0 = (w0 + w5 + m[S[o + 8]]) >>> 0; w15 ^= w0; w15 = (w15 >>> 16 | w15 << 16) >>> 0; w10 = (w10 + w15) >>> 0; w5 ^= w10; w5 = (w5 >>> 12 | w5 << 20) >>> 0;
+    w0 = (w0 + w5 + m[S[o + 9]]) >>> 0; w15 ^= w0; w15 = (w15 >>> 8 | w15 << 24) >>> 0; w10 = (w10 + w15) >>> 0; w5 ^= w10; w5 = (w5 >>> 7 | w5 << 25) >>> 0;
+    w1 = (w1 + w6 + m[S[o + 10]]) >>> 0; w12 ^= w1; w12 = (w12 >>> 16 | w12 << 16) >>> 0; w11 = (w11 + w12) >>> 0; w6 ^= w11; w6 = (w6 >>> 12 | w6 << 20) >>> 0;
+    w1 = (w1 + w6 + m[S[o + 11]]) >>> 0; w12 ^= w1; w12 = (w12 >>> 8 | w12 << 24) >>> 0; w11 = (w11 + w12) >>> 0; w6 ^= w11; w6 = (w6 >>> 7 | w6 << 25) >>> 0;
+    w2 = (w2 + w7 + m[S[o + 12]]) >>> 0; w13 ^= w2; w13 = (w13 >>> 16 | w13 << 16) >>> 0; w8 = (w8 + w13) >>> 0; w7 ^= w8; w7 = (w7 >>> 12 | w7 << 20) >>> 0;
+    w2 = (w2 + w7 + m[S[o + 13]]) >>> 0; w13 ^= w2; w13 = (w13 >>> 8 | w13 << 24) >>> 0; w8 = (w8 + w13) >>> 0; w7 ^= w8; w7 = (w7 >>> 7 | w7 << 25) >>> 0;
+    w3 = (w3 + w4 + m[S[o + 14]]) >>> 0; w14 ^= w3; w14 = (w14 >>> 16 | w14 << 16) >>> 0; w9 = (w9 + w14) >>> 0; w4 ^= w9; w4 = (w4 >>> 12 | w4 << 20) >>> 0;
+    w3 = (w3 + w4 + m[S[o + 15]]) >>> 0; w14 ^= w3; w14 = (w14 >>> 8 | w14 << 24) >>> 0; w9 = (w9 + w14) >>> 0; w4 ^= w9; w4 = (w4 >>> 7 | w4 << 25) >>> 0;
   }
-  for (let i = 0; i < 8; i++) { s[i] = (s[i] ^ s[i + 8]) >>> 0; s[i + 8] = (s[i + 8] ^ cv[i]) >>> 0; }
+  if (out8) {   // chain mode: only the next cv is needed — write into the caller's buffer, no alloc
+    out8[0] = (w0 ^ w8) >>> 0; out8[1] = (w1 ^ w9) >>> 0; out8[2] = (w2 ^ w10) >>> 0; out8[3] = (w3 ^ w11) >>> 0;
+    out8[4] = (w4 ^ w12) >>> 0; out8[5] = (w5 ^ w13) >>> 0; out8[6] = (w6 ^ w14) >>> 0; out8[7] = (w7 ^ w15) >>> 0;
+    return out8;
+  }
+  const s = new Uint32Array(16);
+  s[0] = (w0 ^ w8) >>> 0; s[1] = (w1 ^ w9) >>> 0; s[2] = (w2 ^ w10) >>> 0; s[3] = (w3 ^ w11) >>> 0;
+  s[4] = (w4 ^ w12) >>> 0; s[5] = (w5 ^ w13) >>> 0; s[6] = (w6 ^ w14) >>> 0; s[7] = (w7 ^ w15) >>> 0;
+  s[8] = (w8 ^ cv[0]) >>> 0; s[9] = (w9 ^ cv[1]) >>> 0; s[10] = (w10 ^ cv[2]) >>> 0; s[11] = (w11 ^ cv[3]) >>> 0;
+  s[12] = (w12 ^ cv[4]) >>> 0; s[13] = (w13 ^ cv[5]) >>> 0; s[14] = (w14 ^ cv[6]) >>> 0; s[15] = (w15 ^ cv[7]) >>> 0;
   return s;
 }
-const b3words = (bytes) => { const w = new Uint32Array(16); for (let i = 0; i < 16; i++) { const o = i * 4; w[i] = (bytes[o] | (bytes[o + 1] << 8) | (bytes[o + 2] << 16) | (bytes[o + 3] << 24)) >>> 0; } return w; };
+// load ≤64 bytes at data[off..off+len) into 16 message words, zero-padded (no scratch block copy)
+function b3loadWords(data, off, len, m) {
+  const full = len >> 2; let i = 0;
+  for (; i < full; i++) { const o = off + i * 4; m[i] = (data[o] | (data[o + 1] << 8) | (data[o + 2] << 16) | (data[o + 3] << 24)) >>> 0; }
+  if (len & 3) { const o = off + (i << 2); let w = 0; for (let b = 0; b < (len & 3); b++) w |= data[o + b] << (8 * b); m[i++] = w >>> 0; }
+  for (; i < 16; i++) m[i] = 0;
+}
 function b3output(cv, block, counter, blockLen, flags) { return { cv, block, counter, blockLen, flags }; }
 const b3cv = (o) => b3compress(o.cv, o.block, o.counter, o.blockLen, o.flags).subarray(0, 8);
 function b3rootBytes(o, len) { const out = new Uint8Array(len); let i = 0, ctr = 0; while (i < len) { const w = b3compress(o.cv, o.block, ctr, o.blockLen, o.flags | ROOT); for (let j = 0; j < 16 && i < len; j++) { const word = w[j]; for (let b = 0; b < 4 && i < len; b++) out[i++] = (word >>> (8 * b)) & 0xff; } ctr++; } return out; }
+const _b3m = new Uint32Array(16);   // reused message words for the non-retained chain blocks (single-threaded JS)
+const _b3cvA = new Uint32Array(8), _b3cvB = new Uint32Array(8);   // ping-pong cv chain buffers (never escape)
 function b3chunkOutput(chunk, counter) {
   let cv = B3_IV.subarray(0, 8); const n = Math.max(1, Math.ceil(chunk.length / 64));
-  for (let i = 0; i < n - 1; i++) { const blk = new Uint8Array(64); blk.set(chunk.subarray(i * 64, i * 64 + 64)); cv = b3compress(cv, b3words(blk), counter, 64, i === 0 ? CHUNK_START : 0).subarray(0, 8); }
-  const i = n - 1, start = i * 64, blockLen = chunk.length - start; const blk = new Uint8Array(64); blk.set(chunk.subarray(start, chunk.length));
-  return b3output(cv, b3words(blk), counter, blockLen, (i === 0 ? CHUNK_START : 0) | CHUNK_END);
+  for (let i = 0; i < n - 1; i++) { b3loadWords(chunk, i * 64, 64, _b3m); cv = b3compress(cv, _b3m, counter, 64, i === 0 ? CHUNK_START : 0, cv === _b3cvA ? _b3cvB : _b3cvA); }
+  const i = n - 1, start = i * 64, blockLen = chunk.length - start;
+  const m = new Uint32Array(16);   // retained inside the output (root/parent compress re-reads it) — must be fresh
+  b3loadWords(chunk, start, blockLen, m);
+  return b3output(Uint32Array.from(cv), m, counter, blockLen, (i === 0 ? CHUNK_START : 0) | CHUNK_END);   // cv copied: the output object outlives the ping-pong buffers
 }
 const b3parent = (l, r) => { const block = new Uint32Array(16); block.set(l.subarray(0, 8), 0); block.set(r.subarray(0, 8), 8); return b3output(B3_IV.subarray(0, 8), block, 0, 64, PARENT); };
 export function blake3(input, outLen = 32) {

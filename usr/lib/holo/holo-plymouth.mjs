@@ -142,8 +142,10 @@ const CSS = `
 #holo-login .hlp{position:fixed;inset:0;z-index:0;pointer-events:none;background:#000;opacity:0;transition:opacity .5s ease,background-color 1.1s ease}
 #holo-login .hlp.on{opacity:1}
 #holo-login .hlp canvas{position:absolute;inset:0;width:100%;height:100%}
-/* greet: the black dissolves — your wallpaper IS the login; the splash lives on as a small emblem above you */
+/* greet: the black dissolves — your wallpaper IS the login; the splash lives on as your identity emblem */
 #holo-login .hlp.greet{background:rgba(0,0,0,0)}
+/* while the emblem is alive it REPLACES the avatar circle — the slot keeps its layout, the paint is the animation */
+#holo-login.hlp-anchor .hl-avatar{visibility:hidden}
 #holo-login .hlp.verify canvas{animation:hlp-pulse 1.4s ease-in-out infinite}
 @keyframes hlp-pulse{0%,100%{filter:brightness(1)}50%{filter:brightness(1.45)}}
 #holo-login .hlp.done{opacity:0;transition:opacity .62s ease}
@@ -199,14 +201,35 @@ const reducedMotion = () => { try { return matchMedia("(prefers-reduced-motion: 
 // ── the player: one canvas, the Plymouth template + the power-on choreography ──────────────────────────
 // Poses are draw-space (crisp at any scale — CSS transforms would blur the canvas):
 //   boot   — dead-center, up to 62vmin: the machine booting, exactly like the metal
-//   greet  — a small living emblem ABOVE the identity panel: the machine handing you the keys
+//   greet  — the living emblem IS your identity: it lands on the avatar slot (anchored, a touch larger)
 //   verify — the emblem leans in slightly while the enclave checks you (CSS pulses brightness)
+// Anchored poses track the .hl-avatar rect live (the circle itself is hidden — the animation replaces it);
+// the fraction values are only the fallback for a greeter without an avatar in its panel.
 const POSES = {
-  boot:   { cy: 0.46, cap: 0.62 },
-  greet:  { cy: 0.215, cap: 0.22 },
-  verify: { cy: 0.215, cap: 0.26 },
+  boot:   { cx: 0.5, cy: 0.46, cap: 0.62 },
+  greet:  { cx: 0.5, cy: 0.215, cap: 0.22, anchor: true, mult: 1.5 },
+  verify: { cx: 0.5, cy: 0.215, cap: 0.26, anchor: true, mult: 1.7 },
 };
-function makePlayer(layer, canvas) {
+// Plymouth sprites bake their black screen into the PNG; over the wallpaper that black must be AIR.
+// Key near-black to transparent once per frame at load — boot (over the black layer) looks identical,
+// greet shows only the living pixels. Fail-open: any canvas trouble keeps the original image.
+function keyBlack(img) {
+  try {
+    const w = img.naturalWidth, h = img.naturalHeight;
+    if (!w || !h) return img;
+    const c = document.createElement("canvas"); c.width = w; c.height = h;
+    const x = c.getContext("2d", { willReadFrequently: true });
+    x.drawImage(img, 0, 0);
+    const d = x.getImageData(0, 0, w, h), p = d.data;
+    for (let i = 0; i < p.length; i += 4) {
+      const v = Math.max(p[i], p[i + 1], p[i + 2]);
+      if (v < 48) p[i + 3] = Math.min(p[i + 3], Math.max(0, ((v - 12) / 36) * 255) | 0);
+    }
+    x.putImageData(d, 0, 0);
+    return c;
+  } catch { return img; }
+}
+function makePlayer(overlay, layer, canvas) {
   const ctx = canvas.getContext("2d");
   const images = [];            // sparse, filled as frames land
   let prefix = 0;               // contiguous playable prefix — the loop only plays what has landed
@@ -216,22 +239,32 @@ function makePlayer(layer, canvas) {
   const dpr = Math.min(window.devicePixelRatio || 1, 2);
   function size() { canvas.width = Math.round(innerWidth * dpr); canvas.height = Math.round(innerHeight * dpr); }
   size(); addEventListener("resize", size);
+  // anchored poses resolve to the avatar slot's live rect (panel rise/resize tracked every frame)
+  function liveTarget() {
+    if (!target.anchor) return target;
+    try {
+      const a = overlay.querySelector(".hl-avatar");
+      if (a) {
+        const r = a.getBoundingClientRect();
+        if (r.width) {
+          const cw = canvas.width / dpr, ch = canvas.height / dpr, vmin = Math.min(cw, ch);
+          return { cx: (r.left + r.width / 2) / cw, cy: (r.top + r.height / 2) / ch, cap: (r.width * (target.mult || 1.5)) / vmin };
+        }
+      }
+    } catch {}
+    return target;
+  }
   function draw(idx) {
     const img = images[idx]; if (!img) return;
+    const iw = img.naturalWidth || img.width, ih = img.naturalHeight || img.height;
     const cw = canvas.width / dpr, ch = canvas.height / dpr;
     const vmin = Math.min(cw, ch);
     // Plymouth centers the sprite at its natural size; the pose caps it (boot ≈ the metal, greet = emblem)
-    const s = Math.min(1, (vmin * pose.cap) / Math.max(img.naturalWidth, img.naturalHeight));
-    const w = img.naturalWidth * s, h = img.naturalHeight * s;
-    const cx = cw / 2, cy = ch * pose.cy;
+    const s = Math.min(1, (vmin * pose.cap) / Math.max(iw, ih));
+    const w = iw * s, h = ih * s;
+    const cx = cw * pose.cx, cy = ch * pose.cy;
     ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
     ctx.clearRect(0, 0, cw, ch);
-    // a soft dark halo under the sprite — keeps the emblem legible over ANY wallpaper without a scrim,
-    // so the lock keeps wearing the exact same sharp wallpaper as home
-    const r = Math.max(w, h) * 0.85;
-    const g = ctx.createRadialGradient(cx, cy, r * 0.15, cx, cy, r);
-    g.addColorStop(0, "rgba(0,0,0,.5)"); g.addColorStop(1, "rgba(0,0,0,0)");
-    ctx.fillStyle = g; ctx.fillRect(cx - r, cy - r, r * 2, r * 2);
     ctx.drawImage(img, cx - w / 2, cy - h / 2, w, h);
   }
   function loop(now) {
@@ -241,22 +274,24 @@ function makePlayer(layer, canvas) {
     if (!t0) t0 = now;
     const dt = Math.min((now - last) / 1000, 0.1); last = now;
     // glide the pose toward its target (exp ease ≈ 750ms settle); reduced motion snaps
+    const tgt = liveTarget();
     const k = reducedMotion() ? 1 : Math.min(1, dt * 5.5);
-    pose.cy += (target.cy - pose.cy) * k;
-    pose.cap += (target.cap - pose.cap) * k;
+    pose.cx += (tgt.cx - pose.cx) * k;
+    pose.cy += (tgt.cy - pose.cy) * k;
+    pose.cap += (tgt.cap - pose.cap) * k;
     const idx = Math.floor((now - t0) / (1000 / FPS)) % Math.max(prefix, 1);
     draw(idx);
   }
   return {
     frame(i, img) {
-      images[i] = img;
+      images[i] = keyBlack(img);
       while (images[prefix]) prefix++;
       if (prefix === 1) {                                  // first drawable frame → the splash is alive
         layer.classList.add("on");
         if (reducedMotion()) draw(0); else raf = requestAnimationFrame(loop);
       }
     },
-    pose(name) { target = POSES[name] || POSES.greet; if (reducedMotion()) { pose.cy = target.cy; pose.cap = target.cap; if (images[0]) draw(0); } },
+    pose(name) { target = POSES[name] || POSES.greet; if (reducedMotion()) { const t = liveTarget(); pose.cx = t.cx; pose.cy = t.cy; pose.cap = t.cap; if (images[0]) draw(0); } },
     reset() { images.length = 0; prefix = 0; t0 = 0; },
     destroy() { alive = false; cancelAnimationFrame(raf); removeEventListener("resize", size); },
   };
@@ -376,7 +411,7 @@ export function attachPlymouth(overlay) {
     layer.appendChild(canvas);
     const wall = overlay.querySelector(".hl-wall");
     if (wall && wall.nextSibling) overlay.insertBefore(layer, wall.nextSibling); else overlay.prepend(layer);
-    player = makePlayer(layer, canvas);
+    player = makePlayer(overlay, layer, canvas);
   }
   function play(theme) {
     ensureLayer();
@@ -386,9 +421,10 @@ export function attachPlymouth(overlay) {
     loadFrames(theme, (i, img) => {
       if (my !== gen) return;
       player.frame(i, img);
+      overlay.classList.add("hlp-anchor");                // emblem is alive → it wears the avatar slot
       if (i === 0) dropBaseline();                        // the live canvas has the frame — the 0-ms still yields
     }, () => my !== gen)
-      .catch(() => { if (my === gen && state.on) layer.classList.remove("on"); });   // no frames at all → wallpaper stays
+      .catch(() => { if (my === gen && state.on) { layer.classList.remove("on"); overlay.classList.remove("hlp-anchor"); } });   // no frames at all → wallpaper + circle stay
   }
   // the host baseline (app.html) may have painted a synchronous frame-0 still; remove it once live
   function dropBaseline() { try { const b = document.getElementById("hl-plymouth-base"); if (b) { b.style.opacity = "0"; setTimeout(() => b.remove(), 900); } } catch {} }
@@ -401,7 +437,11 @@ export function attachPlymouth(overlay) {
   const bootable = overlay.classList.contains("hl-boot") || !panelEl || !panelEl.childElementCount;
   if (state.on && bootable && !reducedMotion()) {
     overlay.classList.add("hl-boot");
-    const t = setTimeout(endBoot, 1100);
+    // one 5s boot beat, counted from the baseline's 0-ms frame (window.__hlBootT0) — not from module load,
+    // so the module's endBoot (pose glide + baseline drop) lands together with the panel's rise
+    let bootLeft = 5000;
+    try { if (window.__hlBootT0) bootLeft = Math.max(250, 5000 - (Date.now() - window.__hlBootT0)); } catch {}
+    const t = setTimeout(endBoot, bootLeft);
     overlay.addEventListener("pointerdown", () => { clearTimeout(t); endBoot(); }, { once: true, capture: true });
     document.addEventListener("keydown", () => { clearTimeout(t); endBoot(); }, { once: true, capture: true });
   } else if (state.on) { setTimeout(endBoot, 0); }
@@ -421,6 +461,7 @@ export function attachPlymouth(overlay) {
       if (!name) {
         writeState({ ...s, on: false, firstFrame: undefined });
         gen++; if (layer) layer.classList.remove("on");
+        overlay.classList.remove("hlp-anchor");           // splash off → the avatar circle returns
         toast(overlay, "Boot splash off");
         return;
       }
