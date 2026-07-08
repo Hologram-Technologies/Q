@@ -112,7 +112,10 @@ function warm() {
   try { voice.warmHD({ ttsUrl: TTS_URL }).catch(() => {}); } catch {}
   let tries = 0;
   (function brain() {
-    try { if (window.HoloQ && window.HoloQ.warm) { window.HoloQ.warm(); return; } } catch {}
+    // kick BOTH tiers the instant HoloQ exists: the full BitNet brain (the ~28s κ-stream) AND the ~7MB ONNX
+    // seed. Started here — at drawer-open / idle — the seed is ready to DRAFT the first novel turn in ~1s while
+    // the brain finishes behind it, so the cold first answer never waits on the full model. Both idempotent.
+    try { if (window.HoloQ && window.HoloQ.warm) { window.HoloQ.warm(); try { window.HoloQ.warmSeed && window.HoloQ.warmSeed(); } catch {} return; } } catch {}
     if (++tries < 40) setTimeout(brain, 700);
   })();
 }
@@ -139,6 +142,8 @@ function onOrbDown(e) {
   if (!orb) return;
   openClasses();                    // the hero mounts already-docked (canvas squeezes as Q slides in)
   speakGreeting();                  // the tap IS the gesture → Q speaks by name at t=0
+  warm();                           // …and the SAME gesture kicks the brain + seed load NOW (not at idle) → by the
+                                    // time you finish reading the greeting + typing, the seed can answer instantly
   setTimeout(() => { if (!heroOpen()) closeClasses(); }, 1500);   // safety: never leave the canvas squeezed with no drawer
 }
 DOC.addEventListener("pointerdown", onOrbDown, { capture: true, passive: true });
