@@ -17,7 +17,7 @@
 <meta name="apple-mobile-web-app-title" content="Hologram">
 <link rel="apple-touch-icon" href="/apps/holo-messenger/icon.svg">
 
-<link rel="stylesheet" href="/apps/holo-messenger/_vendor/ui/chat-ui.bundle.css?v=35618f21374b">
+<link rel="stylesheet" href="/apps/holo-messenger/_vendor/ui/chat-ui.bundle.css?v=bb4f1bc03d23">
 <style>html,body{height:100%;margin:0;background:#0b141a;color-scheme:dark}#root{height:100vh}</style>
 <link rel="preload" as="image" href="/apps/holo-messenger/_vendor/wallpaper-default.jpg" fetchpriority="high">
 <!-- ── TEE SIGN-IN GATE (holo-messenger-login.mjs) ─────────────────────────────────────────────────
@@ -244,7 +244,7 @@
 
 <script type="module">
   // ?v=N - bump on each deploy so the browser can never serve a stale cached bundle (the cause of a frozen/old build).
-  import "/apps/holo-messenger/_vendor/ui/chat-ui.bundle.js?v=94fd71e6b4d3";   // → window.HoloMessengerUI
+  import "/apps/holo-messenger/_vendor/ui/chat-ui.bundle.js?v=98c6c4ac538f";   // → window.HoloMessengerUI
   // Opt-in: render the WhatsApp UX from STREAMING shadcn κ-components instead of the chatscope bundle.
   // Lazy — the module loads ONLY when opted in (?ui=shadcn or holo.ui.shadcn=1); the default boot never
   // parses it. Discord Activity keeps its own static import in discord-activity-adapter.mjs.
@@ -281,5 +281,9 @@
   // Q LIVE CALL — tap Call in the hero → realtime voice conversation (createQLive: streaming voice,
   // hands-free turns, barge-in). Additive + fail-soft: no mic/WebGPU → a clear message, chat still works.
   import("/apps/holo-messenger/q-live-hero.mjs?v=3").catch(() => {});
+  // POWER & SESSION — a power control at the very bottom of the rail: a live session uptime + a holographic
+  // "power down" sheet whose primary action locks the vault (window.holo.signOut) and returns to the sovereign
+  // sign-in, securing the box. Additive + fail-soft: no rail / no signOut → the control just doesn't appear.
+  import("/apps/holo-messenger/holo-power-session.mjs?v=1").catch(() => {});
 </script>
 </body></html>
