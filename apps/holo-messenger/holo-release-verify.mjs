@@ -9,7 +9,7 @@
 // update must chain from it. Rollback is NOT a violation: re-pinning a parent is an explicit local
 // act (the store still holds it), never something a remote pointer can cause.
 
-import { verifyEntry } from "../../usr/lib/holo/holo-strand.mjs";
+import { verifyEntry } from "/usr/lib/holo/holo-strand.mjs";
 
 // verifyChain(entries) — Law L5 over the whole strand: every entry re-derives + verifies its
 // signature, seq is dense from 0, every prev is exactly the prior id. Mirrors strand.verify()

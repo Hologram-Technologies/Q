@@ -8,7 +8,7 @@
 // What: in ANY conversation, a message whose text is a HoloChat card renders as that card; tapping "+"
 //   opens apps · Spaces · money · identity · prove, and a pick sends into the current conversation.
 
-import "./holo-app-tray.mjs";   // installs window.HoloApps (+ HoloOpen)
+import "/apps/holo-messenger/holo-app-tray.mjs";   // installs window.HoloApps (+ HoloOpen)
 
 const CONTENT = ".cs-message__content";
 const EDITOR = ".cs-message-input__content-editor";

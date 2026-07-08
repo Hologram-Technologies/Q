@@ -909,7 +909,7 @@ function buildModel() {
   return { conversations, threads, thread: (g) => { const c = convos.find((x) => x.meta.genesis === g); return c ? buildThread(c) : []; },
     identity: identity(), onSetName, makeInvite,
     onSend, onRetry, onReact, onReply, onEdit, onDelete, onForward, onAttach, onTyping, onView, onAddMember, onRemoveMember, onLoadEarlier, undoTidy, markDone, allClear, snooze, snoozedCount: snoozedCount(), clearObvious, unsnooze, forgetLearned, learnedCount: [..._verbLog.keys()].filter((g) => learnedVerb(g)).length,
-    onPin, onMute, onFavourite, onArchive, onBlock, onDeleteChat, targets, onNewChat, startPeerChat,
+    onPin, onMute, onFavourite, onArchive, onBlock, onDeleteChat, targets, onNewChat, startPeerChat, makePeerInvite,
     networks: networksModel(), hub: { connected: netState.hub, homeserver: netState.homeserver },
     connectHub, markNetwork, submitBridgePassword, submitBridgeToken, submitBridgeCredentials, suggestEmail,
     connectPlatform, realNetworkIds: realNetworkIds(), qDigest, qAsk, qCatchUp, qDraft, bodyMatches, prefetch, resolveBridgeMedia, resolveEmailHtml, qContentActions, qSummarizeContent,
@@ -1042,6 +1042,37 @@ async function restorePeerChats() {
   } catch (e) { try { window.__peerRestoreErr = String((e && e.stack) || e); } catch {} }
   try { window.__peerRestored = true; } catch {}
 }
+// P5 — INVITE: mint a self-verifying link (holo-chat-link) for a fresh 1:1 room and open my side, waiting. The link
+// COMMITS the room ctx (ref = [myκ, a random invite token]); whoever opens it derives the SAME room (L2) and joins —
+// no server, no account. Same-device peers are instant (BroadcastChannel); cross-device converges over the
+// content-blind rendezvous (P4). Returns { genesis, link, code } for the invite sheet.
+async function makePeerInvite({ hostName } = {}) {
+  try {
+    const { makeChatLink } = await import("./holo-chat-link.mjs");
+    const tok = [...(crypto.getRandomValues(new Uint8Array(8)))].map((x) => x.toString(16).padStart(2, "0")).join("");
+    const name = String(hostName || profileName || (identity() && identity().name) || "You").slice(0, 40);
+    const ctx = { kind: "dm", ref: [operator || "me", "invite:" + tok], label: name };
+    const genesis = await startPeerChat({ peerName: "Invite sent · waiting…", ctx });
+    const link = await makeChatLink(ctx, { hostName: name, capability: "talk" });
+    return { genesis, link: link.https, kappa: link.kappa, code: (link.kappa || "").slice(0, 12) };
+  } catch (e) { try { window.__peerErr = String((e && e.stack) || e); } catch {} return null; }
+}
+// P5 — JOIN: an invite link opens the messenger; verify it locally (L5 — a tampered/expired link is refused) and
+// join its room as a peer chat. Distinct from the #m1= boot link + the #chat= Q-snapshot; resolveChatLink only
+// accepts a real chat-link payload, so trying it is always safe. Returns the joined genesis (and opens it).
+async function handleJoinLink(raw) {
+  try {
+    const frag = String(raw || (typeof location !== "undefined" ? ((location.hash || "").replace(/^#/, "") || new URLSearchParams(location.search).get("join") || "") : "")).trim();
+    if (!frag || frag.length < 24) return null;
+    const { resolveChatLink } = await import("./holo-chat-link.mjs");
+    const r = await resolveChatLink(frag);
+    if (!r.ok) return null;   // not a chat link, tampered, or expired → leave other #routes alone
+    const g = await startPeerChat({ peerName: (r.descriptor && r.descriptor.hostName) || "Peer", ctx: r.descriptor.ctx });
+    if (g) { lastViewed = g; try { window.dispatchEvent(new CustomEvent("holo-open-chat", { detail: { genesis: g } })); } catch {} rebuild(); }
+    return g;
+  } catch { return null; }
+}
+try { if (typeof window !== "undefined") window.HoloPeer = Object.assign(window.HoloPeer || {}, { invite: makePeerInvite, join: handleJoinLink }); } catch {}
 
 // ── BU0: bidirectional bridge seam. A *connector* owns an external network. INBOUND: it calls ingestExternal()
 // (→ κ conversation, flagged meta.bridge). OUTBOUND: a κ send in a bridged conversation routes to the owning
@@ -2949,6 +2980,7 @@ export async function boot(rootEl, injected = null) {
 
   await buildQ();   // Q joins the unified inbox as a pinned, always-here contact (on-device brain)
   try { restorePeerChats(); } catch {}   // P3: re-open persisted device-to-device chats (OPFS κ-chain) — non-blocking
+  try { handleJoinLink(); } catch {}     // P5: if opened from an invite link, verify + join the room (fail-soft)
   try { window.__hydrated = hydrateInbox(); } catch { window.__hydrated = 0; }   // local-first: restore the last-seen inbox snapshot BEFORE the first paint → returning users see every chat instantly
   // ADOPT the speculative warm paint if it already mounted (identity-independent snapshot rendered during the
   // tap): just refresh it in place — Q, prefs, and any live deltas fold in via one update, no cold re-mount.
