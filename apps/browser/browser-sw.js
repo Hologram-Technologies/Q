@@ -53,6 +53,17 @@ async function ensureExt() {
 async function persistExt() { try { const c = await caches.open(ESTORE); await c.put("/__ext", new Response(JSON.stringify({ dnr: EXT.dnr, contentScripts: EXT.contentScripts }), { headers: { "content-type": "application/json" } })); } catch {} }
 const REQTYPE = { document: "main_frame", iframe: "sub_frame", frame: "sub_frame", script: "script", style: "stylesheet", image: "image", imageset: "image", font: "font", media: "media", track: "media", object: "object", embed: "object", worker: "script", "": "xmlhttprequest" };
 const resourceTypeOf = (req) => req.mode === "navigate" ? (req.destination === "iframe" || req.destination === "frame" ? "sub_frame" : "main_frame") : (REQTYPE[req.destination] || "xmlhttprequest");
+// A public relay hands back the right BYTES but often the wrong content-type — a PDF/JPG/MP4/MP3 labeled
+// text/html renders as broken HTML instead of the file. When the URL has an unambiguous media/file
+// extension AND the egress typed it generically (html/plain/octet-stream, or nothing), trust the
+// extension: the file renders natively (image viewer, PDF viewer, <video>). A real page (.html / no
+// extension / a specific type like application/json) keeps its egress type untouched.
+function typeForUrl(realUrl, egressCt) {
+  let ext = ""; try { ext = mimeByExt(new URL(realUrl).pathname) || ""; } catch { ext = mimeByExt(realUrl) || ""; }
+  if (!ext || /^text\/html/i.test(ext)) return egressCt || ext || "application/octet-stream";   // no media hint → keep egress
+  if (!egressCt || /^(text\/html|text\/plain|application\/octet-stream|binary\/octet-stream)\b/i.test(egressCt)) return ext;  // egress mislabeled a known file → extension wins
+  return egressCt;
+}
 // match a request URL against the compiled DNR ruleset → the winning action ({type:"allow"} if none).
 function dnrAction(url, resourceType) {
   for (const r of EXT.dnr) { try { if (ruleMatches(r, url, resourceType)) return { ...(r.action || { type: "block" }), extId: r.extId, ruleId: r.id }; } catch {} }
@@ -87,17 +98,12 @@ const enc = (s) => btoa(unescape(encodeURIComponent(s))).replace(/\+/g, "-").rep
 const dec = (s) => { const t = s.replace(/-/g, "+").replace(/_/g, "/"); return decodeURIComponent(escape(atob(t.padEnd(Math.ceil(t.length / 4) * 4, "=")))); };
 
 // ── κ-store over the Cache API (shared with the page; both are same-origin) ──────────
-// Cache-write mutex. Chromium throws InvalidAccessError "Entry already exists" when cache.put() calls run
-// CONCURRENTLY on the same Cache — even for different keys — so a page whose subresources (images, css) load
-// in parallel would fail en masse (the real bug behind onion images 0/7). Serialize every κ-store write
-// through one promise chain: at most one put() in flight, ever. Writes are local + fast, so this is cheap;
-// only the Tor fetch is the latency floor. κ is the content hash, so a duplicate write is byte-identical —
-// skip if present, and never let a write error bubble up and refuse the resource.
-// κ-store writes are SERIALIZED (one put in flight — Chromium can throw InvalidAccessError "Entry already
-// exists" on concurrent puts to the same Cache) and FAIL-SOFT: a write error must never bubble up and refuse
-// the resource. That refusal was the real cause of a page's concurrently-loaded subresources (images, css)
-// failing en masse. κ IS the content hash, so a skipped/duplicate write is harmless — worst case the next
-// visit re-fetches instead of hitting the store. Never throws.
+// κ-store writes are SERIALIZED (one put in flight) and FAIL-SOFT. Chromium throws InvalidAccessError
+// "Entry already exists" on CONCURRENT cache.put() to the same Cache — even for different keys — so a page
+// whose subresources (images, css) load in parallel would fail en masse if that error bubbled up and refused
+// the resource (the real bug behind onion images 0/7). One promise chain caps it at one put() at a time;
+// writes are local + fast (only the Tor fetch is the latency floor). κ is the content hash, so a duplicate
+// write is byte-identical — skip if present, swallow any error. Never throws, never refuses a render.
 let K_WRITE = Promise.resolve();
 function kPut(kappa, bytes, meta = {}) {
   const run = K_WRITE.then(async () => {
@@ -505,7 +511,7 @@ async function revalidate(realUrl, req) {
   const { r } = await egressFetch(realUrl, await proxyInit(req, true));
   if (!r || !r.ok || r.status !== 200) return;
   const bytes = new Uint8Array(await r.arrayBuffer());
-  const ctype = r.headers.get("content-type") || mimeByExt(realUrl) || "text/html; charset=utf-8";
+  const ctype = typeForUrl(realUrl, r.headers.get("content-type")) || "text/html; charset=utf-8";
   if (/text\/html/i.test(ctype) && emptyOrWalled(bytes, new TextDecoder().decode(bytes))) return;   // never remember a dead paint
   const kappa = kappaOf(bytes);
   await kPut(kappa, bytes, { contentType: ctype, source: realUrl });
@@ -581,7 +587,7 @@ async function serveWeb(realUrl, req, event) {
   }
   let bytes = new Uint8Array(await r.arrayBuffer());
   const kappa = kappaOf(bytes);                                  // the mint IS the re-derivation
-  const ctype = (r.headers.get("content-type") || mimeByExt(realUrl) || "text/html; charset=utf-8");
+  const ctype = typeForUrl(realUrl, r.headers.get("content-type")) || "text/html; charset=utf-8";
   await kPut(kappa, bytes, { contentType: ctype, source: realUrl });
   if (!verifyKappa(kappa, bytes)) return refused("mint re-derivation failed for " + realUrl);
   let body = bytes;
@@ -619,7 +625,7 @@ async function serveSub(realUrl, req) {
   if (!r) return refused("subresource egress failed for " + realUrl);
   if (!r.ok) return new Response("", { status: r.status, headers: { "content-type": "text/plain", ...COEPH } });
   const raw = new Uint8Array(await r.arrayBuffer());
-  const ct = r.headers.get("content-type") || mimeByExt(realUrl) || "application/octet-stream";
+  const ct = typeForUrl(realUrl, r.headers.get("content-type")) || "application/octet-stream";
   // onion CSS carries its own onion-relative url()/@import — rewrite them to same-origin sub/ wrappers too,
   // or fonts + background images (also .onion) would be blocked by the browser. κ is minted over what we serve.
   const bytes = (isOnionUrl(realUrl) && /text\/css/i.test(ct)) ? new TextEncoder().encode(rewriteOnionCss(new TextDecoder().decode(raw), realUrl)) : raw;

@@ -1,12 +1,12 @@
 {
  "v": 1,
- "created": 1783504735775,
- "aggregate": "ab862c1fd6fd3c978163e16e79f70865f298cdc2679f252152b2dde15edf2b75",
+ "created": 1783505590473,
+ "aggregate": "8ee6ca498b42d95d961d6f96dfb9a02b0ced0fe50a5af7a5ccc39eebab738749",
  "assets": [
   {
    "path": "/apps/browser/browser-sw.js",
-   "kappa": "f0892c8b1448e99702831a84593fd04fd8aab4496db6f34ed157b187194389e5",
-   "bytes": 59536
+   "kappa": "aff9ad6cb46d1ca013a731155377b68b9e28a6694df42370e541b67027da4424",
+   "bytes": 60026
   },
   {
    "path": "/apps/browser/ext/holo-shield.crx",
