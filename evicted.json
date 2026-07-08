@@ -1,5 +1,6 @@
 {
  "apps": [
-  "video"
+  "video",
+  "animate"
  ]
 }
