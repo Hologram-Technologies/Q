@@ -45,13 +45,17 @@
   var _db = null, _dbT = 0;
   function deskBounds() {
     var t = Date.now();
-    if (_db && (t - _dbT) < 120 && _db._vw === innerWidth && _db._vh === innerHeight) return _db;
+    // IMMERSIVE (data-holo-expanded): the canvas is the WHOLE viewport — the rail has slid to a hidden bottom
+    // strip, so it is no longer a left inset. Zero the dock/aside insets so the composition centres on the true
+    // viewport centre (otherwise a stale --holo-dock-w drifts the greeting + ring right by half the rail width).
+    var exp = false; try { exp = DOC.documentElement.hasAttribute("data-holo-expanded"); } catch (e) {}
+    if (_db && (t - _dbT) < 120 && _db._vw === innerWidth && _db._vh === innerHeight && _db._exp === exp) return _db;
     var gs = getComputedStyle(DOC.documentElement);
-    var dW = parseFloat(gs.getPropertyValue("--holo-dock-w")) || 0;
-    var dH = parseFloat(gs.getPropertyValue("--holo-dock-h")) || 0;
-    var aW = parseFloat(gs.getPropertyValue("--holo-aside-w")) || 0;   // a right-edge aside carrier (Wallet) squeezes the canvas
+    var dW = exp ? 0 : (parseFloat(gs.getPropertyValue("--holo-dock-w")) || 0);
+    var dH = exp ? 0 : (parseFloat(gs.getPropertyValue("--holo-dock-h")) || 0);
+    var aW = exp ? 0 : (parseFloat(gs.getPropertyValue("--holo-aside-w")) || 0);   // a right-edge aside carrier (Wallet) squeezes the canvas
     var top = parseFloat(gs.getPropertyValue("--holo-top-inset")) || 0;   // shells with top chrome set this so widgets clear it
-    _db = { minX: EDGE + dW, minY: EDGE + top, maxX: innerWidth - EDGE - aW, maxY: innerHeight - EDGE - dH, _vw: innerWidth, _vh: innerHeight };
+    _db = { minX: EDGE + dW, minY: EDGE + top, maxX: innerWidth - EDGE - aW, maxY: innerHeight - EDGE - dH, _vw: innerWidth, _vh: innerHeight, _exp: exp };
     _dbT = t; return _db;
   }
   function clampPos(w, x, y) {
