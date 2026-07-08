@@ -190,6 +190,11 @@ const CSS = `
 #holo-login .hlp.done canvas{animation:none;filter:brightness(1.7);transition:filter .5s ease}
 #holo-login.hl-boot .hl-panel{opacity:0!important;pointer-events:none!important}
 #holo-login .hl-panel{transition:opacity .55s ease}
+/* ── BOOT REVEAL SYNC — during the 3s hero ALL login chrome (identity panel · Manifesto label · Hologram
+   wordmark · the ⋯ door) is hidden; it fades in TOGETHER the instant the emblem settles into its slot
+   (hl-boot removed), instead of each element popping in on its own separate timer. One coordinated reveal. */
+#holo-login.hl-boot .hl-manifesto, #holo-login.hl-boot .hl-brand, #holo-login.hl-boot .hlp-btn{opacity:0!important;animation:none!important;transition:opacity .55s ease}
+#holo-login:not(.hl-boot) .hl-manifesto, #holo-login:not(.hl-boot) .hl-brand, #holo-login:not(.hl-boot) .hlp-btn{opacity:1!important;animation:none!important;transition:opacity .55s ease .08s}
 /* the ⋯ door — the SAME quiet affordance the home screen wears, top-right: everything about how this
    computer looks and wakes lives behind it. One circle, no words. */
 #holo-login .hlp-btn{position:fixed;right:max(20px,env(safe-area-inset-right));top:max(18px,env(safe-area-inset-top));z-index:4;
@@ -850,7 +855,10 @@ export function attachPlymouth(overlay, host) {
   // minimum flash and NEVER longer than a hard cap — no fixed multi-second wait. Skippable by any tap/key.
   // A supercomputer is ready when it is ready, not on a timer. Counted from the baseline's 0-ms frame
   // (window.__hlBootT0) so the beat measures REAL boot latency, not module-load time.
-  const BOOT_MIN = 320, BOOT_MAX = 1400;
+  // A deliberate HERO: the emblem holds large, dead-centre, for ~3s, THEN glides into the identity slot as the
+  // whole login reveals together. (Was readiness-gated 320–1400ms, which made the emblem flick away instantly and
+  // the chrome pop in on its own separate timers.) Still skippable by a tap/key; hard cap protects a slow network.
+  const BOOT_MIN = 2800, BOOT_MAX = 3400;
   const bootT0 = (() => { try { return window.__hlBootT0 || Date.now(); } catch { return Date.now(); } })();
   let bootDone = false, bootTimer = 0;
   const endBoot = () => {
