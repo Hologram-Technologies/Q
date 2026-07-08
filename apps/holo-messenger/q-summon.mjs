@@ -1,18 +1,16 @@
-// q-summon.mjs — tap the Q orb and Q slides in as a LEFT DRAWER, seamless with the nav rail — the same
-// dimensions as Holo Wallet, the same chrome (#0d1117 = --holo-chrome), no starfield. It is the messenger's
-// OWN Q (one brain, one voice, one memory), just re-framed as a docked panel instead of a full-screen morph.
-// Four welds, all additive, all fail-soft:
+// q-summon.mjs — tap the Q orb and Q slides in from the RIGHT as a docked drawer, exactly like Holo Wallet:
+// same width, same chrome (#0d1117 = --holo-chrome), and it SQUEEZES the home canvas to the left (the wallet's
+// own dock mechanism, mirrored) rather than covering it. It is the messenger's OWN Q — one brain, one voice,
+// one memory — re-framed as a docked panel. Four welds, all additive, all fail-soft:
 //
-//   1. THE DRAWER — the fully-wired hero (`.holo-hero`) is restyled in place into a left panel: width
-//      min(94vw,max(440px,44vw)) (wallet parity), left of the 60px rail, background var(--holo-chrome) so it
-//      reads as ONE seamless chrome extending the nav. Slides in from the left; the home widgets calm behind it.
-//   2. THE VOICE AT t=0 — the tap IS the browser's autoplay gesture, so Q greets you out loud the instant it
-//      opens (on-device Kokoro if warm, OS-voice floor otherwise — never mute). Greeting is name-personalized by
-//      the hero itself (buildQ seeds "Hey <name>…" / "Welcome back <name>…"). HD voice pre-warms while home idles.
-//   3. THE WARM BRAIN — window.HoloQ.warm() (the hero's ~70 tok/s BitNet) + the instant seed first-responder,
-//      pre-warmed at home-idle, so even a first-time user gets an instant, spoken, intelligent first reply.
-//   4. THE κ-THREAD — every painted message is sealed to a BLAKE3 κ (did:holo:blake3), hash-linked + verified
-//      on load. window.QSummon.{thread,verify,kappaOf}.
+//   1. THE DOCKED DRAWER — the fully-wired hero (`.holo-hero`) is restyled in place into a RIGHT panel of the
+//      wallet width, background var(--holo-chrome) (seamless chrome, no starfield); `html.q-docked` pulls the
+//      home wall/scrim/greeting/orb/quote in by the drawer width so the canvas re-centers in the freed space.
+//   2. THE VOICE AT t=0 — the tap IS the autoplay gesture, so Q greets you out loud the instant it opens
+//      (on-device Kokoro if warm, OS-voice floor otherwise — never mute), name-personalized (firstName()).
+//   3. THE WARM BRAIN — window.HoloQ.warm() + the instant seed first-responder, pre-warmed at home-idle, so
+//      even a first-time user gets an instant, spoken, intelligent first reply.
+//   4. THE κ-THREAD — every painted message sealed to a BLAKE3 κ (did:holo:blake3), hash-linked + verified.
 //
 // 100% serverless: Web Audio + vendored Kokoro + WebGPU BitNet + pure-JS BLAKE3. Imports only CANONICAL modules.
 import { createVoice } from "../q/core/voice-out.js";
@@ -20,56 +18,62 @@ import { kappo, kappoVerify } from "../../_shared/holo-kappa.mjs";
 
 const DOC = document, HTML = DOC.documentElement;
 const $ = (s, r) => (r || DOC).querySelector(s);
-const reduced = () => { try { return matchMedia("(prefers-reduced-motion: reduce)").matches; } catch { return false; } };
 
-// ── the drawer skin: reshape the hero into a left panel with wallet dimensions + rail chrome ───────────────
+// ── the drawer skin: a right-side panel of wallet dimensions + rail chrome, and the DOCK that squeezes home ──
 const css = DOC.createElement("style");
 css.id = "q-summon-css";
 css.textContent = `
 :root{ --q-rail-w: var(--holo-rail-w, 60px); --q-drawer-w: min(94vw, max(440px, 44vw)); }
-/* HOME calms while Q is open (the drawer covers the left; a quiet, dimmed home reads better than a half-covered one) */
-html.q-drawer .holo-home-greet,html.q-drawer .holo-home-clock,html.q-drawer .holo-home-quote,
-html.q-drawer .holo-home-grid,html.q-drawer .holo-home-menu-fab{opacity:.18!important;transition:opacity .4s ease!important;pointer-events:none}
 
-/* THE DRAWER — the hero, re-framed. Left of the rail, wallet width, chrome background (no starfield). */
+/* DOCK — squeeze the home canvas LEFT by the drawer width (the wallet's own mechanism, mirrored for Q) */
+html.q-docked .holo-wa-root{ width: calc(100vw - var(--q-drawer-w))!important; }
+html.q-docked .holo-home-space{ right: var(--q-drawer-w)!important; }
+html.q-docked .holo-home-wall,html.q-docked .holo-home-scrim{ right: var(--q-drawer-w)!important; }
+html.q-docked .holo-home-orb,html.q-docked .holo-global-orb{ right: calc(var(--q-drawer-w) + clamp(22px,3.2vw,48px))!important; }
+html.q-docked .holo-home-quote{ left: calc(var(--q-rail-w) + (100vw - var(--q-rail-w) - var(--q-drawer-w)) / 2)!important; }
+html.q-docked .holo-wa-root .cs-main-container{ right: var(--q-drawer-w)!important; }
+/* smooth squeeze both ways */
+.holo-home-space,.holo-home-wall,.holo-home-scrim,.holo-home-orb,.holo-global-orb,.holo-home-quote,.holo-wa-root{
+  transition: right .38s cubic-bezier(.4,0,.2,1), left .38s cubic-bezier(.4,0,.2,1), width .38s cubic-bezier(.4,0,.2,1)!important; }
+
+/* THE DRAWER — the hero, re-framed on the RIGHT. Wallet width, chrome background (no starfield). */
 html.q-drawer .holo-hero{
-  inset:0 auto 0 var(--q-rail-w)!important; width:var(--q-drawer-w)!important;
+  inset:0 0 0 auto!important; width:var(--q-drawer-w)!important;
   background:var(--holo-chrome,#0d1117)!important;
   padding-top:0!important; align-items:stretch!important; justify-content:flex-start!important;
-  border-right:1px solid rgba(255,255,255,.06);
-  box-shadow:14px 0 54px rgba(0,0,0,.5);
-  animation:q-drawer-in .4s cubic-bezier(.4,0,.2,1) both!important; touch-action:auto!important;
+  border-left:1px solid rgba(255,255,255,.06);
+  box-shadow:-16px 0 60px rgba(0,0,0,.5);
+  animation:q-drawer-in .42s ease both!important; touch-action:auto!important;
 }
-@media (prefers-reduced-motion: no-preference){ @keyframes q-drawer-in{ from{ transform:translateX(-22px); opacity:0 } to{ transform:none; opacity:1 } } }
-@media (prefers-reduced-motion: reduce){ @keyframes q-drawer-in{ from{opacity:0} to{opacity:1} } }
-/* header row: a small living orb + the status, top-left (q-chat style) */
+/* opacity-only (NO transform): a transform on .holo-hero would make its position:fixed composer hero-relative.
+   The motion comes from the DOCK — the canvas squeezing left as Q fades in (exactly like the wallet). */
+@keyframes q-drawer-in{ from{opacity:0} to{opacity:1} }
+/* header row: a small living orb + status, top-left of the drawer (absolute within the hero → tracks the panel) */
 html.q-drawer .holo-hero-orb{ position:absolute!important; top:15px!important; left:17px!important; width:42px!important; height:42px!important; min-width:0!important; margin:0!important; filter:drop-shadow(0 0 12px rgba(91,140,255,.5))!important; }
 html.q-drawer .holo-hero-orb.listening{ filter:drop-shadow(0 0 20px rgba(125,239,201,.6))!important; }
 html.q-drawer .holo-hero-status{ position:absolute!important; top:26px!important; left:70px!important; margin:0!important; font-size:10.5px!important; letter-spacing:.18em!important; }
 html.q-drawer .holo-hero-x{ position:absolute!important; top:13px!important; right:13px!important; width:34px; height:34px; }
-/* the header title "Q" (injected) */
-#q-drawer-title{position:fixed;top:16px;left:calc(var(--q-rail-w) + 70px);z-index:302;color:#f4f7fc;font:650 17px/1 -apple-system,"Segoe UI",Roboto,sans-serif;letter-spacing:.2px;pointer-events:none;opacity:0;transition:opacity .3s ease}
-html.q-drawer #q-drawer-title{opacity:1}
-/* the conversation fills the drawer width */
 html.q-drawer .holo-hero-stage{ max-width:none!important; width:100%!important; margin-top:62px!important; padding:0 10px!important; align-items:stretch!important; }
 html.q-drawer .holo-hero-thread{ max-width:none!important; width:100%!important; padding:8px 8px 88px!important; -webkit-mask-image:none!important; mask-image:none!important; }
 html.q-drawer .holo-hero-bubble{ max-width:90%!important; }
 html.q-drawer .holo-hero-empty{ max-width:none!important; padding:0 18px; }
-/* composer pill: centered WITHIN the drawer, fitting its width */
-html.q-drawer .holo-hero-compose{ left:calc(var(--q-rail-w) + var(--q-drawer-w) / 2)!important; width:min(calc(var(--q-drawer-w) - 26px), 92vw)!important; bottom:calc(16px + env(safe-area-inset-bottom))!important; }
-html.q-drawer .holo-hero-open{ display:none!important; }   /* "Open in chat" is redundant in the docked panel */
-/* CLEAN q-chat look: hide the inbox brief / auto-tidy / ledger panels — the drawer is a conversation, not a dashboard */
+html.q-drawer .holo-hero-open{ display:none!important; }
+/* CLEAN q-chat look: hide the inbox brief / auto-tidy / ledger — a conversation, not a dashboard */
 html.q-drawer .holo-hero-brief,html.q-drawer .holo-hero-auto,html.q-drawer .holo-hero-ledger{ display:none!important; }
+/* composer pill centered WITHIN the right drawer */
+html.q-drawer .holo-hero-compose{ left:calc(100vw - var(--q-drawer-w) / 2)!important; width:min(calc(var(--q-drawer-w) - 26px), 92vw)!important; bottom:calc(16px + env(safe-area-inset-bottom))!important; }
 
+/* the header title "Q" — top-left of the drawer */
+#q-drawer-title{position:fixed;top:16px;left:calc(100vw - var(--q-drawer-w) + 70px);z-index:302;color:#f4f7fc;font:650 17px/1 -apple-system,"Segoe UI",Roboto,sans-serif;letter-spacing:.2px;pointer-events:none;opacity:0;transition:opacity .3s ease}
+html.q-drawer #q-drawer-title{opacity:1}
 /* κ-chain proof chip — bottom-left, inside the drawer */
-#q-kappa-chip{position:fixed;left:calc(var(--q-rail-w) + 12px);bottom:14px;z-index:340;font:11px/1.45 ui-monospace,Menlo,Consolas,monospace;
+#q-kappa-chip{position:fixed;left:calc(100vw - var(--q-drawer-w) + 12px);bottom:14px;z-index:340;font:11px/1.45 ui-monospace,Menlo,Consolas,monospace;
   color:#9fd3ff;background:rgba(10,14,20,.55);backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);
   border:1px solid rgba(255,255,255,.12);border-radius:10px;padding:5px 10px;pointer-events:none;opacity:0;transition:opacity .5s ease .25s}
 #q-kappa-chip.on{opacity:.7}
 #q-kappa-chip.bad{color:#ffb3c0;border-color:rgba(255,120,140,.4)}
-
-/* SUGGESTION CHIPS — inside the drawer, above the composer */
-#q-hero-chips{position:fixed;left:var(--q-rail-w);width:var(--q-drawer-w);box-sizing:border-box;bottom:calc(env(safe-area-inset-bottom) + 74px);z-index:305;
+/* SUGGESTION CHIPS — inside the right drawer, above the composer */
+#q-hero-chips{position:fixed;left:calc(100vw - var(--q-drawer-w));width:var(--q-drawer-w);box-sizing:border-box;bottom:calc(env(safe-area-inset-bottom) + 74px);z-index:305;
   display:flex;gap:8px;justify-content:center;flex-wrap:wrap;padding:0 14px;pointer-events:none;
   opacity:0;transform:translateY(6px);transition:opacity .45s ease,transform .45s cubic-bezier(.4,0,.2,1)}
 #q-hero-chips.on{opacity:1;transform:none}
@@ -78,18 +82,14 @@ html.q-drawer .holo-hero-brief,html.q-drawer .holo-hero-auto,html.q-drawer .holo
   backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);transition:transform .14s ease,border-color .16s ease,background .16s ease}
 #q-hero-chips button:hover{border-color:rgba(139,123,255,.55);transform:translateY(-1px);background:rgba(255,255,255,.09)}
 #q-hero-chips button:active{transform:scale(.96)}
-/* the Call button (q-live-hero) rides inside the drawer too */
-html.q-drawer #q-call-btn{ right:auto!important; left:calc(var(--q-rail-w) + var(--q-drawer-w) - 96px)!important; }
 @media (prefers-reduced-motion:reduce){#q-hero-chips{transition:opacity .2s ease}}
 `;
 DOC.head.appendChild(css);
 
 // ── Q's summon voice (canonical core voice; HD warms once, floor voice means never mute) ──────────────────
 const voice = createVoice({ onLevel: (level) => { try { window.dispatchEvent(new CustomEvent("holo-q-state", { detail: { mode: "speaking", level } })); } catch {} } });
-const TTS_URL = new URL("../../usr/lib/holo/voice/holo-voice-tts.mjs", import.meta.url).href;   // mount-safe under /Q/
+const TTS_URL = new URL("../../usr/lib/holo/voice/holo-voice-tts.mjs", import.meta.url).href;
 
-// The spoken greeting is name-personalized to match the hero's own text bubble. Identity is read the same way
-// the home greeting reads it ("Good afternoon, Ilya" ⇒ profile name), so Q greets you by name, out loud, at t=0.
 function firstName() {
   const clean = (s) => { s = String(s || "").trim(); const l = s.toLowerCase(); return (s && l !== "you" && l !== "operator" && l !== "guest") ? s.split(/\s+/)[0] : ""; };
   try { const o = JSON.parse(sessionStorage.getItem("holo.identity") || "null"); if (o && !o.guest && clean(o.label)) return clean(o.label); } catch {}
@@ -127,19 +127,19 @@ function speakGreeting() { greeting = true; Promise.resolve(voice.speak(greetLin
 function bargeIn() { if (greeting) { greeting = false; try { voice.stop(); } catch {} } }
 window.addEventListener("keydown", bargeIn, { capture: true, passive: true });
 
-// ── open the drawer: add the class BEFORE the hero mounts (no full-screen flash), let the tap open the hero ──
+// ── open (dock + drawer) on orb tap; the tap opens the hero, we just add the classes + speak ───────────────
 const heroOpen = () => !!$(".holo-hero");
 let titleEl = null;
 function ensureTitle() { if (!titleEl) { titleEl = DOC.createElement("div"); titleEl.id = "q-drawer-title"; titleEl.textContent = "Q"; DOC.body.appendChild(titleEl); } }
+function openClasses() { HTML.classList.add("q-drawer", "q-docked"); ensureTitle(); }
+function closeClasses() { HTML.classList.remove("q-drawer", "q-docked"); }
 function onOrbDown(e) {
   if (heroOpen()) return;
   const orb = e.target && e.target.closest && e.target.closest(".holo-home-orb, .holo-global-orb");
   if (!orb) return;
-  HTML.classList.add("q-drawer");     // the hero will mount already-shaped as the drawer (no flash)
-  ensureTitle();
-  speakGreeting();                    // the tap IS the gesture → Q speaks by name at t=0
-  // safety: if the hero never actually opens, don't leave the home dimmed
-  setTimeout(() => { if (!heroOpen()) HTML.classList.remove("q-drawer"); }, 1500);
+  openClasses();                    // the hero mounts already-docked (canvas squeezes as Q slides in)
+  speakGreeting();                  // the tap IS the gesture → Q speaks by name at t=0
+  setTimeout(() => { if (!heroOpen()) closeClasses(); }, 1500);   // safety: never leave the canvas squeezed with no drawer
 }
 DOC.addEventListener("pointerdown", onOrbDown, { capture: true, passive: true });
 
@@ -152,11 +152,7 @@ const seen = new Set(ledger.map((m) => m.role + " " + m.text));
 let chainOk = true, brokenAt = -1;
 function verifyChain() {
   let prev = null;
-  for (let i = 0; i < ledger.length; i++) {
-    const m = ledger[i];
-    if (m.prev !== prev || !kappoVerify(sealBytes(m), m.k)) { chainOk = false; brokenAt = i; return false; }
-    prev = m.k;
-  }
+  for (let i = 0; i < ledger.length; i++) { const m = ledger[i]; if (m.prev !== prev || !kappoVerify(sealBytes(m), m.k)) { chainOk = false; brokenAt = i; return false; } prev = m.k; }
   chainOk = true; brokenAt = -1; return true;
 }
 verifyChain();
@@ -203,12 +199,12 @@ function showChips() {
 }
 function hideChips() { if (chipsEl) chipsEl.classList.remove("on"); }
 
-// observe the hero: seal each bubble; manage the drawer lifecycle (open → chips/chip; close → restore home)
+// observe the hero: seal each bubble; manage the docked-drawer lifecycle
 const mo = new MutationObserver((muts) => {
   for (const mut of muts) {
     for (const n of mut.addedNodes) {
       if (!(n instanceof Element)) continue;
-      if (n.classList && n.classList.contains("holo-hero")) { HTML.classList.add("q-drawer"); ensureTitle(); verifyChain(); chip(); setTimeout(showChips, 300); }
+      if (n.classList && n.classList.contains("holo-hero")) { openClasses(); verifyChain(); chip(); setTimeout(showChips, 300); }
       const bubbles = n.classList && n.classList.contains("holo-hero-bubble") ? [n] : (n.querySelectorAll ? n.querySelectorAll(".holo-hero-bubble") : []);
       for (const b of bubbles) {
         if (b.classList.contains("typing")) continue;
@@ -220,7 +216,7 @@ const mo = new MutationObserver((muts) => {
     }
     for (const n of mut.removedNodes) {
       if (n instanceof Element && n.classList && n.classList.contains("holo-hero")) {
-        HTML.classList.remove("q-drawer");                 // restore the home (widgets un-dim)
+        closeClasses();                          // un-squeeze the canvas
         if (chipEl) chipEl.classList.remove("on");
         hideChips(); bargeIn();
       }
@@ -236,6 +232,6 @@ window.QSummon = {
   kappaOf: (i) => (ledger[i] || {}).k || null,
   speak: (t) => voice.speak(t),
   name: () => firstName(),
-  version: 3,
+  version: 4,
 };
-try { console.info("[q-summon] live — LEFT DRAWER (wallet parity) · sealed:", ledger.length, "· chain:", chainOk ? "verified" : "BROKEN@" + brokenAt); } catch {}
+try { console.info("[q-summon] live — RIGHT docked drawer (wallet parity) · sealed:", ledger.length, "· chain:", chainOk ? "verified" : "BROKEN@" + brokenAt); } catch {}
