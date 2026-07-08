@@ -63,7 +63,11 @@ async function render(model) {
   document.getElementById("hi").textContent = model.greeting;
   document.getElementById("sub").textContent = new Date(now).toLocaleDateString(undefined, { weekday: "long", month: "long", day: "numeric" });
   const rows = document.getElementById("rows");
-  rows.innerHTML = model.rows.map((r) =>
+  // one pinned sovereign entry so Holo Pass is discoverable (nav "holo://pass" → the demo/app)
+  const pinned = '<div class="row"><div class="label">Sovereign</div><div class="tiles">'
+    + '<a class="tile" href="holo://pass" data-url="holo://pass"><div class="t">🔑 Holo Pass</div><div class="h">Your logins — try it, no sign-in</div><span class="why">One identity</span></a>'
+    + '</div></div>';
+  rows.innerHTML = pinned + model.rows.map((r) =>
     '<div class="row"><div class="label">' + esc(r.label) + '</div><div class="tiles">' +
     r.tiles.map((t) => '<a class="tile" href="' + esc(t.url) + '" data-url="' + esc(t.url) + '"><div class="t">' + esc(t.title) + '</div><div class="h">' + esc(t.host) + '</div><span class="why">' + esc(t.why) + "</span></a>").join("") +
     "</div></div>").join("") || '<div class="empty">Browse a little — your front page derives itself from where you go. Nothing to configure.</div>';

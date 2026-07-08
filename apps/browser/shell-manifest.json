@@ -1,7 +1,7 @@
 {
  "v": 1,
- "created": 1783505824234,
- "aggregate": "57cb61efa91b12376bf6eded13383d4063076dd8ad1afd55817717f31683ba49",
+ "created": 1783506999678,
+ "aggregate": "22abb514ef338161a7d232ea3fe121cae3c3ce9950521bcfc176387e4d36b6d5",
  "assets": [
   {
    "path": "/apps/browser/browser-sw.js",
@@ -40,8 +40,8 @@
   },
   {
    "path": "/apps/browser/home.html",
-   "kappa": "b8c64928aad279729fc4e45c7685142e742a7d035ddb8f65a0687f7d527d7c47",
-   "bytes": 6965
+   "kappa": "66924f1433147312b6ff0932c18a56095c0edcd2ed62c3eb841e3a68bf6db6ac",
+   "bytes": 7382
   },
   {
    "path": "/apps/browser/icon.svg",
@@ -50,8 +50,8 @@
   },
   {
    "path": "/apps/browser/index.html",
-   "kappa": "25bd8ae5f709035290959b2a4038e70c1990cbe0840e222016c6cde1ed00e591",
-   "bytes": 95745
+   "kappa": "95acc325bc0caebde781c1b5343ac22a91404f129e5527564a8df488f33bfd11",
+   "bytes": 96352
   },
   {
    "path": "/apps/browser/ipfs-sw.js",
@@ -197,6 +197,21 @@
    "path": "/apps/browser/_spike/onion/witness-report.txt",
    "kappa": "17c2a10f64232f7d28d3781e141fe798496a25c1843a8f1f5c911453236be3fb",
    "bytes": 1271
+  },
+  {
+   "path": "/apps/browser/sovereign-demo.html",
+   "kappa": "031f85633b09e61bcabdfaa26705262ddef18700d0824b0762bab189a252db93",
+   "bytes": 9898
+  },
+  {
+   "path": "/apps/browser/_shared/holo-sovereign.mjs",
+   "kappa": "17c1eadd27d6643ef767422a764aee7dc2a8753cf931f65df900763db609da8a",
+   "bytes": 6329
+  },
+  {
+   "path": "/apps/browser/_shared/holo-autofill.mjs",
+   "kappa": "55ff69e2df03924b69fb35c2c47da068d5e91ffb3fbd49eeec15c3eebcca0866",
+   "bytes": 6361
   }
  ]
 }
