@@ -299,8 +299,16 @@
       .card .cap .logo { display: block; max-height: 2.6rem; max-width: 78%; object-fit: contain; object-position: left bottom; filter: drop-shadow(0 2px 6px rgba(0,0,0,0.75)); }
       .card .cap .ct { font-weight: 700; font-size: var(--t1); line-height: 1.18; text-shadow: 0 2px 8px rgba(0,0,0,0.85); display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
       img.bgimg { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
-      .card:hover .pic, .card:focus-visible .pic { transform: scale(1.045); box-shadow: 0 1.2rem 2.4rem rgba(0,0,0,0.55); }
+/* M2 — tvOS-tactile focus: the poster lifts + scales + glows in its own accent, with a specular sheen
+         sweeping across (the "arrives, never pops" grammar). The PV trailer clip tracks the scaled rect, so it
+         stays in register. */
+      .card:hover .pic, .card:focus-visible .pic { transform: scale(1.06) translateY(-0.35rem); box-shadow: 0 1.6rem 3.2rem -0.6rem rgba(0,0,0,0.62), 0 0 3.4rem -1rem var(--glow, var(--acc)); }
       .card:focus-visible .pic { outline: 2px solid var(--acc); outline-offset: 2px; }
+      .card .pic::after { content: ""; position: absolute; inset: 0; z-index: 2; pointer-events: none; opacity: 0;
+        background: linear-gradient(115deg, transparent 32%, rgba(255,255,255,0.16) 47%, transparent 62%); transition: opacity 0.32s ease; }
+      .card:hover .pic::after, .card:focus-visible .pic::after { opacity: 1; }
+      .card.previewing .pic::after { opacity: 0; }
+      @media (prefers-reduced-motion: reduce) { .card:hover .pic, .card:focus-visible .pic { transform: none; } .card .pic::after { display: none; } }
       .card .gen { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; text-align: center; padding: 0 var(--s2); font-weight: 800; font-size: var(--t2); color: #c9d1d9; background: linear-gradient(135deg, #222c40, #0d1117); }
       /* Holo Live — channel logos sit on a clean dark tile (contain, never cropped). */
       .live-bar { display: flex; align-items: center; gap: var(--s3); }
