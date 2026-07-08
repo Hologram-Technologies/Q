@@ -94,6 +94,9 @@ export function classifyInput(raw, { search = DEFAULT_SEARCH } = {}) {
   if (d.kind === "ipns") return mk("ipns", "ipns", normIpfs(d.target, "ipns"), s, {});
   if (d.kind === "ens")  return mk("ens", "ens", d.target, s, { name: d.target.split("/")[0] });
   if (d.kind === "web")  { const u = new URL(s); const gw = u.pathname.match(/^\/(ipfs|ipns)\/([A-Za-z0-9]{40,})(\/.*)?$/); return mk("web", u.protocol.replace(":", ""), u.href, s, gw ? { origin: u.origin, [gw[1]]: gw[2] } : { origin: u.origin }); }   // gateway path → keep web nav, carry the CID hint (L1: the loader may offer the content-addressed mirror)
+  // the onion web — normalize to a real URL so the SW routes it through the onion tier (webview/w/). Onion
+  // services self-authenticate (the address IS the ed25519 key), so http is the norm — no TLS needed.
+  if (d.kind === "onion") { const u = new URL(/^https?:\/\//i.test(s) ? s : "http://" + s); return mk("onion", u.protocol.replace(":", ""), u.href, s, { origin: u.origin, legacy: !!d.legacy }); }
   if (d.kind === "did")  return mk("did", "holo", s, s, {});
   if (d.kind === "demo") return mk("demo", "holo", "@demo", s, {});
   // A bare domain (holo-dweb flags it "dnslink" as a content-addressed CANDIDATE). For a

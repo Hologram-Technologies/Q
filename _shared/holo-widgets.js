@@ -58,6 +58,18 @@
     var b = deskBounds(), ww = w.el.offsetWidth, hh = w.el.offsetHeight;
     return { x: Math.max(b.minX, Math.min(x, Math.max(b.minX, b.maxX - ww))), y: Math.max(b.minY, Math.min(y, Math.max(b.minY, b.maxY - hh))) };
   }
+  // A scene tile can never be wider than the canvas it lives in. A desktop-tuned preset declares 340–640px
+  // tiles; on a phone the usable canvas (dock/aside/edge-aware) is far narrower, so a fixed tile would run off
+  // the right edge and clip (the "greeting cut off on mobile" bug). fitTile caps the width to the canvas and
+  // re-seats the tile fully in-bounds. Applied at BOTH seed (addScene) and every re-layout (repositionToMode),
+  // so a tile shrinks to fit AND re-grows as the canvas widens — the same motion that keeps the home in
+  // proportion when the left nav expands/collapses. On a wide desktop Wu ≥ the tile, so this is a no-op.
+  function fitTile(w, x, b) {
+    var Wu = Math.max(120, b.maxX - b.minX);
+    if (w != null && w > Wu) w = Wu;
+    if (w != null && x != null) x = Math.max(b.minX, Math.min(x, b.maxX - w));
+    return { w: w, x: x };
+  }
   function clampInto(el, left, top) {
     var b = deskBounds(), ww = el.offsetWidth, hh = el.offsetHeight;
     left = Math.max(b.minX, Math.min(left, Math.max(b.minX, b.maxX - ww)));
@@ -642,15 +654,17 @@
     if (!persistScope) return false;                                // only the home/persisting board carries modes
     var name = currentModeName(), sc = name && SCENES[name];
     if (!sc || !sc.layout) return false;
-    var items; try { items = sc.layout(W.innerWidth, W.innerHeight, deskBounds()) || []; } catch (e) { return false; }
+    var b = deskBounds();
+    var items; try { items = sc.layout(W.innerWidth, W.innerHeight, b) || []; } catch (e) { return false; }
     if (!items.length) return false;
     var pools = {};
     live.forEach(function (w) { if (!w.hidden && w.el && w.type !== "q") (pools[w.type] = pools[w.type] || []).push(w); });
     items.forEach(function (it) {
       var pool = pools[it.type]; if (!pool || !pool.length) return;
       var w = pool.shift();
-      if (it.w) { w.w = it.w; w.el.style.setProperty("--hw-w", it.w + "px"); }
-      w.x = it.x; w.y = it.y; var p = clampPos(w, w.x, w.y);
+      var f = fitTile(it.w, it.x, b);                                 // same phone-safe cap as seed → tiles never re-widen past the canvas
+      if (f.w) { w.w = f.w; w.el.style.setProperty("--hw-w", f.w + "px"); }
+      w.x = f.x; w.y = it.y; var p = clampPos(w, w.x, w.y);
       w.el.classList.add("hw-gliding"); w.el.style.left = p.x + "px"; w.el.style.top = p.y + "px";
     });
     return true;
@@ -725,7 +739,10 @@
     if (opts.replace) live.slice().forEach(function (w) { remove(w); });
     var b = deskBounds();
     var items = (sc.layout && sc.layout(innerWidth, innerHeight, b)) || [];
-    var made = items.map(function (it) { return add(it.type, it.config ? JSON.parse(JSON.stringify(it.config)) : null, { x: it.x, y: it.y, w: it.w }); }).filter(Boolean);
+    var made = items.map(function (it) {
+      var f = fitTile(it.w, it.x, b);                                                      // phone-safe: never wider than the canvas
+      return add(it.type, it.config ? JSON.parse(JSON.stringify(it.config)) : null, { x: f.x, y: it.y, w: f.w });
+    }).filter(Boolean);
     if (!opts.quiet) toast((sc.name || name) + " · " + made.length + " widgets — drag, resize or edit any of them");
     return made;
   }

@@ -167,12 +167,12 @@ const CSS = `
 #holo-login .hlp-title{font-size:var(--u,16px);font-weight:700}
 #holo-login .hlp-x{margin-left:auto;width:34px;height:34px;flex:0 0 auto;border:0;border-radius:50%;background:var(--field-bg,rgba(255,255,255,.08));color:var(--ink,#c9d1d9);cursor:pointer;font-size:var(--u,16px)}
 #holo-login .hlp-x:hover{background:var(--field-border,rgba(255,255,255,.16))}
-#holo-login .hlp-srch{padding:0 22px 16px;flex:0 0 auto}
+#holo-login .hlp-srch{padding:12px 14px 8px;flex:0 0 auto}
 #holo-login .hlp-srch input{width:100%;box-sizing:border-box;background:var(--field-bg,rgba(1,4,9,.6));border:1px solid var(--field-border,rgba(255,255,255,.12));border-radius:999px;padding:11px 18px;color:var(--ink,#e6edf3);font:inherit;font-size:var(--u,16px);outline:none}
 #holo-login .hlp-srch input:focus{border-color:#34d3a6}
 /* grid-auto-rows is EXPLICIT — Chromium computes a <button> grid item's intrinsic content height as 0,
    so content-sized rows collapse to the border (the "80 empty bars" failure). Fixed rows are immune. */
-#holo-login .hlp-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(198px,1fr));grid-auto-rows:186px;gap:14px;padding:4px 22px 20px;overflow-y:auto;flex:1 1 auto;min-height:0}
+#holo-login .hlp-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(168px,1fr));grid-auto-rows:158px;gap:12px;padding:2px 14px 14px;overflow-y:auto;flex:1 1 auto;min-height:0}
 #holo-login .hlp-tile{appearance:none;-webkit-appearance:none;display:flex;flex-direction:column;height:186px;box-sizing:border-box;border:1px solid rgba(255,255,255,.1);border-radius:14px;overflow:hidden;cursor:pointer;background:#05070c;text-align:left;padding:0;margin:0;color:inherit;font:inherit;transition:transform .1s,border-color .12s;position:relative}
 #holo-login .hlp-tile:hover{transform:translateY(-2px);border-color:#34d3a6}
 #holo-login .hlp-tile.sel{border-color:#34d3a6;box-shadow:0 0 0 2px rgba(52,211,166,.45)}
@@ -183,12 +183,22 @@ const CSS = `
 @keyframes hlp-shimmer{to{background-position:-220% 0}}
 #holo-login .hlp-prev.off{color:#6e7681;font-size:30px}
 #holo-login .hlp-name{flex:0 0 auto;padding:11px 14px 12px;background:rgba(5,7,12,.9);font-size:var(--u,16px);font-weight:600;color:#e6edf3;line-height:1.25;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-#holo-login .hlp-acts{margin:4px 22px 16px;border:1px solid var(--field-border,rgba(255,255,255,.12));border-radius:14px;overflow:hidden;flex:0 0 auto}
-#holo-login .hlp-acts button{display:flex;align-items:center;gap:13px;width:100%;min-height:52px;padding:0 16px;border:0;background:none;color:var(--ink,#e6edf3);font:500 var(--u,16px)/1 "Segoe UI",system-ui,sans-serif;cursor:pointer;text-align:left;transition:background .12s}
-#holo-login .hlp-acts button + button{border-top:1px solid var(--field-border,rgba(255,255,255,.1))}
-#holo-login .hlp-acts button:hover{background:var(--field-bg,rgba(255,255,255,.06))}
-#holo-login .hlp-acts .ic{width:20px;height:20px;flex:0 0 auto;color:var(--muted,#9fb3d0)}
-#holo-login .hlp-acts .chev{margin-left:auto;width:18px;height:18px;flex:0 0 auto;color:var(--muted,#8b949e)}
+/* ── the grouped list: ONE OS-familiar settings card holding Boot style (expandable) + the account rows ── */
+#holo-login .hlp-list{margin:2px 22px 16px;border:1px solid var(--field-border,rgba(255,255,255,.12));border-radius:14px;overflow:hidden;flex:0 0 auto;display:flex;flex-direction:column;min-height:0}
+#holo-login .hlp-sheet.hlp-open .hlp-list{flex:1 1 auto}   /* boot style expanded → the card takes the room, the grid scrolls inside */
+#holo-login .hlp-row{display:flex;align-items:center;gap:13px;width:100%;min-height:56px;padding:0 16px;border:0;background:none;color:var(--ink,#e6edf3);font:500 var(--u,16px)/1 "Segoe UI",system-ui,sans-serif;cursor:pointer;text-align:left;transition:background .12s;flex:0 0 auto}
+#holo-login .hlp-row + .hlp-row,#holo-login .hlp-boot-body + .hlp-row{border-top:1px solid var(--field-border,rgba(255,255,255,.1))}
+#holo-login .hlp-row:hover{background:var(--field-bg,rgba(255,255,255,.06))}
+#holo-login .hlp-row .ic{width:22px;height:22px;flex:0 0 auto;color:var(--muted,#9fb3d0)}
+#holo-login .hlp-row .lbl{flex:1 1 auto;min-width:0}
+#holo-login .hlp-row .val{flex:0 1 auto;color:var(--muted,#8b949e);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;padding-left:10px}
+#holo-login .hlp-row .chev{width:18px;height:18px;flex:0 0 auto;color:var(--muted,#8b949e);transition:transform .18s}
+#holo-login .hlp-row[aria-expanded="true"] .chev{transform:rotate(90deg)}
+#holo-login .hlp-thumb{width:36px;height:36px;flex:0 0 auto;border-radius:8px;overflow:hidden;background:#000;display:grid;place-items:center}
+#holo-login .hlp-thumb img{max-width:100%;max-height:100%;object-fit:contain;display:block}
+#holo-login .hlp-thumb.off{color:var(--muted,#6e7681);font-size:16px}
+#holo-login .hlp-boot-body{border-top:1px solid var(--field-border,rgba(255,255,255,.1));display:flex;flex-direction:column;min-height:0;flex:1 1 auto}
+#holo-login .hlp-boot-body[hidden]{display:none}
 #holo-login .hlp-foot{padding:12px 22px 16px;font-size:var(--u,16px);color:var(--muted,#6e7681);border-top:1px solid var(--glass-border,rgba(255,255,255,.07));flex:0 0 auto}
 #holo-login .hlp-foot a{color:var(--link,#58a6ff);text-decoration:none}
 #holo-login .hlp-toast{position:fixed;left:50%;bottom:74px;transform:translateX(-50%);z-index:7;background:var(--sheet,rgba(13,17,23,.95));color:var(--ink,#e6edf3);
@@ -581,29 +591,25 @@ function applyMode(overlay, m) {
 // applies LIVE behind the sheet. `host.actions` is whatever the greeter offers (recovery flows today);
 // read at open time, rendered as one quiet row, gone when empty. ───────────────────────────────────────
 function openGallery(overlay, current, onPick, host) {
+  const CHEV = `<svg class="chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6l6 6-6 6"/></svg>`;
+  const curName = current ? pretty(current) : "Off";
   const gal = document.createElement("div"); gal.className = "hlp-gal";
   gal.innerHTML = `<div class="hlp-sheet" role="dialog" aria-label="Appearance">
     <div class="hlp-head"><div class="hlp-title">Appearance</div>
       <button class="hlp-x" aria-label="Close">✕</button></div>
     <div class="hlp-modes" role="radiogroup" aria-label="Theme"></div>
-    <div class="hlp-srch"><input type="search" placeholder="Search" spellcheck="false"></div>
-    <div class="hlp-grid"></div>
-    <div class="hlp-acts"></div>
+    <div class="hlp-list">
+      <button type="button" class="hlp-row hlp-boot-toggle" aria-expanded="false">
+        <span class="hlp-thumb${current ? "" : " off"}">${current ? '<img alt="">' : "◌"}</span>
+        <span class="lbl">Boot style</span><span class="val">${curName}</span>${CHEV}</button>
+      <div class="hlp-boot-body" hidden>
+        <div class="hlp-srch"><input type="search" placeholder="Search" spellcheck="false"></div>
+        <div class="hlp-grid"></div>
+      </div>
+    </div>
     <div class="hlp-foot">Animations by <a href="https://github.com/adi1090x/plymouth-themes" target="_blank" rel="noopener">adi1090x</a> · GPL 3.0</div>
   </div>`;
-  // the host's doors render as the OS-familiar grouped list — leading icon, label, trailing chevron —
-  // so they read as ACCOUNT rows (like every system settings screen), never as more boot tiles.
-  const acts = gal.querySelector(".hlp-acts");
-  const hostActs = (host && Array.isArray(host.actions)) ? host.actions : [];
-  const CHEV = `<svg class="chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6l6 6-6 6"/></svg>`;
-  if (!hostActs.length) acts.remove();
-  else for (const a of hostActs) {
-    const b = document.createElement("button");
-    b.type = "button";
-    b.innerHTML = `${a.icon || ""}<span>${a.label}</span>${CHEV}`;
-    b.onclick = () => { close(); try { a.run(); } catch {} };
-    acts.appendChild(b);
-  }
+  const sheet = gal.querySelector(".hlp-sheet"), list = gal.querySelector(".hlp-list");
   const modes = gal.querySelector(".hlp-modes");
   const drawModes = () => { const cur = themeMode(); modes.querySelectorAll("button").forEach((b) => { const on = b.dataset.mode === cur; b.classList.toggle("on", on); b.setAttribute("aria-checked", String(on)); }); };
   for (const m of THEME_MODES) {
@@ -614,12 +620,38 @@ function openGallery(overlay, current, onPick, host) {
     modes.appendChild(b);
   }
   drawModes();
+  // the current boot style's own frame-0 sits on the row — a tiny live preview of what you wear now
+  if (current) { const t = themeOf(current); if (t) thumbFor(t).then((u) => { const im = gal.querySelector(".hlp-thumb img"); if (im && u) im.src = u; }).catch(() => {}); }
+
   const grid = gal.querySelector(".hlp-grid");
   const close = () => { gal.remove(); document.removeEventListener("keydown", esc, true); try { clearTimeout(sweep); io && io.disconnect(); } catch {} };
   const esc = (e) => { if (e.key === "Escape") { e.preventDefault(); e.stopPropagation(); close(); } };
   document.addEventListener("keydown", esc, true);
   gal.addEventListener("pointerdown", (e) => { if (e.target === gal) close(); });
   gal.querySelector(".hlp-x").onclick = close;
+
+  // ── the host's rare doors (Use another device · Restore) — appended to the SAME grouped card, so the
+  // whole panel reads as one clean settings list: Boot style, then the account rows. ──────────────────────
+  const hostActs = (host && Array.isArray(host.actions)) ? host.actions : [];
+  for (const a of hostActs) {
+    const b = document.createElement("button"); b.type = "button"; b.className = "hlp-row";
+    b.innerHTML = `${a.icon || ""}<span class="lbl">${a.label}</span>${CHEV}`;
+    b.onclick = () => { close(); try { a.run(); } catch {} };
+    list.appendChild(b);
+  }
+
+  // ── Boot style is COLLAPSED by default (clean). Expanding it reveals the search + grid; the 80 thumbnails
+  // load lazily only THEN, so opening the panel is instant. ───────────────────────────────────────────────
+  const bootBody = gal.querySelector(".hlp-boot-body"), toggle = gal.querySelector(".hlp-boot-toggle");
+  let built = false, sweep = 0;
+  const expand = (show) => {
+    toggle.setAttribute("aria-expanded", String(show));
+    bootBody.hidden = !show;
+    sheet.classList.toggle("hlp-open", show);
+    if (show && !built) { built = true; draw(""); sweep = setTimeout(() => { for (const j of allJobs) if (!j.queued) { j.queued = 1; pending.push(j); } pump(); }, 700); }
+    if (show) setTimeout(() => { try { inp.focus(); } catch {} }, 60);
+  };
+  toggle.onclick = () => expand(bootBody.hidden);
 
   // thumbnail loader — a small queue (never stampedes the CDN). IntersectionObserver PRIORITIZES what's
   // on screen; a fallback sweep enqueues the rest regardless (IO callbacks pause in hidden tabs, and 80
@@ -648,7 +680,6 @@ function openGallery(overlay, current, onPick, host) {
     }
     pump();
   }, { root: grid, rootMargin: "240px" }) : null;
-  const sweep = setTimeout(() => { for (const j of allJobs) if (!j.queued) { j.queued = 1; pending.push(j); } pump(); }, 900);
 
   function tile(t) {
     const el = document.createElement("button"); el.type = "button";
@@ -676,11 +707,9 @@ function openGallery(overlay, current, onPick, host) {
     const needle = (q || "").toLowerCase().trim();
     for (const t of CATALOG) if (!needle || t.name.includes(needle.replace(/\s+/g, "_")) || pretty(t.name).toLowerCase().includes(needle)) grid.appendChild(tile(t));
   }
-  draw("");
-  const inp = gal.querySelector("input");
-  inp.addEventListener("input", () => draw(inp.value));
+  const inp = gal.querySelector(".hlp-boot-body input");
+  inp.addEventListener("input", () => draw(inp.value));   // the grid is built lazily on first expand (fast open)
   overlay.appendChild(gal);
-  setTimeout(() => { try { inp.focus(); } catch {} }, 60);
 }
 
 function toast(overlay, msg) {
