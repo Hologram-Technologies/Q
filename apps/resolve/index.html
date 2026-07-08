@@ -108,6 +108,9 @@ async function renderChips() {
   if (APPS) for (const a of APPS.apps.filter((x) => ["q", "browser", "holo-money", "player"].includes(x.dir))) chips.push([a.title + " · by κ", a.kappa]);
   try {
     const mf = await (await fetch(new URL("apps/holo-messenger/shell-manifest.json", BASE), { cache: "no-store" })).json();
+    // a REAL image object, content-addressed in this bundle — the card renders it from VERIFIED bytes
+    const img = (mf.assets || []).find((x) => /\.(jpe?g|png|webp|svg)$/i.test(x.path));
+    if (img) chips.push(["a verified image, by κ", "sha256:" + img.kappa]);
     const a = (mf.assets || []).find((x) => /app\.html$/.test(x.path));
     if (a) {
       const raw = Uint8Array.from(a.kappa.match(/.{2}/g), (x) => parseInt(x, 16));
