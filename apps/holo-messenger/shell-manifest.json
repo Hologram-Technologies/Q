@@ -1,12 +1,12 @@
 {
  "v": 1,
- "created": 1783499524341,
- "aggregate": "0d2833d2ca6a1630c5239ee11922a461602bf7d219dcce34caee63ef3f4d940b",
+ "created": 1783499420750,
+ "aggregate": "aedafb18ec476e27e140922ea3310111a78a1f2574e1f437a4305bf7bcb6cd8b",
  "assets": [
   {
    "path": "/apps/holo-messenger/app.html",
-   "kappa": "09cc825eabcf952dea591767612159be04e1bd2735ce1ae182bb21e5f87ec2cc",
-   "bytes": 20562
+   "kappa": "289d743382752aecd59a019b277586b06a52359352503fc65f09321765aa0dd1",
+   "bytes": 21872
   },
   {
    "path": "/apps/holo-messenger/_vendor/ui/chat-ui.bundle.js",
@@ -15,8 +15,8 @@
   },
   {
    "path": "/apps/holo-messenger/_vendor/ui/chat-ui.bundle.css",
-   "kappa": "ff6726308f0b340f0b0387ebe9a67b00247083c5faf77c1d0e7fbadc285b3d9a",
-   "bytes": 182979
+   "kappa": "42d4acf3d84d6598b87c6fa888e669c0b61872c4e07dd183b97b1a75acef8d3b",
+   "bytes": 183215
   },
   {
    "path": "/apps/holo-messenger/holo-messenger-login.mjs",

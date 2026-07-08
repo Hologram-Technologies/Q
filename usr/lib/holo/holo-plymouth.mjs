@@ -694,6 +694,7 @@ export function attachPlymouth(overlay, host) {
   try { if (!localStorage.getItem(KEY)) writeState(state); } catch {}   // persist the default → next cold boot gets the 0-ms baseline
   try { if (!overlay.getAttribute("data-appearance")) overlay.setAttribute("data-appearance", themeMode()); } catch {}   // primitive overlays get the mode too
   let layer = null, player = null, gen = 0;
+  let onEmblemLive = () => {};   // set by the boot-beat setup; fired the instant the emblem paints its first frame
 
   function ensureLayer() {
     if (layer) return;
@@ -701,9 +702,10 @@ export function attachPlymouth(overlay, host) {
     const wall = overlay.querySelector(".hl-wall");
     if (wall && wall.nextSibling) overlay.insertBefore(layer, wall.nextSibling); else overlay.prepend(layer);
     // onLive fires at the backend's FIRST drawable frame (whichever backend won the ladder):
-    // the splash is alive — it wears the avatar slot and the 0-ms baseline still yields.
+    // the splash is alive — it wears the avatar slot and the 0-ms baseline still yields, and the boot
+    // beat can lift NOW (the panel rises the moment there is a real emblem to greet you with).
     player = makePlayer(overlay, layer, () => {
-      try { layer.classList.add("on"); overlay.classList.add("hlp-anchor"); dropBaseline(); } catch {}
+      try { layer.classList.add("on"); overlay.classList.add("hlp-anchor"); dropBaseline(); onEmblemLive(); } catch {}
     });
     player.ink(isInk());
   }
@@ -727,21 +729,25 @@ export function attachPlymouth(overlay, host) {
   // the host baseline (app.html) may have painted a synchronous frame-0 still; remove it once live
   function dropBaseline() { try { const b = document.getElementById("hl-plymouth-base"); if (b) { b.style.opacity = "0"; setTimeout(() => b.remove(), 900); } } catch {} }
 
-  // the boot beat: a moment of pure splash before the greeter rises — skippable, never a lock-out. Only
-  // when the beat is ALREADY running (the host baseline started it at 0 ms) or the panel hasn't painted
-  // yet (primitive-owned overlay): a panel the human can already see is never re-hidden.
-  const endBoot = () => { try { overlay.classList.remove("hl-boot"); if (layer) { layer.classList.add("greet"); player.pose("greet"); } dropBaseline(); } catch {} };
+  // THE BOOT BEAT — lean, readiness-gated. The panel rises the instant the emblem is alive, after a crisp
+  // minimum flash and NEVER longer than a hard cap — no fixed multi-second wait. Skippable by any tap/key.
+  // A supercomputer is ready when it is ready, not on a timer. Counted from the baseline's 0-ms frame
+  // (window.__hlBootT0) so the beat measures REAL boot latency, not module-load time.
+  const BOOT_MIN = 320, BOOT_MAX = 1400;
+  const bootT0 = (() => { try { return window.__hlBootT0 || Date.now(); } catch { return Date.now(); } })();
+  let bootDone = false, bootTimer = 0;
+  const endBoot = () => {
+    if (bootDone) return; bootDone = true; clearTimeout(bootTimer);
+    try { overlay.classList.remove("hl-boot"); if (layer) { layer.classList.add("greet"); player.pose("greet"); } dropBaseline(); } catch {}
+  };
   const panelEl = overlay.querySelector("#holo-login-panel");
   const bootable = overlay.classList.contains("hl-boot") || !panelEl || !panelEl.childElementCount;
   if (state.on && bootable && !reducedMotion()) {
     overlay.classList.add("hl-boot");
-    // one 5s boot beat, counted from the baseline's 0-ms frame (window.__hlBootT0) — not from module load,
-    // so the module's endBoot (pose glide + baseline drop) lands together with the panel's rise
-    let bootLeft = 5000;
-    try { if (window.__hlBootT0) bootLeft = Math.max(250, 5000 - (Date.now() - window.__hlBootT0)); } catch {}
-    const t = setTimeout(endBoot, bootLeft);
-    overlay.addEventListener("pointerdown", () => { clearTimeout(t); endBoot(); }, { once: true, capture: true });
-    document.addEventListener("keydown", () => { clearTimeout(t); endBoot(); }, { once: true, capture: true });
+    bootTimer = setTimeout(endBoot, Math.max(250, BOOT_MAX - (Date.now() - bootT0)));   // hard cap — never stall on a slow network
+    onEmblemLive = () => { if (bootDone) return; clearTimeout(bootTimer); bootTimer = setTimeout(endBoot, Math.max(0, BOOT_MIN - (Date.now() - bootT0))); };   // alive → rise after the min flash
+    overlay.addEventListener("pointerdown", endBoot, { once: true, capture: true });
+    document.addEventListener("keydown", endBoot, { once: true, capture: true });
   } else if (state.on) { setTimeout(endBoot, 0); }
   if (state.on) play(state.theme);
 

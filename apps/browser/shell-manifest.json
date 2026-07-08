@@ -1,12 +1,12 @@
 {
  "v": 1,
- "created": 1783495913926,
- "aggregate": "e02d6858351a9104a6ec8a3e8d6beb8632306b9affc53964f96be4f092a2b2e1",
+ "created": 1783499421220,
+ "aggregate": "d0ecf22ba263b5a76a1b5f744687ed41c256ff7750f610a682a5d1952e263e6b",
  "assets": [
   {
    "path": "/apps/browser/browser-sw.js",
-   "kappa": "3eaa05c2a7d4309e6d61fac0da4a3c35fef706cd043734bfd321ca7c79b44bde",
-   "bytes": 54383
+   "kappa": "9a6307fae9e2d0e2f3b2cf8ebe45599e02bb490afa21774b3c09dd823315089d",
+   "bytes": 55958
   },
   {
    "path": "/apps/browser/ext/holo-shield.crx",
@@ -50,13 +50,13 @@
   },
   {
    "path": "/apps/browser/index.html",
-   "kappa": "b147edd38465d8113a2f63db6a3f2578e11cfbabcecb87e12b0ff3fc39e139cc",
-   "bytes": 91368
+   "kappa": "38e5527ac585446701a5a151e774f7365e3383ff9cf835e28b363cc21f121603",
+   "bytes": 91245
   },
   {
    "path": "/apps/browser/ipfs-sw.js",
-   "kappa": "5213fec45d252f5bb1e498e32f743fd991b7a2579bc9cad01aabaa120db0661b",
-   "bytes": 9193
+   "kappa": "eb16a3af589b17f17c03f443d8c41adc6ad6ef99e31282bc3fad55cba5f4e872",
+   "bytes": 9202
   },
   {
    "path": "/apps/browser/onion-browse.html",
@@ -100,8 +100,8 @@
   },
   {
    "path": "/apps/browser/_shared/holo-ipfs-gateway.mjs",
-   "kappa": "893f18c290d56cc058362b0d439ecf2c4a47de49a6af1ea6597a332022f2617b",
-   "bytes": 26472
+   "kappa": "3007ede5b9a7000cd52a1c8bf7ce643102472edf8116fe38fdaac1af64873a80",
+   "bytes": 27315
   },
   {
    "path": "/apps/browser/_shared/holo-ipfs.js",
@@ -110,8 +110,8 @@
   },
   {
    "path": "/apps/browser/_shared/holo-onion-arti.node.mjs",
-   "kappa": "2507e49bb3f1f8d73ed948182043f0f0532547b3c1a3b6a323f3a6f6de55b2a6",
-   "bytes": 8777
+   "kappa": "906467efc626271435ec3ab36b4e9d02bd17aba385ce950f2fa42d6ee9d35e71",
+   "bytes": 9783
   },
   {
    "path": "/apps/browser/_shared/holo-onion-endpoint.node.mjs",
@@ -190,8 +190,8 @@
   },
   {
    "path": "/apps/browser/_spike/onion/witness-report.txt",
-   "kappa": "19cce55bf0f529b20f92aabd43061d54a043cf33f2a29702e65fc0176b111d2d",
-   "bytes": 1270
+   "kappa": "17c2a10f64232f7d28d3781e141fe798496a25c1843a8f1f5c911453236be3fb",
+   "bytes": 1271
   }
  ]
 }
