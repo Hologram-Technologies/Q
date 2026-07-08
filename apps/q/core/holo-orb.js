@@ -179,6 +179,8 @@ const WORKER_BODY = [
   "  if(!canvas) return;",
   "  if(m.t==='size'){ cssW=m.cssW||cssW; cssH=m.cssH||cssH; dpr=m.dpr||dpr; resize(); }",
   "  else if(m.t==='sig'){ mode=m.mode||0; extLevel=(typeof m.level==='number'?m.level:-1); }",
+  "  else if(m.t==='pause'){ if(running){ running=false; if(raf){ CAF(raf); raf=0; } } }",   // off-screen/backgrounded → halt the loop, KEEP the device (cheap resume)
+  "  else if(m.t==='resume'){ if(!running && !dead && canvas){ running=true; raf=RAF(frame); } }",
   "  else if(m.t==='stop'){ running=false; if(raf){ CAF(raf); raf=0; } try{ if(dev&&dev.destroy) dev.destroy(); }catch(e){} }",
   "}catch(err){ try{ self.postMessage({t:'fail',err:String(err&&err.message||err)}); }catch(e2){} } };",
 ].join("\n");
@@ -197,6 +199,14 @@ function mountGpuOrb(canvas, opts) {
 
   let worker = null, url = null, stopped = false, transferred = false, fellBack = null, timer = 0, ro = null, pendingSig = null, onQState = null;
   const handle = { fallback: false, mode: "webgpu-worker",
+    pause() {   // visibility budget: halt the render loop while unseen (keeps the device warm for an instant resume)
+      try { if (worker && !stopped) worker.postMessage({ t: "pause" }); } catch (e) {}
+      if (fellBack && fellBack.pause) { try { fellBack.pause(); } catch (e) {} }
+    },
+    resume() {
+      try { if (worker && !stopped) worker.postMessage({ t: "resume" }); } catch (e) {}
+      if (fellBack && fellBack.resume) { try { fellBack.resume(); } catch (e) {} }
+    },
     stop() {
       stopped = true; if (timer) { clearTimeout(timer); timer = 0; }
       try { if (ro) ro.disconnect(); } catch (e) {}
@@ -255,10 +265,43 @@ function mountGpuOrb(canvas, opts) {
   return handle;
 }
 
+// ── VISIBILITY BUDGET (M5-L1) — the orb is a CONTINUOUS GPU raymarch; on a phone it must cost ~nothing when it
+// can't be seen. The dominant case is the app/tab BACKGROUNDED — halt the loop on `visibilitychange`/document.hidden
+// and resume on return. This is 100% reliable and self-correcting: the orb runs exactly as before whenever the app
+// is foreground-visible, and goes idle (no rAF, no GPU) the moment it's backgrounded — the big battery/thermal win.
+// prefers-reduced-motion → paint one calm frame, then hold static (the base <img> behind the canvas carries the
+// still orb, so it never goes blank). Fail-safe: any error leaves the orb running exactly as before — we never
+// break the orb to save a frame. (Off-screen-while-foreground gating via IntersectionObserver is deferred to a
+// later L1 pass, pending real-device verification — it can't be exercised in a throttled headless tab.)
+function budgetByVisibility(canvas, h) {
+  try {
+    if (!h || typeof h.pause !== "function" || typeof h.resume !== "function") return h;   // mode:"none" → nothing to gate
+    if (typeof document === "undefined") return h;
+    const reduce = (typeof matchMedia === "function") && matchMedia("(prefers-reduced-motion: reduce)").matches;
+    if (reduce) {
+      const t = setTimeout(function () { try { h.pause(); } catch (e) {} }, 450);   // one frame settles, then the still image holds
+      const os = h.stop && h.stop.bind(h);
+      h.stop = function () { try { clearTimeout(t); } catch (e) {} if (os) os(); };
+      return h;
+    }
+    let gone = false;
+    const onVis = function () { if (gone) return; try { document.hidden ? h.pause() : h.resume(); } catch (e) {} };
+    try { document.addEventListener("visibilitychange", onVis); } catch (e) {}
+    const os = h.stop && h.stop.bind(h);
+    h.stop = function () {
+      gone = true;
+      try { document.removeEventListener("visibilitychange", onVis); } catch (e) {}
+      if (os) os();
+    };
+    if (document.hidden) onVis();   // mounted while backgrounded → start idle
+    return h;
+  } catch (e) { return h; }
+}
+
 export function mountOrb(canvas, opts) {
-  const gpu = mountGpuOrb(canvas, opts); // native-WebGPU worker orb (off the main thread) — the hero
-  if (gpu) return gpu;
-  return mountWebglOrb(canvas);          // no WebGPU/Worker/OffscreenCanvas → the WebGL2 wireframe floor
+  const h = mountGpuOrb(canvas, opts)   // native-WebGPU worker orb (off the main thread) — the hero
+    || mountWebglOrb(canvas);           // no WebGPU/Worker/OffscreenCanvas → the WebGL2 wireframe floor
+  return budgetByVisibility(canvas, h);
 }
 
 // ─────────────────────────────────────────────────────────────────────────────────────────────────────────
@@ -309,11 +352,15 @@ function mountWebglOrb(canvas){
   mkBuf(pos, gl.getAttribLocation(prog,"aPos")); mkBuf(col, gl.getAttribLocation(prog,"aCol"));
   const uProj=gl.getUniformLocation(prog,"uProj"), uT=gl.getUniformLocation(prog,"uT");
   gl.enable(gl.BLEND); gl.blendFunc(gl.SRC_ALPHA, gl.ONE); gl.lineWidth(1);
-  let raf=0, t0=performance.now(), stopped=false;
+  let raf=0, t0=performance.now(), stopped=false, paused=false;
   function resize(){ const dpr=Math.min(window.devicePixelRatio||1, 2.5); const w=Math.max(2, canvas.clientWidth), h=Math.max(2, canvas.clientHeight); const W=Math.round(w*dpr), H=Math.round(h*dpr); if(canvas.width!==W||canvas.height!==H){ canvas.width=W; canvas.height=H; } gl.viewport(0,0,canvas.width,canvas.height); gl.uniformMatrix4fv(uProj,false, mat4Perspective(45*Math.PI/180, canvas.width/canvas.height, 0.1, 10)); }
-  function frame(){ if(stopped) return; resize(); const t=(performance.now()-t0)/1000; gl.clearColor(0,0,0,0); gl.clear(gl.COLOR_BUFFER_BIT); gl.uniform1f(uT,t); gl.drawArrays(gl.LINES,0,E.length); raf=requestAnimationFrame(frame); }
+  function frame(){ if(stopped||paused) return; resize(); const t=(performance.now()-t0)/1000; gl.clearColor(0,0,0,0); gl.clear(gl.COLOR_BUFFER_BIT); gl.uniform1f(uT,t); gl.drawArrays(gl.LINES,0,E.length); raf=requestAnimationFrame(frame); }
   frame();
-  return { stop(){ stopped=true; cancelAnimationFrame(raf); }, fallback:false, mode:"webgl" };
+  return {
+    stop(){ stopped=true; cancelAnimationFrame(raf); raf=0; },
+    pause(){ if(paused||stopped) return; paused=true; if(raf){ cancelAnimationFrame(raf); raf=0; } },   // halt while unseen; the last frame stays painted
+    resume(){ if(!paused||stopped) return; paused=false; if(!raf) frame(); },
+    fallback:false, mode:"webgl" };
 }
 
 export default mountOrb;

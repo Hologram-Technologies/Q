@@ -272,15 +272,41 @@ function keyBlack(img, ink) {
     return c;
   } catch { return img; }
 }
-// ── the 2D floor: the proven player, unchanged physics (25 fps stepped, CPU key, dpr ≤ 2) ─────────────
+// ── LIVING MOTION — the emblem is a hologram suspended in space: it breathes with a slow autonomous float
+// and, on a device with a pointer, leans with your cursor (parallax). Both are tiny px offsets folded into
+// the pose TARGET, so the player's existing ease smooths them for free — no worker or shader surgery. Under
+// reduced motion it holds perfectly still. Works on both backends (GPU worker via send(), 2D via liveTarget). ─
+let _paraX = 0, _paraY = 0, _paraArmed = false;
+function armParallax() {
+  if (_paraArmed) return; _paraArmed = true;
+  if (reducedMotion()) return;
+  try {
+    addEventListener("pointermove", (e) => {
+      if (e.pointerType === "touch") return;                 // desktop hover only — touch has no idle hover
+      _paraX = -((((e.clientX / innerWidth) || 0.5) - 0.5)) * 26;   // ±13px, opposite the cursor → it floats in front of the glass
+      _paraY = -((((e.clientY / innerHeight) || 0.5) - 0.5)) * 20;  // ±10px
+    }, { passive: true });
+    addEventListener("blur", () => { _paraX = 0; _paraY = 0; }, { passive: true });
+  } catch {}
+}
+function posOffset() {                                        // px offset added to an ANCHORED pose's centre
+  if (reducedMotion()) return { x: 0, y: 0 };
+  let fx = 0, fy = 0;
+  try { const t = performance.now() / 1000; fx = Math.sin(t * 0.55) * 6; fy = Math.cos(t * 0.42) * 7.5; } catch {}
+  return { x: fx + _paraX, y: fy + _paraY };
+}
+
+// ── the 2D floor: the proven player, unchanged physics (25 fps stepped, CPU key) — dpr up to 3 + high-quality
+// smoothing so the emblem is crisp at true device resolution on retina and phones. ────────────────────────
 function make2dPlayer(overlay, layer, canvas, onLive) {
   const ctx = canvas.getContext("2d");
+  try { ctx.imageSmoothingEnabled = true; ctx.imageSmoothingQuality = "high"; } catch {}
   const images = [];            // sparse, filled as frames land
   let prefix = 0;               // contiguous playable prefix — the loop only plays what has landed
   let raf = 0, t0 = 0, alive = true, last = 0, started = false, inkOn = false;
   const pose = { ...POSES.boot };          // current, eased toward target every frame
   let target = POSES.boot;
-  const dpr = Math.min(window.devicePixelRatio || 1, 2);
+  const dpr = Math.min(window.devicePixelRatio || 1, 3);
   function size() { canvas.width = Math.round(innerWidth * dpr); canvas.height = Math.round(innerHeight * dpr); }
   size(); addEventListener("resize", size);
   // anchored poses resolve to the avatar slot's live rect (panel rise/resize tracked every frame)
@@ -289,7 +315,8 @@ function make2dPlayer(overlay, layer, canvas, onLive) {
     const cw = canvas.width / dpr, ch = canvas.height / dpr, vmin = Math.min(cw, ch);
     const px = anchorTarget(overlay, target, null);
     if (!px) return target;
-    return { cx: px.cx / cw, cy: px.cy / ch, cap: px.cap / vmin };
+    const o = posOffset();
+    return { cx: (px.cx + o.x) / cw, cy: (px.cy + o.y) / ch, cap: px.cap / vmin };
   }
   function draw(idx) {
     const img = images[idx]; if (!img) return;
@@ -470,7 +497,7 @@ async function makeGpuPlayer(overlay, layer, canvas, onLive) {
   const send = () => {
     const p = target, cw = innerWidth, ch = innerHeight, vmin = Math.min(cw, ch);
     let t = { cx: cw * p.cx, cy: ch * p.cy, cap: vmin * p.cap };
-    if (p.anchor) t = anchorTarget(overlay, p, t);
+    if (p.anchor) { t = anchorTarget(overlay, p, t); const o = posOffset(); t = { cx: t.cx + o.x, cy: t.cy + o.y, cap: t.cap }; }
     if (!last || Math.abs(t.cx - last.cx) > 0.25 || Math.abs(t.cy - last.cy) > 0.25 || Math.abs(t.cap - last.cap) > 0.25) {
       last = t;
       try { worker.postMessage({ t: "pose", cx: t.cx, cy: t.cy, cap: t.cap }); } catch {}
@@ -509,6 +536,7 @@ function isMobileLike() {
 // GPU backend that hasn't drawn a first frame within ~2s onto a FRESH-canvas 2D player, replaying the
 // early frames — so the emblem always ends up moving, on any device, even if WebGPU lies about working.
 function makePlayer(overlay, layer, onLive) {
+  armParallax();                                           // living motion: pointer-lean (desktop) + autonomous float
   let backend = null, queue = [], lastPose = null, lastInk = null, dead = false;
   let firstFired = false, watchdog = 0, early = [];        // early frame copies, for a fallback replay
   let forced = null; try { forced = new URLSearchParams(location.search).get("emblem"); } catch {}

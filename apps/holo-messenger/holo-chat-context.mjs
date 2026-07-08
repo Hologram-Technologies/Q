@@ -211,7 +211,7 @@ export async function openContextChannel(ctx, { meName = null, label = null } = 
         let ri = 0;
         const timer = setInterval(async () => {
           try { const arr = sub.collected || []; while (ri < arr.length) { const blob = arr[ri++]; let w; try { w = JSON.parse(blob); } catch { continue; } const m = await openWire(_key, w); if (m) _ingest(m); } } catch {}
-        }, 1200);
+        }, 500);   // low-latency poll of the content-blind mailbox (same-device stays instant via BroadcastChannel)
         mail = { post: (sealed) => { try { mbox.put(coord, JSON.stringify(sealed)); } catch {} }, close: () => { try { clearInterval(timer); sub.close && sub.close(); mbox.close && mbox.close(); } catch {} } };
       } else { try { mbox && mbox.close && mbox.close(); } catch {} }
     }

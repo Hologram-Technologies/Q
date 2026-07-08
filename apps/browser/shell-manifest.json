@@ -1,12 +1,12 @@
 {
  "v": 1,
- "created": 1783511857507,
- "aggregate": "ed763ffb783d3f214eee624995ef40b9d6f7d3d535c3ef5169715344a3345ff9",
+ "created": 1783514558116,
+ "aggregate": "5a4ec7a552bd3e066ae7e10534370b507daae9be690457c185d5fa6db8524256",
  "assets": [
   {
    "path": "/apps/browser/browser-sw.js",
-   "kappa": "aff9ad6cb46d1ca013a731155377b68b9e28a6694df42370e541b67027da4424",
-   "bytes": 60026
+   "kappa": "90e5a2a072670c956cdff5352004d7286f2a189105486c104698ab5754213017",
+   "bytes": 66066
   },
   {
    "path": "/apps/browser/ext/holo-shield.crx",
@@ -50,8 +50,8 @@
   },
   {
    "path": "/apps/browser/index.html",
-   "kappa": "093155a782a3961924146a5c60df8dfd61abcb15fb2101f6bc96326422fa8e4c",
-   "bytes": 96213
+   "kappa": "5222afa2c650570444b44235e004c592dc6ba88c2d6f7f1e925d136eeefdef37",
+   "bytes": 99552
   },
   {
    "path": "/apps/browser/ipfs-sw.js",
@@ -124,6 +124,11 @@
    "bytes": 37357
   },
   {
+   "path": "/apps/browser/_shared/holo-ladder.mjs",
+   "kappa": "ca16576c7c4cee5793d4e003ca73d91d437f1bc2c1d71ee2bcd776866d578e47",
+   "bytes": 12724
+  },
+  {
    "path": "/apps/browser/_shared/holo-onion-arti.node.mjs",
    "kappa": "906467efc626271435ec3ab36b4e9d02bd17aba385ce950f2fa42d6ee9d35e71",
    "bytes": 9783
@@ -142,6 +147,11 @@
    "path": "/apps/browser/_shared/holo-onion-rewrite.mjs",
    "kappa": "10028291ece9de86bb13ec19e2b82899ff37c73d4a12a9efbe8b90b99a9568d7",
    "bytes": 3937
+  },
+  {
+   "path": "/apps/browser/_shared/holo-onion-snowflake-encap.mjs",
+   "kappa": "d2e68bd4bbd64bc2fb2c96700c157354e1d9a13ce1e0b7c399c7c7a71d5df5b7",
+   "bytes": 3204
   },
   {
    "path": "/apps/browser/_shared/holo-peer-egress.mjs",
