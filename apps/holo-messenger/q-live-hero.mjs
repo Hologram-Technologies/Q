@@ -96,7 +96,7 @@ function preload() {
 function wireEvents(l) {
   l.on("state", (s) => { orb(s); setStatus(s === "listening" ? "listening" : s === "thinking" ? "thinking…" : s === "speaking" ? "speaking" : "ready"); });
   l.on("partial", (t) => setYou(t));
-  l.on("final", (t) => { const txt = String(t || "").trim(); if (txt && txt !== sealedYou) { sealedYou = txt; setYou(txt); try { window.HoloQ && window.HoloQ.liveIngest && window.HoloQ.liveIngest("me", txt); } catch {} try { window.HoloQ && window.HoloQ.remember && window.HoloQ.remember(txt); } catch {} } });   // ONE MEMORY: what you say out loud is remembered in chat too
+  l.on("final", (t) => { const txt = String(t || "").trim(); if (txt && txt !== sealedYou) { sealedYou = txt; setYou(txt); try { window.HoloQ && window.HoloQ.liveIngest && window.HoloQ.liveIngest("me", txt); } catch {} } });
   l.on("reply", (full) => { lastQ = String(full || ""); setQ(lastQ); });
   l.on("spoken", (cap) => { if (cap) setQ(cap); });
   l.on("bargein", () => setStatus("listening"));
@@ -131,14 +131,6 @@ async function startCall() {
   if (!_armed) { try { inst.arm(); _armed = true; } catch {} }   // arm if the sync path couldn't (module loaded late)
   try {
     await inst.start();
-    // Q REMEMBERS YOU (voice): the loop rebuilds its system turn from brain.persona() at load, so inject what Q
-    // knows about the person AFTER start — the call opens already aware of your name / what you're building.
-    try {
-      if (window.HoloQ && window.HoloQ.recall && inst.history && inst.history[0]) {
-        const facts = await window.HoloQ.recall("", 6);
-        if (facts && facts.length) inst.history[0].content += "\n\nWhat you already know about the person you're talking with (private, on this device — use naturally, don't recite): " + facts.join("; ") + ".";
-      }
-    } catch (e) {}
     setStatus("listening");
     cancelAnimationFrame(rafId); rafId = requestAnimationFrame(pumpOrb);
   } catch (e) {
@@ -183,5 +175,5 @@ mo.observe(DOC.body, { childList: true, subtree: true });
 if ($(".holo-hero")) showButton();
 
 // debug surface
-window.QLiveHero = { start: startCall, end: endCall, active: () => !!live, get instance() { return live; }, version: 3 };
+window.QLiveHero = { start: startCall, end: endCall, active: () => !!live, get instance() { return live; }, version: 2 };
 try { console.info("[q-live-hero] ready — Call button rides the hero; reuses createQLive (apps/q/q-live.mjs)"); } catch {}

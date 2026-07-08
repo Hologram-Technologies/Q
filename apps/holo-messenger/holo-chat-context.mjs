@@ -139,7 +139,7 @@ async function saveLog(room, log) {
 
 // ── the live channel: same-device BroadcastChannel + optional cross-device Together mesh ──────────
 // Returns { history, send, onMessage, close }. Verifies every inbound message (L5) and dedups by id.
-export async function openContextChannel(ctx, { meName = null, label = null } = {}) {
+export async function openContextChannel(ctx, { meName = null, label = null, role = null } = {}) {
   const cr = (ctx && ctx.kappa && ctx.room) ? ctx : await contextRoom(ctx);
   if (!(await verifyContextRoom(cr))) throw new Error("context-room failed verification (L5)");
   const room = cr.room;
@@ -198,7 +198,7 @@ export async function openContextChannel(ctx, { meName = null, label = null } = 
   // throwaway relay key signs events (relay-acceptance only, never a trust root). Fail-soft: no relay → no-op, and
   // BroadcastChannel still carries same-device. `window.__holoChatMailbox` overrides the backend (tests / P6 inject
   // a deterministic mailbox). Gated to 1:1 DM rooms + real hosted origins, so it never fires in Node/localhost.
-  let mail = null;
+  let mail = null, rtc = null, rtcStop = false;
   try {
     const override = (typeof window !== "undefined" && window.__holoChatMailbox) || null;
     const hosted = typeof location !== "undefined" && !!location.hostname && !/^(127\.0\.0\.1|localhost|\[::1\])$/.test(location.hostname);
@@ -207,12 +207,33 @@ export async function openContextChannel(ctx, { meName = null, label = null } = 
       const coord = rdv.coordinate(room);
       const mbox = override ? await override({ relays: rdv.DEFAULT_RELAYS }) : await rdv.makeNostrMailbox();
       if (mbox && (!mbox.relayCount || mbox.relayCount() > 0)) {
-        const sub = mbox.liveGet(coord);
+        const drain = async (blob) => { try { const w = JSON.parse(blob); const m = await openWire(_key, w); if (m) _ingest(m); } catch {} };
+        // EVENT-DRIVEN (low-latency): the relay pushes each sealed blob into `onData` the instant it lands — no poll
+        // wait — so cross-device latency is bounded by relay RTT (~tens of ms), not a poll interval. A slow 2s poll
+        // is kept only as a backstop (and to service mailbox backends, like the test mock, that have no onData).
+        const sub = mbox.liveGet(coord, undefined, drain);
         let ri = 0;
-        const timer = setInterval(async () => {
-          try { const arr = sub.collected || []; while (ri < arr.length) { const blob = arr[ri++]; let w; try { w = JSON.parse(blob); } catch { continue; } const m = await openWire(_key, w); if (m) _ingest(m); } } catch {}
-        }, 500);   // low-latency poll of the content-blind mailbox (same-device stays instant via BroadcastChannel)
-        mail = { post: (sealed) => { try { mbox.put(coord, JSON.stringify(sealed)); } catch {} }, close: () => { try { clearInterval(timer); sub.close && sub.close(); mbox.close && mbox.close(); } catch {} } };
+        const timer = setInterval(() => { const arr = (sub && sub.collected) || []; while (ri < arr.length) drain(arr[ri++]); }, 2000);
+        mail = { post: (sealed) => { try { mbox.put(coord, JSON.stringify(sealed)); } catch {} }, close: () => { try { clearInterval(timer); sub && sub.close && sub.close(); } catch {} } };
+
+        // FAST PATH — a direct WebRTC data channel (sub-RTT, no relay for message bytes). The invite/join asymmetry
+        // assigns roles with no glare: the INVITER hosts (answerSide, serve-many re-arm), the JOINER offers. The SDP
+        // handshake rides the SAME content-blind mailbox on a DISTINCT coordinate (room|rtc). STUN for NAT; fail-soft
+        // — if it never connects (symmetric NAT / no relay), the event-driven mailbox above already carries every
+        // message. When the channel opens, sends prefer it. Verify-on-receipt is unchanged (_ingest, L5).
+        if (role && typeof RTCPeerConnection !== "undefined" && mbox.get) {
+          const ICE = [{ urls: ["stun:stun.l.google.com:19302", "stun:global.stun.twilio.com:3478"] }];
+          const onChannel = (dc) => {
+            try {
+              dc.onmessage = async (e) => { try { const w = JSON.parse(e.data); const m = await openWire(_key, w); if (m) _ingest(m); } catch {} };
+              rtc = { post: (sealed) => { try { if (dc.readyState === "open") dc.send(JSON.stringify(sealed)); } catch {} }, close: () => { try { dc.close(); } catch {} } };
+            } catch {}
+          };
+          const rk = room + "|rtc";
+          if (role === "host") { const arm = () => { if (rtcStop) return; rdv.answerSide({ pairKappa: rk, mailbox: mbox, onChannel, iceServers: ICE }).then(() => { if (!rtcStop) arm(); }).catch(() => { if (!rtcStop) setTimeout(arm, 1500); }); }; arm(); }
+          else { rdv.offerSide({ pairKappa: rk, mailbox: mbox, onChannel, iceServers: ICE }).catch(() => {}); }
+        }
+        mail._mbox = mbox;   // keep a handle so close() can shut the shared mailbox after rtc stops
       } else { try { mbox && mbox.close && mbox.close(); } catch {} }
     }
   } catch {}
@@ -224,10 +245,11 @@ export async function openContextChannel(ctx, { meName = null, label = null } = 
     const seq = log.length ? (log[log.length - 1].seq | 0) + 1 : 0;
     const m = await makeMessage({ room, from: me, text: t, seq, ts: Date.now(), prev });
     await _ingest(m);
-    const sealed = await sealWire(_key, m);   // encrypt before it touches BroadcastChannel or any relay/mailbox
+    const sealed = await sealWire(_key, m);   // encrypt before it touches BroadcastChannel / data channel / mailbox
     try { bc && bc.postMessage(sealed); } catch {}
     try { relay && relay.post({ kind: "holochat", data: sealed }); } catch {}
-    try { mail && mail.post(sealed); } catch {}
+    try { rtc && rtc.post(sealed); } catch {}    // fast path (direct P2P) when the data channel is open…
+    try { mail && mail.post(sealed); } catch {}  // …and the content-blind relay always, as the universal fallback (dedup by κ)
     return m;
   };
 
@@ -236,7 +258,7 @@ export async function openContextChannel(ctx, { meName = null, label = null } = 
     history: () => log.slice(),
     onMessage: (cb) => { listeners.add(cb); return () => listeners.delete(cb); },
     send,
-    close: () => { try { bc && bc.close(); } catch {} try { relay && relay.close(); } catch {} try { mail && mail.close(); } catch {} listeners.clear(); },
+    close: () => { rtcStop = true; try { rtc && rtc.close(); } catch {} try { bc && bc.close(); } catch {} try { relay && relay.close(); } catch {} try { mail && mail.close(); mail && mail._mbox && mail._mbox.close && mail._mbox.close(); } catch {} listeners.clear(); },
   };
 }
 

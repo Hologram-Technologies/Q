@@ -3,7 +3,7 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
-    <title>Holo Wallet · Hologram OS</title>
+    <title>My Wallet · Hologram</title>
     <meta name="description" content="Holo Wallet. One seed reaches every chain: Ethereum and every EVM network, Bitcoin, Solana. Self custodial, serverless, no password. Reads are open; every spend is approved by your biometrics on this device." />
     <link rel="stylesheet" href="../../../_shared/holo-theme.css" data-holo-shared="holo-theme.css" />
     <link rel="stylesheet" href="../../../_shared/holo-mobile.css" data-holo-shared="holo-mobile.css" />
@@ -50,7 +50,7 @@
       #bar { flex: 0 0 auto; display: flex; align-items: center; gap: .6rem; z-index: 40;
         padding: .5rem .85rem; background: color-mix(in srgb, var(--bg) 70%, transparent); backdrop-filter: blur(10px); border-bottom: 1px solid var(--line); user-select: none; }
       #bar .brand { display: flex; align-items: center; gap: .45rem; font-weight: 700; letter-spacing: .01em; }
-      #bar .brand .mk { width: 22px; height: 22px; border-radius: 7px; display: grid; place-items: center; background: var(--acc); color: var(--acc-ink); font-weight: 900; }
+      #bar .brand .mk-h { width: 22px; height: 22px; display: block; flex: 0 0 auto; }   /* the Hologram H — vector, always crisp */
       #bar .sp { margin-left: auto; }
       .iconbtn { width: 32px; height: 32px; display: grid; place-items: center; border: 0; border-radius: 9px; background: transparent; color: var(--dim); cursor: pointer; transition: background .12s, color .12s; }
       .iconbtn:hover { background: var(--surface2); color: var(--ink); } .iconbtn svg { width: 18px; height: 18px; }
@@ -109,6 +109,42 @@
       .acctpill .did { color: var(--dim); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; display: block; }
       .acctpill:hover .did { color: var(--acc); }
 
+      /* ── THE PLATINUM CARD — the operator's own, hyper-real machined metal (pure CSS, static). Layered:
+         a diagonal platinum sheen · fine vertical brushing · a soft light-catch · engraved (embossed) text ·
+         a real gold EMV chip. No animation, no parallax — it just sits there like a $600 metal card. ── */
+      .holo-cc { position: relative; width: 100%; aspect-ratio: 1.586 / 1; border-radius: 16px; overflow: hidden;
+        margin: .1rem 0 1.1rem; padding: clamp(.9rem, 4.6cqw, 1.45rem); display: flex; flex-direction: column; justify-content: space-between;
+        color: #3a4048; isolation: isolate; container-type: inline-size;
+        background: linear-gradient(128deg, #f6f8fb 0%, #e2e6ec 20%, #c4cbd4 44%, #d9dee4 60%, #eef1f5 80%, #cbd1d9 100%);
+        border: 1px solid rgba(255,255,255,.65);
+        box-shadow: 0 20px 44px -20px rgba(2,6,14,.72), inset 0 1px 0 rgba(255,255,255,.85), inset 0 0 0 1px rgba(120,132,148,.22); }
+      /* fine vertical brushed-metal grain (the Revolut texture) */
+      .holo-cc::before { content: ""; position: absolute; inset: 0; z-index: 0; pointer-events: none; opacity: .6; mix-blend-mode: overlay;
+        background: repeating-linear-gradient(90deg, rgba(255,255,255,.11) 0 1px, rgba(78,88,102,.07) 1px 2px); }
+      /* the light catch — bright top-left, cool shadow bottom-right, plus a whisper of the OS accent */
+      .holo-cc::after { content: ""; position: absolute; inset: 0; z-index: 0; pointer-events: none;
+        background: radial-gradient(130% 90% at 12% -8%, rgba(255,255,255,.6) 0%, transparent 42%),
+                    radial-gradient(120% 90% at 104% 116%, rgba(64,74,90,.24) 0%, transparent 46%),
+                    radial-gradient(60% 60% at 92% 8%, color-mix(in srgb, var(--acc) 22%, transparent) 0%, transparent 60%); }
+      .holo-cc > * { position: relative; z-index: 1; }
+      .holo-cc-top { display: flex; align-items: center; justify-content: space-between; }
+      .holo-cc-brand { display: inline-flex; align-items: center; gap: .42rem; font-weight: 800; font-size: clamp(1rem, 5.4cqw, 1.4rem); letter-spacing: .01em;
+        color: #cfd4db; text-shadow: 0 1px 0 rgba(255,255,255,.85), 0 -1px 0 rgba(58,68,84,.45); }   /* embossed / raised metal */
+      .holo-cc-mk { width: clamp(16px, 5.2cqw, 22px); height: clamp(16px, 5.2cqw, 22px); display: block; opacity: .9;
+        filter: brightness(.55) drop-shadow(0 1px 0 rgba(255,255,255,.7)); }   /* the white H → graphite, embossed on the metal */
+      .holo-cc-tier { font: 800 clamp(.6rem, 2.7cqw, .72rem)/1 var(--font); letter-spacing: .22em; text-transform: uppercase;
+        color: #9aa2ad; text-shadow: 0 1px 0 rgba(255,255,255,.7); }
+      .holo-cc-chip { width: clamp(2.4rem, 15cqw, 3.2rem); height: clamp(1.7rem, 10.6cqw, 2.35rem); border-radius: 6px; position: relative;
+        background: linear-gradient(135deg, #f0dca0 0%, #d3b365 42%, #a9832f 100%);
+        box-shadow: inset 0 0 0 1px rgba(0,0,0,.2), inset 0 1px 1px rgba(255,255,255,.55), 0 1px 2px rgba(0,0,0,.22); }
+      .holo-cc-chip::before { content: ""; position: absolute; inset: 16% 12%; border: 1px solid rgba(0,0,0,.3); border-radius: 3px;
+        background: linear-gradient(90deg, transparent 30%, rgba(0,0,0,.16) 30% 33%, transparent 33% 67%, rgba(0,0,0,.16) 67% 70%, transparent 70%); }
+      .holo-cc-foot { display: flex; align-items: flex-end; justify-content: space-between; gap: .7rem; }
+      .holo-cc-name { font-weight: 800; font-size: clamp(.9rem, 4.6cqw, 1.15rem); letter-spacing: .09em; text-transform: uppercase; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+        color: #cfd4db; text-shadow: 0 1px 0 rgba(255,255,255,.75), 0 -1px 0 rgba(58,68,84,.4); }   /* engraved cardholder name */
+      .holo-cc-seal { font-size: clamp(1.1rem, 6cqw, 1.5rem); line-height: 1; color: #b6bcc5; text-shadow: 0 1px 0 rgba(255,255,255,.7), 0 -1px 1px rgba(58,68,84,.4); }
+      @media (prefers-color-scheme: light) { .holo-cc { box-shadow: 0 16px 36px -20px rgba(2,6,14,.4), inset 0 1px 0 rgba(255,255,255,.85), inset 0 0 0 1px rgba(120,132,148,.22); } }
+
       .mm-bal { display: flex; flex-direction: column; align-items: center; gap: var(--s-3xs); margin: var(--s-xs) 0 var(--s-m); }
       .mm-bal .big { font-size: var(--s-l); font-weight: 800; letter-spacing: -.025em; line-height: 1; }
       .mm-bal .iconbtn { width: 26px; height: 26px; } .mm-bal .iconbtn svg { width: 14px; height: 14px; }
@@ -141,6 +177,9 @@
       .tok .dot, .netrow .nd, .netpill .ndot { position: relative; overflow: hidden; }
       .lg { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; border-radius: 50%; background: inherit; }
       .tok-empty { padding: 1.6rem .6rem; text-align: center; }
+      /* section headers — MONEY (your dollars) and ASSETS (your coins) */
+      .grp-h { font: 700 var(--t-sm) var(--font); color: var(--dim); letter-spacing: .02em; padding: 1rem .3rem .35rem; }
+      #chainList .grp-h:first-child { padding-top: .35rem; }
 
       /* ── routed SHEETS (Receive/Send/Swap/Buy/Bridge/Networks/Sites/Menu/Agents) ── */
       .scrim { position: fixed; inset: 0; background: #05070ccc; backdrop-filter: blur(4px); opacity: 0; pointer-events: none; transition: opacity .18s; z-index: 60; }
@@ -243,7 +282,7 @@
   </head>
   <body>
     <div id="bar">
-      <span class="brand"><span class="mk">◈</span> Holo Wallet</span>
+      <span class="brand"><img class="mk-h" src="../icons/hologram-dark.svg" alt="Hologram" /> My Wallet</span>
       <span class="sp"></span>
       <button class="iconbtn hidden" id="settingsBtn" title="Menu"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M4 6h16M4 12h16M4 18h16"/></svg></button>
       <button class="iconbtn" id="fsBtn" title="Fullscreen (f)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M8 3H5a2 2 0 0 0-2 2v3M16 3h3a2 2 0 0 1 2 2v3M8 21H5a2 2 0 0 1-2-2v-3M16 21h3a2 2 0 0 0 2-2v-3"/></svg></button>
@@ -272,7 +311,7 @@
         <h2>Your recovery phrase</h2>
         <p class="muted">Write these 12 words down in order and keep them offline. They are the only backup.</p>
         <div class="seedgrid" id="seedgrid"></div>
-        <p class="warn">Never share them. Holo Wallet will never ask for them.</p>
+        <p class="warn">Never share them. We will never ask for them.</p>
         <label>Passphrase to protect this device (12 characters or more)</label>
         <input id="newpass" type="password" placeholder="a long passphrase you will remember" autocomplete="new-password" />
         <div class="row" style="margin-top:1rem">
@@ -318,6 +357,20 @@
           <button class="acctpill" id="acctPill" title="Copy address"><span class="av" id="acctAv">◈</span><span class="anm"><b id="acctName">Account 1</b><span class="did mono" id="walletDid"></span></span></button>
         </div>
 
+        <!-- the platinum card — the operator's own, hyper-real brushed metal (pure CSS, static). Their name
+             is engraved; the whole surface is one machined piece of platinum catching the light. -->
+        <div class="holo-cc" aria-label="Your Hologram card">
+          <div class="holo-cc-top">
+            <span class="holo-cc-brand"><img class="holo-cc-mk" src="../icons/hologram-dark.svg" alt="" />Hologram</span>
+            <span class="holo-cc-tier">SOVEREIGN</span>
+          </div>
+          <div class="holo-cc-chip" aria-hidden="true"></div>
+          <div class="holo-cc-foot">
+            <span class="holo-cc-name" id="ccName">Your Name</span>
+            <span class="holo-cc-seal" aria-hidden="true">◈</span>
+          </div>
+        </div>
+
         <div class="mm-bal">
           <div class="bigrow"><div class="big">$<span id="totalNum"></span></div><button class="iconbtn" id="refreshBtn" title="Refresh balances"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a9 9 0 1 1-2.6-6.4M21 4v5h-5"/></svg></button></div>
           <div class="chgline" id="netChg"></div>
@@ -331,7 +384,7 @@
         </div>
 
         <div class="mm-tabs">
-          <button class="mm-tab on" data-tab="tokens">Tokens</button>
+          <button class="mm-tab on" data-tab="tokens">Assets</button>
           <button class="mm-tab" data-tab="activity">Activity</button>
         </div>
 
@@ -681,6 +734,8 @@
         })();
         // anchor the account name in the one identity (its label · pc/npc) rather than a generic number
         if (hi && hi.label) $("acctName").textContent = hi.label + (hi.subjectType === "npc" ? " · agent" : "");
+        // engrave the operator's name on the platinum card
+        const ccNm = (hi && hi.label) || (currentOp && currentOp.label) || ""; if ($("ccName")) $("ccName").textContent = ccNm || "Cardholder";
         $("settingsBtn").classList.remove("hidden");
         if (window.HoloTeleport && did) HoloTeleport.stamp(did);
       }
@@ -721,7 +776,7 @@
         bsc: "smartchain", avalanche: "avalanchec", gnosis: "xdai", linea: "linea", scroll: "scroll", celo: "celo", blast: "blast", bitcoin: "bitcoin", solana: "solana", hyperliquid: "hyperliquid" };
       const chainLogo = (k) => `https://cdn.jsdelivr.net/gh/trustwallet/assets@master/blockchains/${TW_SLUG[k] || k}/info/logo.png`;
       // the popular networks (MetaMask's "All Networks" scope)
-      const NETS = ["ethereum", "base", "arbitrum", "optimism", "polygon", "bsc", "avalanche", "solana", "bitcoin", "plasma"];
+      const NETS = ["ethereum", "base", "arbitrum", "optimism", "polygon", "bsc", "avalanche", "solana", "bitcoin", "plasma", "hyperliquid"];
       const netAccent = (k) => CHAINS[k]?.accent || "var(--acc)";
       const scopeChains = () => selectedNet === "all" ? NETS : [selectedNet];
       // the asset rows in scope: USD₮ first where it lives, then the native coin, per chain
@@ -777,24 +832,43 @@
           + `<span class="sub">${chg == null ? "" : `<span class="chg ${chgCls}">${chgTxt}</span>`}</span></div>`
           + `<div class="bal"><b>${t.usd == null ? "" : "$" + esc(t.usd)}</b><span class="amt">${esc(t.amount)} ${esc(t.sym)}</span></div></div>`;
       }
-      // your holdings in the active scope, value sorted — painted from cache first, refreshed live.
-      // MetaMask-clean: only tokens you actually hold. A zero row is hidden once its balance is known;
-      // rows still loading stay until they answer, so nothing flashes empty on a warm open.
+      // The wallet reads as MONEY and ASSETS. MONEY is your dollars — Tether (USD₮ folded across every chain
+      // into ONE line) and Plasma (the gas-free USD₮0 rail). ASSETS is your coins — Bitcoin, Ethereum,
+      // Hyperliquid always present (even at zero, so a fresh wallet still looks like a wallet), plus anything
+      // else you actually hold. A known-zero, non-key row is hidden; a loading row stays until it answers.
+      const ASSET_KEYS = ["bitcoin", "ethereum", "hyperliquid"];
       function renderHoldings() {
-        const all = activeAssets().map((a) => {
-          const bal = balances[a.id], u = usdValue(a, bal);
-          return { a, bal, u, loading: bal == null, html: {
-            sym: a.sym, name: a.name, logo: a.tether ? USDT_LOGO : chainLogo(a.chain),
-            glyphBg: a.tether ? "#26a17b" : netAccent(a.chain), netColor: netAccent(a.chain),
-            change: a.tether ? change24("tether") : change24(CHAINS[a.chain].coingecko),
-            usd: u == null ? null : fmtUsd(u), amount: bal == null ? "…" : fmt(bal, a.decimals),
-          } };
-        });
-        const shown = all.filter((r) => r.loading || Number(r.bal) > 0).sort((x, y) => (y.u || 0) - (x.u || 0));
-        const anyLoaded = all.some((r) => !r.loading);
-        $("chainList").innerHTML = shown.length ? shown.map((r) => holdingRowHTML(r.html)).join("")
-          : (anyLoaded ? `<div class="tok-empty muted">No tokens yet. Buy or receive to get started.</div>`
-                       : `<div class="tok-empty muted">Loading…</div>`);
+        const scope = selectedNet === "all" ? NETS : [selectedNet];
+        const inScope = (k) => scope.includes(k);
+
+        // ── MONEY ──
+        const money = [];
+        let tUsd = 0, tAmt = 0, tKnown = false, tCapable = false;
+        for (const k of scope) {
+          if (k === "plasma" || !USDT[k]) continue; tCapable = true;
+          const b = balances["usdt:" + k]; if (b != null) { tKnown = true; const h = Number(b) / 10 ** USDT[k].decimals; tUsd += h; tAmt += h; }
+        }
+        if (tCapable) money.push({ key: true, loading: !tKnown, u: tKnown ? tUsd : null, html: {
+          sym: "USD₮", name: "Tether", logo: USDT_LOGO, glyphBg: "#26a17b", netColor: "#26a17b", change: change24("tether"),
+          usd: tKnown ? fmtUsd(tUsd) : null, amount: tKnown ? tAmt.toLocaleString(undefined, { maximumFractionDigits: 2 }) : "…" } });
+        if (inScope("plasma")) { const pB = balances["usdt:plasma"], pk = pB != null, pu = pk ? Number(pB) / 10 ** USDT.plasma.decimals : null;
+          money.push({ key: true, loading: !pk, u: pu, html: { sym: "USD₮0", name: "Plasma", logo: chainLogo("plasma"), glyphBg: CHAINS.plasma.accent, netColor: CHAINS.plasma.accent, change: change24("tether"),
+            usd: pk ? fmtUsd(pu) : null, amount: pk ? fmt(pB, USDT.plasma.decimals) : "…" } }); }
+
+        // ── ASSETS ──
+        const nativeRow = (chain, key) => { const b = balances[chain], u = usdOf(chain, b);
+          return { key, loading: b == null, u: u == null ? null : u, html: {
+            sym: CHAINS[chain].symbol, name: CHAINS[chain].name, logo: chainLogo(chain), glyphBg: netAccent(chain), netColor: netAccent(chain),
+            change: change24(CHAINS[chain].coingecko), usd: u == null ? null : fmtUsd(u), amount: b == null ? "…" : fmt(b, CHAINS[chain].decimals) } }; };
+        const assets = [], seen = new Set();
+        for (const c of ASSET_KEYS) { if (inScope(c)) { assets.push(nativeRow(c, true)); seen.add(c); } }
+        for (const k of scope) { if (seen.has(k) || k === "plasma") continue; const b = balances[k]; if (b != null && Number(b) > 0) { assets.push(nativeRow(k, false)); seen.add(k); } }
+
+        const keep = (r) => r.key || r.loading || (r.u != null && r.u > 0);
+        const mS = money.filter(keep).sort((a, b) => (b.u || 0) - (a.u || 0));
+        const aS = assets.filter(keep).sort((a, b) => (b.u || 0) - (a.u || 0));
+        const sec = (label, rows) => rows.length ? `<div class="grp-h">${label}</div>` + rows.map((r) => holdingRowHTML(r.html)).join("") : "";
+        $("chainList").innerHTML = (sec("Money", mS) + sec("Assets", aS)) || `<div class="tok-empty muted">Loading…</div>`;
       }
       function renderNet() {
         let total = 0, weighted = 0, any = false;
@@ -1063,7 +1137,7 @@
       function bootBench() {
         currentOp = { kappa: "did:holo:bench", did: "did:key:zBench", label: "Account 1", cred: null };
         show("view-wallet");
-        $("acctName").textContent = "Account 1";
+        $("acctName").textContent = "Account 1"; $("ccName").textContent = "Ilya";
         $("walletDid").textContent = "0x7F3b…4F61a";
         $("netName").textContent = "All Networks";
         $("totalNum").textContent = "40.23";
@@ -1196,7 +1270,7 @@
       // ── OS-wide signing seam: gate + reply; record + honor the connected-sites block list ──
       async function handleSignRequest(d, reply, origin) {
         if (!d || d.type !== "holo-wallet:sign-request") return;
-        if (!wallet.unlocked) return reply({ error: "wallet locked open Holo Wallet and unlock" });
+        if (!wallet.unlocked) return reply({ error: "wallet locked — open My Wallet and unlock" });
         const req = d.request || {};
         // ── AGENT (NPC) DELEGATION: if a grant is attached, the agent must be authorised to even ASK —
         //    verify it (hybrid Ed25519 ‖ ML-DSA, re-derived κ, unexpired — Law L5), check it isn't revoked,

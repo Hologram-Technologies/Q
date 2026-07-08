@@ -129,7 +129,7 @@ export async function makeNostrMailbox({ relays = DEFAULT_RELAYS, WebSocketImpl 
     return sent;                                            // 0 → no relay carried it (honest; caller may fall back)
   }
   // get() opens a short subscription per relay filtered by the coordinate topic and collects contents seen.
-  function get(coord, sinceSec) {
+  function get(coord, sinceSec, onData) {
     const since = sinceSec || Math.floor(Date.now() / 1000) - 300;
     const subId = "rdv-" + coord.slice(0, 12) + "-" + (msgCtr++);
     const filter = { kinds: [KIND], "#t": [coord], since };
@@ -139,7 +139,7 @@ export async function makeNostrMailbox({ relays = DEFAULT_RELAYS, WebSocketImpl 
         s.ws.send(JSON.stringify(["REQ", subId, filter]));
         const on = (e) => {
           try { const m = JSON.parse(typeof e.data === "string" ? e.data : new TextDecoder().decode(e.data));
-            if (m[0] === "EVENT" && m[1] === subId && m[2] && !seen.has(m[2].id)) { seen.add(m[2].id); out.push(m[2].content); } } catch {}
+            if (m[0] === "EVENT" && m[1] === subId && m[2] && !seen.has(m[2].id)) { seen.add(m[2].id); out.push(m[2].content); if (onData) { try { onData(m[2].content); } catch {} } } } catch {}   // onData = event-driven push (low-latency): drain on arrival, not on a poll
         };
         s.ws.addEventListener("message", on); s.subs.set(subId, () => { try { s.ws.send(JSON.stringify(["CLOSE", subId])); s.ws.removeEventListener("message", on); } catch {} });
       } catch {}

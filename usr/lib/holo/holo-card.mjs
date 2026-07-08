@@ -6,7 +6,7 @@
 // (/apps/resolve/#<name>). A refusal shows one honest sentence, never a fake card.
 //
 // Embed the resolver into ANY holo app streamed in the messenger with ONE line:
-//     import "/usr/lib/holo/holo-card.mjs";  then  <holo-card name="sha256:…"></holo-card>
+//     import "./holo-card.mjs";  then  <holo-card name="sha256:…"></holo-card>
 // or imperatively:  HoloCard.mount(el, name).  Lean: shadow-scoped CSS, blob previews revoked on
 // disconnect, one shared resolver + one app-index load across every card on the page.
 
