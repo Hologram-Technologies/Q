@@ -5,12 +5,12 @@
 // inherits it from a single call. This file supplies only the messenger's specifics: its session label, the
 // shell it opens, and a warm-paint thunk that pulls the messenger's M1 shell bytes during the biometric tap.
 
-import { signIn } from "../../usr/lib/holo/holo-signin.mjs";
+import { signIn } from "/usr/lib/holo/holo-signin.mjs";
 
 // warm the messenger shell (M1 SHELL_MANIFEST) during the human's look-and-tap, so post-auth boot is cache-hot.
 function warmMessengerShell() {
   try {
-    import("./holo-m1-boot.mjs")
+    import("/apps/holo-messenger/holo-m1-boot.mjs")
       .then((m) => { for (const p of (m.SHELL_MANIFEST || [])) { try { fetch(p, { cache: "force-cache" }).catch(() => {}); } catch {} } })
       .catch(() => {});
   } catch {}

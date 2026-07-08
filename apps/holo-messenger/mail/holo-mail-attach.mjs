@@ -5,13 +5,13 @@
 //   flag on:  localStorage.setItem("holo.mail.enabled","1")   - or open with ?mail=1
 //   manual:   window.HoloMailOpen()   (always available)
 
-import { makeMailProvider } from "./holo-mail-provider.mjs";
-import { makeMultiProvider } from "./holo-mail-multi.mjs";
-import { attachMailEngine } from "./holo-mail-engine.mjs";
-import { mountMailUI } from "./holo-mail-ui.mjs";
-import { makeOnboarding } from "./holo-mail-onboard.mjs";
-import { mountOnboard } from "./holo-mail-onboard-ui.mjs";
-import { makeMailHealth } from "./holo-mail-health.mjs";
+import { makeMailProvider } from "/apps/holo-messenger/mail/holo-mail-provider.mjs";
+import { makeMultiProvider } from "/apps/holo-messenger/mail/holo-mail-multi.mjs";
+import { attachMailEngine } from "/apps/holo-messenger/mail/holo-mail-engine.mjs";
+import { mountMailUI } from "/apps/holo-messenger/mail/holo-mail-ui.mjs";
+import { makeOnboarding } from "/apps/holo-messenger/mail/holo-mail-onboard.mjs";
+import { mountOnboard } from "/apps/holo-messenger/mail/holo-mail-onboard-ui.mjs";
+import { makeMailHealth } from "/apps/holo-messenger/mail/holo-mail-health.mjs";
 
 const BASE = "http://127.0.0.1:8793";              // the primary bridge (account #1). More = more ports.
 const SUPERVISOR = "http://127.0.0.1:8795";        // email-supervisor: spawns/owns one bridge per mailbox

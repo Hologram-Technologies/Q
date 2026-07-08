@@ -2079,9 +2079,8 @@ async function qGroundedContext(query) {
     } catch (e) {}
   }
   // M0 — Q REMEMBERS YOU: on EVERY ordinary turn (not only "do you remember"), surface the FEW things Q has
-  // genuinely remembered about the person that are relevant here, so it brings them up naturally. Composes WITH
-  // the world retrieval below (both may be present). Private + on-device; rides the KV-safe user-turn injection
-  // (qChatFallback prepends this to the last USER turn, never the pinned persona → TTFT preserved).
+  // genuinely remembered about the person that are relevant here. Composes WITH the world retrieval below. Private
+  // + on-device; rides the KV-safe user-turn injection (never the pinned persona → TTFT preserved).
   const world = qRetrieveContext(query);
   let youBlock = "";
   try {
@@ -2091,10 +2090,8 @@ async function qGroundedContext(query) {
   return [youBlock, world].filter(Boolean).join("\n\n");
 }
 
-// ── USER-MEMORY RECALL (Q Remembers You): score what Q has genuinely REMEMBERED about the person against this
-//    turn and return the few most relevant, so Q recalls your name / what you're building / what you told it
-//    WITHOUT you asking "do you remember". Reads ONLY the κ-sealed, AES-encrypted, on-device HoloMemory (recent
-//    across kinds + learned affinity + recency). Cheap, fail-soft, never blocks a reply. Never leaves the device. ──
+// USER-MEMORY RECALL (Q Remembers You): score what Q has genuinely REMEMBERED about the person against this turn
+// and return the few most relevant — private, on-device (recent + affinity + recency). Cheap, fail-soft.
 async function _qRecall(query, k = 4) {
   try {
     const M = (typeof window !== "undefined") && window.HoloMemory;
@@ -2120,8 +2117,7 @@ async function _qRecall(query, k = 4) {
   } catch (e) { return []; }
 }
 
-// Learn durable FACTS about the person from a turn (name · what they're building · stated likes/dislikes) and
-// seal them as a 'profile' memory, so recall has SUBSTANCE. Conservative heuristics, on-device, fail-soft.
+// Learn durable FACTS about the person from a turn (name/project/preference) and seal as a 'profile' memory.
 function _qLearnUser(text) {
   try {
     const M = (typeof window !== "undefined") && window.HoloMemory; if (!M || !M.remember) return;
@@ -2241,8 +2237,6 @@ async function buildQ() {
     c.members = [{ id: operator || "me", name: "You", admin: true }, { id: "did:holo:agent:q", name: "Q", admin: false }];
     const qFirst = (profileName || "").trim().split(/\s+/)[0];   // greet by first name when known (returning operator); graceful "Hey," on a fresh, unnamed first run
     let _greet = `Hey${qFirst ? " " + qFirst : ""}, I'm Q. I'm on this device, so anything you say here stays with you. Ask me anything, or @Q me in any chat.`;
-    // CONTINUITY (Q Remembers You): a returning operator is greeted with a warm "welcome back" that picks up where
-    // you left off. Fail-soft + FAST: memory hydration raced against 250ms so the greeting never delays boot.
     try {
       const M = (typeof window !== "undefined") && window.HoloMemory;
       if (M && M.summary) {
@@ -2314,8 +2308,6 @@ async function buildQ() {
       window.HoloQ = window.HoloQ || {};
       window.HoloQ.liveIngest = async (role, text) => { const t = String(text || "").trim(); if (!t) return null; let r = null; try { r = await c.thread.ingest({ text: t, sender: (role === "me" || role === "Me") ? "Me" : "Q", sentAt: now(), chat: "Q", source: "holo" }); } catch (e) {} try { _touch(c.meta.genesis); rebuildSoon(); } catch (e) {} return r; };
       window.HoloQ.persona = () => { try { return _qPersona(); } catch (e) { return ""; } };
-      // ONE MEMORY across chat AND voice (Q Remembers You): the voice call (q-live-hero) writes each spoken turn +
-      // pulls recall through THESE, so telling Q something out loud is remembered in tomorrow's chat, and vice versa.
       window.HoloQ.remember = (text) => { const t = String(text || "").trim(); if (!t) return; try { window.HoloMemory && window.HoloMemory.remember({ kind: "intent", text: t.slice(0, 400) }); } catch (e) {} try { _qLearnUser(t); } catch (e) {} };
       window.HoloQ.recall = (q, k) => { try { return _qRecall(q, k || 4); } catch (e) { return Promise.resolve([]); } };
     } catch (e) {}   // group @Q replies get the SAME identity-guard + humanize voice as the 1:1 chat
@@ -2461,7 +2453,7 @@ async function qReply(c, text, opts) {
   const ctl = (typeof AbortController !== "undefined") ? new AbortController() : null; _qAbort = ctl;
   await c.thread.ingest({ text, sender: "Me", sentAt: now(), chat: "Q", source: "holo" });
   try { if (typeof window !== "undefined" && window.HoloMemory) window.HoloMemory.remember({ kind: "intent", text: String(text).slice(0, 400) }); } catch (e) {}   // M3: Q remembers what you ask it — its real, private, κ-sealed memory grows with you (never surveillance: only your intents TO Q)
-  try { _qLearnUser(String(text)); } catch (e) {}   // …and LEARNS durable facts (name · what you're building · preferences) so recall has substance, not just a log
+  try { _qLearnUser(String(text)); } catch (e) {}   // …and LEARNS durable facts (name/project/preferences) so recall has substance
   // M6 — BOUNDED ACTION. If YOUR message is a command, Q does the deed (tier-gated) instead of only talking: read-only
   // briefs run for real, prohibited is refused with the rule, money stays in your hands. Decided ONLY from your turn
   // (never inbox content) → injection→action immune. A grounded string ⇒ handled; ingest it as Q's reply and stop.
