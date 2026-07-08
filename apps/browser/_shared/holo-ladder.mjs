@@ -61,13 +61,17 @@ export function detectPaywall(html, url) {
   const head = t.slice(0, 200000);
   const why = [];
   let strong = 0, weak = 0;
+  // STRONG — an unambiguous "this content is gated" statement, alone enough to lock.
   if (/"isAccessibleForFree"\s*:\s*(false|"false"|"False"|0)\b/i.test(head)) { strong++; why.push("ld:isAccessibleForFree=false"); }
   if (/<meta[^>]+(?:property|name)=["']article:content_tier["'][^>]+content=["'](?:locked|metered|premium)["']/i.test(head)) { strong++; why.push("meta:content_tier"); }
-  for (const tok of ["paywall", "regwall", "tp-modal", "meteredcontent", "piano-", "fc-app-content", "subscribe-wall", "premium-wall"]) {
-    if (head.toLowerCase().includes(tok)) { strong++; why.push("dom:" + tok); break; }
-  }
-  if (/subscribe to (?:continue|read)|to continue reading|already a subscriber|subscribers? only|create a free account to (?:read|continue)/i.test(head)) { weak++; why.push("copy:subscribe"); }
-  if (/data-truncated|article-body--truncated|paywalled-content|is-locked\b/i.test(head)) { weak++; why.push("attr:truncated"); }
+  // a real wall ELEMENT (a class/id NAMES it) — not a vendor script that merely happens to be loaded.
+  if (/(?:class|id)\s*=\s*["'][^"']*(?:paywall|reg-?wall|subscribe-wall|subscription-wall|premium-wall|article-gate|paywalled-content|hard-paywall)[^"']*["']/i.test(head)) { strong++; why.push("dom:wall-element"); }
+  // WEAK — corroborating only; TWO are needed to lock. A vendor meter being PRESENT (piano/tinypass/
+  // poool/tp-modal/fc-app-content) means the site COULD wall, not that THIS page is walled — many free
+  // articles ship it for newsletters/consent (BBC etc.), so it can never lock on its own.
+  if (/subscribe to (?:continue|read)|to continue reading|continue reading this article|already a subscriber|subscribers? only|create a free account to (?:read|continue)|sign in to (?:keep|continue) reading/i.test(head)) { weak++; why.push("copy:subscribe"); }
+  if (/data-truncated|article-body--truncated|is-locked["'\s>]/i.test(head)) { weak++; why.push("attr:truncated"); }
+  if (/\b(?:tinypass|piano\.io|poool|tp-modal|fc-app-content|meteredcontent)\b/i.test(head)) { weak++; why.push("vendor:meter"); }
   const locked = strong >= 1 || weak >= 2;
   return { locked, why, ruled: !!ruleFor(url) };
 }
