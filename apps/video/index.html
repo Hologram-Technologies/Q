@@ -3,6 +3,9 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <!-- Discord Activity host: route any external hosts through Discord's URL-mapping proxy.
+         Classic + first so it patches fetch/XHR/media-src before any app module runs; no-op off Discord. -->
+    <script src="../holo-messenger/holo-discord-proxy.js"></script>
     <title>Holo Video Hologram OS</title>
     <meta name="description" content="Holo Video the hologram-native video player: content-addressed, adaptive (HLS/DASH), low-latency, WebGPU present. Plays any holospace video in any browser." />
     <!-- The native video engine: video.js 8 (HTML5 <video> + Media Source Extensions),

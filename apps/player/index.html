@@ -3,6 +3,9 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <!-- Discord Activity host: route external stream/art hosts through Discord's URL-mapping proxy.
+         Classic + first so it patches fetch/XHR/media-src before any app module runs; no-op off Discord. -->
+    <script src="../holo-messenger/holo-discord-proxy.js"></script>
     <title>Holo Player</title>
     <meta name="description" content="Holo Player a content-addressed media library for Hologram OS. Jellyfin-faithful discovery (hero · rails · detail), every title streamed natively through Holo Video and ranked by HoloRank, a transparent on-device recommender. Your media, your way no server, no tracking, rooted in the UOR substrate." />
     <link rel="stylesheet" href="../../_shared/holo-mobile.css" data-holo-shared="holo-mobile.css" />
