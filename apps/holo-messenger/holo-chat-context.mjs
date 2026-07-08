@@ -198,7 +198,7 @@ export async function openContextChannel(ctx, { meName = null, label = null, rol
   // throwaway relay key signs events (relay-acceptance only, never a trust root). Fail-soft: no relay → no-op, and
   // BroadcastChannel still carries same-device. `window.__holoChatMailbox` overrides the backend (tests / P6 inject
   // a deterministic mailbox). Gated to 1:1 DM rooms + real hosted origins, so it never fires in Node/localhost.
-  let mail = null, rtc = null, rtcStop = false;
+  let mail = null, rtc = null, rtcStop = false, rtcClose = null;
   try {
     const override = (typeof window !== "undefined" && window.__holoChatMailbox) || null;
     const hosted = typeof location !== "undefined" && !!location.hostname && !/^(127\.0\.0\.1|localhost|\[::1\])$/.test(location.hostname);
@@ -223,15 +223,18 @@ export async function openContextChannel(ctx, { meName = null, label = null, rol
         // message. When the channel opens, sends prefer it. Verify-on-receipt is unchanged (_ingest, L5).
         if (role && typeof RTCPeerConnection !== "undefined" && mbox.get) {
           const ICE = [{ urls: ["stun:stun.l.google.com:19302", "stun:global.stun.twilio.com:3478"] }];
+          const _hs = [];   // offerSide/answerSide handles → { close } that shuts the RTCPeerConnection (not just the data channel)
+          const _closeAll = () => { for (const h of _hs) { try { h && h.close && h.close(); } catch {} } _hs.length = 0; };
+          rtcClose = _closeAll;   // so the channel's close() tears the pc(s) down — otherwise ICE churns forever (a real leak)
           const onChannel = (dc) => {
             try {
               dc.onmessage = async (e) => { try { const w = JSON.parse(e.data); const m = await openWire(_key, w); if (m) _ingest(m); } catch {} };
-              rtc = { post: (sealed) => { try { if (dc.readyState === "open") dc.send(JSON.stringify(sealed)); } catch {} }, close: () => { try { dc.close(); } catch {} } };
+              rtc = { post: (sealed) => { try { if (dc.readyState === "open") dc.send(JSON.stringify(sealed)); } catch {} } };
             } catch {}
           };
           const rk = room + "|rtc";
-          if (role === "host") { const arm = () => { if (rtcStop) return; rdv.answerSide({ pairKappa: rk, mailbox: mbox, onChannel, iceServers: ICE }).then(() => { if (!rtcStop) arm(); }).catch(() => { if (!rtcStop) setTimeout(arm, 1500); }); }; arm(); }
-          else { rdv.offerSide({ pairKappa: rk, mailbox: mbox, onChannel, iceServers: ICE }).catch(() => {}); }
+          if (role === "host") { const arm = () => { if (rtcStop) return; rdv.answerSide({ pairKappa: rk, mailbox: mbox, onChannel, iceServers: ICE }).then((h) => { if (h) _hs.push(h); if (rtcStop) _closeAll(); else arm(); }).catch(() => { if (!rtcStop) setTimeout(arm, 1500); }); }; arm(); }
+          else { rdv.offerSide({ pairKappa: rk, mailbox: mbox, onChannel, iceServers: ICE }).then((h) => { if (h) { _hs.push(h); if (rtcStop) _closeAll(); } }).catch(() => {}); }
         }
         mail._mbox = mbox;   // keep a handle so close() can shut the shared mailbox after rtc stops
       } else { try { mbox && mbox.close && mbox.close(); } catch {} }
@@ -258,7 +261,7 @@ export async function openContextChannel(ctx, { meName = null, label = null, rol
     history: () => log.slice(),
     onMessage: (cb) => { listeners.add(cb); return () => listeners.delete(cb); },
     send,
-    close: () => { rtcStop = true; try { rtc && rtc.close(); } catch {} try { bc && bc.close(); } catch {} try { relay && relay.close(); } catch {} try { mail && mail.close(); mail && mail._mbox && mail._mbox.close && mail._mbox.close(); } catch {} listeners.clear(); },
+    close: () => { rtcStop = true; try { rtcClose && rtcClose(); } catch {} try { bc && bc.close(); } catch {} try { relay && relay.close(); } catch {} try { mail && mail.close(); mail && mail._mbox && mail._mbox.close && mail._mbox.close(); } catch {} listeners.clear(); },
   };
 }
 

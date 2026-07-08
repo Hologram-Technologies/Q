@@ -1,22 +1,22 @@
 {
  "v": 1,
- "created": 1783533707469,
- "aggregate": "9d67072b4e44aa7735ea56845ee8ea8859bba5fd001357d80b2dc7e5258e893a",
+ "created": 1783534197283,
+ "aggregate": "a502720b937b11e2080b69dc9b228912a7b49659db04b7471d1cbd3f516ad82b",
  "assets": [
   {
    "path": "/apps/holo-messenger/app.html",
-   "kappa": "0593d058c25017948f076de1c06df32de752acd635b80b7aed87293b63ceaf50",
-   "bytes": 23362
+   "kappa": "843e8ddc9cae34749016af2a62b99114cde6a32534a80a40ed9bb38974b34a11",
+   "bytes": 33771
   },
   {
    "path": "/apps/holo-messenger/_vendor/ui/chat-ui.bundle.js",
-   "kappa": "4c051fcc43d18bd6d38522c88d351be71da18c1c30ed326c05c9631a337a6691",
-   "bytes": 528089
+   "kappa": "c4c0ae71850c7c7e6ae8038d04a06cf5d2d309ce66a0d1fcb481682b2fb598b3",
+   "bytes": 528216
   },
   {
    "path": "/apps/holo-messenger/_vendor/ui/chat-ui.bundle.css",
-   "kappa": "bb4f1bc03d233d86f6d6b3b79793f49de81d90428ca61b42e9c73b4ac8d74d94",
-   "bytes": 186893
+   "kappa": "7d780c6f5f270b135db0dc1dc413786668ced20437a3b4437cbe218bc1ac1fca",
+   "bytes": 186849
   },
   {
    "path": "/apps/holo-messenger/holo-messenger-login.mjs",
@@ -35,8 +35,8 @@
   },
   {
    "path": "/apps/holo-messenger/holo-messenger-weave.mjs",
-   "kappa": "9f62d9e0480be19a114542104a51a4e69da89a49c2960d75910ed0b57ea41c55",
-   "bytes": 8742
+   "kappa": "232d735a20f3a27c22126ea42cbfc7768b9c2db16c52b110980e82d37e710c0b",
+   "bytes": 8723
   },
   {
    "path": "/apps/holo-messenger/messenger-skin.mjs",
@@ -45,8 +45,8 @@
   },
   {
    "path": "/apps/holo-messenger/messenger-skins.css",
-   "kappa": "7d883ae6cf3e4495a3377e83d4cedef8f4141c15cf8166884e0efad2592f15e9",
-   "bytes": 23583
+   "kappa": "4b2007b56d1c82c5d7f797a59e864a921bc0bd171606b22602678475290f5026",
+   "bytes": 23545
   },
   {
    "path": "/apps/holo-messenger/messenger-sw-register.mjs",
@@ -70,8 +70,8 @@
   },
   {
    "path": "/apps/holo-messenger/mail/holo-mail-attach.mjs",
-   "kappa": "9e602f8270c163a794c8e1b9d455569a2069c15e2f7db955ded05659b326567b",
-   "bytes": 11614
+   "kappa": "ab9519718341527bc28daba9fd6a0c372017b1d3f2bcdfc5488f435063192703",
+   "bytes": 11446
   },
   {
    "path": "/apps/holo-messenger/_vendor/wallpaper-default.jpg",

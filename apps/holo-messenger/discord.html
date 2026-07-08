@@ -2,6 +2,9 @@
 <html lang="en"><head>
 <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <title>Holo Messenger</title>
+<!-- Discord Activity host: route external hosts through Discord's URL-mapping proxy. Classic + first so it
+     patches fetch/XHR/media-src before any module runs; strict no-op off *.discordsays.com. -->
+<script src="./holo-discord-proxy.js"></script>
 <!-- ── DISCORD ACTIVITY ENTRY (M1 — FIRST PAINT) ──────────────────────────────────────────────────────
      The Holo Messenger runtime, hosted inside a Discord Activity iframe (origin <APP_ID>.discordsays.com).
      This is a THIN host shell — a sibling of the native/CEF entry (app.html), NOT a fork of the runtime.
