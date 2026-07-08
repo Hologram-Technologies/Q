@@ -6,7 +6,7 @@
      ?guest=1. Full machine-readable contract in script#holo-agent-login (JSON). Mirrors holo://login. -->
 <meta name="ai-agent-login" content="Guest mode: act now with window.HoloLogin.guest() or ?guest=1 (ephemeral, no human). Biometric ('It's me') needs the person. See script#holo-agent-login.">
 
-<link rel="stylesheet" href="./_vendor/ui/chat-ui.bundle.css?v=aba64806c722">
+<link rel="stylesheet" href="./_vendor/ui/chat-ui.bundle.css?v=6360753a8fc1">
 <style>html,body{height:100%;margin:0;background:#0b141a;color-scheme:dark}#root{height:100vh}</style>
 <link rel="preload" as="image" href="./_vendor/wallpaper-default.jpg" fetchpriority="high">
 <!-- ── TEE SIGN-IN GATE (holo-messenger-login.mjs) ─────────────────────────────────────────────────
@@ -206,7 +206,7 @@
 
 <script type="module">
   // ?v=N - bump on each deploy so the browser can never serve a stale cached bundle (the cause of a frozen/old build).
-  import "./_vendor/ui/chat-ui.bundle.js?v=85fc48c2a927";   // → window.HoloMessengerUI
+  import "./_vendor/ui/chat-ui.bundle.js?v=a0396064dc33";   // → window.HoloMessengerUI
   // Opt-in: render the WhatsApp UX from STREAMING shadcn κ-components instead of the chatscope bundle.
   // Lazy — the module loads ONLY when opted in (?ui=shadcn or holo.ui.shadcn=1); the default boot never
   // parses it. Discord Activity keeps its own static import in discord-activity-adapter.mjs.

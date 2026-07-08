@@ -22,12 +22,16 @@
 
   var VIDEO_ID = "holo.video";                                    // the dock pin id (shared with holo-dock.js)
   var PIN_LS = "holo-video.dockpin.v1";                           // one-time pin guard (respects a later removal)
-  // The pinned demo reel — streamed same-origin through the host at the HIGHEST quality the source offers
-  // (up to 8K). YouTube serves no muxed progressive above 720p, so /sc/vstream resolves the best video +
-  // audio and ffmpeg COPY-muxes them (no re-encode → zero quality loss); the host caches the muxed file so
-  // the first play warms it and every later play is instant + seekable. open(src) overrides it.
-  var DEFAULT_SRC = "/apps/video/video/big-buck-bunny-360p.mp4";
-  // Offline / network-failure fallback — a complete progressive MP4 served same-origin (has audio).
+  // The pinned demo reel is a YouTube video, played through YouTube's OWN HTML5 IFrame player. This is the
+  // ONE path that works EVERYWHERE — the static Holo bundle (github.io, no /sc backend), a mounted mirror,
+  // and the desktop — instantly, for first-time users, at full adaptive quality (up to the display: 1080p/4K
+  // where available, with real audio). No yt-dlp, no server mux. The player lives INSIDE our glass frame:
+  // drag · resize · immerse · minimise · close stay ours; YouTube supplies the picture, transport, and the
+  // quality ladder. open(src) overrides it — a YouTube URL/id → this path; any other URL → the <video> path.
+  var YT_DEFAULT_ID = "AOCQp6lAfEE";
+  var DEFAULT_SRC = "https://www.youtube.com/watch?v=" + YT_DEFAULT_ID;
+  // Offline / network-failure fallback — a complete progressive MP4 served same-origin (has audio). Used for
+  // the native <video> path, and if YouTube itself can't load (blocked / offline) the reel folds to it.
   var FALLBACK_SRC = "/apps/video/video/big-buck-bunny-360p.mp4";
   var MIN_W = 240, MIN_H = 150, EDGE = 8;
   var PHI = 1.618;                                                 // φ — the whole window obeys the golden ratio (size · shape · corner gap)
@@ -84,6 +88,13 @@
       // in full screen it switches to contain so the whole frame is shown, nothing cropped.
       ".hvid-video{width:100%;height:100%;object-fit:cover;display:block;background:#04050a}",
       ".hvid.fs .hvid-video{object-fit:contain}",
+      // YouTube surface — the IFrame fills the stage; in YT mode the native <video> and OUR transport hide,
+      // because YouTube brings its own picture, controls and quality ladder (one set of controls, not two).
+      ".hvid-yt{position:absolute;inset:0;z-index:2;display:none;background:#04050a}",
+      ".hvid-yt iframe{width:100%;height:100%;border:0;display:block}",
+      ".hvid.yt .hvid-yt{display:block}",
+      ".hvid.yt .hvid-video{display:none}",
+      ".hvid.yt .hvid-center,.hvid.yt .hvid-ctl{display:none}",
       // top glass bar — the drag handle + the two corner verbs (immerse · close). Fades with the UI.
       ".hvid-top{position:absolute;left:0;right:0;top:0;height:46px;z-index:4;display:flex;align-items:center;",
         "justify-content:flex-end;gap:7px;padding:0 9px;cursor:grab;",
@@ -230,8 +241,84 @@
     }
     return b;
   }
+  // ── YouTube engine (the pinned reel plays through YouTube's own IFrame player) ───────────────
+  function ytIdOf(src) {
+    if (!src) return null;
+    var s = String(src);
+    if (/^[\w-]{11}$/.test(s)) return s;                           // a bare 11-char video id
+    var m = s.match(/(?:youtube\.com\/(?:watch\?(?:.*&)?v=|embed\/|shorts\/|v\/)|youtu\.be\/|music\.youtube\.com\/watch\?(?:.*&)?v=)([\w-]{11})/i);
+    return m ? m[1] : null;
+  }
+  var _ytApiP = null;
+  function loadYtApi() {
+    if (W.YT && W.YT.Player) return Promise.resolve(W.YT);
+    if (_ytApiP) return _ytApiP;
+    _ytApiP = new Promise(function (res) {
+      var prev = W.onYouTubeIframeAPIReady;
+      W.onYouTubeIframeAPIReady = function () { try { prev && prev(); } catch (e) {} res(W.YT); };
+      var s = DOC.createElement("script"); s.src = "https://www.youtube.com/iframe_api"; s.async = true;
+      s.onerror = function () { res(null); };
+      (DOC.head || DOC.documentElement).appendChild(s);
+    });
+    return _ytApiP;
+  }
+  // Mount (or re-cue) the YouTube player for `id`. autoplay is only ever true inside a user gesture (a tap),
+  // so the browser lets it play WITH sound; the prewarm cues it silently so the first tap is instant.
+  function mountYt(id, autoplay) {
+    if (!VID) return;
+    VID.ytId = id;
+    loadYtApi().then(function (YT) {
+      if (!VID || VID.ytId !== id) return;                         // superseded by a newer open()
+      if (!YT || !YT.Player) { ytFail(); return; }
+      if (VID.yt && VID.yt.loadVideoById) {                        // reuse the live player → instant swap
+        try { autoplay ? VID.yt.loadVideoById(id) : VID.yt.cueVideoById(id); } catch (e) {}
+        return;
+      }
+      // YT.Player REPLACES the element it's given with the <iframe>. Give it a throwaway INNER host so our
+      // styled .hvid-yt container survives (the iframe lands inside it, filling the stage).
+      var host = DOC.createElement("div"); host.style.cssText = "width:100%;height:100%";
+      try { VID.ytHost.innerHTML = ""; VID.ytHost.appendChild(host); } catch (e) {}
+      try {
+        VID.yt = new YT.Player(host, {
+          videoId: id, width: "100%", height: "100%",
+          playerVars: { autoplay: autoplay ? 1 : 0, modestbranding: 1, rel: 0, playsinline: 1, fs: 1, iv_load_policy: 3 },
+          events: {
+            onReady: function (e) {
+              VID.win.classList.remove("loading");
+              try { e.target.setPlaybackQuality("hd1080"); } catch (x) {}     // hint the ladder high; YouTube caps to the connection
+              try { e.target.unMute(); e.target.setVolume(100); } catch (x) {}
+              if (VID.ytWantPlay) { VID.ytWantPlay = false; try { e.target.playVideo(); } catch (x) {} }
+            },
+            onStateChange: function (e) {
+              if (e.data === 3) VID.win.classList.add("loading");            // buffering
+              else if (e.data === 1 || e.data === 2 || e.data === 0) VID.win.classList.remove("loading");
+              VID.ytPlaying = (e.data === 1);
+              VID.win.classList.toggle("playing", VID.ytPlaying);
+              reflectTile();
+              if (e.data === 0) showUi();                                     // ended → surface the chrome
+            },
+            onError: function () { ytFail(); }
+          }
+        });
+      } catch (e) { ytFail(); }
+    });
+  }
+  // YouTube couldn't load (blocked / offline / removed video) → fold to the local progressive clip so the
+  // window is never blank, and it still has audio.
+  function ytFail() {
+    if (!VID) return;
+    VID.ytId = null; VID.ytPlaying = false;
+    try { if (VID.yt && VID.yt.destroy) VID.yt.destroy(); } catch (e) {}
+    VID.yt = null;
+    VID.win.classList.remove("yt", "loading");
+    if (VID.ytHost) VID.ytHost.innerHTML = "";
+    var v = VID.video;
+    v.removeAttribute("data-fellback"); v.setAttribute("src", FALLBACK_SRC);
+    try { v.load(); v.play().catch(function () {}); } catch (e) {}
+  }
+
   // ── the singleton player window ───────────────────────────────────────────────────────────
-  var VID = null;                                                 // { win, video, els…, hover, hideT }
+  var VID = null;                                                 // { win, video, yt, ytHost, els…, hover, hideT }
   function isFs(win) { var fe = DOC.fullscreenElement || DOC.webkitFullscreenElement; return fe === win; }
 
   function build() {
@@ -240,6 +327,7 @@
     win.innerHTML =
       '<div class="hvid-stage">' +
         '<video class="hvid-video" playsinline preload="metadata"></video>' +
+        '<div class="hvid-yt"></div>' +
         '<div class="hvid-center"><button class="hvid-play-big" aria-label="Play">' + I.play + '</button></div>' +
         '<div class="hvid-top">' +
           '<button class="hvid-btn hvid-min" aria-label="Minimize">' + I.min + '</button>' +
@@ -268,7 +356,7 @@
       time: q(".hvid-time"), grip: q(".hvid-grip"), vol: q("input"),
       playBig: q(".hvid-play-big"), play: q(".hvid-play"), mute: q(".hvid-mute")
     };
-    VID = { win: win, video: v, els: els, hover: false, hideT: 0 };
+    VID = { win: win, video: v, ytHost: q(".hvid-yt"), yt: null, ytId: null, ytPlaying: false, els: els, hover: false, hideT: 0 };
 
     // place + size: ALWAYS a compact GOLDEN picture-in-picture tucked into the canvas' bottom-left —
     // ~30% of the canvas width (small enough to work behind, big enough to watch), the frame a golden
@@ -361,6 +449,7 @@
     els.stage.addEventListener("click", function (e) {                // tap the picture → play/pause (but not the chrome)
       if (e.target.closest(".hvid-top,.hvid-ctl,.hvid-grip,.hvid-center")) return;
       if (VID && VID.min) { restore(); return; }                      // a peek is a one-tap pop-back
+      if (VID && VID.win.classList.contains("yt")) return;            // YouTube owns its own picture taps
       toggle();
     });
     els.win.querySelector(".hvid-min").addEventListener("click", toggleMin);
@@ -432,13 +521,16 @@
       var active = VID.hover || isFs(els.win);
       if (!active) return;
       var t = e.target; if (t && (t.tagName === "INPUT" || t.tagName === "TEXTAREA" || t.isContentEditable)) return;
-      var v = els.video;
-      if (e.key === " " || e.key.toLowerCase() === "k") { e.preventDefault(); v.paused ? v.play().catch(function () {}) : v.pause(); }
-      else if (e.key.toLowerCase() === "f") { e.preventDefault(); toggleFs(els.win); }
+      var v = els.video, yt = VID.win.classList.contains("yt");
+      if (e.key.toLowerCase() === "f") { e.preventDefault(); toggleFs(els.win); }
+      else if (e.key === "Escape" && !isFs(els.win)) { close(); }
+      else if (yt) {                                                   // YouTube's own player handles space/seek/mute when focused
+        if (e.key === " " || e.key.toLowerCase() === "k") { e.preventDefault(); try { VID.ytPlaying ? VID.yt.pauseVideo() : VID.yt.playVideo(); } catch (x) {} }
+      }
+      else if (e.key === " " || e.key.toLowerCase() === "k") { e.preventDefault(); v.paused ? v.play().catch(function () {}) : v.pause(); }
       else if (e.key.toLowerCase() === "m") { v.muted = !v.muted; }
       else if (e.key === "ArrowRight") { v.currentTime = Math.min((v.duration || 0), v.currentTime + 5); showUi(); }
       else if (e.key === "ArrowLeft") { v.currentTime = Math.max(0, v.currentTime - 5); showUi(); }
-      else if (e.key === "Escape" && !isFs(els.win)) { close(); }
     });
   }
 
@@ -535,6 +627,8 @@
     if (!VID || !VID.win) return;
     try { if (isFs(VID.win)) (DOC.exitFullscreen || DOC.webkitExitFullscreen).call(DOC); } catch (e) {}
     try { VID.video.pause(); } catch (e) {}
+    try { if (VID.yt && VID.yt.pauseVideo) VID.yt.pauseVideo(); } catch (e) {}
+    VID.ytPlaying = false;
     VID.win.style.display = "none"; VID.suspended = true; reflectTile();
   }
 
@@ -550,12 +644,32 @@
     applySharedGeom();                                             // land in the shared media slot (where music last sat)
     clampIntoFrame();                                              // …and ALWAYS inside the current canvas frame
     S.claim("video");                                              // take the slot → the music window suspends (no audio clash)
-    var url = src || v.getAttribute("src") || DEFAULT_SRC;
+    var url = src || (VID.ytId ? DEFAULT_SRC : v.getAttribute("src")) || DEFAULT_SRC;
+    var autoplay = opts.autoplay !== false;
+    var ytId = ytIdOf(url);
+    if (ytId) {                                                     // ── YouTube reel: our frame, YouTube's picture + quality ──
+      win.classList.add("yt");
+      try { v.pause(); } catch (e) {}                              // the native element steps aside
+      VID.ytWantPlay = autoplay;                                   // if the player is still mounting, play the moment it's ready
+      if (VID.ytId === ytId && VID.yt) {                           // already the live reel → just resume (instant)
+        win.classList.remove("loading");
+        if (autoplay) { VID.ytWantPlay = false; try { VID.yt.playVideo(); } catch (e) {} }
+      } else {
+        win.classList.add("loading");
+        mountYt(ytId, autoplay);
+      }
+      showUi(); reflectTile(); publishGeom();
+      return VID;
+    }
+    // ── native <video> path (local / direct MP4) ──
+    win.classList.remove("yt");
+    try { if (VID.yt && VID.yt.pauseVideo) VID.yt.pauseVideo(); } catch (e) {}
+    VID.ytPlaying = false;
     if (opts.poster) v.setAttribute("poster", opts.poster);
     if (url !== v.getAttribute("src")) { v.removeAttribute("data-fellback"); v.setAttribute("src", url); try { v.load(); } catch (e) {} }
     v.muted = false; v.volume = (opts.volume != null ? opts.volume : 1);   // audio ON by default — a tap means "watch + listen"
     showUi();
-    if (opts.autoplay !== false) { v.play().catch(function () {}); }   // a gesture (the dock tap) carried us here → play
+    if (autoplay) { v.play().catch(function () {}); }              // a gesture (the dock tap) carried us here → play
     reflectTile(); publishGeom();
     return VID;
   }
@@ -563,6 +677,8 @@
     if (!VID) return;
     try { if (isFs(VID.win)) (DOC.exitFullscreen || DOC.webkitExitFullscreen).call(DOC); } catch (e) {}
     try { VID.video.pause(); } catch (e) {}
+    try { if (VID.yt && VID.yt.destroy) VID.yt.destroy(); } catch (e) {}
+    VID.yt = null; VID.ytId = null; VID.ytPlaying = false;
     if (VID.win.parentNode) VID.win.remove();
     VID = null; reflectTile();
   }
@@ -571,7 +687,9 @@
   // ── the live DOCK TILE: a glass play-orb, the video sibling of the spinning music disc ───────
   var vidTileEl = null;
   function reflectTile() {
-    var on = !!(VID && VID.video && DOC.body.contains(VID.win) && !VID.suspended && !VID.video.paused);
+    var on;
+    if (VID && VID.win && VID.win.classList.contains("yt")) on = !!(DOC.body.contains(VID.win) && !VID.suspended && VID.ytPlaying);
+    else on = !!(VID && VID.video && DOC.body.contains(VID.win) && !VID.suspended && !VID.video.paused);
     if (vidTileEl) vidTileEl.classList.toggle("playing", on);
   }
   function dockTile() {
@@ -619,9 +737,14 @@
     try {
       build();                                                     // create the player DOM now (off the click path)
       VID.win.style.display = "none"; VID.suspended = true;        // hidden + not claiming the media slot → music plays on
-      var v = VID.video;
-      v.preload = "auto";                                          // warm the host mux + buffer initial media ahead of the tap
-      if (!v.getAttribute("src")) { v.setAttribute("src", DEFAULT_SRC); try { v.load(); } catch (e) {} }
+      var ytId = ytIdOf(DEFAULT_SRC);
+      if (ytId) {                                                  // pre-mount the YouTube reel CUED (no autoplay) → the first tap is instant
+        VID.win.classList.add("yt"); VID.ytWantPlay = false; mountYt(ytId, false);
+      } else {
+        var v = VID.video;
+        v.preload = "auto";                                        // warm the buffer ahead of the tap
+        if (!v.getAttribute("src")) { v.setAttribute("src", DEFAULT_SRC); try { v.load(); } catch (e) {} }
+      }
     } catch (e) { prewarmed = false; }
   }
 

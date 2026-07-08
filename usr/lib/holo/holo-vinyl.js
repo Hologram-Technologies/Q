@@ -231,6 +231,90 @@
   function esc(s) { return String(s == null ? "" : s).replace(/"/g, "&quot;").replace(/</g, "&lt;"); }
   function escTxt(s) { var d = DOC.createElement("div"); d.textContent = s == null ? "" : s; return d.innerHTML; }
 
+  // ── SoundCloud streaming engine (works with NO backend) ─────────────────────────────────────
+  // The /sc/stream proxy is a local yt-dlp backend that a static host (github.io) never runs, so SoundCloud
+  // tracks play through SoundCloud's OWN HTML5 Widget (a hidden iframe) via its Widget API — it streams
+  // INSTANTLY, needs no backend, and works for first-time users. One shared hidden widget drives whichever
+  // disc is the active "now playing"; its events feed the SAME player state the UI already paints (position ·
+  // duration · finish → next). Kappa (local lossless) tracks keep their verified-bytes Audio + Hi-Fi path.
+  var SC_RE = /^https?:\/\/(?:[\w-]+\.)?(?:soundcloud\.com|snd\.sc|on\.soundcloud\.com)\//i;
+  function isScUrl(u) { return !!(u && SC_RE.test(u)); }
+  function trackAt(w, i) { var ts = (w && w.config && w.config.tracks) || []; if (!ts.length) return null; return ts[((i % ts.length) + ts.length) % ts.length] || null; }
+  function curTrack(w) { return trackAt(w, w.idx || 0); }
+  function inSc(w) { var t = curTrack(w); return !!(t && !t.kappa && isScUrl(t.url)); }
+  // one time/duration accessor so the pill · seek · prev all read the right source (widget vs element)
+  function curTime(w) { return inSc(w) ? (w._scPos || 0) : (w.audio ? (w.audio.currentTime || 0) : 0); }
+  function curDur(w) { return inSc(w) ? (w._scDur || 0) : (w.audio && isFinite(w.audio.duration) ? w.audio.duration : 0); }
+
+  var _scApiP = null, _scWidgetP = null, _scWdg = null, _scOwner = null;
+  function loadScApi() {
+    if (W.SC && W.SC.Widget) return Promise.resolve(W.SC.Widget);
+    if (_scApiP) return _scApiP;
+    _scApiP = new Promise(function (resolve) {
+      var s = DOC.createElement("script"); s.src = "https://w.soundcloud.com/player/api.js";
+      s.onload = function () { resolve(W.SC && W.SC.Widget); };
+      s.onerror = function () { resolve(null); };
+      (DOC.head || DOC.documentElement).appendChild(s);
+    });
+    return _scApiP;
+  }
+  function ensureScWidget() {
+    if (_scWidgetP) return _scWidgetP;
+    _scWidgetP = loadScApi().then(function (Widget) {
+      if (!Widget) return null;
+      var f = DOC.createElement("iframe");
+      f.id = "holo-sc-widget"; f.allow = "autoplay"; f.setAttribute("scrolling", "no");
+      f.style.cssText = "position:fixed;left:-9999px;top:-9999px;width:340px;height:120px;border:0;opacity:0;pointer-events:none;visibility:hidden";
+      f.src = "https://w.soundcloud.com/player/?url=" + encodeURIComponent("https://soundcloud.com/ben-bohmer/begin-again") +
+              "&auto_play=false&hide_related=true&show_comments=false&show_user=false&show_reposts=false&visual=false&buying=false&sharing=false&download=false&show_playcount=false&single_active=true";
+      (DOC.body || DOC.documentElement).appendChild(f);
+      _scWdg = Widget(f);
+      return new Promise(function (resolve) {
+        _scWdg.bind(Widget.Events.READY, function () { wireScEvents(Widget); resolve(_scWdg); });
+      });
+    });
+    return _scWidgetP;
+  }
+  function wireScEvents(Widget) {
+    if (!_scWdg) return;
+    _scWdg.bind(Widget.Events.PLAY, function () { var w = _scOwner; if (w && !w.playing) setPlaying(w, true); });
+    _scWdg.bind(Widget.Events.PAUSE, function () { var w = _scOwner; if (w && w.playing && !w._scSwitching) setPlaying(w, false); });
+    _scWdg.bind(Widget.Events.FINISH, function () { var w = _scOwner; if (w) next(w); });
+    _scWdg.bind(Widget.Events.ERROR, function () { var w = _scOwner; if (w) { toast("Couldn’t stream that track"); stop(w); } });
+    _scWdg.bind(Widget.Events.PLAY_PROGRESS, function (e) {
+      var w = _scOwner; if (!w) return;
+      w._scPos = (e && e.currentPosition != null ? e.currentPosition : 0) / 1000;
+      if (!w._scDur) { try { _scWdg.getDuration(function (d) { w._scDur = (d || 0) / 1000; }); } catch (x) {} }
+      paintWindow();
+    });
+  }
+  // play a SoundCloud track through the widget (loads + auto-plays inside the tap gesture → audible instantly)
+  function playSc(w, t) {
+    _scOwner = w; w._scMode = true;
+    try { w.audio.pause(); } catch (e) {}                            // never let the (silent) element and the widget both run
+    ensureScWidget().then(function (wdg) {
+      if (!wdg || _scOwner !== w) { if (!wdg) { toast("Couldn’t reach SoundCloud"); stop(w); } return; }
+      if (w._scUrl === t.url && w._scLoaded) { try { wdg.play(); } catch (e) {} setPlaying(w, true); return; }
+      w._scUrl = t.url; w._scLoaded = false; w._scPos = 0; w._scDur = 0; w._scSwitching = true;
+      wdg.load(t.url, {
+        auto_play: true, visual: false, show_comments: false, hide_related: true, single_active: true,
+        callback: function () {
+          w._scSwitching = false;
+          if (_scOwner !== w) return;
+          w._scLoaded = true;
+          try { wdg.setVolume(100); } catch (e) {}
+          try { wdg.getDuration(function (d) { w._scDur = (d || 0) / 1000; refreshWindow(w); }); } catch (e) {}
+          try { wdg.play(); } catch (e) {}
+          setPlaying(w, true);
+        }
+      });
+    });
+    refreshMini(w); refreshWindow(w); npEmit();
+  }
+  function scResume(w) { _scOwner = w; ensureScWidget().then(function (wdg) { if (wdg && _scOwner === w) { try { wdg.play(); } catch (e) {} setPlaying(w, true); } }); }
+  function scPause(w) { if (_scWdg && _scOwner === w) { try { _scWdg.pause(); } catch (e) {} } }
+  function scSeek(w, frac) { if (_scWdg && _scOwner === w && w._scDur) { try { _scWdg.seekTo(mClamp(frac, 0, 1) * w._scDur * 1000); } catch (e) {} } }
+
   // keep the quick-preview INSIDE the canvas frame — ONE geometry with the pill/video (mediaBounds below),
   // so every floating music surface opens and moves only inside the visible canvas.
   function deskBounds() { return mediaBounds(); }
@@ -299,7 +383,7 @@
   // (the opener is the title track “Begin Again”). It plays at the highest bitrate SoundCloud serves and is
   // shaped by the OS-wide Hi-Fi chain; the opener is pre-buffered at boot for a low-latency first tap. The
   // native LOSSLESS κ-album (KAPPA_SESSIONS) stays one paste away by editing the disc.
-  function getDefaults() { return Promise.resolve(defaults || (defaults = JSON.parse(JSON.stringify(KAPPA_SESSIONS)))); }
+  function getDefaults() { return Promise.resolve(defaults || (defaults = JSON.parse(JSON.stringify(BENBOHMER)))); }
   function configFromSet(set) {
     return { artist: set.artist || set.title || "", title: set.title || "", cover: set.cover || (set.tracks[0] && set.tracks[0].art) || "", resolve: set.resolve || "",
       tracks: (set.tracks || []).map(function (t) { return { title: t.title, artist: t.artist || set.artist, art: t.art, url: t.url, kappa: t.kappa }; }) };
@@ -404,8 +488,10 @@
     var tracks = (w.config && w.config.tracks) || []; if (!tracks.length) { editArtist(w); return; }
     w.idx = ((i % tracks.length) + tracks.length) % tracks.length;
     var t = tracks[w.idx]; if (!t || (!t.url && !t.kappa)) return;
-    fxResume(w);                                                  // claim the element for Hi-Fi + wake the audio graph
     if (w.art && t.art) { w.art.src = t.art; w.art.style.display = ""; }
+    if (!t.kappa && isScUrl(t.url)) { playSc(w, t); return; }      // SoundCloud → the hidden Widget engine (no backend)
+    if (w._scMode) { scPause(w); w._scMode = false; w._scUrl = null; w._scLoaded = false; }   // leaving SoundCloud → silence the widget
+    fxResume(w);                                                  // claim the element for Hi-Fi + wake the audio graph
     if (t.kappa) playKappa(w, t);                                 // native LOSSLESS κ-audio (verify-before-decode)
     else { w._verified = null; w._normalizeDb = 0; applyNormalize(w); w.audio.src = streamSrc(t.url); w.audio.play().then(function () { setPlaying(w, true); }).catch(function () { setPlaying(w, true); }); }
     refreshMini(w); refreshWindow(w); npEmit();
@@ -440,7 +526,7 @@
   function setPlaying(w, on) {
     var was = w.playing;
     w.playing = on; if (w.el) { w.el.classList.toggle("playing", on); if (w.disc) w.disc.classList.toggle("spin", on); }
-    if (on && !w.fx) fxResume(w);                                  // guarantee the Hi-Fi chain is engaged once playback confirms
+    if (on && !w.fx && !inSc(w)) fxResume(w);                      // guarantee the Hi-Fi chain is engaged (element path only; SC is a cross-origin widget)
     if (on) { npCurrent = w; }                                    // this is now the "now playing" source (the pill reflects it)
     if (w === DOCKP) { var li = w.el && w.el.closest && w.el.closest(".holo-dock-item"); if (li) { if (on) li.setAttribute("data-running", ""); else li.removeAttribute("data-running"); } saveDock(); }
     else persist(w);
@@ -452,6 +538,7 @@
   function updateScope(w) {
     if (_vscope) { try { _vscope.stop(); } catch (e) {} _vscope = null; }
     var m = w && w._mini; if (!m || !DOC.body.contains(m) || !w.playing) return;
+    if (inSc(w)) return;                                            // SoundCloud audio is a cross-origin widget — no analyser to scope
     if (!W.HoloFX) return;
     var sp = m.querySelector(".sp"); if (!sp) return;
     // when the Hi-Fi engine owns the element, read ITS analyser (one tap per element) — never re-source.
@@ -465,11 +552,14 @@
       _vscope = W.HoloFX.audioScope(sp, w.audio, { kind: "bars", width: 9 });
     }
   }
-  function play(w) { fxResume(w); if (!w.audio.src) playTrack(w, w.idx || 0); else { w.audio.play().catch(function () {}); setPlaying(w, true); } }
-  function stop(w) { try { w.audio.pause(); } catch (e) {} setPlaying(w, false); }       // pause — keeps position
+  function play(w) {
+    if (inSc(w)) { var t = curTrack(w); if (t && w._scLoaded && w._scUrl === t.url) scResume(w); else playTrack(w, w.idx || 0); return; }
+    fxResume(w); if (!w.audio.src) playTrack(w, w.idx || 0); else { w.audio.play().catch(function () {}); setPlaying(w, true); }
+  }
+  function stop(w) { if (inSc(w)) scPause(w); else { try { w.audio.pause(); } catch (e) {} } setPlaying(w, false); }   // pause — keeps position
   function toggle(w) { w.playing ? stop(w) : play(w); }
   function next(w) { playTrack(w, (w.idx || 0) + 1); }
-  function prev(w) { if (w.audio.currentTime > 3) { w.audio.currentTime = 0; return; } playTrack(w, (w.idx || 0) - 1); }
+  function prev(w) { if (curTime(w) > 3) { if (inSc(w)) scSeek(w, 0); else w.audio.currentTime = 0; return; } playTrack(w, (w.idx || 0) - 1); }
 
   // lazily resolve the album set → full tracklist + crisp cover (keeps the seeded opener, e.g. “Begin Again”, first)
   function enrich(w) {
@@ -624,7 +714,7 @@
   }
   function wirePillSeek(els) {
     var seek = els.seek, dragging = false;
-    function at(clientX) { var w = MWIN && MWIN.w; if (!w || !w.audio || !w.audio.duration) return; var r = seek.getBoundingClientRect(); w.audio.currentTime = mClamp((clientX - r.left) / r.width, 0, 1) * w.audio.duration; paintWindow(); }
+    function at(clientX) { var w = MWIN && MWIN.w; if (!w) return; var r = seek.getBoundingClientRect(); var frac = mClamp((clientX - r.left) / r.width, 0, 1); if (inSc(w)) { scSeek(w, frac); } else if (w.audio && w.audio.duration) { w.audio.currentTime = frac * w.audio.duration; } paintWindow(); }
     seek.addEventListener("pointerdown", function (e) { dragging = true; try { seek.setPointerCapture(e.pointerId); } catch (x) {} at(e.clientX); e.stopPropagation(); });
     seek.addEventListener("pointermove", function (e) { if (dragging) { at(e.clientX); e.stopPropagation(); } });
     seek.addEventListener("pointerup", function (e) { dragging = false; try { seek.releasePointerCapture(e.pointerId); } catch (x) {} });
@@ -669,8 +759,8 @@
     w.audio.addEventListener("timeupdate", MWIN._onTime); w.audio.addEventListener("durationchange", MWIN._onTime);
   }
   function paintWindow() {
-    var m = MWIN, w = m && m.w; if (!m || !w || !w.audio || m.suspended) return;
-    var d = w.audio.duration || 0, c = w.audio.currentTime || 0;
+    var m = MWIN, w = m && m.w; if (!m || !w || m.suspended) return;
+    var d = curDur(w), c = curTime(w);
     m.els.prog.style.width = (d ? (c / d * 100) : 0) + "%";
   }
   // keep the pill in sync with the active track + play state (called wherever refreshMini is)
@@ -747,7 +837,7 @@
     W.HoloWidgets.define("vinyl", {
       name: "Vinyl Player", icon: "disc", blurb: "A music disc that plays across the shell.",
       defaultW: 84, minW: SIZE_MIN, maxW: SIZE_MAX,
-      defaultConfig: JSON.parse(JSON.stringify(KAPPA_SESSIONS)),
+      defaultConfig: JSON.parse(JSON.stringify(BENBOHMER)),
       render: function (hostObj) {
         injectCss();
         hostObj.body.style.cssText = "width:100%;aspect-ratio:1/1";
@@ -818,7 +908,9 @@
   function prefetchOpener(w) {
     try {
       var t = (w.config && w.config.tracks && w.config.tracks[w.idx || 0]) || null;
-      if (!t || !t.url || t.kappa || w.audio.src) return;
+      if (!t) return;
+      if (!t.kappa && isScUrl(t.url)) { ensureScWidget(); return; }   // warm the SoundCloud widget (API + iframe) so the first tap loads fast
+      if (!t.url || t.kappa || w.audio.src) return;
       w.audio.preload = "auto"; w.audio.src = streamSrc(t.url); try { w.audio.load(); } catch (e) {}
     } catch (e) {}
   }
@@ -841,12 +933,12 @@
     injectCss();
     if (!DOCKP) {
       var saved = loadDock();
-      DOCKP = { id: "dock", idx: (saved && saved.idx) || 0, playing: false, config: (saved && saved.config) || JSON.parse(JSON.stringify(KAPPA_SESSIONS)) };
+      DOCKP = { id: "dock", idx: (saved && saved.idx) || 0, playing: false, config: (saved && saved.config) || JSON.parse(JSON.stringify(BENBOHMER)) };
       DOCKP._touched = !!saved;
       DOCKP.audio = new Audio(); DOCKP.audio.preload = "auto";       // warm-buffer the stream → low-latency first play
       DOCKP.audio.addEventListener("ended", function () { next(DOCKP); });
       DOCKP.audio.addEventListener("error", function () { if (DOCKP.playing) { toast("Couldn’t stream that track"); stop(DOCKP); } });
-      if (!DOCKP._touched) getDefaults().then(function (d) { if (DOCKP && !DOCKP._touched) { DOCKP.config = JSON.parse(JSON.stringify(d)); DOCKP.idx = 0; syncDisc(DOCKP); refreshMini(DOCKP); } warmDisc(DOCKP); });
+      if (!DOCKP._touched) getDefaults().then(function (d) { if (DOCKP && !DOCKP._touched && d) { DOCKP.config = JSON.parse(JSON.stringify(d)); DOCKP.idx = 0; syncDisc(DOCKP); refreshMini(DOCKP); refreshWindow(DOCKP); } warmDisc(DOCKP); });
       else { warmDisc(DOCKP); }
     }
     var box = DOC.createElement("div"); box.className = "hv-widget hv-dock";
@@ -903,7 +995,7 @@
       var raw = W.localStorage.getItem(LS);
       if (raw && W.HoloWidgets && W.HoloWidgets.add) {
         var arr = []; try { arr = JSON.parse(raw) || []; } catch (e) { arr = []; }
-        arr.forEach(function (s) { if (s && !s.hidden) W.HoloWidgets.add("vinyl", s.config || JSON.parse(JSON.stringify(KAPPA_SESSIONS)), { x: s.x, y: s.y }); });
+        arr.forEach(function (s) { if (s && !s.hidden) W.HoloWidgets.add("vinyl", s.config || JSON.parse(JSON.stringify(BENBOHMER)), { x: s.x, y: s.y }); });
       }
       if (raw) W.localStorage.removeItem(LS);
       W.localStorage.setItem(MIGRATED_LS, "1");

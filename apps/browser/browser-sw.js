@@ -54,9 +54,23 @@ const enc = (s) => btoa(unescape(encodeURIComponent(s))).replace(/\+/g, "-").rep
 const dec = (s) => { const t = s.replace(/-/g, "+").replace(/_/g, "/"); return decodeURIComponent(escape(atob(t.padEnd(Math.ceil(t.length / 4) * 4, "=")))); };
 
 // ── κ-store over the Cache API (shared with the page; both are same-origin) ──────────
-async function kPut(kappa, bytes, meta = {}) {
-  const cache = await caches.open(KSTORE);
-  await cache.put("/__k/" + kappa, new Response(bytes, { headers: { "content-type": meta.contentType || "application/octet-stream", "x-holo-source": meta.source || "" } }));
+// Cache-write mutex. Chromium throws InvalidAccessError "Entry already exists" when cache.put() calls run
+// CONCURRENTLY on the same Cache — even for different keys — so a page whose subresources (images, css) load
+// in parallel would fail en masse (the real bug behind onion images 0/7). Serialize every κ-store write
+// through one promise chain: at most one put() in flight, ever. Writes are local + fast, so this is cheap;
+// only the Tor fetch is the latency floor. κ is the content hash, so a duplicate write is byte-identical —
+// skip if present, and never let a write error bubble up and refuse the resource.
+let K_WRITE = Promise.resolve();
+function kPut(kappa, bytes, meta = {}) {
+  const run = K_WRITE.then(async () => {
+    try {
+      const cache = await caches.open(KSTORE);
+      if (await cache.match("/__k/" + kappa)) return;   // already stored — content-addressed, identical bytes
+      await cache.put("/__k/" + kappa, new Response(bytes, { headers: { "content-type": meta.contentType || "application/octet-stream", "x-holo-source": meta.source || "" } }));
+    } catch (e) { console.error("KPUT-FAIL", kappa.slice(0, 10), String(e && e.message || e)); /* benign for a content-addressed store */ }
+  });
+  K_WRITE = run.catch(() => {});   // keep the chain alive even if a link rejects
+  return run;
 }
 async function kGet(kappa) { const cache = await caches.open(KSTORE); const r = await cache.match("/__k/" + kappa); return r ? new Uint8Array(await r.arrayBuffer()) : null; }
 
@@ -65,7 +79,11 @@ async function kGet(kappa) { const cache = await caches.open(KSTORE); const r = 
 // serves the κ-store FIRST (re-derived, Law L5) and touches the wire only on a miss. This is
 // what makes the browser work on a 100% serverless mount, and offline, by law not by luck. ──
 const USTORE = "holo-browser-url-v1";
-async function uPut(realUrl, entry) { try { const cache = await caches.open(USTORE); await cache.put("/__u/" + enc(realUrl), new Response(JSON.stringify(entry), { headers: { "content-type": "application/json" } })); } catch {} }
+let U_WRITE = Promise.resolve();   // serialize url-index writes for the same reason as kPut (Chromium concurrent-put race)
+function uPut(realUrl, entry) {
+  const run = U_WRITE.then(async () => { try { const cache = await caches.open(USTORE); await cache.put("/__u/" + enc(realUrl), new Response(JSON.stringify(entry), { headers: { "content-type": "application/json" } })); } catch (e) { console.error("UPUT-FAIL", String(e && e.message || e)); } });
+  U_WRITE = run.catch(() => {}); return run;
+}
 async function uGet(realUrl) { try { const cache = await caches.open(USTORE); const r = await cache.match("/__u/" + enc(realUrl)); return r ? await r.json() : null; } catch { return null; } }
 // serve a URL straight from the κ-store if we hold it (verified) — null means "go to the wire".
 async function uServe(realUrl, fallbackCt) {

@@ -29,7 +29,7 @@ const COEPH = { "cross-origin-embedder-policy": "credentialless", "cross-origin-
 // Bump on any change to this worker OR its imported engine (holo-ipfs-gateway.mjs) so the browser
 // re-installs and re-fetches the imports — a byte-identical SW script is NOT reinstalled, and static
 // imports are cached with the worker. (M2: HAMT-sharded directory support in the gateway.)
-const SW_BUILD = "ipfs-sw/m2-hamt-2026-07-07b";
+const SW_BUILD = "ipfs-sw/m2-hamt-resilient-2026-07-08";
 const CFG = "holo-ipfs-cfg-v1";
 // Mount point + app base, derived from the SW's own scope (e.g. /repo/ipfsview/ → /repo/).
 const VIEW = new URL(self.registration.scope).pathname.replace(/\/?$/, "/");

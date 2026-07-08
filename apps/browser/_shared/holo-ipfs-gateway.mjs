@@ -17,7 +17,7 @@ import { selectRender, kindOfContentType } from "./holo-render-contract.mjs";   
 // Two deps of the OS copy are intentionally dropped here so the SW closure stays lean: assembleUnixFs
 // (holo-omni-object) is unused by the serve path, and holo-peers' IPFS_GATEWAYS is inlined below (importing
 // it would pull holo-resolver + holo-sources). Keep the read-path logic in lock-step with the OS canonical.
-const IPFS_GATEWAYS = ["https://trustless-gateway.link", "https://ipfs.io", "https://dweb.link", "https://w3s.link"];
+const IPFS_GATEWAYS = ["https://trustless-gateway.link", "https://ipfs.io", "https://dweb.link", "https://w3s.link", "https://4everland.io"];
 
 const MIME = {
   html: "text/html", htm: "text/html", css: "text/css", js: "text/javascript", mjs: "text/javascript",
@@ -96,11 +96,21 @@ export function makeGetBlock(fetchImpl, { gateways = IPFS_GATEWAYS, discover = t
     });
     try { return await Promise.any(tasks); } catch { return null; }
   };
+  const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
   return async (cidStr) => {
     if (!f) return null;
     const cached = await blockCacheGet(cidStr); if (cached) return cached;   // L1/L2 — O(1), no network
-    let b = await pull(gateways, cidStr);
-    if (!b && discover) { try { const extra = await discoverGateways(cidStr, { fetchImpl: f }); if (extra.length) b = await pull(extra, cidStr); } catch {} }
+    // Resilience: a single flaky / rate-limited gateway must not fail a whole multi-block page. Race the
+    // gateways; on a miss, WIDEN the set via Delegated-Routing discovery, then RETRY the race with a short
+    // backoff — public gateways 429 under load, and a deep HAMT site (Wikipedia) fetches hundreds of blocks,
+    // so a lone transient miss would otherwise blank the page. A verified block is cached immediately, so a
+    // retry only ever re-attempts the blocks that actually missed (never re-fetches what already landed).
+    let gws = gateways, b = null;
+    for (let attempt = 0; attempt < 3 && !b; attempt++) {
+      if (attempt > 0) await sleep(200 * attempt);                           // 0 · 200 · 400 ms backoff
+      b = await pull(gws, cidStr);
+      if (!b && discover) { try { const extra = await discoverGateways(cidStr, { fetchImpl: f }); if (extra.length) gws = [...new Set([...gateways, ...extra])]; } catch {} }
+    }
     if (b) await blockCachePut(cidStr, b);                                   // verified block → unified κ-store
     return b;
   };

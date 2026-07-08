@@ -99,10 +99,12 @@ export function nodeArtiFetch({ socksHost = "127.0.0.1", socksPort = 9150 } = {}
   const keyOf = (u) => (u.protocol === "https:" ? "https" : "http") + "://" + u.hostname + ":" + (u.port || (u.protocol === "https:" ? 443 : 80));
   const dec = (key) => { const n = Math.max(0, (inflight.get(key) || 1) - 1); inflight.set(key, n); const w = waiters.get(key); if (w && w.length) w.shift()(); };
 
-  async function acquire(u) {
+  async function acquire(u, forceFresh = false) {
     const key = keyOf(u);
     const idle = pool.get(key);
-    while (idle && idle.length) { const e = idle.pop(); clearTimeout(e.idleTimer); if (e.sock.writable && !e.sock.destroyed) return e.sock; try { e.sock.destroy(); } catch {} }
+    // forceFresh (a retry) skips the pool: a reused keep-alive socket whose Tor circuit died silently still
+    // looks writable, so a stale socket is exactly what a retry must avoid — go straight to a new circuit.
+    while (!forceFresh && idle && idle.length) { const e = idle.pop(); clearTimeout(e.idleTimer); if (e.sock.writable && !e.sock.destroyed) return e.sock; try { e.sock.destroy(); } catch {} }
     if ((inflight.get(key) || 0) >= MAX_PER_ORIGIN) await new Promise((res) => { const w = waiters.get(key) || []; w.push(res); waiters.set(key, w); });
     inflight.set(key, (inflight.get(key) || 0) + 1);
     try {
@@ -126,17 +128,27 @@ export function nodeArtiFetch({ socksHost = "127.0.0.1", socksPort = 9150 } = {}
   return async function onionFetch(url) {
     const u = new URL(/^https?:\/\//i.test(url) ? url : "http://" + url);
     const path = (u.pathname + u.search) || "/";
-    let sock = null, keep = false;
-    try {
-      sock = await acquire(u);
-      sock.write(`GET ${path} HTTP/1.1\r\nHost: ${u.hostname}\r\nUser-Agent: Hologram/onion\r\nAccept: */*\r\nAccept-Encoding: identity\r\nConnection: keep-alive\r\n\r\n`);
-      const res = await readResponse(sock);
-      keep = res.keepAlive;
-      return { status: res.status, headers: res.headers, bytes: new Uint8Array(res.bytes), verified: true };
-    } catch (e) {
-      if (sock) { const key = keyOf(u); try { sock.destroy(); } catch {} dec(key); sock = null; }
-      throw e;
-    } finally { if (sock) release(u, sock, keep); }
+    // Retry so an IDLE/rebuilt Tor circuit is transparent: after Tor drops circuits (long idle), the first
+    // stream fails or a stale pooled socket dies — attempt 2+ forces a fresh circuit with a short backoff so
+    // Tor has time to rebuild. GETs are idempotent, so retry is safe. This kills the "first request → 502".
+    let lastErr = null;
+    for (let attempt = 0; attempt < 3; attempt++) {
+      let sock = null, keep = false;
+      try {
+        sock = await acquire(u, attempt > 0);
+        const onTimeout = () => { try { sock.destroy(new Error("onion request timeout")); } catch {} };
+        sock.setTimeout(REQ_TIMEOUT, onTimeout);
+        sock.write(`GET ${path} HTTP/1.1\r\nHost: ${u.hostname}\r\nUser-Agent: Hologram/onion\r\nAccept: */*\r\nAccept-Encoding: identity\r\nConnection: keep-alive\r\n\r\n`);
+        const res = await readResponse(sock);
+        keep = res.keepAlive; sock.setTimeout(0);
+        return { status: res.status, headers: res.headers, bytes: new Uint8Array(res.bytes), verified: true };
+      } catch (e) {
+        lastErr = e;
+        if (sock) { const key = keyOf(u); try { sock.destroy(); } catch {} dec(key); sock = null; }
+        if (attempt < 2) await new Promise((r) => setTimeout(r, 350 + attempt * 600));   // let Tor rebuild
+      } finally { if (sock) release(u, sock, keep); }
+    }
+    throw lastErr;
   };
 }
 

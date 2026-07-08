@@ -312,7 +312,9 @@ function make2dPlayer(overlay, layer, canvas, onLive) {
     if (!started && prefix > 0) {                          // first drawable frame → the splash is alive
       started = true;
       try { onLive(); } catch {}
-      if (reducedMotion()) draw(0); else raf = requestAnimationFrame(loop);
+      const t = liveTarget(); pose.cx = t.cx; pose.cy = t.cy; pose.cap = t.cap;   // snap to the current pose…
+      draw(0);                                             // …and paint frame 0 NOW (instant first paint, even before rAF)
+      if (!reducedMotion()) raf = requestAnimationFrame(loop);                    // then animate (reduced motion holds this frame)
     }
   }
   return {
@@ -473,28 +475,63 @@ async function makeGpuPlayer(overlay, layer, canvas, onLive) {
   };
 }
 
+// TOUCH / MOBILE = the 2D main-thread player, always. WebGPU-in-a-Worker over an OffscreenCanvas is the
+// one combo that is unreliable on phones: iOS/Android throttle or never fire the worker's rAF, so the
+// emblem renders its pose ONCE and then freezes (the "static image on mobile" bug). The main-thread 2D
+// player drives rAF on the page's own frame clock — universally reliable, and these emblems are small, so
+// the CPU cost is nothing. ?emblem=gpu forces the worker anyway (desktop testing); ?emblem=2d forces 2D.
+function isMobileLike() {
+  try {
+    if (matchMedia("(pointer: coarse)").matches) return true;                       // any touchscreen
+    if (Math.min(window.innerWidth, window.innerHeight) < 600) return true;         // phone-sized
+    if (/Android|iPhone|iPad|iPod|Mobile/i.test(navigator.userAgent || "")) return true;
+  } catch {}
+  return false;
+}
+
 // the facade: same synchronous API the choreography uses; the backend resolves async (frames queue).
-function makePlayer(overlay, layer, canvas, onLive) {
+// TWO layers of defense against a silent GPU stall: mobile never picks GPU, AND a watchdog swaps any
+// GPU backend that hasn't drawn a first frame within ~2s onto a FRESH-canvas 2D player, replaying the
+// early frames — so the emblem always ends up moving, on any device, even if WebGPU lies about working.
+function makePlayer(overlay, layer, onLive) {
   let backend = null, queue = [], lastPose = null, lastInk = null, dead = false;
+  let firstFired = false, watchdog = 0, early = [];        // early frame copies, for a fallback replay
   let forced = null; try { forced = new URLSearchParams(location.search).get("emblem"); } catch {}
+
+  const freshCanvas = () => { const old = layer.querySelector("canvas"); if (old) old.remove(); const c = document.createElement("canvas"); layer.appendChild(c); return c; };
+  const live = () => { if (firstFired) return; firstFired = true; clearTimeout(watchdog); early = []; try { onLive(); } catch {} };
+  function build2d() {
+    backend = make2dPlayer(overlay, layer, freshCanvas(), live);
+    if (lastInk != null) backend.ink(lastInk);
+    if (lastPose) backend.pose(lastPose);
+    for (const [i, b] of early) backend.frame(i, b);       // replay what the stalled backend never showed
+  }
+  function forward(i, bytes) {
+    if (!firstFired && early.length < 24) { try { early.push([i, bytes.slice()]); } catch {} }
+    if (!firstFired && !watchdog && backend && backend.mode === "gpu-worker") {
+      watchdog = setTimeout(() => { if (firstFired) return; try { backend.destroy(); } catch {} build2d(); }, 2200);
+    }
+    if (backend) backend.frame(i, bytes);
+  }
+
   (async () => {
+    const wantGpu = forced === "gpu" || (forced !== "2d" && !isMobileLike());
     let b = null;
-    if (forced !== "2d") { try { b = await makeGpuPlayer(overlay, layer, canvas, onLive); } catch { b = null; } }
-    if (!b) b = make2dPlayer(overlay, layer, canvas, onLive);
-    if (dead) { try { b.destroy(); } catch {} return; }
-    backend = b;
-    if (lastInk != null && b.ink) b.ink(lastInk);
-    if (lastPose) b.pose(lastPose);
-    const q = queue; queue = [];
-    for (const [i, bytes] of q) b.frame(i, bytes);
+    if (wantGpu) { try { b = await makeGpuPlayer(overlay, layer, freshCanvas(), live); } catch { b = null; } }
+    if (dead) { try { b && b.destroy(); } catch {} return; }
+    if (b) { backend = b; if (lastInk != null && b.ink) b.ink(lastInk); if (lastPose) b.pose(lastPose); }
+    else build2d();
+    const q = queue; queue = null;
+    for (const [i, bytes] of q) forward(i, bytes);
   })();
+
   return {
     mode: () => (backend ? backend.mode : "pending"),
-    frame(i, bytes) { if (backend) backend.frame(i, bytes); else queue.push([i, bytes]); },
+    frame(i, bytes) { if (backend) forward(i, bytes); else if (queue) queue.push([i, bytes]); },
     pose(name) { lastPose = name; if (backend) backend.pose(name); },
     ink(on) { lastInk = !!on; return backend && backend.ink ? backend.ink(on) : false; },   // truthy → caller replays (2D re-key)
-    reset() { queue = []; if (backend) backend.reset(); },
-    destroy() { dead = true; if (backend) backend.destroy(); },
+    reset() { if (queue) queue = []; early = []; firstFired = false; clearTimeout(watchdog); watchdog = 0; if (backend) backend.reset(); },
+    destroy() { dead = true; clearTimeout(watchdog); if (backend) backend.destroy(); },
   };
 }
 
@@ -656,18 +693,16 @@ export function attachPlymouth(overlay, host) {
   const state = readState();
   try { if (!localStorage.getItem(KEY)) writeState(state); } catch {}   // persist the default → next cold boot gets the 0-ms baseline
   try { if (!overlay.getAttribute("data-appearance")) overlay.setAttribute("data-appearance", themeMode()); } catch {}   // primitive overlays get the mode too
-  let layer = null, canvas = null, player = null, gen = 0;
+  let layer = null, player = null, gen = 0;
 
   function ensureLayer() {
     if (layer) return;
-    layer = document.createElement("div"); layer.className = "hlp";
-    canvas = document.createElement("canvas");
-    layer.appendChild(canvas);
+    layer = document.createElement("div"); layer.className = "hlp";   // the facade owns the canvas (it may swap it on GPU-stall fallback)
     const wall = overlay.querySelector(".hl-wall");
     if (wall && wall.nextSibling) overlay.insertBefore(layer, wall.nextSibling); else overlay.prepend(layer);
     // onLive fires at the backend's FIRST drawable frame (whichever backend won the ladder):
     // the splash is alive — it wears the avatar slot and the 0-ms baseline still yields.
-    player = makePlayer(overlay, layer, canvas, () => {
+    player = makePlayer(overlay, layer, () => {
       try { layer.classList.add("on"); overlay.classList.add("hlp-anchor"); dropBaseline(); } catch {}
     });
     player.ink(isInk());
