@@ -1412,7 +1412,9 @@
         greetW = Math.round(clamp(Math.min(W_, H_) * 0.62, 340, 640));
       }
       var gap = Math.round(ringW * 0.3);                                       // a tighter gap → greeting sits a little higher
-      var total = ringW + gap + Math.round(greetW * 0.12);                     // ring (≈square) + gap + one greeting line
+      // greeting height for CENTERING: the name line can wrap to two lines on a phone, so estimate ~1.5 lines of
+      // its width-derived type (font ≈ greetW*0.092, line-height 1.1). Under-counting here let the pair drift low.
+      var total = ringW + gap + Math.round(greetW * 0.15);                     // ring (≈square) + gap + greeting block
       var lift = Math.round((H_ - top) * 0.06);                                // nudge the pair slightly above true centre
       var startY = Math.round(top + Math.max(m, ((H_ - top) - total) / 2 - lift)); // centre the pair, lifted a touch higher
       return [
