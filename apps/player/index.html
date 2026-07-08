@@ -1386,6 +1386,7 @@
           el.addEventListener("pointerleave", () => stopInline(el));
           el.addEventListener("focusin", () => playInline(el, it));
           el.addEventListener("focusout", () => stopInline(el));
+          if (!it.trailerKey) { el._pvIt = it; ensureTrailerObserver().observe(el); }   // pre-resolve trailer on scroll-into-view → instant on hover
         }
         return el;
       }
@@ -1422,6 +1423,24 @@
           for (const e of entries) if (e.isIntersecting && e.target._mount) { railObserver.unobserve(e.target); const f = e.target._mount; e.target._mount = null; f(); }
         }, { root: views.home, rootMargin: "700px 0px" });
         return railObserver;
+      }
+      // Instant hover previews — pre-resolve each VOD card's trailer id the moment it scrolls into view (idle-budgeted,
+      // idempotent via resolveTrailer's cache, skips metered/backgrounded), so the warm preview player recues the
+      // INSTANT the pointer lands — no first-hover network wait. Live cards pre-buffer on hover instead.
+      let _trObs = null; const _trQ = []; let _trActive = 0;
+      function _pumpTrailers() {
+        if (document.hidden) return;
+        const ric = window.requestIdleCallback || ((f) => setTimeout(f, 60));
+        while (_trActive < 4 && _trQ.length) { const it = _trQ.shift(); _trActive++; Promise.resolve(resolveTrailer(it)).catch(() => {}).finally(() => { _trActive--; if (_trQ.length) ric(_pumpTrailers); }); }
+      }
+      function ensureTrailerObserver() {
+        if (_trObs) return _trObs;
+        _trObs = new IntersectionObserver((entries) => {
+          const c = navigator.connection; if (c && (c.saveData || /(^|-)2g$/.test(c.effectiveType || ""))) return;
+          for (const e of entries) if (e.isIntersecting && e.target._pvIt) { _trObs.unobserve(e.target); const it = e.target._pvIt; e.target._pvIt = null; _trQ.push(it); }
+          if (_trQ.length) (window.requestIdleCallback || ((f) => setTimeout(f, 60)))(_pumpTrailers);
+        }, { rootMargin: "400px 0px" });
+        return _trObs;
       }
       // railShell(title, list, opts) — opts.shape "landscape"(default)|"portrait"; opts.rank → Top-10; opts.sub.
       function railShell(title, list, opts = {}) {
