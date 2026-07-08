@@ -18,10 +18,10 @@
     <meta name="application-name" content="Hologram" />
     <link rel="apple-touch-icon" href="/icon-192.png" />
     <!-- Shared mobile-conformance layer every shipped holospace adopts (enforce-witnesses gate). -->
-    <link rel="stylesheet" href="/_shared/holo-mobile.css" data-holo-shared="holo-mobile.css" />
-    <link rel="stylesheet" href="/_shared/holo-phi.css" data-holo-shared="holo-phi.css" />
-    <script type="module" src="/_shared/holo-ux.js" data-holo-shared="holo-ux.js"></script>
-    <link rel="stylesheet" href="/_shared/holo-dock.css" data-holo-shared="holo-dock.css" />
+    <link rel="stylesheet" href="../../_shared/holo-mobile.css" data-holo-shared="holo-mobile.css" />
+    <link rel="stylesheet" href="../../_shared/holo-phi.css" data-holo-shared="holo-phi.css" />
+    <script type="module" src="../../_shared/holo-ux.js" data-holo-shared="holo-ux.js"></script>
+    <link rel="stylesheet" href="../../_shared/holo-dock.css" data-holo-shared="holo-dock.css" />
     <style>
       :root {
         color-scheme: dark;
@@ -186,7 +186,9 @@
       #peerstate { font-size: 0.84rem; margin-top: 0.6rem; min-height: 1.2em; }
       @media (max-width: 640px) { #native { display: none; } .tab { min-width: 92px; } }
     </style>
-  </head>
+  <link rel="icon" href="./icon.svg">
+<script>try{if("serviceWorker" in navigator)navigator.serviceWorker.register(new URL("../../root-sw.js",location.href),{type:"module"}).catch(function(){navigator.serviceWorker.register(new URL("../../root-sw-classic.js",location.href)).catch(function(){})})}catch(e){}</script>
+</head>
   <body>
     <!-- Entry splash: the shared Hologram "streaming" boot screen. ONE source of truth
          for every Holo app — only the app="…" name differs. Self-contained, offline,
@@ -285,7 +287,7 @@
       </div>
     </div>
 
-    <script src="/_shared/teleport.js" data-holo-shared="teleport.js" defer></script>
+    <script src="../../_shared/teleport.js" data-holo-shared="teleport.js" defer></script>
     <script type="module">
       import * as B from "../../_shared/holo-browser.js";
       import { blake3, toHex, toBytes } from "../../_shared/holo-ipfs.js";
@@ -755,9 +757,7 @@
           : (scheme === "http" || scheme === "https") ? "Loading page" : "Resolving…";
         const t = $("ldgT"); if (t) t.textContent = label + "…";
         el.classList.add("on"); el.setAttribute("aria-hidden", "false");
-        // insurance only — the SW now time-boxes every egress tier (~8s worst case → content or an
-        // honest interstitial, both of which fire onload and hide this). Keep a short backstop.
-        clearTimeout(ldgTimer); ldgTimer = setTimeout(hideLoading, 12000);
+        clearTimeout(ldgTimer); ldgTimer = setTimeout(hideLoading, 30000);
       }
       function hideLoading() { const el = $("ldg"); if (el) { el.classList.remove("on"); el.setAttribute("aria-hidden", "true"); } clearTimeout(ldgTimer); }
 
@@ -1178,10 +1178,10 @@
       render(); hydrate().then(async () => { await autoInstallShield(); await pushSeam(); });
       } catch (err) { console.error("[holo-ext] store init failed:", err); }
     </script>
-    <script src="/_shared/holo-theme.js" data-holo-shared="holo-theme.js"></script>
-    <script src="/_shared/holo-manage.js" data-holo-shared="holo-manage.js" defer></script>
+    <script src="../../_shared/holo-theme.js" data-holo-shared="holo-theme.js"></script>
+    <script src="../../_shared/holo-manage.js" data-holo-shared="holo-manage.js" defer></script>
     <!-- The dock is Holo Browser's shortcut bar (ADR-0059): a tap opens that object in a tab. -->
-    <script defer src="/_shared/holo-dock.js" data-holo-shared="holo-dock.js"></script>
+    <script defer src="../../_shared/holo-dock.js" data-holo-shared="holo-dock.js"></script>
     <script defer src="./holo-install.js" data-holo-shared="holo-install.js"></script>
     <!-- Window controls: native tier only. Uses Tauri's official window API (withGlobalTauri). -->
     <script>

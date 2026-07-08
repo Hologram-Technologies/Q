@@ -738,7 +738,7 @@
       }
     </style>
   <link rel="icon" href="./icon.svg">
-<script>try{if("serviceWorker" in navigator)navigator.serviceWorker.register(new URL("../../root-sw.js",location.href)).catch(function(){})}catch(e){}</script>
+<script>try{if("serviceWorker" in navigator)navigator.serviceWorker.register(new URL("../../root-sw.js",location.href),{type:"module"}).catch(function(){navigator.serviceWorker.register(new URL("../../root-sw-classic.js",location.href)).catch(function(){})})}catch(e){}</script>
 </head>
   <body>
 
@@ -2010,7 +2010,7 @@
           const c = this.clip; c.style.left = b.left + "px"; c.style.top = b.top + "px"; c.style.width = b.width + "px"; c.style.height = b.height + "px";
           c.style.borderRadius = getComputedStyle(pic).borderRadius;
           const cover = (b.width / b.height > 16 / 9) ? { w: b.width, h: b.width * 9 / 16 } : { w: b.height * 16 / 9, h: b.height };
-          const OVER = 1.15, SS = 2.5; this.fr.style.width = Math.ceil(cover.w * OVER * SS) + "px"; this.fr.style.height = Math.ceil(cover.h * OVER * SS) + "px";
+          const SS = 2.5; this.fr.style.width = Math.ceil(cover.w * SS) + "px"; this.fr.style.height = Math.ceil(cover.h * SS) + "px";
           this.fr.style.transform = `translate(-50%,-50%) scale(${1 / SS})`;
           return true;
         },
