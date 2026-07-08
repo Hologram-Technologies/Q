@@ -247,18 +247,23 @@ async function egressFetch(realUrl, init) {
     for (const [via, go] of tiers) { let r; try { r = await go(); } catch { continue; } if (via === "host-peer" && !r.headers.get("x-holo-web")) continue; if (r.ok) return { r, via }; if (!up) up = { r, via }; }
     return up || { r: null, via: "none" };
   }
-  if (Date.now() >= PROXY_DOWN_UNTIL) tiers.push(["proxy", () => fetch(WEB_PROXY + encodeURIComponent(realUrl), init)]);
+  // Every wire tier is TIME-BOXED: one slow carrier can never hang the navigation — it aborts and
+  // falls through to the next tier (and finally the honest interstitial) fast. Bounded, low latency.
+  const tfetch = (url, i, ms) => fetch(url, { ...i, signal: AbortSignal.timeout(ms) });
+  if (Date.now() >= PROXY_DOWN_UNTIL) tiers.push(["proxy", () => tfetch(WEB_PROXY + encodeURIComponent(realUrl), init, 3500)]);
   // seam-private headers would force a CORS preflight neither a host nor a third party answers — strip beyond tier 1
   const dinit = { ...init };
   if (dinit.headers) { const h = { ...dinit.headers }; delete h["x-holo-doc"]; delete h["x-holo-operator"]; delete h["x-holo-ua"]; delete h["x-holo-referer"]; delete h["x-holo-xff"]; dinit.headers = h; }
   if (Date.now() < PROXY_DOWN_UNTIL) {
     const hostQ = encodeURIComponent(realUrl) + (isDoc ? "&doc=1" : "") + (op ? "&op=" + encodeURIComponent(op) : "");
-    for (const h of await probeHosts()) tiers.push(["host", () => fetch(h + hostQ, dinit)]);
+    for (const h of await probeHosts()) tiers.push(["host", () => tfetch(h + hostQ, dinit, 4000)]);
     // your device-mesh peer (another of YOUR machines) — above direct/relay, below same-LAN loopback
     if (PEER_READY) tiers.push(["host-peer", () => peerFetchViaPage(realUrl, { doc: isDoc, op })]);
   }
-  tiers.push(["direct", () => fetch(realUrl, dinit)]);
-  for (const relay of RELAYS) tiers.push(["relay", () => fetch(relay(realUrl), dinit)]);
+  tiers.push(["direct", () => tfetch(realUrl, dinit, 6000)]);
+  // RELAYS RACED IN PARALLEL — the fastest CORS relay to answer OK wins (not slowest-sequential-sum).
+  // The whole relay tier is bounded to the per-relay timeout; if all fail it throws → honest interstitial.
+  tiers.push(["relay", () => Promise.any(RELAYS.map((relay) => tfetch(relay(realUrl), dinit, 8000).then((r) => { if (!r.ok) throw 0; return r; })))]);
   let upstream = null;                               // the best non-ok answer seen, reported honestly if no tier lands
   for (const [via, go] of tiers) {
     let r; try { r = await go(); } catch { if (via === "proxy") PROXY_DOWN_UNTIL = Date.now() + 60_000; continue; }
