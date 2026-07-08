@@ -107,6 +107,7 @@ export function cardModel(res, name, appIdx) {
   const model = { ok: true, url, kappa: res.kappa, size, kind: app ? "holo app · " + app.dir : res.kind, app: app ? { title: app.title, desc: app.desc, url: app.url } : null };
   if (res.trust) model.trust = res.trust;                  // V5: how this proved itself (self-verifying / via a shown resolver)
   if (res.author) model.author = res.author;
+  if (res.pointsTo) model.pointsTo = res.pointsTo;         // V3: a resolved pointer that lands on another κ-name
   if (!app && res.bytes) {
     const type = sniff(res.bytes);
     if (type && type.startsWith("kind:")) model.binary = type.slice(5);   // labeled (font/wasm/archive) — no inline render
@@ -166,7 +167,8 @@ const HoloCardEl = typeof HTMLElement !== "undefined" ? class extends HTMLElemen
     else {
       let h = `<a class="seal" href="${m.url}" target="_blank" rel="noopener"><span class="dot"></span>verified<span class="go">details ↗</span></a>`;
       if (m.app) h += `<div class="app"><div class="app-h"><span class="app-title">${esc(m.app.title)}</span><a class="open" href="${esc(m.app.url)}">Open →</a></div>${m.app.desc ? `<div class="msg" style="margin-top:6px">${esc(m.app.desc)}</div>` : ""}</div>`;
-      h += `<div class="kv"><div class="k">κ</div><div class="v">${esc(m.kappa)}</div><div class="k">kind</div><div class="v">${esc(m.kind)}${m.binary ? " · " + esc(m.binary) : m.media ? " · " + esc(m.media.type) : ""}</div>${m.author ? `<div class="k">author</div><div class="v">${esc(m.author)}</div>` : ""}<div class="k">size</div><div class="v">${m.size.toLocaleString()} bytes</div></div>`;
+      if (m.pointsTo) h += `<div class="app"><div class="app-h"><span class="app-title">↳ resolves to</span><a class="open" href="${INSPECTOR}#${encodeURIComponent(m.pointsTo)}">Open →</a></div><div class="msg" style="margin-top:6px;font-family:ui-monospace,Consolas,monospace;font-size:11px;word-break:break-all">${esc(m.pointsTo)}</div></div>`;
+      h += `<div class="kv">${m.kappa ? `<div class="k">κ</div><div class="v">${esc(m.kappa)}</div>` : ""}<div class="k">kind</div><div class="v">${esc(m.kind)}${m.binary ? " · " + esc(m.binary) : m.media ? " · " + esc(m.media.type) : ""}</div>${m.author ? `<div class="k">author</div><div class="v">${esc(m.author)}</div>` : ""}${m.size ? `<div class="k">size</div><div class="v">${m.size.toLocaleString()} bytes</div>` : ""}</div>`;
       if (m.preview) h += `<pre>${esc(m.preview)}</pre>`;
       if (m.trust) h += `<div class="trust">✓ ${esc(m.trust)}</div>`;    // V5: the proof, in plain words
       card.innerHTML = h;

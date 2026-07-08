@@ -88,4 +88,49 @@ export async function resolveNostr(name, { sha256hex, WebSocket = null, timeout 
   };
 }
 
-export default { decodeNostr, nostrEventId, verifyNostrEvent, fetchNostrEvent, resolveNostr, DEFAULT_RELAYS };
+// ── ENS (V3 · resolved pointer) — namehash (keccak256, LOCAL) → contenthash via an UNTRUSTED RPC → a CID
+//    the content then self-verifies against (Mode A). Trust is SPLIT and shown: the name→content step
+//    trusts the RPC (named in the card); the content step trusts nothing. keccak256 lazy-loaded. ────────
+const ENS_REGISTRY = "0x00000000000c2e074ec69a0dfb2997ba6c7d2e1e";
+const B32L = "abcdefghijklmnopqrstuvwxyz234567";
+const b32 = (u8) => { let bits = 0, val = 0, out = ""; for (const b of u8) { val = (val << 8) | b; bits += 8; while (bits >= 5) { out += B32L[(val >> (bits - 5)) & 31]; bits -= 5; } } if (bits) out += B32L[(val << (5 - bits)) & 31]; return out; };
+
+export function namehash(name, keccak256) {                          // EIP-137
+  let node = new Uint8Array(32);
+  if (name) { const labels = name.toLowerCase().split("."); for (let i = labels.length - 1; i >= 0; i--) { const lh = keccak256(new TextEncoder().encode(labels[i])); const cat = new Uint8Array(64); cat.set(node); cat.set(lh, 32); node = keccak256(cat); } }
+  return node;
+}
+export function decodeContenthash(hex) {                             // EIP-1577
+  const h = String(hex).replace(/^0x/, "").toLowerCase(); if (!h) return null;
+  const b = h.match(/.{2}/g).map((x) => parseInt(x, 16));
+  if (b[0] === 0xe3) return { proto: "ipfs", cid: "b" + b32(Uint8Array.from(b.slice(2))) };   // ipfs-ns → CIDv1
+  if (b[0] === 0xe5) return { proto: "ipns", cid: "b" + b32(Uint8Array.from(b.slice(2))) };   // ipns-ns
+  return { proto: "0x" + (b[0] || 0).toString(16), raw: h };
+}
+export async function resolveENS(name, { fetchFn, rpcs } = {}) {
+  const { keccak256 } = await import("./holo-keccak.mjs");
+  const RPCS = rpcs || ["https://ethereum-rpc.publicnode.com", "https://eth.llamarpc.com", "https://cloudflare-eth.com"];
+  const node = "0x" + hx(namehash(name, keccak256));
+  const call = async (to, data) => {
+    for (const rpc of RPCS) { try {
+      const r = await fetchFn(rpc, { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ jsonrpc: "2.0", id: 1, method: "eth_call", params: [{ to, data }, "latest"] }) });
+      if (r && r.ok) { const j = await r.json(); if (j && j.result && j.result !== "0x") return { result: j.result, via: rpc }; }
+    } catch {} }
+    return null;
+  };
+  const rslv = await call(ENS_REGISTRY, "0x0178b8bf" + node.slice(2));                        // resolver(bytes32)
+  if (!rslv) return { ok: false, why: "no Ethereum RPC answered for this name" };
+  const resolver = "0x" + rslv.result.slice(26);
+  if (/^0x0+$/.test(resolver)) return { ok: false, why: "this name has no resolver set" };
+  const ch = await call(resolver, "0xbc1c58d1" + node.slice(2));                              // contenthash(bytes32)
+  if (!ch) return { ok: false, why: "the resolver returned no contenthash (maybe only an address)" };
+  const raw = ch.result.replace(/^0x/, ""); const len = parseInt(raw.slice(64, 128) || "0", 16); const data = raw.slice(128, 128 + len * 2);
+  if (!data) return { ok: false, why: "this name points to no content (no contenthash record)" };
+  const dec = decodeContenthash(data);
+  if (!dec || !dec.cid) return { ok: false, why: "unsupported contenthash protocol" };
+  const host = (() => { try { return new URL(ch.via).host; } catch { return "an RPC"; } })();
+  return { ok: true, name, node, resolver, cid: dec.cid, proto: dec.proto, pointsTo: dec.proto + "://" + dec.cid, via: "ethereum RPC (" + host + ")",
+    trust: "name → content resolved via an UNTRUSTED Ethereum RPC (" + host + "); the content then verifies by its " + dec.proto.toUpperCase() + " address — nothing about the bytes is trusted" };
+}
+
+export default { decodeNostr, nostrEventId, verifyNostrEvent, fetchNostrEvent, resolveNostr, DEFAULT_RELAYS, namehash, decodeContenthash, resolveENS };

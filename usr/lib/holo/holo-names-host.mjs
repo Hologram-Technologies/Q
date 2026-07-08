@@ -41,10 +41,11 @@ export function makeHostResolver({ base, wasmGlue = null, fetchFn = null, lruSiz
   if (!BASE) throw new Error("makeHostResolver needs base (the bundle root URL)");
   const rawFetch = fetchFn || ((u, o) => fetch(u, o));
 
-  let _b3 = null, _wasm = null;
+  let _b3 = null, _wasm = null, _kec = null;
   const b3small = async (b) => { if (!_b3) _b3 = (await import("./holo-blake3.mjs")).blake3hex; return _b3(b); };
   const hashers = {
     sha256: async (b) => hex2(await crypto.subtle.digest("SHA-256", b)),
+    keccak256: async (b) => { if (!_kec) _kec = (await import("./holo-keccak.mjs")).keccak256hex; return _kec(b); },   // completes the σ-axis: eth content verifies too
     blake3: async (b) => {
       if (b.length > SMALL && wasmGlue) {
         try {
@@ -104,6 +105,17 @@ export function makeHostResolver({ base, wasmGlue = null, fetchFn = null, lruSiz
           if (r.ok) { bump(r.kappa, { kind: "nostr", kappa: r.kappa, bytes: r.bytes }); return { ok: true, kind: "nostr", kappa: r.kappa, bytes: r.bytes, source: r.via, trust: r.trust, author: r.author, event: r.event }; }
           return { ok: false, kind: "nostr", why: r.why };
         } catch (e) { return { ok: false, kind: "nostr", why: String(e && e.message || e).slice(0, 60) }; }
+      }
+      // ENS (V3): namehash local → contenthash via an untrusted RPC → a CID the content verifies against.
+      if (rec && rec.kind === "ens") {
+        try {
+          const { resolveENS } = await import("./holo-pointers.mjs");
+          const e = await resolveENS(name, { fetchFn: rawFetch });
+          if (!e.ok) return { ok: false, kind: "ens", why: e.why };
+          let content = null; try { content = await resolve(e.pointsTo); } catch {}   // chain the CID into Mode A
+          if (content && content.ok) return { ok: true, kind: "ens", kappa: content.kappa, bytes: content.bytes, source: "ens→" + content.source, pointsTo: e.pointsTo, via: e.via, trust: e.trust };
+          return { ok: true, kind: "ens", pointsTo: e.pointsTo, cid: e.cid, via: e.via, trust: e.trust };   // a directory (dag-pb) → point at it, honestly
+        } catch (err) { return { ok: false, kind: "ens", why: String(err && err.message || err).slice(0, 60) }; }
       }
       // data: URI — inline, self-verifying, zero network. Decode → the κ is the hash of its own bytes (L5).
       if (rec && rec.kind === "data") {
