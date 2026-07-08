@@ -1,6 +1,7 @@
 {
  "apps": [
   "video",
-  "animate"
+  "animate",
+  "holo-linux"
  ]
 }
