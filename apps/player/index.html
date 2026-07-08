@@ -99,7 +99,35 @@
       .me svg { display: block; width: 100%; height: 100%; }
       .me:hover { transform: scale(1.06); filter: drop-shadow(0 0 6px color-mix(in srgb, var(--acc) 55%, #c79bff)); }
 
+/* ── Apple-TV LEFT SIDEBAR (desktop ≥900px) — the persistent spine; the immersive stage sits to its
+         right and stays mounted. Below 900px the top pill-nav (mobile) is untouched. Tab icons are line-art
+         (tvOS grammar); the active row glows in the accent. ── */
+      .ti { width: 1.25rem; height: 1.25rem; fill: none; stroke: currentColor; stroke-width: 1.7; stroke-linecap: round; stroke-linejoin: round; flex: 0 0 auto; }
+      nav button .ti { display: none; }
+      @media (min-width: 900px) {
+        body { flex-direction: row; }
+        #top { position: static; inset: auto; height: 100vh; width: 15rem; flex: 0 0 15rem;
+          flex-direction: column; align-items: stretch; gap: var(--s2); padding: var(--s5) var(--s3) var(--s3);
+          background: linear-gradient(180deg, rgba(13,17,23,0.94), rgba(9,11,14,0.92));
+          border-right: 1px solid var(--line); backdrop-filter: blur(18px); }
+        #top.solid { background: rgba(13,17,23,0.96); border-bottom: 0; }
+        .me { align-self: flex-start; margin-bottom: var(--s2); }
+        nav { flex-direction: column; align-items: stretch; gap: 0.12rem; width: 100%; background: transparent; border-radius: 0; padding: 0; }
+        nav .nav-ic { display: none; }
+        nav button { justify-content: flex-start; gap: var(--s2); padding: var(--s2); border-radius: 10px; font-size: 1.02rem; width: 100%; text-align: left; }
+        nav button .ti { display: inline-flex; }
+        nav button:hover { background: rgba(255,255,255,0.06); }
+        nav button.on { color: var(--ink); background: rgba(255,255,255,0.13); }
+        nav button.on .ti { color: var(--acc); stroke: var(--acc); }
+        .sp { margin: auto 0 0; }
+        .search { display: flex; width: 100%; max-width: none; order: 2; }
+        .gear, .addbtn { align-self: flex-start; }
+        #library, #search { padding-top: var(--s4); }
+      }
+
       main { flex: 1 1 auto; min-height: 0; position: relative; }
+
+            main { flex: 1 1 auto; min-height: 0; position: relative; }
       /* Seamless view changes — crossfade + a subtle rise instead of a hard cut. */
       .view { position: absolute; inset: 0; overflow-y: auto; overflow-x: hidden; opacity: 0; transform: translateY(10px); transition: opacity 0.2s ease, transform 0.2s cubic-bezier(.2,.7,.3,1); }
       .view.on { opacity: 1; transform: none; }
@@ -752,11 +780,11 @@
       </button>
       <nav>
         <button class="nav-ic" id="navSearch" type="button" title="Search" aria-label="Search"><svg class="icon" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l5.27 5.27-1.42 1.42-5.27-5.27A6.5 6.5 0 1 1 9.5 3m0 2a4.5 4.5 0 1 0 0 9 4.5 4.5 0 0 0 0-9Z"/></svg></button>
-        <button data-tab="home" class="on">Home</button>
-        <button data-tab="live">Live</button>
-        <button data-tab="movies">Movies</button>
-        <button data-tab="shows">Shows</button>
-        <button data-tab="apps">Apps</button>
+<button data-tab="home" class="on"><svg class="ti" viewBox="0 0 24 24"><path d="M4 11.5 12 5l8 6.5"/><path d="M6 10.5V19h12v-8.5"/></svg><span>Home</span></button>
+        <button data-tab="live"><svg class="ti" viewBox="0 0 24 24"><circle cx="12" cy="12" r="2.2"/><path d="M8.2 8.2a5.4 5.4 0 0 0 0 7.6M15.8 8.2a5.4 5.4 0 0 1 0 7.6M5.6 5.6a9 9 0 0 0 0 12.8M18.4 5.6a9 9 0 0 1 0 12.8"/></svg><span>Live</span></button>
+        <button data-tab="movies"><svg class="ti" viewBox="0 0 24 24"><rect x="4" y="5" width="16" height="14" rx="2"/><path d="M8.2 5v14M15.8 5v14M4 9.6h4.2M15.8 9.6H20M4 14.4h4.2M15.8 14.4H20"/></svg><span>Movies</span></button>
+        <button data-tab="shows"><svg class="ti" viewBox="0 0 24 24"><rect x="3.5" y="5" width="17" height="12" rx="2"/><path d="M8.5 20.5h7M12 17v3.5"/></svg><span>Shows</span></button>
+        <button data-tab="apps"><svg class="ti" viewBox="0 0 24 24"><rect x="4" y="4" width="6.6" height="6.6" rx="1.7"/><rect x="13.4" y="4" width="6.6" height="6.6" rx="1.7"/><rect x="4" y="13.4" width="6.6" height="6.6" rx="1.7"/><rect x="13.4" y="13.4" width="6.6" height="6.6" rx="1.7"/></svg><span>Apps</span></button>
       </nav>
       <span class="sp"></span>
       <label class="search" id="searchBox">
