@@ -1,7 +1,7 @@
 {
  "v": 1,
  "created": 1783514558116,
- "aggregate": "5a4ec7a552bd3e066ae7e10534370b507daae9be690457c185d5fa6db8524256",
+ "aggregate": "6de4701a768f9453c922f2d0ec812399a6c51e22d757cd03f452a57e975bb657",
  "assets": [
   {
    "path": "/apps/browser/browser-sw.js",
@@ -50,8 +50,8 @@
   },
   {
    "path": "/apps/browser/index.html",
-   "kappa": "5222afa2c650570444b44235e004c592dc6ba88c2d6f7f1e925d136eeefdef37",
-   "bytes": 99552
+   "kappa": "ed2158402765f39afdbe9f34a8556555768473e336fd185738098acfc4e1cbf7",
+   "bytes": 99643
   },
   {
    "path": "/apps/browser/ipfs-sw.js",
