@@ -211,6 +211,24 @@
         .hero .body { left: var(--s3); right: var(--s3); width: auto; bottom: var(--s4); }
         .hero .cta .btn { height: 3rem; padding: 0 var(--s4); }
       }
+/* ── M6 MOBILE (<900px) — the nav becomes an iOS/tvOS BOTTOM TAB BAR (thumb-native), icon over label,
+         active tab in the accent. The top bar stays slim (profile · search · settings). Content clears the bar
+         + the home-indicator safe area. Above 900px the desktop sidebar owns nav; this never fires there. ── */
+      @media (max-width: 899px) {
+        nav { position: fixed; left: 0; right: 0; bottom: 0; z-index: 45; justify-content: space-around;
+          align-items: stretch; gap: 0; max-width: none; overflow: visible; border-radius: 0;
+          background: rgba(13,17,23,0.9); backdrop-filter: blur(20px); border-top: 1px solid var(--line);
+          padding: 0.28rem 0 calc(0.28rem + env(safe-area-inset-bottom, 0px)); }
+        nav .nav-ic { display: none; }
+        nav button { flex: 1 1 0; flex-direction: column; align-items: center; justify-content: center; gap: 2px;
+          padding: 0.32rem 0; font-size: 0.6rem; font-weight: 600; border-radius: 0; color: var(--dim); }
+        nav button .ti { display: inline-flex; width: 1.5rem; height: 1.5rem; }
+        nav button:hover { background: transparent; }
+        nav button.on { color: var(--acc); background: transparent; }
+        nav button.on .ti { color: var(--acc); stroke: var(--acc); }
+        .search { display: flex; flex: 1 1 auto; max-width: none; }   /* persistent search in the slim top bar */
+        .view { padding-bottom: calc(4.6rem + env(safe-area-inset-bottom, 0px)); }
+      }
       .app-ic .ic { width: 0.595em; height: 0.595em; }
       .app-ic .ic.apple { width: 0.37em; height: 0.37em; }
       .appletv-wrap { display: inline-flex; align-items: center; gap: 1px; }
