@@ -18,10 +18,10 @@
     <meta name="application-name" content="Hologram" />
     <link rel="apple-touch-icon" href="/icon-192.png" />
     <!-- Shared mobile-conformance layer every shipped holospace adopts (enforce-witnesses gate). -->
-    <link rel="stylesheet" href="../../_shared/holo-mobile.css" data-holo-shared="holo-mobile.css" />
-    <link rel="stylesheet" href="../../_shared/holo-phi.css" data-holo-shared="holo-phi.css" />
-    <script type="module" src="../../_shared/holo-ux.js" data-holo-shared="holo-ux.js"></script>
-    <link rel="stylesheet" href="../../_shared/holo-dock.css" data-holo-shared="holo-dock.css" />
+    <link rel="stylesheet" href="/.holo/sha256/b2bfa104b9ee8e3bb631dcd0ec0e6f7017b8898c4304666f5b3dfeeebc926eb9.css" data-holo-shared="holo-mobile.css" />
+    <link rel="stylesheet" href="/.holo/sha256/af0f2b5ff47f414281246d8e8e786edc6302bed6731174897f74f105dd2f93f3.css" data-holo-shared="holo-phi.css" />
+    <script type="module" src="/.holo/sha256/f06225898cce8ded3bddebb5abf6a4f2478e40b7eac828905d38290cebb820de.js" data-holo-shared="holo-ux.js"></script>
+    <link rel="stylesheet" href="/_shared/holo-dock.css" data-holo-shared="holo-dock.css" />
     <style>
       :root {
         color-scheme: dark;
@@ -167,9 +167,7 @@
       #peerstate { font-size: 0.84rem; margin-top: 0.6rem; min-height: 1.2em; }
       @media (max-width: 640px) { #native { display: none; } .tab { min-width: 92px; } }
     </style>
-  <link rel="icon" href="./icon.svg">
-<script>try{if("serviceWorker" in navigator)navigator.serviceWorker.register(new URL("../../root-sw.js",location.href)).catch(function(){})}catch(e){}</script>
-</head>
+  </head>
   <body>
     <!-- Entry splash: the shared Hologram "streaming" boot screen. ONE source of truth
          for every Holo app — only the app="…" name differs. Self-contained, offline,
@@ -238,8 +236,11 @@
         <h2 id="peerttl">Browse through your own device</h2>
         <p>Public relays hand many sites back empty. Your own computer can carry the request instead —
            the bytes flow device-to-device and never touch a third party. Works on any network.</p>
-        <p>On your computer, open <code>peer-host.html</code> — <b>scan its QR</b>, or type the pairing
-           code it shows here.</p>
+        <p><b>Is this the computer</b> you want to browse through? Turn it into your exit peer —
+           it shows a QR your phone scans, and stays reachable while open:</p>
+        <div class="row" style="justify-content:flex-start;margin:.2rem 0 .9rem"><button class="go" id="peerbehost" style="width:100%">Make this device the exit peer →</button></div>
+        <p style="border-top:1px solid var(--line);padding-top:.8rem"><b>Or pair to another device:</b> on it,
+           open <code>peer-host.html</code> — <b>scan its QR</b>, or type the pairing code it shows here.</p>
         <input id="peercode" type="text" spellcheck="false" autocomplete="off"
           placeholder="pairing code (e.g. a1b2c-3d4e5-…)" aria-label="Pairing code" />
         <div id="peerstate"></div>
@@ -253,7 +254,7 @@
       </div>
     </div>
 
-    <script src="../../_shared/teleport.js" data-holo-shared="teleport.js" defer></script>
+    <script src="/.holo/sha256/a0ebbc696bda5154727b76b42c11921231cbc652de3e705dd6b632456e6f34aa.js" data-holo-shared="teleport.js" defer></script>
     <script type="module">
       import * as B from "../../_shared/holo-browser.js";
       import { blake3, toHex, toBytes } from "../../_shared/holo-ipfs.js";
@@ -419,8 +420,20 @@
         const inp = $("peercode"); inp.value = ""; $("peersignal").value = (peerConfig().signal || ""); $("peerstate").textContent = "";
         setTimeout(() => inp.focus(), 50);
       }
+      // "Make THIS device the exit peer" → open peer-host.html as a browser tab. It mints a pairκ, shows a
+      // QR + code, and arms serveAsExitPeerRdv over the content-blind Nostr rendezvous — the other device
+      // scans/types it and browses through here. (Needs a Hologram host that answers /web; on a bare static
+      // mount peer-host says so honestly.) Closes the loop from ONE panel: pair TO a device, or BE the device.
+      function becomeExitPeer() {
+        $("peerdlg").classList.remove("on");
+        const t = browser.newTab("holo://exit-peer"); renderTabs();
+        t.title = "Exit peer"; setOmni(""); setSecurity(); syncNav();
+        setVerify({ verified: true, scheme: "holo" });
+        loadFrame(BASE + "peer-host.html", t, performance.now(), "holo");
+      }
       function closePeerSetup() { $("peerdlg").classList.remove("on"); }
       $("peerno").onclick = closePeerSetup;
+      $("peerbehost").onclick = becomeExitPeer;
       $("peerdlg").addEventListener("click", (e) => { if (e.target === $("peerdlg")) closePeerSetup(); });
       async function connectWith({ pairk, signal }) {
         const st = $("peerstate");
@@ -1063,10 +1076,10 @@
       render(); hydrate().then(autoInstallShield);
       } catch (err) { console.error("[holo-ext] store init failed:", err); }
     </script>
-    <script src="../../_shared/holo-theme.js" data-holo-shared="holo-theme.js"></script>
-    <script src="../../_shared/holo-manage.js" data-holo-shared="holo-manage.js" defer></script>
+    <script src="/.holo/sha256/b4dbe84b9234d9b4672a632159fc7cbafb94c0af6da7cec9eedf2c325fe1667b.js" data-holo-shared="holo-theme.js"></script>
+    <script src="/.holo/sha256/92dcac0de44530fe7a198607bd3daf734e02119a3c9c1ba15b871f8fc3c0782f.js" data-holo-shared="holo-manage.js" defer></script>
     <!-- The dock is Holo Browser's shortcut bar (ADR-0059): a tap opens that object in a tab. -->
-    <script defer src="../../_shared/holo-dock.js" data-holo-shared="holo-dock.js"></script>
+    <script defer src="/_shared/holo-dock.js" data-holo-shared="holo-dock.js"></script>
     <script defer src="./holo-install.js" data-holo-shared="holo-install.js"></script>
     <!-- Window controls: native tier only. Uses Tauri's official window API (withGlobalTauri). -->
     <script>
