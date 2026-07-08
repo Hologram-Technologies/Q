@@ -167,7 +167,7 @@ html[data-skin="slack"] .holo-wa-root .holo-c-input { background:#26262B !import
 html[data-skin="slack"] .holo-wa-root.theater {
   /* FOLLOW the operator's chosen wallpaper (--wp-img, set from localStorage holo-messenger/wallpaper-src),
      falling back to the preloaded default when unset. `none` (the "plain" mode) is honoured → dark. */
-  background: #0b0f14 var(--wp-img, url("./_vendor/wallpaper-default.jpg")) center center / cover no-repeat !important;
+  background: #0b0f14 var(--wp-img, url("/apps/holo-messenger/_vendor/wallpaper-default.jpg")) center center / cover no-repeat !important;
 }
 html[data-skin="slack"] .holo-wa-root.theater .holo-backdrop { display: none !important; }                 /* WebGPU canvas off → lower latency */
 html[data-skin="slack"] .holo-wa-root.theater .cs-chat-container {
@@ -213,7 +213,7 @@ html[data-skin="slack"] .holo-wa-root.theater .cs-message--outgoing .cs-message_
  *   · Only 3 blur layers total (rail + header + composer); bubbles are plain translucent — stays responsive. */
 html[data-skin="slack"] .holo-wa-root:has(.holo-main.frame-collapsed):not(.theater) {
   /* same as theatre: follow the operator's --wp-img, fall back to the preloaded default */
-  background: #0b0f14 var(--wp-img, url("./_vendor/wallpaper-default.jpg")) center center / cover no-repeat !important;
+  background: #0b0f14 var(--wp-img, url("/apps/holo-messenger/_vendor/wallpaper-default.jpg")) center center / cover no-repeat !important;
 }
 html[data-skin="slack"] .holo-wa-root:has(.holo-main.frame-collapsed):not(.theater) .holo-backdrop { display: none !important; }
 /* the left nav bar stays — a clean SOLID strip; the wallpaper covers the entire screen EXCEPT this rail */
