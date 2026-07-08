@@ -92,6 +92,36 @@ select{background:var(--panel);border:1px solid var(--line2);color:var(--tx2);bo
 .pub.off{color:var(--green)} .pub.ver{color:var(--blue)} .pub.comm{color:var(--tx3)}
 .tierb{display:inline-flex;gap:4px;align-items:center;font-size:11px;font-weight:700;padding:1px 7px;border-radius:20px;border:1px solid;white-space:nowrap;width:fit-content;margin-top:3px}
 .srcg{display:inline-flex;gap:2px;align-items:center;font-size:12px;letter-spacing:1px} .srcg b{font-weight:800}
+/* ── PH-clean ranked list ─────────────────────────────────────────────────────────── */
+.home-head{max-width:1120px;margin:0 auto;padding:var(--s2) var(--s3) var(--s3);display:flex;align-items:center;justify-content:space-between;gap:var(--s3)}
+.home-head h2{font-size:21px;font-weight:750;letter-spacing:-.3px;margin:0;color:var(--tx)}
+.viewtog{display:flex;gap:2px;background:var(--panel2);border:1px solid var(--line2);border-radius:11px;padding:2px;flex:0 0 auto}
+.viewtog button{background:transparent;color:var(--tx3);border:0;border-radius:9px;padding:5px 11px;font-size:12px;font-weight:600;cursor:pointer}
+.viewtog button.on{background:var(--blue);color:#0a0d14;font-weight:700}
+.grid.list{display:block;max-width:1120px;margin:0 auto;padding:0}
+.approw{display:flex;align-items:center;gap:var(--s3);padding:var(--s3) var(--s2);border-bottom:1px solid var(--line);cursor:pointer;transition:background .12s,border-color .12s}
+.approw:hover{background:var(--panel)}
+.approw .rank{width:26px;flex:0 0 auto;text-align:right;color:var(--tx3);font-variant-numeric:tabular-nums;font-size:15px;font-weight:700}
+.approw .ic{width:46px;height:46px;flex:0 0 auto;border-radius:13px;font-size:20px}
+.approw .abody{min-width:0;flex:1;display:flex;flex-direction:column;gap:3px}
+.approw .r1{display:flex;align-items:center;gap:var(--s2);min-width:0;flex-wrap:wrap}
+.approw .rn{font-weight:650;font-size:15.5px;letter-spacing:-.1px;color:var(--tx);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:100%}
+.approw .rt{color:var(--tx2);font-size:13px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;line-height:1.4}
+.approw .tags{display:flex;gap:var(--s3);color:var(--tx3);font-size:12px;flex-wrap:wrap}
+.approw .tags span{cursor:pointer} .approw .tags span:hover{color:var(--blue)} .approw .tags span::before{content:'#'}
+.approw .aright{flex:0 0 auto;display:flex;align-items:center;gap:var(--s3)}
+.approw .up{display:flex;flex-direction:column;align-items:center;gap:1px;border:1px solid var(--line2);border-radius:11px;padding:5px 11px;min-width:50px}
+.approw .up b{font-size:14px;color:var(--tx);font-variant-numeric:tabular-nums;line-height:1} .approw .up small{font-size:9px;letter-spacing:.6px;text-transform:uppercase;color:var(--tx3)}
+.approw .runb{background:var(--green);color:#04140c;border:0;border-radius:11px;padding:8px 14px;font-weight:700;font-size:13px;cursor:pointer;white-space:nowrap;transition:filter .12s}
+.approw .runb:hover{filter:brightness(1.08)} .approw .runb.b{background:var(--gold);color:#1a1405} .approw .runb.v{background:var(--panel2);color:var(--tx);border:1px solid var(--line2)}
+@media(max-width:640px){.approw .rt{-webkit-line-clamp:1}.approw .tags{display:none}.approw .up{display:none}.home-head h2{font-size:18px}.approw{gap:var(--s2)}}
+/* ── categories directory (PH-style) ─────────────────────────────────────────────── */
+#cats{display:none;max-width:1120px;margin:0 auto;padding:var(--s4) var(--s5)}
+#cats.on{display:block} #cats h2{font-size:26px;font-weight:750;letter-spacing:-.4px;margin:0 0 var(--s2)}
+.catgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:var(--s2) var(--s5);margin-top:var(--s4)}
+.catcard{padding:var(--s3) 0;border-top:1px solid var(--line);cursor:pointer}
+.catcard:hover .cn{color:var(--blue)} .catcard .cn{font-size:16px;font-weight:650;color:var(--tx);display:flex;gap:var(--s2);align-items:baseline}
+.catcard .cn .cc{font-size:12px;color:var(--tx3);font-weight:500;font-variant-numeric:tabular-nums} .catcard .cd{color:var(--tx2);font-size:12.5px;margin-top:3px;line-height:1.45}
 .why{color:var(--tx2);font-size:13px;line-height:1.5;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;min-height:39px}
 .foot{display:flex;gap:var(--s4);color:var(--tx3);font-size:13px;margin-top:auto;align-items:center}
 .foot span{display:flex;gap:var(--s1);align-items:center}
@@ -137,22 +167,84 @@ html,body{overflow:hidden;height:100%}
   .tabswrap::before{left:var(--s4)}.tabswrap::after{right:var(--s4)}#tprev{left:calc(var(--s4) - 13px)}#tnext{right:calc(var(--s4) - 13px)}
   .gridwrap{padding:var(--s3) var(--s4) var(--s6)}#detail{padding:var(--s4)}main{grid-template-columns:1fr}.logwrap{display:none}}
 @media(max-width:640px){.hic2{display:none}.hname{font-size:21px}.hinner{gap:var(--s4);padding:var(--s4)}.hinner button{display:none}}
+/* ══ Featherless-style: enclosed left filter rail + artwork card grid (golden-ratio) ══ */
+#sidetog{display:none} #browse{display:flex;flex-direction:row;height:calc(100vh - 55px);gap:0}
+#side{flex:0 0 233px;overflow-y:auto;border-right:1px solid var(--line);padding:var(--s4) var(--s3);display:flex;flex-direction:column;gap:var(--s5);background:#0c1017}
+#side::-webkit-scrollbar{width:8px} #side::-webkit-scrollbar-thumb{background:#232a3d;border-radius:8px;border:2px solid #0c1017}
+.ssec{display:flex;flex-direction:column;gap:var(--s2)}
+.shd{display:flex;align-items:center;justify-content:space-between;font-size:11px;font-weight:800;letter-spacing:1.2px;text-transform:uppercase;color:var(--tx3);padding:0 var(--s2)}
+.sreset{background:none;border:0;color:var(--tx3);font-size:9.5px;letter-spacing:.6px;text-transform:uppercase;cursor:pointer;padding:2px 4px;opacity:0;transition:opacity .15s}
+.ssec.active .sreset{opacity:1} .sreset:hover{color:var(--blue)}
+.frows{display:flex;flex-direction:column;gap:1px}
+.frow{display:flex;align-items:center;gap:var(--s2);padding:6px var(--s2);border-radius:9px;cursor:pointer;color:var(--tx2);font-size:13px;transition:background .12s,color .12s;user-select:none}
+.frow:hover{background:var(--panel)} .frow.on{background:var(--panel2);color:var(--tx);font-weight:650}
+.frow .fg{flex:0 0 auto;width:18px;text-align:center} .frow .fl{flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.frow .fc{flex:0 0 auto;font-size:11px;color:var(--tx3);font-variant-numeric:tabular-nums;background:var(--bg);border:1px solid var(--line);border-radius:20px;padding:0 7px;line-height:18px}
+.frow.on .fc{color:var(--tx2);border-color:var(--line2)}
+.sfilter{background:var(--bg);border:1px solid var(--line2);color:var(--tx);border-radius:9px;padding:6px var(--s2);font:inherit;font-size:12px;outline:none;margin-bottom:2px}
+.sfilter:focus{border-color:var(--blue)} .smore{background:none;border:0;color:var(--blue);font-size:12px;text-align:left;padding:5px var(--s2) 0;cursor:pointer}
+.mainhd{display:flex;align-items:center;justify-content:space-between;gap:var(--s3);padding:var(--s4) var(--s5) var(--s3);max-width:1597px;margin:0 auto;width:100%}
+.mtitle{display:flex;align-items:baseline;gap:var(--s3)} .mtitle h2{font-size:21px;font-weight:750;letter-spacing:-.3px;margin:0}
+.mctl{display:flex;gap:var(--s2);align-items:center}
+.viewtog{display:flex;gap:2px;background:var(--panel2);border:1px solid var(--line2);border-radius:10px;padding:2px;flex:0 0 auto}
+.viewtog button{background:transparent;color:var(--tx3);border:0;border-radius:8px;padding:5px 10px;font-size:13px;cursor:pointer}
+.viewtog button.on{background:var(--blue);color:#0a0d14;font-weight:700}
+/* cover card — art lives in a clean banner; text on a solid strip (always readable) */
+.grid{grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:var(--s4)}
+.fcard{position:relative;background:var(--panel);border:1px solid var(--line);border-radius:14px;overflow:hidden;cursor:pointer;display:flex;flex-direction:column;transition:border-color .18s,box-shadow .18s,transform .12s}
+.fcard:hover{border-color:color-mix(in srgb,var(--tint,#7aa5f8) 60%,var(--line2));box-shadow:0 18px 46px #000b,0 0 44px color-mix(in srgb,var(--tint,#7aa5f8) 16%,transparent);transform:translateY(-3px)}
+.fcover{position:relative;aspect-ratio:1.9/1;background:#0d1119;overflow:hidden}
+.cimg{position:absolute;inset:0;background-size:cover;background-position:center;transition:transform .35s} .fcard:hover .cimg{transform:scale(1.045)}
+.cgen{position:absolute;inset:0;background:radial-gradient(130% 140% at 18% 6%,color-mix(in srgb,var(--tint,#3a4568) 34%,#0f1420),#090c12 82%)}
+.ctex{position:absolute;inset:0;opacity:.9;background:
+  linear-gradient(135deg,#ffffff0e 0,transparent 38%),
+  conic-gradient(from 220deg at 80% 14%,#ffffff10,transparent 16%,transparent 46%,#ffffff08 62%,transparent 78%),
+  repeating-linear-gradient(58deg,#ffffff08 0 1px,transparent 1px 26px),
+  repeating-linear-gradient(-58deg,#ffffff06 0 1px,transparent 1px 34px)}
+.cbig{position:absolute;inset:0;display:flex;align-items:center;justify-content:center} .cbig img{width:60px;height:60px;object-fit:contain;filter:drop-shadow(0 8px 20px #000c)}
+.cmono{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-size:50px;font-weight:800;color:#ffffff33;letter-spacing:-2px}
+.cshade{position:absolute;inset:0;background:linear-gradient(180deg,#0a0d1466 0,transparent 26%,transparent 70%,#0a0d14a6 100%)}
+.cbadges{position:absolute;top:9px;left:9px;display:flex;gap:5px;flex-wrap:wrap;max-width:calc(100% - 62px)}
+.cbadge{font-size:10px;font-weight:700;letter-spacing:.5px;text-transform:uppercase;padding:3px 8px;border-radius:7px;background:#0a0d14b8;border:1px solid #ffffff1f;color:#dbe2f0;white-space:nowrap;backdrop-filter:blur(6px)}
+.cbadge.s{color:#8ff0bf;border-color:#41ba8366;background:#0d2a1ecc} .cbadge.b{color:#f2d98c;border-color:#e8c66a5e;background:#2a2411cc} .cbadge.v{color:#c3ccdf}
+.clogo{position:absolute;bottom:9px;right:9px;width:40px;height:40px;border-radius:11px;background:#0d1119;border:1px solid #ffffff2b;display:flex;align-items:center;justify-content:center;overflow:hidden;font-size:18px;font-weight:800;color:#fff;box-shadow:0 5px 16px #000a}
+.clogo img{width:100%;height:100%;object-fit:cover}
+.finfo{padding:var(--s3);display:flex;flex-direction:column;gap:5px}
+.fname{font-family:ui-monospace,"Cascadia Code","JetBrains Mono",monospace;font-size:14px;font-weight:600;color:var(--tx);letter-spacing:-.2px;line-height:1.3;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.fwhy{color:var(--tx2);font-size:12.5px;line-height:1.42;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;min-height:36px}
+.fstats{display:flex;gap:var(--s3);align-items:center;color:var(--tx3);font-size:12px;font-variant-numeric:tabular-nums;margin-top:1px}
+.fstats span{display:flex;gap:5px;align-items:center}
+@media(max-width:820px){#sidetog{display:inline-flex}#side{position:fixed;left:0;top:var(--s6);bottom:0;z-index:9;transform:translateX(-100%);transition:transform .22s;box-shadow:0 0 55px #000a}#side.open{transform:none}}
 </style></head><body>
 <header>
   <span class=brand id=home><span class=hlogo><img src=hologram.svg alt=Hologram></span><span class=bt>Holo Hub</span></span>
   <button class=ghost id=back style="display:none">←</button>
-  <input id=search placeholder="Search Docker Hub…">
-  <select id=sort><option value=pull_count>Most pulled</option><option value=updated_at>Recently updated</option></select>
-  <span id=count></span>
+  <button class=ghost id=sidetog>☰</button>
+  <input id=search placeholder="Search every app…">
 </header>
-<div id=browse><div class=tabswrap id=tabswrap><button class=tnav id=tprev>‹</button><div class=tabs id=tabs></div><button class=tnav id=tnext>›</button></div>
-  <div class=gridwrap><div id=hero></div><div class=grid id=grid></div><div id=sentinel></div></div></div>
+<div id=browse>
+  <aside id=side>
+    <div class=ssec id=secSrc><div class=shd>Source<button class=sreset data-r=kind>Reset</button></div><div id=fSrc class=frows></div></div>
+    <div class=ssec id=secTier><div class=shd>How it opens<button class=sreset data-r=tier>Reset</button></div><div id=fTier class=frows></div></div>
+    <div class=ssec id=secCat><div class=shd>Category<button class=sreset data-r=cat>Reset</button></div>
+      <input id=catq class=sfilter placeholder="Filter categories…"><div id=fCat class=frows></div>
+      <button id=catMore class=smore>All categories →</button></div>
+  </aside>
+  <div class=gridwrap>
+    <div class=mainhd><div class=mtitle><h2 id=htitle>Apps</h2><span id=count></span></div>
+      <div class=mctl>
+        <select id=sort><option value=trending>Trending</option><option value=updated_at>Newest</option><option value=pull_count>Most popular</option></select>
+        <div class=viewtog><button id=mList class=on>☰</button><button id=mGrid>▦</button></div></div></div>
+    <div id=hero></div><div class=grid id=grid></div><div id=sentinel></div>
+  </div>
+</div>
+<div id=cats></div>
 <div id=detail></div>
 <div id=portal>
-  <div class=toolbar><input id=image placeholder="any image, e.g. nginx:alpine"><input id=port placeholder=port><input id=cmd placeholder="command (optional)">
-    <button id=runbtn>Stream</button><span id=status>idle</span></div>
+  <div class=toolbar><span id=ptitle style="font-weight:650;color:var(--tx)"></span><span id=status>idle</span>
+    <input id=image type=hidden><input id=port type=hidden><input id=cmd type=hidden><button id=runbtn style="display:none"></button></div>
   <main><iframe id=frame title="the live app"></iframe>
-    <div class=logwrap><div class=logbar><span>runtime log</span>
+    <div class=logwrap><div class=logbar><span>Activity</span>
       <button class=ghost id=copy style="margin-left:auto">Copy</button><button class=ghost id=clear>Clear</button></div><div id=log></div></div>
   </main>
 </div>
@@ -171,13 +263,13 @@ const I={
  star:'<svg width=13 height=13 viewBox="0 0 24 24" fill=none stroke=currentColor stroke-width=2 stroke-linejoin=round><path d="M12 3.5l2.6 5.4 5.9.8-4.3 4.1 1 5.9-5.2-2.8-5.2 2.8 1-5.9L3.5 9.7l5.9-.8z"></path></svg>',
  rosette:'<svg width=14 height=14 viewBox="0 0 24 24"><circle cx=12 cy=12 r=10 fill=currentColor opacity=.18></circle><path d="M7.5 12.5l3 3 6-7" stroke=currentColor stroke-width=2.2 fill=none stroke-linecap=round stroke-linejoin=round></path></svg>',
  check:'<svg width=14 height=14 viewBox="0 0 24 24" fill=none stroke=currentColor stroke-width=2.2 stroke-linecap=round stroke-linejoin=round><path d="M5 13l4 4L19 7"></path></svg>'};
-function show(v){ ['browse','detail','portal'].forEach(x=>$('#'+x).classList.toggle('on', x===v)); $('#browse').style.display=v==='browse'?'':'none'; $('#back').style.display=v==='browse'?'none':''; }
+function show(v){ ['browse','cats','detail','portal'].forEach(x=>$('#'+x).classList.toggle('on', x===v)); $('#browse').style.display=v==='browse'?'':'none'; $('#back').style.display=v==='browse'?'none':''; }
 $('#home').onclick=()=>show('browse');
 $('#back').onclick=()=>{ if($('#portal').classList.contains('on') && curApp) detail(curApp); else show('browse'); };
 
 // ── the baked snapshot: fresh Docker Hub index with original artwork inlined. 100% serverless —
 // the whole index ships in this app, zero network, no CORS, no proxy. A scheduled Action re-bakes it.
-let CAT=null, curCat='', curKind='', curQ='', curApp=null, epoch=0, view=[], SHOWN=0, VERIFIED=false;
+let CAT=null, curCat='', curKind='', curTier='', curQ='', curApp=null, epoch=0, view=[], SHOWN=0, VERIFIED=false, MODE='list';
 const SIZE=28;
 async function boot(){
   try{ CAT=await (await fetch('catalog.json',{cache:'force-cache'})).json(); }
@@ -189,12 +281,13 @@ async function boot(){
   CAT.__verified=VERIFIED; window.__CAT=CAT; window.__openDetail=(a)=>detail(a); window.__dbg={get VERIFIED(){return VERIFIED}};   // witness hooks
   loadCats(); refresh();
 }
-const SRCG={ dockerhub:'🐳', docker:'🐳', github:'⚡', 'github-repo':'⚡', producthunt:'🚀', hackernews:'🔥', reddit:'👽' };
-const TIERM={ S:{i:'⚡',l:'Stream now',c:'#41ba83'}, B:{i:'🧊',l:'Bake-once',c:'#e8c66a'}, K:{i:'🅺',l:'κ-native',c:'#7aa5f8'}, V:{i:'↗',l:'View',c:'#5b6479'} };
+const SRCG={ dockerhub:'🐳', docker:'🐳', github:'⚡', 'github-repo':'⚡', 'github-marketplace':'🛒', producthunt:'🚀', hackernews:'🔥', reddit:'👽' };
+// two plain states: an app either STREAMS (runs right here) or OPENS on its own site. No jargon.
+const STREAMABLE=a=>!!(a&&a.tier&&a.tier!=='V');
+const runIcon=a=>STREAMABLE(a)?'⚡':'↗', runWord=a=>STREAMABLE(a)?'Stream':'Open';
 function hostOf(u){ try{ return new URL(u).host.replace(/^www\./,''); }catch{ return ''; } }
-// tier badge (web entries carry a.tier; docker/repo run via their own door and show none)
-function tierBadge(a){ const t=TIERM[a.tier]; if(!t) return ''; const via=(a.tier==='S'&&a.framable===false)?' · via browser':'';
-  return '<span class=tierb style="color:'+t.c+';border-color:'+t.c+'55;background:'+t.c+'19">'+t.i+' '+t.l+via+'</span>'; }
+function tierBadge(a){ const s=STREAMABLE(a);
+  return '<span class=tierb style="color:'+(s?'#41ba83':'#8896b0')+';border-color:'+(s?'#41ba8355':'#3a445e')+';background:'+(s?'#41ba8319':'#8896b016')+'">'+runIcon(a)+' '+runWord(a)+'</span>'; }
 // source glyphs — the L7 "many spellings, one app" tell; buzz>1 = trending across sources
 function srcGlyphs(a){ const s=a.sources||[]; if(!s.length) return ''; const g=s.map(x=>SRCG[x.src]||'•').join('');
   return '<span class=srcg title="'+esc(s.map(x=>x.src).join(' · '))+'">'+g+(a.buzz>1?' <b style="color:var(--gold)">×'+a.buzz+'</b>':'')+'</span>'; }
@@ -203,29 +296,55 @@ function pubLine(a){ if(a.official) return '<div class="pub off">'+I.rosette+'Do
   if(a.site) return '<div class="pub comm">'+esc(hostOf(a.site))+'</div>';
   return '<div class="pub comm">'+esc(String(a.id||'').replace(/^[a-z]+:/,'').split('/')[0])+'</div>'; }
 function logoEl(a){ if(!a.art) return '📦'; return '<img src="'+a.art+'" alt="">'; }
-function loadCats(){ const el=$('#tabs'); el.innerHTML='';
-  const mkCat=(label,slug)=>{ const b=document.createElement('span'); b.className='tab'+(slug===curCat?' on':''); b.textContent=label;
-    b.onclick=()=>{ curCat=slug; loadCats(); refresh(); b.scrollIntoView({behavior:'smooth',block:'nearest',inline:'nearest'}); }; el.appendChild(b); };
-  // KIND facet leads the rail — one delightful surface, filterable by where an app RUNS (its runtime door).
-  const mkKind=(label,kind)=>{ const b=document.createElement('span'); b.className='tab kind'+(kind===curKind?' on':''); b.textContent=label;
-    b.onclick=()=>{ curKind=kind; loadCats(); refresh(); b.scrollIntoView({behavior:'smooth',block:'nearest',inline:'nearest'}); }; el.appendChild(b); };
-  mkKind('All',''); (CAT.kinds||[]).forEach(k=>mkKind(k.icon+' '+k.label+' '+k.count.toLocaleString(),k.kind));
-  const sep=document.createElement('span'); sep.style.cssText='flex:0 0 auto;width:1px;align-self:center;height:21px;background:var(--line2);margin:0 4px'; el.appendChild(sep);
-  mkCat('All','',true); (CAT.categories||[]).forEach(c=>mkCat(c.name,c.slug)); railFades(); }
-function railFades(){ const tb=$('#tabs'), tw=$('#tabswrap'); const max=tb.scrollWidth-tb.clientWidth;
-  tw.classList.toggle('l',tb.scrollLeft>4); tw.classList.toggle('r',tb.scrollLeft<max-4); }
-$('#tabs').addEventListener('scroll',railFades,{passive:true}); addEventListener('resize',railFades);
-$('#tabs').addEventListener('wheel',e=>{ const tb=$('#tabs'); if(tb.scrollWidth>tb.clientWidth){ e.preventDefault(); tb.scrollLeft+=(e.deltaY||e.deltaX); railFades(); } },{passive:false});
-$('#tprev').onclick=()=>$('#tabs').scrollBy({left:-377,behavior:'smooth'});
-$('#tnext').onclick=()=>$('#tabs').scrollBy({left:377,behavior:'smooth'});
+function openCats(){ show('cats'); const el=$('#cats');
+  const byCat=new Map();
+  for(const a of CAT.images) for(const c of (a.cats||[])){ if(!c) continue; if(!byCat.has(c)) byCat.set(c,{n:0,srcs:new Set(),ex:[]}); const o=byCat.get(c); o.n++; (a.sources||[]).forEach(s=>o.srcs.add(s.src)); if(o.ex.length<3) o.ex.push(a.name); }
+  const rows=[...byCat.entries()].filter(([,o])=>o.n>=2).sort((a,b)=>b[1].n-a[1].n);
+  el.innerHTML='<h2>Browse by category</h2><div class=hint style="max-width:760px">'+rows.length+' categories · '+CAT.images.length.toLocaleString()+' apps, all in one place. Pick a category to explore.</div>'+
+    '<div class=catgrid>'+rows.map(([c,o])=>'<div class=catcard data-cat="'+esc(c)+'"><div class=cn>'+esc(c)+' <span class=cc>'+o.n+'</span> <span class=srcg>'+[...o.srcs].map(s=>SRCG[s]||'').join('')+'</span></div><div class=cd>'+esc(o.ex.join(' · '))+'</div></div>').join('')+'</div>';
+  el.querySelectorAll('.catcard').forEach(cc=>cc.onclick=()=>pickCat(cc.dataset.cat)); }
+let CATCOUNTS=null;
+function catCounts(){ const m=new Map(); for(const a of CAT.images) for(const c of (a.cats||[])){ if(!c) continue; m.set(c,(m.get(c)||0)+1); } return m; }
+// the enclosed left rail: Source · Streamability · Category — Featherless-style filter facets.
+function loadCats(){ if(!CATCOUNTS) CATCOUNTS=catCounts();
+  const row=(g,label,count,on,click)=>{ const r=document.createElement('div'); r.className='frow'+(on?' on':'');
+    r.innerHTML=(g?'<span class=fg>'+g+'</span>':'')+'<span class=fl>'+esc(label)+'</span>'+(count!=null?'<span class=fc>'+count.toLocaleString()+'</span>':''); r.onclick=click; return r; };
+  const fSrc=$('#fSrc'); fSrc.innerHTML='';
+  fSrc.appendChild(row('✦','All sources',CAT.images.length,!curKind,()=>{ curKind=''; curCat=''; loadCats(); refresh(); }));
+  (CAT.kinds||[]).forEach(k=>fSrc.appendChild(row(k.icon,k.label,k.count,k.kind===curKind,()=>{ curKind=k.kind; curCat=''; loadCats(); refresh(); })));
+  $('#secSrc').classList.toggle('active',!!curKind);
+  const fTier=$('#fTier'); fTier.innerHTML='';
+  const sN=CAT.images.filter(STREAMABLE).length, oN=CAT.images.filter(a=>a.tier==='V').length;
+  fTier.appendChild(row('⚡','Stream here',sN,curTier==='stream',()=>{ curTier=(curTier==='stream'?'':'stream'); loadCats(); refresh(); }));
+  if(oN) fTier.appendChild(row('↗','Opens elsewhere',oN,curTier==='open',()=>{ curTier=(curTier==='open'?'':'open'); loadCats(); refresh(); }));
+  $('#secTier').classList.toggle('active',!!curTier);
+  const fCat=$('#fCat'), q=($('#catq').value||'').toLowerCase(); fCat.innerHTML='';
+  const cats=[...CATCOUNTS.entries()].filter(([c,n])=>n>=2&&(!q||c.toLowerCase().includes(q))).sort((a,b)=>b[1]-a[1]);
+  cats.slice(0,14).forEach(([c,n])=>fCat.appendChild(row('',c,n,c===curCat,()=>{ curCat=c; curKind=''; loadCats(); refresh(); })));
+  $('#secCat').classList.toggle('active',!!curCat); $('#catMore').style.display=cats.length>14?'':'none'; }
+$('#catq').addEventListener('input',()=>loadCats());
+$('#catMore').onclick=openCats;
+$('#sidetog').onclick=()=>$('#side').classList.toggle('open');
+document.querySelectorAll('.sreset').forEach(b=>b.onclick=(e)=>{ e.stopPropagation(); const r=b.dataset.r; if(r==='kind')curKind=''; if(r==='tier')curTier=''; if(r==='cat')curCat=''; loadCats(); refresh(); });
+addEventListener('keydown',e=>{ if(e.key==='/' && document.activeElement!==$('#search')){ e.preventDefault(); $('#search').focus(); $('#search').select(); }
+  else if(e.key==='Escape' && ($('#portal').classList.contains('on')||$('#detail').classList.contains('on')||$('#cats').classList.contains('on'))) $('#back').click(); });
 addEventListener('keydown',e=>{ if(e.key==='/' && document.activeElement!==$('#search')){ e.preventDefault(); $('#search').focus(); $('#search').select(); }
   else if(e.key==='Escape' && ($('#portal').classList.contains('on')||$('#detail').classList.contains('on'))) $('#back').click(); });
 // client-side resolve over the baked set: instant, no network.
-function query(){ const catName=(CAT.categories.find(c=>c.slug===curCat)||{}).name;
-  let list=CAT.images.filter(a=>(!curKind||a.kind===curKind)&&(!curCat||(a.cats||[]).includes(catName))&&(!curQ||(a.name+' '+a.why+' '+a.id).toLowerCase().includes(curQ.toLowerCase())));
-  const sort=$('#sort').value;
+const DAILY={producthunt:1,hackernews:1,reddit:1};   // the "launching today" home feed (PH-parity)
+function query(){ const q=curQ.toLowerCase();
+  let list=CAT.images.filter(a=>{
+    if(curTier==='stream' && !STREAMABLE(a)) return false;                                         // "how it opens" facet
+    if(curTier==='open' && a.tier!=='V') return false;
+    if(curQ) return (a.name+' '+a.why+' '+a.id).toLowerCase().includes(q);                        // search spans everything
+    if(curCat) return (a.cats||[]).includes(curCat);                                              // category = facet across all
+    if(curKind) return a.kind===curKind;                                                          // a source = its full catalogue
+    if(curTier) return true;                                                                      // tier alone → span all sources
+    return DAILY[a.kind]; });                                                                     // pure home = today's launches
+  const sort=$('#sort').value, rank=new Map(CAT.top_ids.map((id,i)=>[id,i])), tr=id=>rank.has(id)?rank.get(id):1e9;
   if(sort==='updated_at') list.sort((a,b)=>new Date(b.updated)-new Date(a.updated));
-  else { const rank=new Map(CAT.top_ids.map((id,i)=>[id,i])); list.sort((a,b)=>((b.buzz||1)-(a.buzz||1))||((rank.has(a.id)?rank.get(a.id):1e9)-(rank.has(b.id)?rank.get(b.id):1e9))||(b.stars-a.stars)); }
+  else if(sort==='pull_count') list.sort((a,b)=>(tr(a.id)-tr(b.id))||(b.stars-a.stars));
+  else list.sort((a,b)=>((b.buzz||1)-(a.buzz||1))||(tr(a.id)-tr(b.id))||(b.stars-a.stars));   // trending: consensus first
   return list; }
 function mineTint(img,el,a){ try{ const cv=document.createElement('canvas'); cv.width=cv.height=8;
   const cx=cv.getContext('2d',{willReadFrequently:true}); cx.drawImage(img,0,0,8,8);
@@ -236,22 +355,55 @@ function mineTint(img,el,a){ try{ const cv=document.createElement('canvas'); cv.
 function hookTint(c,a){ const im=c.querySelector('.ic img'); if(!im) return;
   if(a.tint){ c.style.setProperty('--tint',a.tint); return; }
   if(im.complete&&im.naturalWidth) mineTint(im,c,a); else im.addEventListener('load',()=>mineTint(im,c,a),{once:true}); }
-function card(a){ const c=document.createElement('div'); c.className='card';
-  c.innerHTML='<div class=chead><div class=ic>'+logoEl(a)+'</div><div class=meta style="flex:1"><div class=nm>'+esc(a.name)+'</div>'+pubLine(a)+tierBadge(a)+'</div></div>'+
-    '<div class=why>'+esc(a.why)+'</div>'+
-    '<div class=foot>'+srcGlyphs(a)+(a.updated?'<span>'+I.clock+ago(a.updated)+'</span>':'')+(a.pulls?'<span>'+I.dl+esc(a.pulls)+'</span>':'')+(a.stars?'<span>'+I.star+fmtN(a.stars)+'</span>':'')+'</div>';
-  c.onclick=()=>detail(a); hookTint(c,a); return c; }
+const SRCLABEL={ docker:'Docker Hub','github-repo':'GitHub', 'github-marketplace':'Marketplace', producthunt:'Product Hunt', hackernews:'Hacker News', reddit:'Reddit' };
+const TSHORT={ S:'Stream', B:'Bake', V:'View', K:'κ' };
+function tint(name){ let h=0; for(const c of String(name||'')) h=(h*31+c.charCodeAt(0))>>>0; return 'hsl('+(h%360)+' 60% 58%)'; }
+// cover card: icon apps (Docker/GitHub) = crisp centered logo on a tinted facet tile (Featherless-style);
+// web launches = their own banner artwork. Text sits on a solid strip below — always readable.
+function card(a){ const t=TIERM[a.tier], tn=tint(a.name); const c=document.createElement('div'); c.className='fcard'; c.style.setProperty('--tint',tn);
+  const mono=esc((a.name||'?').trim().replace(/^[^\p{L}\p{N}]+/u,'')[0]||'?').toUpperCase();
+  const isIcon=(a.kind==='docker'||a.kind==='github-repo'||a.kind==='github-marketplace');
+  let cover;
+  if(!isIcon && a.art) cover='<div class=cimg style="background-image:url(&quot;'+a.art+'&quot;)"></div><div class=cshade></div>'+
+      '<div class=clogo style="background:#0d1119"><img src="'+a.art+'" alt=""></div>';
+  else cover='<div class=cgen></div><div class=ctex></div>'+(a.art?'<div class=cbig><img src="'+a.art+'" alt=""></div>':'<div class=cmono>'+mono+'</div>');
+  const badges='<span class="cbadge '+(STREAMABLE(a)?'s':'v')+'">'+runIcon(a)+' '+runWord(a)+'</span><span class=cbadge>'+esc(SRCLABEL[a.kind]||a.kind)+'</span>';
+  const upN=(a.buzz>1)?a.buzz:(a.stars||0), upI=(a.buzz>1)?'⚡':'★';
+  const stats=(upN?'<span>'+upI+' '+fmtN(upN)+'</span>':'')+(a.pulls?'<span>⬇ '+esc(a.pulls)+'</span>':'')+(a.updated?'<span>'+ago(a.updated)+'</span>':'');
+  c.innerHTML='<div class=fcover>'+cover+'<div class=cbadges>'+badges+'</div></div>'+
+    '<div class=finfo><div class=fname>'+esc(a.name)+'</div>'+(a.why?'<div class=fwhy>'+esc(a.why)+'</div>':'')+(stats?'<div class=fstats>'+stats+'</div>':'')+'</div>';
+  c.onclick=()=>detail(a); return c; }
+// PH-clean leaderboard row: rank · icon · name+tagline+tags · buzz/stars · one-tap run
+function rowEl(a,rank){ const s=STREAMABLE(a); const r=document.createElement('div'); r.className='approw';
+  const upN=(a.buzz>1)?a.buzz:(a.stars||0), upL=(a.buzz>1)?'trending':'★';
+  r.innerHTML='<div class=rank>'+rank+'</div><div class=ic style="background:'+(a.art?'#0d1119':'var(--tint,#141926)')+'">'+logoEl(a)+'</div>'+
+    '<div class=abody><div class=r1><span class=rn>'+esc(a.name)+'</span>'+tierBadge(a)+srcGlyphs(a)+'</div>'+
+      '<div class=rt>'+esc(a.why)+'</div>'+
+      ((a.cats&&a.cats.length)?'<div class=tags>'+a.cats.slice(0,3).map(c=>'<span data-cat="'+esc(c)+'">'+esc(c)+'</span>').join('')+'</div>':'')+'</div>'+
+    '<div class=aright>'+(upN?'<div class=up><b>'+fmtN(upN)+'</b><small>'+upL+'</small></div>':'')+
+      '<button class="runb '+(s?'':'v')+'">'+(s?'⚡ Stream':'↗ Open')+'</button></div>';
+  r.onclick=(e)=>{ const tg=e.target.closest('.tags span'); if(tg){ pickCat(tg.dataset.cat); return; } detail(a); };
+  r.querySelector('.runb').onclick=(e)=>{ e.stopPropagation(); curApp=a; launch(a); };
+  hookTint(r,a); return r; }
+function pickCat(name){ curCat=name; curKind=''; loadCats(); show('browse'); refresh(); }
 $('#grid').addEventListener('pointermove',e=>{ const c=e.target.closest('.card'); if(!c) return;
   const r=c.getBoundingClientRect(), x=(e.clientX-r.left)/r.width, y=(e.clientY-r.top)/r.height;
   c.style.setProperty('--mx',(x*100).toFixed(1)+'%'); c.style.setProperty('--my',(y*100).toFixed(1)+'%');
   c.style.transform='perspective(800px) rotateX('+((0.5-y)*3.2).toFixed(2)+'deg) rotateY('+((x-0.5)*3.2).toFixed(2)+'deg) translateY(-2px)'; });
 $('#grid').addEventListener('pointerout',e=>{ const c=e.target.closest('.card'); if(c) c.style.transform='perspective(800px)'; });
 function refresh(){ const g=$('#grid'); epoch++; view=query(); SHOWN=0; window.__view=view;
-  $('#count').textContent=view.length.toLocaleString()+(curQ||curCat?' matches':' of '+CAT.hub_total.toLocaleString()+' · snapshot');
-  g.innerHTML='';
-  if(!curQ && !curCat) heroBuild(view.slice(0,5)); else { $('#hero').classList.remove('on'); clearInterval(hTimer); }
-  page(); }
-function page(){ const g=$('#grid'); const slice=view.slice(SHOWN,SHOWN+SIZE); slice.forEach(a=>g.appendChild(card(a))); SHOWN+=slice.length; }
+  g.className='grid'+(MODE==='list'?' list':'');
+  const kindLabel=((CAT.kinds||[]).find(k=>k.kind===curKind)||{}).label, tierLabel=curTier==='stream'?'Stream here':curTier==='open'?'Opens elsewhere':'';
+  $('#htitle').textContent = curQ?('“'+curQ+'”') : curCat||kindLabel||tierLabel||'Trending today';
+  $('#count').textContent=view.length.toLocaleString()+' apps';
+  $('#hero').classList.remove('on'); clearInterval(hTimer);
+  g.innerHTML=''; page(); }
+function page(){ const g=$('#grid'); const slice=view.slice(SHOWN,SHOWN+SIZE);
+  if(MODE==='list') slice.forEach((a,j)=>g.appendChild(rowEl(a,SHOWN+j+1)));
+  else slice.forEach(a=>g.appendChild(card(a)));
+  SHOWN+=slice.length; }
+$('#mList').onclick=()=>{ MODE='list'; $('#mList').classList.add('on'); $('#mGrid').classList.remove('on'); refresh(); };
+$('#mGrid').onclick=()=>{ MODE='grid'; $('#mGrid').classList.add('on'); $('#mList').classList.remove('on'); refresh(); };
 function maybeMore(){ if(SHOWN<view.length && $('#browse').style.display!=='none'){ const gw=$('.gridwrap'); if(gw.scrollTop+gw.clientHeight>gw.scrollHeight-987) page(); } }
 new IntersectionObserver(es=>{ if(es[0].isIntersecting) maybeMore(); },{root:$('.gridwrap'),rootMargin:'610px'}).observe($('#sentinel'));
 $('.gridwrap').addEventListener('scroll',maybeMore,{passive:true});
@@ -277,40 +429,36 @@ function heroBuild(list){ const h=$('#hero'); HERO=list.filter(a=>a.art&&a.why).
 // runtime doors — every entry streams in the holospace runtime as a κ-addressable object, dispatched by kind:
 //   docker  → holo-run prepares the image into the κ fabric → resumes in-tab (κ container pack)
 //   repo    → the animate ladder compiles/boots the repo → a κ .holo, runs in-tab
-const RUNTIME_NOTE={ stream:'Opens live in this tab on the holospaces runtime — no install, no account, no server. The image is prepared into the κ fabric and resumed in-browser; every κ-object is verified before use.',
-  animate:'Compiles the original source in this tab and runs it live — sealed as a κ .holo, verified before render. No install, no account, no server. Built once per planet; anyone you share the κ with resumes it instantly.',
-  web:'Projects the live app in this tab (mount → derive → project). In the OS it streams through the Holo browser egress on a node — the whole fetch graph, rendered as you, verified — with no install and no account.',
-  view:'An app-store or native product — not streamable in a tab. Opens its launch page so you can grab it where it lives.' };
+const RUNTIME_NOTE={ stream:'Opens and runs right here — nothing to install, no account, no waiting. Just tap and it streams.',
+  animate:'Opens right here in Hologram. The first time it takes a moment to get ready, then it streams instantly — for you and anyone you share it with.',
+  web:'Streams live right here in your window — the whole app, with nothing to install and no sign-up.',
+  view:'This one lives on its own site. Tap to open it there.' };
 const doorOf=a=>(a.action&&a.action.door)||'stream';
 // the animate app deep-link (a sibling app on the same origin) — ?run=<owner/repo> auto-runs it in-tab.
-function animateURL(slug){ return '../animate/?run='+encodeURIComponent(slug); }
+function animateURL(slug){ return '../tauri/animate-web/?run='+encodeURIComponent(slug); }
 // image page
-function detail(a){ curApp=a; show('detail'); const door=doorOf(a);
-  const cmd = door==='animate'?('holo animate '+a.image) : door==='web'?('holo open '+(a.site||a.action.target)) : door==='view'?'' : ('holo run '+a.image);
-  const btn = door==='view'?'↗ View launch' : (TIERM[a.tier]?(TIERM[a.tier].i+' '+(a.tier==='B'?'Prepare & stream':a.tier==='V'?'View':'Stream it')):'⚡ Stream it');
+function detail(a){ curApp=a; show('detail'); const door=doorOf(a); const s=STREAMABLE(a);
+  const btn = s?'⚡ Stream it':'↗ Open';
   const sub = a.site?esc(hostOf(a.site)) : esc(String(a.id||'').replace(/^[a-z]+:/,''));
+  const also = (a.sources||[]).map(x=>SRCLABEL[x.src]||x.src);
   $('#detail').innerHTML=(a.art?'<div class=dback style="background-image:url(&quot;'+a.art+'&quot;)"></div>':'')+
    '<div class=dwrap><div class=hero><div class=hic>'+logoEl(a)+'</div>'+
      '<div style="flex:1;min-width:233px"><div class=htitle>'+esc(a.name)+' '+tierBadge(a)+'</div>'+pubLine(a)+
-       '<div class=hwhy>'+esc(a.why)+'</div><div class=hint style="margin-top:8px">'+sub+(a.archs&&a.archs.length?' · '+esc(a.archs.join(', ')):'')+'</div></div>'+
+       '<div class=hwhy>'+esc(a.why)+'</div><div class=hint style="margin-top:8px">'+sub+'</div></div>'+
      '<button class=big id=stream>'+btn+'</button></div>'+
-   '<div class=cols><div class=panel><h3>'+(door==='view'?'Where it lives':'Runs right here')+'</h3>'+
+   '<div class=cols><div class=panel><h3>'+(s?'Runs right here':'Where to find it')+'</h3>'+
        '<p>'+(RUNTIME_NOTE[door]||RUNTIME_NOTE.stream)+'</p>'+
-       (door==='web'&&a.framable===false?'<p class=mut>This site blocks bare embedding, so it streams through the Holo browser egress on a node — the whole fetch graph, rendered as you, verified.</p>':'')+
-       (cmd?'<div class=cmd><span>'+esc(cmd)+'</span><button class=ghost id=ccmd>copy</button></div>':'')+'</div>'+
-     '<div class=panel><h3>Details</h3><div class=kv>'+
-       (a.tier?'<span class=k>Tier</span><span class=v>'+TIERM[a.tier].i+' '+TIERM[a.tier].l+'</span>':'')+
+       (door==='web'&&a.framable===false?'<p class=mut>This one opens in the Hologram browser instead of inline — same app, its own window.</p>':'')+'</div>'+
+     '<div class=panel><h3>About</h3><div class=kv>'+
+       '<span class=k>Opens</span><span class=v>'+(s?'Right here':'Its own site')+'</span>'+
        (a.site?'<span class=k>Site</span><span class=v>'+esc(hostOf(a.site))+'</span>':'')+
-       (a.pulls?'<span class=k>Pulls</span><span class=v>⬇ '+esc(a.pulls)+'</span>':'')+
+       (a.pulls?'<span class=k>Downloads</span><span class=v>'+esc(a.pulls)+'</span>':'')+
        (a.stars?'<span class=k>Stars</span><span class=v>★ '+fmtN(a.stars)+'</span>':'')+
-       (a.updated?'<span class=k>'+(a.tier?'Launched':'Updated')+'</span><span class=v>'+ago(a.updated)+'</span>':'')+
-       (a.sources&&a.sources.length?'<span class=k>Sources</span><span class=v>'+esc(a.sources.map(s=>s.src).join(', '))+(a.buzz>1?' · trending ×'+a.buzz:'')+'</span>':'')+
-       (a.cats&&a.cats.length?'<span class=k>Categories</span><span class=v>'+esc(a.cats.join(', '))+'</span>':'')+
-       (!a.tier?'<span class=k>Publisher</span><span class=v>'+(a.official?'Docker Official':esc(String(a.id||'').split('/')[0]))+'</span>':'')+
-       (!a.tier&&a.image?'<span class=k>Image</span><span class=v>'+esc(a.image)+'</span>':'')+
+       (a.updated?'<span class=k>Updated</span><span class=v>'+ago(a.updated)+'</span>':'')+
+       (also.length?'<span class=k>Found on</span><span class=v>'+esc(also.join(', '))+(a.buzz>1?' · trending':'')+'</span>':'')+
+       (a.cats&&a.cats.length?'<span class=k>Category</span><span class=v>'+esc(a.cats.slice(0,3).join(', '))+'</span>':'')+
        '</div></div></div></div>';
   $('#stream').onclick=()=>launch(a);
-  const cc=$('#ccmd'); if(cc) cc.onclick=async()=>{ try{ await navigator.clipboard.writeText(cmd); cc.textContent='copied'; }catch(_){}};
   try{ if(RUNTIME!==null && door==='stream') fetch(base('/prewarm'),{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({image:a.image,port:'',cmd:''})}); }catch(_){}
 }
 // ── streaming via the holospaces runtime. A Hologram node (holo-serve, or an OS peer) prepares the
@@ -318,31 +466,27 @@ function detail(a){ curApp=a; show('detail'); const door=doorOf(a);
 // is reachable from a pure-static deploy, we say so honestly rather than spin forever.
 const RUNTIME = (window.HOLO_RUNTIME!==undefined ? window.HOLO_RUNTIME : ''); // '' = same origin; null = none
 const base = p => (RUNTIME||'')+p;
-function launch(a){ const d=doorOf(a);
+function launch(a){ const d=doorOf(a); $('#ptitle').textContent=a.name||'';
   if(d==='animate') return launchAnimate(a);
   if(d==='view') return void window.open((a.sources&&a.sources[0]&&a.sources[0].url)||a.site||a.action.target,'_blank','noopener');
   if(d==='web') return launchWeb(a);
   show('portal'); $('#image').value=a.image; $('#port').value=''; $('#cmd').value=''; run(); }
-// web door: project the live app in-tab (mount→derive). In the OS, hand to the Holo browser egress; on a
-// bare static deploy, iframe framable sites directly and say so honestly when a site blocks embedding.
 function launchWeb(a){ const url=a.action.target||a.site;
   const holo=(()=>{ try{ return window.HoloResolve||(window.parent&&window.parent!==window&&window.parent.HoloResolve)||null; }catch(_){ return null; } })();
   if(holo){ try{ holo.open(url); return; }catch(_){} }
-  show('portal'); if($('#image')) $('#image').value=url; runBtn.disabled=false; setStatus('opening…'); LINES.length=0; logEl.textContent='';
-  log('── STREAM '+url+' ──','k'); log('projecting the live app in this tab (mount → derive → project)…','p');
+  show('portal'); if($('#image')) $('#image').value=url; runBtn.disabled=false; setStatus('Opening…'); LINES.length=0; logEl.textContent='';
+  log('Opening '+(a.name||hostOf(url))+'…');
   frame.removeAttribute('srcdoc'); frame.src=url; let done=false;
-  frame.onload=()=>{ done=true; setStatus('live in the portal'); log('live · verified projection','k'); };
+  frame.onload=()=>{ done=true; setStatus('Streaming'); log('Streaming now — enjoy!','k'); };
   setTimeout(()=>{ if(!done) webBlocked(a,url); },3500); }
-function webBlocked(a,url){ setStatus('embedding blocked',true);
-  log(hostOf(url)+' blocks bare embedding; in Hologram it streams via the Holo browser egress on a node — the whole fetch graph, verified.','p');
-  frame.srcdoc='<body style="margin:0;display:grid;place-items:center;height:100vh;background:#0a0d14;color:#98a2bc;font:14px system-ui;text-align:center"><div><div style=font-size:34px>⚡</div><p><b style="color:#e2e8f5">'+esc(a.name)+'</b> blocks bare embedding.<br>In Hologram it streams through the Holo browser egress on a node — rendered as you, verified.</p><p><a href="'+esc(url)+'" target=_blank rel=noopener style=color:#7aa5f8>Open '+esc(hostOf(url))+' ↗</a></p></div></body>'; }
-// repo door: stream the app via the animate ladder (a κ .holo), rendered in the SAME portal iframe → same feel.
+function webBlocked(a,url){ setStatus('Opens in its own window',true);
+  log(a.name+' opens in its own window — same app.');
+  frame.srcdoc='<body style="margin:0;display:grid;place-items:center;height:100vh;background:#0a0d14;color:#98a2bc;font:15px system-ui;text-align:center"><div><div style=font-size:34px>⚡</div><p style="font-size:15px"><b style="color:#e2e8f5">'+esc(a.name)+'</b> opens in its own window.</p><p><a href="'+esc(url)+'" target=_blank rel=noopener style=color:#7aa5f8>Open '+esc(hostOf(url))+' ↗</a></p></div></body>'; }
 function launchAnimate(a){ show('portal'); $('#image').value=a.image; $('#port').value=''; $('#cmd').value=''; runBtn.disabled=false;
-  setStatus('animating…'); LINES.length=0; logEl.textContent='';
-  log('── ANIMATE '+a.action.target+' → κ .holo ──','k');
-  log('compiling the original source in-tab on the holospaces runtime…','p');
+  setStatus('Getting it ready…'); LINES.length=0; logEl.textContent='';
+  log('Getting '+(a.name||'it')+' ready…');
   frame.src=animateURL(a.action.target);
-  frame.onload=()=>{ setStatus('live in the portal'); log('repo running in the portal (κ .holo, verified before render)','k'); };
+  frame.onload=()=>{ setStatus('Streaming'); log('Streaming now — enjoy!','k'); };
 }
 const LINES=[]; let seenSrv=0;
 function stamp(){ const d=new Date(); return d.toTimeString().slice(0,8)+'.'+String(d.getMilliseconds()).padStart(3,'0'); }
@@ -352,37 +496,32 @@ function log(msg,cls){ LINES.push('['+stamp()+'] '+msg); const div=document.crea
 $('#copy').onclick=async()=>{ try{await navigator.clipboard.writeText(LINES.join('\n')); $('#copy').textContent='Copied!'; setTimeout(()=>$('#copy').textContent='Copy',1200);}catch(_){}};
 $('#clear').onclick=()=>{ LINES.length=0; logEl.textContent=''; };
 addEventListener('message',e=>{ const d=e.data; if(!d||d.ho===undefined) return;
-  if(d.ho==='phase') log('portal · '+d.msg,'p');
-  else if(d.ho==='paint') log('portal · FIRST FRAME at '+d.ms+'ms — instant-paint','k');
-  else if(d.ho==='live') log('portal · LIVE at '+d.ms+'ms  {resume '+(d.p&&d.p.resumeMs)+'ms}','k');
-  else if(d.ho==='served') log('portal · guest served '+d.method+' '+d.path+' → '+d.status);
-  else if(d.ho==='error') log('portal · ERROR: '+d.msg,'e'); });
+  if(d.ho==='paint') log('First frame — streaming','k');
+  else if(d.ho==='live') log('Ready — enjoy!','k');
+  else if(d.ho==='error') log('Something went wrong: '+d.msg,'e'); });
 async function run(){ const image=$('#image').value.trim(); if(!image)return;
   const port=$('#port').value.trim(), cmd=$('#cmd').value.trim();
-  runBtn.disabled=true; frame.removeAttribute('src'); setStatus('starting…'); seenSrv=0;
-  log('── STREAM '+image+(port?(' :'+port):'')+' ──','k');
+  runBtn.disabled=true; frame.removeAttribute('src'); setStatus('Getting it ready…'); seenSrv=0;
+  log('Getting '+((curApp&&curApp.name)||image)+' ready…');
   if(RUNTIME===null){ streamlessNote(image); return; }
   let r; try{ r=await fetch(base('/run'),{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({image,port,cmd})}); }
   catch(e){ return streamlessNote(image); }
   if(!r.ok){ return streamlessNote(image); }
-  const j=await r.json(); if(j.error){ log('runtime: '+j.error,'e'); setStatus('error',true); runBtn.disabled=false; return; }
-  const id=j.id; log('job '+id+' started on the holospaces runtime…');
+  const j=await r.json(); if(j.error){ log('Couldn’t start it: '+j.error,'e'); setStatus('Something went wrong',true); runBtn.disabled=false; return; }
+  const id=j.id; log('Setting things up…');
   const poll=setInterval(async()=>{ let s; try{ s=await (await fetch(base('/job/'+id))).json(); }catch(e){ return; }
-    setStatus(s.status, s.status==='error');
-    const srv=s.log||[]; for(;seenSrv<srv.length;seenSrv++){ const l=srv[seenSrv]; log('holo-run · '+l, /error|fail|panic|refus/i.test(l)?'e':(/cached|resumed|is live|published|resolved/i.test(l)?'k':null)); }
-    if(s.status==='ready'){ clearInterval(poll); runBtn.disabled=false; setStatus('live in the portal');
+    setStatus(s.status==='ready'?'Streaming':s.status==='error'?'Something went wrong':'Getting it ready…', s.status==='error');
+    const srv=s.log||[]; for(;seenSrv<srv.length;seenSrv++){ const l=srv[seenSrv]; if(/error|fail|panic|refus/i.test(l)) log(l,'e'); else if(/cached|resumed|is live|published|ready/i.test(l)) log('Almost there…','k'); }
+    if(s.status==='ready'){ clearInterval(poll); runBtn.disabled=false; setStatus('Streaming');
       const q=s.pack?('holo-app.html?pack='+encodeURIComponent(s.pack.pack)+'&mz='+encodeURIComponent(s.pack.manifestZ)+'&idx='+encodeURIComponent(s.pack.idx)+(s.pack.idxZ?('&idxz='+encodeURIComponent(s.pack.idxZ)):'')+(s.pack.lazy?'&lazy=1':'')+'&port='+(s.port||80)+(s.resp?('&resp='+encodeURIComponent(s.resp)):''))
                         :('holo-app.html?k='+encodeURIComponent(s.holo)+'&port='+(s.port||80)+(s.resp?('&resp='+encodeURIComponent(s.resp)):''));
-      log('resolved κ → opening in the tab','k'); frame.src=q; }
-    if(s.status==='error'||s.status==='stopped'){ clearInterval(poll); runBtn.disabled=false; log('job '+s.status,'e'); }
+      log('Ready — enjoy!','k'); frame.src=q; }
+    if(s.status==='error'||s.status==='stopped'){ clearInterval(poll); runBtn.disabled=false; log('Stopped','e'); }
   },700);
 }
-function streamlessNote(image){ runBtn.disabled=false; setStatus('needs a Hologram node',true);
-  log('This static deployment has no runtime node reachable, so it cannot prepare a fresh image itself.','p');
-  log('To stream '+image+' 100% in-browser: run it on a Hologram node (holo-serve, or a Hologram OS peer)','p');
-  log('which prepares it into the κ fabric — then this tab resumes it on the vendored holospaces wasm.','p');
-  log('The browse + discover experience above is fully serverless; streaming needs one κ-fabric source.','k');
-  frame.srcdoc='<body style="margin:0;display:grid;place-items:center;height:100vh;background:#0a0d14;color:#98a2bc;font:14px system-ui;text-align:center"><div><div style="font-size:34px">⚡</div><p><b style="color:#e2e8f5">'+esc(image)+'</b> streams on a Hologram node.<br>Browse is serverless; streaming resumes from the κ fabric.</p></div></body>';
+function streamlessNote(image){ runBtn.disabled=false; setStatus('Opens on a Hologram device',true);
+  log('Browsing works instantly right here. To stream this one, open it on a Hologram device.','p');
+  frame.srcdoc='<body style="margin:0;display:grid;place-items:center;height:100vh;background:#0a0d14;color:#98a2bc;font:15px system-ui;text-align:center"><div><div style="font-size:34px">⚡</div><p style="font-size:15px"><b style="color:#e2e8f5">'+esc((curApp&&curApp.name)||image)+'</b> streams on a Hologram device.<br>Browsing and discovery work right here.</p></div></body>';
 }
 runBtn.onclick=run; $('#image').addEventListener('keydown',e=>{if(e.key==='Enter')run()});
 show('browse'); boot();

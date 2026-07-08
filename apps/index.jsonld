@@ -424,6 +424,36 @@
         "videojs/video-js.min.css",
         "videojs/video.min.js"
       ]
+    },
+    {
+      "@id": "did:holo:sha256:620299e9ab8fdfb5396f254d8ef2636aa3c8940b15c76b5a84f72727077b002c",
+      "holo:root": "did:holo:sha256:620299e9ab8fdfb5396f254d8ef2636aa3c8940b15c76b5a84f72727077b002c",
+      "@type": [
+        "schema:SoftwareApplication",
+        "schema:WebApplication"
+      ],
+      "schema:name": "Holo Hub",
+      "schema:identifier": "org.hologram.HoloHub",
+      "holo:words": "cube.guilt.access",
+      "schema:alternateName": "cube.guilt.access",
+      "schema:description": "Discover and stream thousands of apps — one clean place, nothing to install.",
+      "schema:applicationCategory": "UtilitiesApplication",
+      "holo:categories": [
+        "System",
+        "Utilities"
+      ],
+      "schema:keywords": [
+        "apps",
+        "store",
+        "discover",
+        "stream",
+        "docker",
+        "github",
+        "product hunt",
+        "marketplace"
+      ],
+      "dcat:landingPage": "apps/hub/index.html",
+      "schema:image": "apps/hub/hologram.svg"
     }
   ]
 }
