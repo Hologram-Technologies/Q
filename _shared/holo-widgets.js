@@ -1397,8 +1397,20 @@
     blurb: "A warm welcome: a greeting in your time zone, over a ring that shows how much of the day has passed.",
     layout: function (W_, H_, b) {
       var m = MARGIN(W_, H_), top = (b.minY || 0);
-      var ringW = Math.round(clamp(Math.min(W_, H_) * 0.22, 150, 250));        // the circle, smaller
-      var greetW = Math.round(clamp(Math.min(W_, H_) * 0.62, 340, 640));       // wide → larger greeting type
+      var Wu = Math.max(120, b.maxX - b.minX);                                 // the REAL usable canvas width (rail/aside-aware)
+      var Hu = Math.max(120, (b.maxY || H_) - top);
+      var ringW, greetW;
+      if (Wu < 520) {
+        // NARROW / SQUEEZED canvas (phone, or a pane squeezed by the rail/an aside): ONE ratio-locked composition.
+        // The greeting spans the usable canvas and the ring is ALWAYS 46% of it — so squeezing the canvas scales the
+        // WHOLE pair uniformly and keeps it centred, instead of the two clamping independently and drifting apart.
+        greetW = Math.round(clamp(Math.min(Wu * 0.92, Hu * 0.72), 200, 500));
+        ringW  = Math.round(greetW * 0.46);
+      } else {
+        // WIDE canvas (desktop): the original golden composition, unchanged.
+        ringW  = Math.round(clamp(Math.min(W_, H_) * 0.22, 150, 250));
+        greetW = Math.round(clamp(Math.min(W_, H_) * 0.62, 340, 640));
+      }
       var gap = Math.round(ringW * 0.3);                                       // a tighter gap → greeting sits a little higher
       var total = ringW + gap + Math.round(greetW * 0.12);                     // ring (≈square) + gap + one greeting line
       var lift = Math.round((H_ - top) * 0.06);                                // nudge the pair slightly above true centre

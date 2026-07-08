@@ -124,8 +124,8 @@ export function makeNameResolver({ fetchFn, hashers = {}, mirrors = [], lruSize 
   const remember = (k, bytes) => { if (lru.has(k)) lru.delete(k); lru.set(k, bytes); if (lru.size > lruSize) lru.delete(lru.keys().next().value); };
   const verifyBytes = async (axis, hex, bytes) => { const h = hashers[axis]; if (!h) return { ok: false, why: "unverifiable-axis:" + axis }; return (await h(bytes)) === hex ? { ok: true } : { ok: false, why: "kappa-mismatch" }; };
 
-  async function fetchVerified(axis, hex, admitted) {
-    const urls = admitted.map((m) => [m.name, m.url({ axis, hex })]).filter(([, u]) => !!u);
+  async function fetchVerified(axis, hex, admitted, kind = null) {
+    const urls = admitted.map((m) => [m.name, m.url({ axis, hex, kind })]).filter(([, u]) => !!u);   // kind lets a mirror decline names it can't serve (e.g. a gateway only serves IPFS)
     if (!urls.length) return { ok: false, why: "no-transport-admitted" };
     return await new Promise((done) => {
       let pending = urls.length; const whys = [];
@@ -155,7 +155,7 @@ export function makeNameResolver({ fetchFn, hashers = {}, mirrors = [], lruSize 
     for (const axis of axes) { const hit = lru.get(axis + ":" + hex); if (hit) return { ok: true, kind: rec.kind, kappa: axis + ":" + hex, bytes: hit, source: "cache" }; }
     const whys = [];
     for (const axis of axes) {                                        // bare hex tries the registry in axis order
-      const r = await fetchVerified(axis, hex, admitted);
+      const r = await fetchVerified(axis, hex, admitted, rec.kind);
       if (r.ok) { remember(axis + ":" + hex, r.bytes); return { ok: true, kind: rec.kind, kappa: axis + ":" + hex, bytes: r.bytes, source: r.source }; }
       whys.push(axis + "(" + r.why + ")");
     }

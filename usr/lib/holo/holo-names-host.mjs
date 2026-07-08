@@ -16,10 +16,25 @@
 // Glue only (≤5KB). Nothing here can widen what the verb admits — caps attenuate per call (SEC-2/5),
 // refusals stay named, the LRU stays bounded (SEC-8).
 
-import { makeNameResolver, classify, AXES } from "./holo-names.mjs";
+import { makeNameResolver, classify, AXES, kappaToCid } from "./holo-names.mjs";
 
 const hex2 = (buf) => Array.from(new Uint8Array(buf), (b) => b.toString(16).padStart(2, "0")).join("");
 export const SMALL = 262144;   // ≤256KB: hash on the calling thread without jank (I0-measured line)
+
+// ── data: URI — content is INLINE, so it is its own proof (V1 Mode A, zero network). Decode the bytes,
+//    the κ is the hash of exactly those bytes — nothing is fetched, nothing is trusted. ────────────────
+export function decodeDataURI(s) {
+  const m = /^data:([^,]*),(.*)$/is.exec(String(s || ""));
+  if (!m) return null;
+  const meta = m[1] || "", body = m[2] || "", isB64 = /;base64/i.test(meta);
+  const mime = (meta.split(";")[0] || "text/plain").trim() || "text/plain";
+  try {
+    let bytes;
+    if (isB64) { const bin = globalThis.atob ? atob(body) : Buffer.from(body, "base64").toString("binary"); bytes = Uint8Array.from(bin, (c) => c.charCodeAt(0)); }
+    else { const txt = decodeURIComponent(body); bytes = new TextEncoder().encode(txt); }
+    return { bytes, mime };
+  } catch { return null; }
+}
 
 export function makeHostResolver({ base, wasmGlue = null, fetchFn = null, lruSize = 256, mirrors = null } = {}) {
   const BASE = base ? new URL(String(base)) : (typeof location !== "undefined" ? new URL("./", location.href) : null);
@@ -42,10 +57,16 @@ export function makeHostResolver({ base, wasmGlue = null, fetchFn = null, lruSiz
   };
 
   const spellings = (axis, hex) => [new URL("b/" + hex, BASE).href, new URL(".holo/" + axis + "/" + hex, BASE).href];
+  // a sha256 κ that is ALSO a raw-leaf IPFS CID can be fetched from ANY public gateway: the raw-leaf CID
+  // digest IS the sha256 of the bytes, so the gateway is just another untrusted mirror the race re-derives
+  // (SEC-1). Reconstruct the CID from the κ. Gateways are named transports → caps can refuse them (privacy).
+  const ipfsGw = (host) => ({ axis, hex, kind }) => { if (axis !== "sha256" || (kind !== "ipfs" && kind !== "torrent")) return null; try { return host + kappaToCid("sha256:" + hex); } catch { return null; } };
   const RUNGS = mirrors || [
     { name: "origin", url: ({ axis, hex }) => new URL(".holo/" + axis + "/" + hex, BASE).href },
     { name: "origin-b", url: ({ axis, hex }) => (axis === "sha256" ? new URL("b/" + hex, BASE).href : null) },
     { name: "hf-mirror", url: ({ axis, hex }) => (axis === "sha256" ? "https://huggingface.co/HOLOGRAMTECH/holo-messenger-shell/resolve/main/b/" + hex : null) },
+    { name: "ipfs-gw", url: ipfsGw("https://ipfs.io/ipfs/") },        // public gateway — untrusted, re-derived
+    { name: "ipfs-dweb", url: ipfsGw("https://dweb.link/ipfs/") },    //   raced with a second, no single point
   ];
   const store = { name: "store", url: ({ axis, hex }) => "cache://" + axis + "/" + hex };
   const storeFetch = async (url) => {   // TIER 0: CacheStorage only; a miss is silence, never a request
@@ -74,6 +95,14 @@ export function makeHostResolver({ base, wasmGlue = null, fetchFn = null, lruSiz
   async function resolve(name, caps = null) {
     if (!caps) {                                           // caps present → honor attenuation, skip the warm shortcut
       const rec = classify(name);
+      // data: URI — inline, self-verifying, zero network. Decode → the κ is the hash of its own bytes (L5).
+      if (rec && rec.kind === "data") {
+        const d = decodeDataURI(name);
+        if (!d) return { ok: false, kind: "data", why: "malformed data: URI" };
+        const kappa = "sha256:" + (await hashers.sha256(d.bytes));
+        bump(kappa, { kind: "data", kappa, bytes: d.bytes });
+        return { ok: true, kind: "data", kappa, bytes: d.bytes, source: "inline", mime: d.mime };
+      }
       if (rec && (rec.kappa || rec.hex)) {
         const k = warmKeyOf(rec);
         let hit = k && warm.get(k);

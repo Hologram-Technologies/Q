@@ -1,7 +1,7 @@
 {
  "v": 1,
- "created": 1783518445226,
- "aggregate": "6de4701a768f9453c922f2d0ec812399a6c51e22d757cd03f452a57e975bb657",
+ "created": 1783522941365,
+ "aggregate": "82703f6b460466a47895e42e94771757e892d6c480f44df90b4cdf50c45b3129",
  "assets": [
   {
    "path": "/apps/browser/browser-sw.js",
@@ -125,8 +125,8 @@
   },
   {
    "path": "/apps/browser/_shared/holo-ladder.mjs",
-   "kappa": "ca16576c7c4cee5793d4e003ca73d91d437f1bc2c1d71ee2bcd776866d578e47",
-   "bytes": 12724
+   "kappa": "737c84d98a8ad09e97856e77627e073efede130a10c9fd119e905626907f00ed",
+   "bytes": 13390
   },
   {
    "path": "/apps/browser/_shared/holo-onion-arti.node.mjs",
@@ -147,6 +147,16 @@
    "path": "/apps/browser/_shared/holo-onion-rewrite.mjs",
    "kappa": "10028291ece9de86bb13ec19e2b82899ff37c73d4a12a9efbe8b90b99a9568d7",
    "bytes": 3937
+  },
+  {
+   "path": "/apps/browser/_shared/holo-onion-smux2.mjs",
+   "kappa": "f061d0c57bf9e1000a9be02a674411d36f31e845a112c2fa894e19497eb1a3ec",
+   "bytes": 4430
+  },
+  {
+   "path": "/apps/browser/_shared/holo-onion-smux2.test.mjs",
+   "kappa": "697cce62523f3137903c1b04dc719f9daf99d569be8a681a843f4ec4155ad3b5",
+   "bytes": 2728
   },
   {
    "path": "/apps/browser/_shared/holo-onion-snowflake-encap.mjs",

@@ -213,7 +213,7 @@ export async function openContextChannel(ctx, { meName = null, label = null, rol
         // is kept only as a backstop (and to service mailbox backends, like the test mock, that have no onData).
         const sub = mbox.liveGet(coord, undefined, drain);
         let ri = 0;
-        const timer = setInterval(() => { const arr = (sub && sub.collected) || []; while (ri < arr.length) drain(arr[ri++]); }, 2000);
+        const timer = setInterval(() => { const arr = (sub && sub.collected) || []; while (ri < arr.length) drain(arr[ri++]); }, 150);   // fast fallback (≤150ms) for backends without onData; onData makes the happy path ~RTT
         mail = { post: (sealed) => { try { mbox.put(coord, JSON.stringify(sealed)); } catch {} }, close: () => { try { clearInterval(timer); sub && sub.close && sub.close(); } catch {} } };
 
         // FAST PATH — a direct WebRTC data channel (sub-RTT, no relay for message bytes). The invite/join asymmetry
