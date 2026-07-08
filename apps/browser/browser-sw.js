@@ -286,22 +286,32 @@ async function broadcast(msg) { for (const c of await self.clients.matchAll({ in
 // through our relay tier. Wayback needs its availability API resolved to a snapshot first; `id_`
 // gives the RAW original (no Wayback toolbar/URL-rewriting) so our own rewrite handles it cleanly.
 // Returns { text, via } of the first source that yields real HTML, or null. No new egress carriers. ──
+// a challenge/CAPTCHA/error shell is NOT the article — archive.today walls automated fetches this way.
+const ARCHIVE_JUNK = /one more step|security check|complete the (?:captcha|security)|cf-browser-verification|attention required|checking your browser|enable javascript and cookies|request could not be satisfied|\berror 40\d\b|too many requests/i;
 async function ladderArchive(realUrl) {
+  // Archive hosts are CORS-open (ACAO:*) so a DIRECT fetch works from the browser and skips the
+  // relay's short budget — archived docs are large, so give them a generous timeout; relay is a backstop.
+  const tfetch = (u, ms) => fetch(u, { redirect: "follow", signal: AbortSignal.timeout(ms) });
+  const getArchive = async (u, ms) => {
+    try { const r = await tfetch(u, ms); if (r.ok) return r; } catch {}
+    for (const relay of RELAYS) { try { const r = await tfetch(relay(u), ms); if (r.ok) return r; } catch {} }
+    return null;
+  };
   for (const src of archiveSources(realUrl)) {
     try {
       let snap = src.url;
       if (src.via === "wayback") {
-        const { r } = await egressFetch(src.api, { redirect: "follow" });
-        if (!r || !r.ok) continue;
+        const r = await getArchive(src.api, 12000);
+        if (!r) continue;
         const j = await r.json().catch(() => null);
         const closest = j && j.archived_snapshots && j.archived_snapshots.closest;
         if (!closest || !closest.available || !closest.url) continue;
         snap = closest.url.replace(/^http:/, "https:").replace(/\/web\/(\d+)\//, "/web/$1id_/");   // raw original
       }
-      const { r } = await egressFetch(snap, { redirect: "follow" });
-      if (!r || !r.ok) continue;
+      const r = await getArchive(snap, 22000);
+      if (!r) continue;
       const text = await r.text();
-      if (text && text.length > 1000 && /<html|<article|<body/i.test(text)) return { text, via: "archive:" + src.via };
+      if (text && text.length > 2000 && /<html|<article|<body/i.test(text) && !ARCHIVE_JUNK.test(text.slice(0, 3500))) return { text, via: "archive:" + src.via };
     } catch {}
   }
   return null;
@@ -590,6 +600,28 @@ async function ladderView(text, realUrl) {
   return ladderUnlock(text, realUrl, { det, force: mode === "on" }).html;
 }
 
+// ── LADDER rung-2 as a DEAD-END rescue — the serverless killer case: a public relay is BLOCKED by the
+// publisher (datacenter IP) and hands back an empty/JS-walled shell, so there is no in-band text to
+// unlock. The crawler already captured the article, and archive.org is relay-friendly. Before we show
+// the honest interstitial, try the archived copy; if it yields real HTML, unlock + mint + serve it.
+// Returns a Response or null. Only when the ladder is not "off". Bounded by egressFetch's tier timeouts.
+async function serveViaArchive(realUrl) {
+  if ((await loadLadder()) === "off") return null;
+  const arch = await ladderArchive(realUrl);
+  if (!arch || !arch.text) return null;
+  const u = ladderUnlock(arch.text, realUrl, { force: true });
+  const nb = new TextEncoder().encode(u.html);
+  const kappa = kappaOf(nb);
+  await kPut(kappa, nb, { contentType: "text/html; charset=utf-8", source: realUrl });
+  await uPut(realUrl, { kappa, contentType: "text/html; charset=utf-8", ts: Date.now() });
+  const via = arch.via + (u.applied && u.applied.length ? "+" + u.applied.join("+") : "");
+  const CT = "text/html; charset=utf-8";
+  await broadcast({ type: "ladder", view: VIEW + "w/" + enc(realUrl), url: realUrl, via, recovered: true, why: ["empty-shell→archive"] });
+  await broadcast({ type: "committed", view: VIEW + "w/" + enc(realUrl), kappa, minted: true, verified: true, egress: via, scheme: new URL(realUrl).protocol.replace(":", ""), contentType: CT, source: realUrl });
+  const body = new TextEncoder().encode(rewriteHtml(u.html, realUrl, kappa));
+  return new Response(body, { status: 200, headers: KHDR(kappa, CT, { "x-holo-egress": via, "x-holo-ladder": via }) });
+}
+
 // ── serve a live http(s) page: κ-store first (SWR window) → proxy → mint κ → cache → re-derive → serve ─
 async function serveWeb(realUrl, req, event) {
   // NOTE on Google search: /search is JS-walled (no-JS search was retired). Google first
@@ -651,6 +683,8 @@ async function serveWeb(realUrl, req, event) {
         return new Response(body, { status: 200, headers: KHDR(hit.kappa, hit.contentType, { "x-holo-stale": "1", "x-holo-egress": "kappa-store" }) });
       }
     }
+    // LADDER rung-2 rescue: no tier reached it (or relay-blocked) → try the archived copy before giving up.
+    if (isDoc) { const a = await serveViaArchive(realUrl); if (a) return a; }
     // S1 — no dead frame: an honest, actionable interstitial instead of blank/plain-text error.
     // (COEPH inside interstitialPage — a doc without CORP is ERR_BLOCKED_BY_RESPONSE, i.e. still blank.)
     if (isDoc) return interstitialPage(realUrl, { via: r ? via : "none" });
@@ -673,6 +707,9 @@ async function serveWeb(realUrl, req, event) {
     if (isDoc && emptyOrWalled(bytes, text)) {
       const alt = googleAlt(realUrl);
       if (alt) return Response.redirect(appAbs(alt), 302);
+      // relay handed back an empty/JS-walled shell (publisher blocks the relay IP) → the crawler copy
+      // is the serverless rescue: try the archive before the interstitial. Only if the ladder is on.
+      const a = await serveViaArchive(realUrl); if (a) return a;
       await broadcast({ type: "committed", view: VIEW + "w/" + enc(realUrl), kappa, minted: true, verified: true, egress: via, blank: true, scheme: new URL(realUrl).protocol.replace(":", ""), contentType: ctype, source: realUrl });
       return interstitialPage(realUrl, { via });
     }
