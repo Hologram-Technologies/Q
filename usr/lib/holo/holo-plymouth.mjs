@@ -92,12 +92,54 @@ async function kBytes(kappa, url) {
   return null;
 }
 
-// ── frame loading: κ store first (offline), CDN stream + seal on a miss ───────────────────────────────
+// ── SAME-ORIGIN pack (S1): the DEFAULT theme boots from usr/share/plymouth/<theme>/frames.pack — the OS
+// animates its own boot from its OWN origin, zero third-party CDN. Format: [u32 count][u32 len×count][png…]
+// (little-endian). Fail-open: ANY miss returns null and loadFrames falls back to the κ-store + CDN stream
+// (exactly today's path) — so the pack can only make the sovereign case better, never the boot worse.
+async function loadPack(theme, onFrame, cancelled) {
+  let buf = null;
+  try {
+    const url = new URL("../../share/plymouth/" + theme + "/frames.pack", import.meta.url);
+    const r = await fetch(url, { cache: "force-cache" });
+    if (!r.ok) return null;
+    buf = new Uint8Array(await r.arrayBuffer());
+  } catch { return null; }
+  if (!buf || buf.length < 8) return null;
+  const dv = new DataView(buf.buffer, buf.byteOffset, buf.byteLength);
+  const count = dv.getUint32(0, true);
+  if (!count || count > 4096) return null;                       // sanity — a corrupt header falls open to CDN
+  let off = 4; const lens = new Array(count);
+  for (let i = 0; i < count; i++) { lens[i] = dv.getUint32(off, true); off += 4; }
+  const st = await store();
+  const kappas = new Array(count).fill(null);
+  let firstBytes = null, p = off, loaded = 0;
+  for (let i = 0; i < count; i++) {
+    if (cancelled()) return { loaded, total: count };
+    const len = lens[i]; if (!len || p + len > buf.length) break;
+    const bytes = buf.subarray(p, p + len); p += len;
+    if (i === 0) firstBytes = bytes;
+    try { kappas[i] = await st.put(bytes); } catch {}           // seal each frame → warm boots are κ-native
+    loaded++; onFrame(i, bytes);
+  }
+  if (loaded < 5) return loaded ? { loaded, total: count } : null;
+  try { if (kappas.slice(0, loaded).every(Boolean)) localStorage.setItem(FRK(theme), JSON.stringify(kappas.slice(0, loaded))); } catch {}
+  if (firstBytes && firstBytes.length < 80000) {                 // frame-0 → next boot's 0-ms baseline
+    try { const fr = new FileReader(); fr.onload = () => { const s = readState(); if (s.theme === theme) { s.firstFrame = fr.result; writeState(s); } }; fr.readAsDataURL(new Blob([firstBytes], { type: "image/png" })); } catch {}
+  }
+  return { loaded, total: count };
+}
+
+// ── frame loading: same-origin pack (default) → κ store (offline) → CDN stream + seal on a miss ────────
 // onFrame(i, bytes) fires with raw PNG bytes as frames land — the PLAYER decodes on its own thread
 // (worker createImageBitmap, or the 2D floor's Image path); playback starts on the first drawable one.
 async function loadFrames(theme, onFrame, cancelled) {
   const t = themeOf(theme); if (!t) throw new Error("unknown theme " + theme);
   let manifest = null; try { manifest = JSON.parse(localStorage.getItem(FRK(theme)) || "null"); } catch {}
+  // S1: a first-boot DEFAULT theme (nothing sealed yet) animates from the same-origin pack — no CDN.
+  if (theme === DEFAULT_THEME && !manifest) {
+    try { const packed = await loadPack(theme, onFrame, cancelled); if (packed && packed.loaded > 4) return packed; } catch {}
+    if (cancelled()) return { loaded: 0, total: t.frames };
+  }
   const total = (manifest && manifest.length) || t.frames;
   const kappas = new Array(total).fill(null);
   let firstBytes = null, loaded = 0;
