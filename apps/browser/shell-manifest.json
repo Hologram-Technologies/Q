@@ -1,7 +1,7 @@
 {
  "v": 1,
- "created": 1783448510121,
- "aggregate": "bdad76b345738cff37050934e1f848c3518776350abdb397caee21bc1360cb8b",
+ "created": 1783461363765,
+ "aggregate": "00455fac489454508228cc2cbfa3c6ddfb9659e1d97e90d374906ddc0866554d",
  "assets": [
   {
    "path": "/apps/browser/browser-sw.js",
@@ -50,13 +50,13 @@
   },
   {
    "path": "/apps/browser/index.html",
-   "kappa": "d8f4998cc21bd768a7c431cd67b0ed023ddbf15d8defbbc753cf9c4990a69ba4",
-   "bytes": 90080
+   "kappa": "214e5ca77fc3cba69f78983ef24bcbc5e16110468dfa3d1dbe938beba577c2b7",
+   "bytes": 89957
   },
   {
    "path": "/apps/browser/ipfs-sw.js",
-   "kappa": "5abca336babd03891a531fd7869d6bebb3d4f00e7484501edc121cdb5d8e5c6b",
-   "bytes": 8846
+   "kappa": "5213fec45d252f5bb1e498e32f743fd991b7a2579bc9cad01aabaa120db0661b",
+   "bytes": 9193
   },
   {
    "path": "/apps/browser/onion-browse.html",
@@ -100,8 +100,8 @@
   },
   {
    "path": "/apps/browser/_shared/holo-ipfs-gateway.mjs",
-   "kappa": "67ff89dd5efe112834607744fee25b0b66ec7a5daffb33c6bc540992f6df8b43",
-   "bytes": 26074
+   "kappa": "893f18c290d56cc058362b0d439ecf2c4a47de49a6af1ea6597a332022f2617b",
+   "bytes": 26472
   },
   {
    "path": "/apps/browser/_shared/holo-ipfs.js",
@@ -180,13 +180,18 @@
   },
   {
    "path": "/apps/browser/_spike/onion/serve-parity.mjs",
-   "kappa": "c08e98ca026288a01b736df80a3b39f9e3e7e09d333168a48480923f3236b21a",
-   "bytes": 3899
+   "kappa": "e19111557001f7968284a8bc5fb763bed6ddf807a964166a1b9a0461949210da",
+   "bytes": 4348
   },
   {
    "path": "/apps/browser/_spike/onion/serve.mjs",
    "kappa": "ab7f05b4bd8136b8f2549eb3428eaa8d9fd153097f22c4bd5a8ba81dde0654b9",
    "bytes": 3658
+  },
+  {
+   "path": "/apps/browser/_spike/onion/witness-report.txt",
+   "kappa": "19cce55bf0f529b20f92aabd43061d54a043cf33f2a29702e65fc0176b111d2d",
+   "bytes": 1270
   }
  ]
 }

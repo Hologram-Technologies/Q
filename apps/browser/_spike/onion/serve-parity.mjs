@@ -10,7 +10,7 @@
 
 import http from "node:http";
 import net from "node:net";
-import { readFile } from "node:fs/promises";
+import { readFile, writeFile } from "node:fs/promises";
 import { fileURLToPath } from "node:url";
 import { dirname, join, normalize } from "node:path";
 import { onionRequestHandler } from "../../_shared/holo-onion-endpoint.node.mjs";
@@ -30,6 +30,12 @@ http.createServer(async (req, res) => {
   try {
     const u = new URL(req.url, "http://localhost");
     if (u.pathname === "/apps/browser/onion" || u.pathname === "/onion") return onion(req, res);
+    // browser→disk sink: the witness POSTs its per-image diagnostic here so the loop closes without screenshots
+    if (u.pathname === "/witness-report" && req.method === "POST") {
+      let b = ""; for await (const c of req) b += c;
+      try { await writeFile(join(HERE, "witness-report.txt"), b); } catch {}
+      res.writeHead(200, { "content-type": "text/plain", "access-control-allow-origin": "*" }); return res.end("ok");
+    }
     if (u.pathname === "/health") { const ok = await socksAlive(); res.writeHead(ok ? 200 : 503, { "content-type": "application/json" }); return res.end(JSON.stringify({ socks: "127.0.0.1:" + SOCKS_PORT, reachable: ok, root: ROOT })); }
     let p = u.pathname === "/" ? "/apps/browser/index.html" : decodeURIComponent(u.pathname);
     const file = normalize(join(ROOT, p));

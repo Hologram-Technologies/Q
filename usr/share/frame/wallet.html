@@ -466,6 +466,7 @@
       import * as login from "../../../_shared/holo-login.mjs";
       import { teeAvailable, teeAssert, teeEnroll } from "../../../_shared/holo-webauthn.mjs";
       import { attachWindowSeam } from "../../../_shared/holo-wallet-resident.mjs";   // A1: the seam's answerer is RESIDENT now; this window defers to it
+      import { handleIntent, makeApprovals } from "../../../_shared/holo-intent-router.mjs";   // A2: chains disappear — intent → ONE card → bound legs
 
       // Solana spot tokens for the Swap sheet (the live Jupiter Swidge provider).
       const TOKENS = {
@@ -499,9 +500,16 @@
       };
 
       // ── the human-approval gate: returns a promise resolved by Approve/Deny (full-screen view) ──
+      // A2 BINDING (Law L5): while an intent proposal is armed (ONE biometric already covered the whole
+      // route), each of ITS legs auto-approves exactly once; anything else falls through to the human.
+      const intentApprovals = makeApprovals();
+      const normLeg = (req) => req.type === "bridge"
+        ? { kind: "bridge", srcChain: req.from || req.chain, dstChain: req.to, amount: req.amount }
+        : { kind: req.type === "transfer" ? "send" : (req.type || "send"), chain: req.chain, to: req.to, amount: req.amount, token: req.token || null };
       let gateResolve = null, gateReq = null;
       let agentCtx = null;   // set by handleSignRequest when a verified agent (NPC) is the one asking
       async function gate(req) {
+        if (intentApprovals.match(normLeg(req))) return true;   // a bound leg of the ONE approved route
         return new Promise(async (resolve) => {
           gateResolve = resolve; gateReq = req;
           $("appWho").textContent = agentCtx
@@ -509,7 +517,8 @@
             : (req._who || "A request to sign with your wallet.");
           // plain-language "what this does" — derived locally, not from a remote explorer.
           const sym = CHAINS[req.chain]?.symbol || "";
-          const plain = req.type === "swap"
+          const plain = req._plain ? req._plain
+            : req.type === "swap"
             ? `Swap ${req.amount ? req.amount + " " + (tokByMint(req.inputMint)?.symbol || "") : fmtTok(req.inputMint, req.inAmount)} for about ${fmtTok(req.outputMint, req.outAmount)} on ${req.venue || "Jupiter"}. Funds move only if the swap succeeds.`
             : req.type === "swapEvm" ? `Swap ${req.amount || ""} on ${CHAINS[req.chain]?.name || req.chain} via Velora. The minimum received is checked on this device.`
             : req.type === "bridge" ? `Move ${req.amount || ""} USD₮0 from ${CHAINS[req.chain]?.name || req.chain} to another network. The fee is shown before anything signs.`
@@ -522,7 +531,7 @@
           $("appTitle").textContent = isSig ? "Signature request" : "Transaction request";
           $("appAccount").textContent = agentCtx ? ("🤖 " + (agentCtx.label || "Agent") + (agentCtx.attest === "tee" ? " · passport ✓" : agentCtx.attest === "soft" ? " · passport" : " · grant") + " · acting for you") : "Your account";
           $("appNetwork").textContent = CHAINS[req.chain]?.name || (req.type === "swap" ? "Solana" : req.chain || "");
-          const moves = req.type === "send" || req.type === "swap" || req.type === "swapEvm" || req.type === "bridge";
+          const moves = req.type === "send" || req.type === "swap" || req.type === "swapEvm" || req.type === "bridge" || req.type === "intent";
           $("appRisk").className = "risk " + (moves ? "warn" : "ok");
           $("appRisk").querySelector("span:first-child").textContent = moves ? "⚠" : "✓";
           $("appRiskMsg").textContent = moves ? "This moves value. It cannot be undone once signed." : "Nothing moves. This signature only proves intent.";
@@ -561,7 +570,7 @@
           const { enforce } = await import("../../../_shared/holo-stepup-gate.mjs");
           const action = { kind: "wallet." + (req.type || "send"), appId: "org.hologram.HoloWallet", operator: op.kappa,
             reason: ($("appPlain").textContent || "Confirm this wallet action").trim(),
-            payload: { type: req.type || "send", chain: req.chain || null, to: req.to || null, amount: req.amount != null ? String(req.amount) : null, token: req.token || null, inputMint: req.inputMint || null, outputMint: req.outputMint || null, srcToken: req.srcToken || null, destToken: req.destToken || null, typedData: req.typedData || null, message: req.message || null } };
+            payload: { type: req.type || "send", chain: req.chain || null, to: req.to || null, amount: req.amount != null ? String(req.amount) : null, token: req.token || null, inputMint: req.inputMint || null, outputMint: req.outputMint || null, srcToken: req.srcToken || null, destToken: req.destToken || null, typedData: req.typedData || null, message: req.message || null, kappa: req.kappaBound || null } };
           const g = await enforce(action, { credentialId: op.cred });
           if (!g.ok) { toast("confirm with biometrics — " + (g.reason || "denied")); return closeGate(false); }
           closeGate(true);
@@ -1155,6 +1164,32 @@
       $("lockBtn").onclick = () => { wallet.lock(); closeSheet(); $("settingsBtn").classList.add("hidden"); $("verPill").textContent = "κ "; $("verPill").style.color = ""; boot(); };
       $("backupBtn").onclick = () => { const l = wallet.vaultLinkValue; if (l) copy(l); toast("backup link copied. Restore it anywhere"); };
 
+      // ── A2 · the intent context — the router reads the SAME κ-cached portfolio the dashboard paints
+      //    from (L3) and quotes ONLY over real engine calls; an unverifiable number refuses upstream. ──
+      const intentQuotes = {
+        usdt0: null,   // the pinned lane table, loaded lazily from the engine module
+        usdtOn: (c) => USDT[c] ? { addr: USDT[c].addr, decimals: USDT[c].decimals } : null,
+        symbolOf: (c) => CHAINS[c]?.symbol,
+        bridgeFeeUsd: async ({ srcChain, dstChain, amount }) => {
+          try { const q = await wallet.quoteBridge({ srcChain, dstChain, amount });
+            const p = prices[CHAINS[srcChain]?.coingecko]?.usd;
+            return p == null ? null : (Number(q.nativeFee) / 1e18) * p; } catch { return null; }
+        },
+        sendFeeUsd: async ({ chain, token }) => {
+          try { const c = CHAINS[chain]; if (!c || c.kind !== "evm") return null;
+            const gp = await fetch(c.rpc, { method: "POST", headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ jsonrpc: "2.0", id: 1, method: "eth_gasPrice", params: [] }), signal: AbortSignal.timeout(5000) }).then((r) => r.json());
+            const p = prices[c.coingecko]?.usd;
+            return (gp && gp.result && p != null) ? (Number(BigInt(gp.result) * (token ? 65000n : 21000n)) / 1e18) * p : null; } catch { return null; }
+        },
+      };
+      async function intentCtx() {
+        if (!intentQuotes.usdt0) { try { intentQuotes.usdt0 = (await import("../../../_shared/holo-bridge.mjs")).USDT0; } catch { intentQuotes.usdt0 = {}; } }
+        if (!Object.keys(prices).length) await loadPrices();
+        if (!Object.keys(addresses).length) { try { addresses = await wallet.addresses(0); } catch {} }
+        return { wallet, gate, approvals: intentApprovals, portfolio: async () => ({ balances, addresses, prices }), quotes: intentQuotes };
+      }
+
       // ── OS-wide signing seam: gate + reply; record + honor the connected-sites block list ──
       async function handleSignRequest(d, reply, origin) {
         if (!d || d.type !== "holo-wallet:sign-request") return;
@@ -1187,6 +1222,8 @@
           sites.touch(agentCtx ? ("agent · " + (agentCtx.label || agentCtx.subject)) : origin, req.kind || "send"); if (openSheetId === "sites") renderSites();
         }
         try {
+          // ── A2 · intents — derive is a free read (SEC-2); realize is ONE biometric over the whole route ──
+          if (req.kind === "intent" || req.kind === "intent-realize") return reply(await handleIntent(req, await intentCtx()));
           if (req.kind === "sign") reply({ ok: true, signature: await wallet.signMessage({ chain: req.chain, message: req.message }) });
           else if (req.kind === "signTypedData") reply({ ok: true, signature: await wallet.signTypedData({ chain: req.chain || "ethereum", typedData: req.typedData }) });
           else if (req.kind === "address") reply({ ok: true, address: await wallet.address(req.chain || "ethereum") });

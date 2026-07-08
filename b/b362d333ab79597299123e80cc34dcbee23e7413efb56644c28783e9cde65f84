@@ -39,8 +39,9 @@
   /* GOLDEN SECTION: the identity mark (emblem/avatar) centers on the 38.2% line — 1/φ² of the screen above,
      1/φ below. All gaps are already φ-scaled (--g1/--g2), so the whole column derives from one number. */
   #holo-login .hl-lock{position:fixed;inset:0;z-index:2;display:grid;justify-items:center;align-items:start;
-    padding:calc(38.2vh - var(--avatar)/2) var(--g2) var(--g2);}
-  @media (max-height:620px){#holo-login .hl-lock{padding-top:calc(28vh - var(--avatar)/2);}}
+    padding:calc(38.2vh - var(--avatar)/2) var(--g2) var(--g2);
+    padding-top:calc(38.2dvh - var(--avatar)/2);}   /* dvh: the golden line holds while mobile URL bars collapse */
+  @media (max-height:620px){#holo-login .hl-lock{padding-top:calc(28vh - var(--avatar)/2);padding-top:calc(28dvh - var(--avatar)/2);}}
   #holo-login .hl-panel{display:flex;flex-direction:column;align-items:center;text-align:center;width:var(--field);max-width:92vw;}
   #holo-login .hl-avatar{width:var(--avatar);height:var(--avatar);border-radius:50%;display:grid;place-items:center;color:#fff;
     font-size:calc(var(--avatar)*.37);font-weight:600;letter-spacing:.02em;user-select:none;
@@ -240,5 +241,10 @@
   import("./messenger-skin.mjs?v=8d34a1e9297f").catch(() => {});
   // Asset cache (service worker) — repeat opens serve the shell NETWORK-FREE. Escape hatch: open with ?nosw=1.
   import("./messenger-sw-register.mjs").catch(() => {});
+  // Q SUMMON — tap the home orb and the canvas MORPHS into Q (View Transitions pair the orb corner→face),
+  // Q greets OUT LOUD at the tap (the tap IS the autoplay gesture), the HD voice + Q's BitNet brain pre-warm
+  // while home idles (window.HoloQ.warm — standalone-parity TTFT), and every Q-thread message is sealed to a
+  // BLAKE3 κ chain (did:holo:blake3, hash-linked, verified on load). Additive + fail-soft.
+  import("./q-summon.mjs?v=2").catch(() => {});
 </script>
 </body></html>

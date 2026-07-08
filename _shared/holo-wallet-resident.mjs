@@ -46,7 +46,9 @@ const htlcToken = (asset, chain, art, CHAINS) => { const t = art?.tokens?.[chain
 //   gate          : async (req) → boolean       — the SAME human gate the wallet instance holds (HTLC branches call it directly, as wallet.html did).
 //   sites         : makeSites(...)              — block-before-gate + touch log.
 //   CHAINS        : chain table (holo-wdk)      — names/symbols/decimals/rpc.
-//   deps          : { priceUsd?, history?, jupQuote? }            — read/quote providers; absent ⇒ honest refusal.
+//   deps          : { priceUsd?, history?, jupQuote?, intent? }   — read/quote providers; absent ⇒ honest refusal.
+//                     intent: async (req, {wallet, gate}) → reply payload — the A2 router (holo-intent-router
+//                     handleIntent, closed over the host's portfolio/quotes/approvals); absent ⇒ honest refusal.
 //   loadDelegate  : async () → { authorizeRequest, attestationOf } — agent (NPC) authorization module.
 //   loadHtlc      : async () → holo-htlc module  — Holo Pay settlement; absent ⇒ honest refusal.
 //   htlcArt       : async () → artifact          — deployed HTLC addresses/tokens (fetch in browser, stub in witness).
@@ -85,6 +87,8 @@ export function makeSignResponder({ resolveWallet, gate, sites, CHAINS = {}, dep
       sites.touch(agentCtx ? ("agent · " + (agentCtx.label || agentCtx.subject)) : origin, req.kind || "send");
     }
     try {
+      // ── A2 · intents — derive is a free read (SEC-2); realize is ONE biometric over the whole route ──
+      if (req.kind === "intent" || req.kind === "intent-realize") { if (!deps.intent) return reply(missing("intent routing")); return reply(await deps.intent(req, { wallet, gate })); }
       if (req.kind === "sign") reply({ ok: true, signature: await wallet.signMessage({ chain: req.chain, message: req.message }) });
       else if (req.kind === "signTypedData") reply({ ok: true, signature: await wallet.signTypedData({ chain: req.chain || "ethereum", typedData: req.typedData }) });
       else if (req.kind === "address") reply({ ok: true, address: await wallet.address(req.chain || "ethereum") });

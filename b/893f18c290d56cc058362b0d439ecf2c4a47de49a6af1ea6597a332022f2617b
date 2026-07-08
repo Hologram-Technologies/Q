@@ -244,7 +244,10 @@ export async function resolveIpfsPath(root, path, getBlock) {
   const { parseCID, cidToString } = holoIpfs;
   let cur;
   try { cur = cidToString(parseCID(root)); } catch { return { kind: "error", reason: "not a CID: " + root, status: 400 }; }
-  const segs = String(path || "").split("/").filter(Boolean);
+  // %-decode each segment: a link/HAMT name is stored DECODED (UTF-8, e.g. "Türkiye"), but a navigation
+  // arrives percent-encoded ("T%C3%BCrkiye"). Without decoding, the murmur3 bucket hash (and a plain link
+  // match) is computed over the wrong bytes and every non-ASCII path 404s. Decoding an ASCII name is a no-op.
+  const segs = String(path || "").split("/").filter(Boolean).map((s) => { try { return decodeURIComponent(s); } catch { return s; } });
   for (const seg of segs) {
     let next; try { next = await childCid(cur, seg, getBlock); } catch (e) { return { kind: "error", reason: (e && e.message) || String(e), status: 502 }; }
     if (next == null) return { kind: "error", reason: "no such path segment: " + seg, status: 404 };

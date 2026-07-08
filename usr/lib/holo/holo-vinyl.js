@@ -299,7 +299,7 @@
   // (the opener is the title track “Begin Again”). It plays at the highest bitrate SoundCloud serves and is
   // shaped by the OS-wide Hi-Fi chain; the opener is pre-buffered at boot for a low-latency first tap. The
   // native LOSSLESS κ-album (KAPPA_SESSIONS) stays one paste away by editing the disc.
-  function getDefaults() { return Promise.resolve(defaults || (defaults = JSON.parse(JSON.stringify(BENBOHMER)))); }
+  function getDefaults() { return Promise.resolve(defaults || (defaults = JSON.parse(JSON.stringify(KAPPA_SESSIONS)))); }
   function configFromSet(set) {
     return { artist: set.artist || set.title || "", title: set.title || "", cover: set.cover || (set.tracks[0] && set.tracks[0].art) || "", resolve: set.resolve || "",
       tracks: (set.tracks || []).map(function (t) { return { title: t.title, artist: t.artist || set.artist, art: t.art, url: t.url, kappa: t.kappa }; }) };
@@ -624,7 +624,7 @@
   }
   function wirePillSeek(els) {
     var seek = els.seek, dragging = false;
-    function at(clientX) { var w = MWIN && MWIN.w; if (!w) return; var r = seek.getBoundingClientRect(); var frac = mClamp((clientX - r.left) / r.width, 0, 1); if (inSc(w)) { scSeek(w, frac); } else if (w.audio && w.audio.duration) { w.audio.currentTime = frac * w.audio.duration; } paintWindow(); }
+    function at(clientX) { var w = MWIN && MWIN.w; if (!w || !w.audio || !w.audio.duration) return; var r = seek.getBoundingClientRect(); w.audio.currentTime = mClamp((clientX - r.left) / r.width, 0, 1) * w.audio.duration; paintWindow(); }
     seek.addEventListener("pointerdown", function (e) { dragging = true; try { seek.setPointerCapture(e.pointerId); } catch (x) {} at(e.clientX); e.stopPropagation(); });
     seek.addEventListener("pointermove", function (e) { if (dragging) { at(e.clientX); e.stopPropagation(); } });
     seek.addEventListener("pointerup", function (e) { dragging = false; try { seek.releasePointerCapture(e.pointerId); } catch (x) {} });
@@ -669,8 +669,8 @@
     w.audio.addEventListener("timeupdate", MWIN._onTime); w.audio.addEventListener("durationchange", MWIN._onTime);
   }
   function paintWindow() {
-    var m = MWIN, w = m && m.w; if (!m || !w || m.suspended) return;
-    var d = curDur(w), c = curTime(w);
+    var m = MWIN, w = m && m.w; if (!m || !w || !w.audio || m.suspended) return;
+    var d = w.audio.duration || 0, c = w.audio.currentTime || 0;
     m.els.prog.style.width = (d ? (c / d * 100) : 0) + "%";
   }
   // keep the pill in sync with the active track + play state (called wherever refreshMini is)
@@ -747,7 +747,7 @@
     W.HoloWidgets.define("vinyl", {
       name: "Vinyl Player", icon: "disc", blurb: "A music disc that plays across the shell.",
       defaultW: 84, minW: SIZE_MIN, maxW: SIZE_MAX,
-      defaultConfig: JSON.parse(JSON.stringify(BENBOHMER)),
+      defaultConfig: JSON.parse(JSON.stringify(KAPPA_SESSIONS)),
       render: function (hostObj) {
         injectCss();
         hostObj.body.style.cssText = "width:100%;aspect-ratio:1/1";
@@ -818,9 +818,7 @@
   function prefetchOpener(w) {
     try {
       var t = (w.config && w.config.tracks && w.config.tracks[w.idx || 0]) || null;
-      if (!t) return;
-      if (!t.kappa && isScUrl(t.url)) { ensureScWidget(); return; }   // warm the SoundCloud widget (API + iframe) so the first tap loads fast
-      if (!t.url || t.kappa || w.audio.src) return;
+      if (!t || !t.url || t.kappa || w.audio.src) return;
       w.audio.preload = "auto"; w.audio.src = streamSrc(t.url); try { w.audio.load(); } catch (e) {}
     } catch (e) {}
   }
@@ -843,12 +841,12 @@
     injectCss();
     if (!DOCKP) {
       var saved = loadDock();
-      DOCKP = { id: "dock", idx: (saved && saved.idx) || 0, playing: false, config: (saved && saved.config) || JSON.parse(JSON.stringify(BENBOHMER)) };
+      DOCKP = { id: "dock", idx: (saved && saved.idx) || 0, playing: false, config: (saved && saved.config) || JSON.parse(JSON.stringify(KAPPA_SESSIONS)) };
       DOCKP._touched = !!saved;
       DOCKP.audio = new Audio(); DOCKP.audio.preload = "auto";       // warm-buffer the stream → low-latency first play
       DOCKP.audio.addEventListener("ended", function () { next(DOCKP); });
       DOCKP.audio.addEventListener("error", function () { if (DOCKP.playing) { toast("Couldn’t stream that track"); stop(DOCKP); } });
-      if (!DOCKP._touched) getDefaults().then(function (d) { if (DOCKP && !DOCKP._touched && d) { DOCKP.config = JSON.parse(JSON.stringify(d)); DOCKP.idx = 0; syncDisc(DOCKP); refreshMini(DOCKP); refreshWindow(DOCKP); } warmDisc(DOCKP); });
+      if (!DOCKP._touched) getDefaults().then(function (d) { if (DOCKP && !DOCKP._touched) { DOCKP.config = JSON.parse(JSON.stringify(d)); DOCKP.idx = 0; syncDisc(DOCKP); refreshMini(DOCKP); } warmDisc(DOCKP); });
       else { warmDisc(DOCKP); }
     }
     var box = DOC.createElement("div"); box.className = "hv-widget hv-dock";

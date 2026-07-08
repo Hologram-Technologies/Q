@@ -155,13 +155,13 @@ const CSS = `
 #holo-login .hlp-btn svg{width:20px;height:20px}
 @keyframes hlp-in{to{opacity:1}}
 #holo-login .hlp-modes{display:flex;gap:4px;margin:0 22px 16px;padding:4px;border-radius:999px;background:var(--field-bg,rgba(255,255,255,.07));border:1px solid var(--field-border,rgba(255,255,255,.12));flex:0 0 auto}
-#holo-login .hlp-modes button{flex:1 1 0;border:0;background:none;color:var(--muted,#9fb3d0);font:500 var(--u,16px)/1 "Segoe UI",system-ui,sans-serif;padding:10px 0;border-radius:999px;cursor:pointer;transition:color .15s,background .15s}
+#holo-login .hlp-modes button{flex:1 1 0;min-height:44px;border:0;background:none;color:var(--muted,#9fb3d0);font:500 var(--u,16px)/1 "Segoe UI",system-ui,sans-serif;padding:10px 0;border-radius:999px;cursor:pointer;transition:color .15s,background .15s}
 #holo-login .hlp-modes button:hover{color:var(--ink,#fff)}
 #holo-login .hlp-modes button.on{background:var(--ink,#f4f7fc);color:var(--wall,#05070c);font-weight:600}
 #holo-login .hlp-gal{position:fixed;inset:0;z-index:6;pointer-events:auto;background:var(--glass,rgba(1,4,9,.6));backdrop-filter:blur(9px);-webkit-backdrop-filter:blur(9px);
   display:grid;place-items:center;animation:hlp-fade .22s ease}
 @keyframes hlp-fade{from{opacity:0}}
-#holo-login .hlp-sheet{width:min(920px,94vw);max-height:84vh;display:flex;flex-direction:column;overflow:hidden;background:var(--sheet,rgba(8,12,18,.94));
+#holo-login .hlp-sheet{width:min(920px,94vw);max-height:84vh;max-height:84dvh;display:flex;flex-direction:column;overflow:hidden;background:var(--sheet,rgba(8,12,18,.94));
   border:1px solid var(--glass-border,rgba(255,255,255,.12));border-radius:16px;box-shadow:0 28px 80px rgba(0,0,0,.6);color:var(--ink,#e6edf3);font-family:"Segoe UI",system-ui,sans-serif}
 #holo-login .hlp-head{display:flex;align-items:center;gap:12px;padding:20px 22px 14px;flex:0 0 auto}
 #holo-login .hlp-title{font-size:var(--u,16px);font-weight:700}
@@ -183,9 +183,12 @@ const CSS = `
 @keyframes hlp-shimmer{to{background-position:-220% 0}}
 #holo-login .hlp-prev.off{color:#6e7681;font-size:30px}
 #holo-login .hlp-name{flex:0 0 auto;padding:11px 14px 12px;background:rgba(5,7,12,.9);font-size:var(--u,16px);font-weight:600;color:#e6edf3;line-height:1.25;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-#holo-login .hlp-acts{display:flex;gap:10px;justify-content:center;flex-wrap:wrap;padding:2px 22px 16px;flex:0 0 auto}
-#holo-login .hlp-acts button{border:1px solid var(--field-border,rgba(255,255,255,.14));background:var(--field-bg,rgba(255,255,255,.06));color:var(--glass-ink,rgba(231,237,250,.8));font:500 var(--u,16px)/1 "Segoe UI",system-ui,sans-serif;padding:11px 20px;border-radius:999px;cursor:pointer;transition:color .15s,border-color .15s}
-#holo-login .hlp-acts button:hover{color:var(--ink,#fff);border-color:rgba(52,211,166,.55)}
+#holo-login .hlp-acts{margin:4px 22px 16px;border:1px solid var(--field-border,rgba(255,255,255,.12));border-radius:14px;overflow:hidden;flex:0 0 auto}
+#holo-login .hlp-acts button{display:flex;align-items:center;gap:13px;width:100%;min-height:52px;padding:0 16px;border:0;background:none;color:var(--ink,#e6edf3);font:500 var(--u,16px)/1 "Segoe UI",system-ui,sans-serif;cursor:pointer;text-align:left;transition:background .12s}
+#holo-login .hlp-acts button + button{border-top:1px solid var(--field-border,rgba(255,255,255,.1))}
+#holo-login .hlp-acts button:hover{background:var(--field-bg,rgba(255,255,255,.06))}
+#holo-login .hlp-acts .ic{width:20px;height:20px;flex:0 0 auto;color:var(--muted,#9fb3d0)}
+#holo-login .hlp-acts .chev{margin-left:auto;width:18px;height:18px;flex:0 0 auto;color:var(--muted,#8b949e)}
 #holo-login .hlp-foot{padding:12px 22px 16px;font-size:var(--u,16px);color:var(--muted,#6e7681);border-top:1px solid var(--glass-border,rgba(255,255,255,.07));flex:0 0 auto}
 #holo-login .hlp-foot a{color:var(--link,#58a6ff);text-decoration:none}
 #holo-login .hlp-toast{position:fixed;left:50%;bottom:74px;transform:translateX(-50%);z-index:7;background:var(--sheet,rgba(13,17,23,.95));color:var(--ink,#e6edf3);
@@ -549,12 +552,16 @@ function openGallery(overlay, current, onPick, host) {
     <div class="hlp-acts"></div>
     <div class="hlp-foot">Animations by <a href="https://github.com/adi1090x/plymouth-themes" target="_blank" rel="noopener">adi1090x</a> · GPL 3.0</div>
   </div>`;
+  // the host's doors render as the OS-familiar grouped list — leading icon, label, trailing chevron —
+  // so they read as ACCOUNT rows (like every system settings screen), never as more boot tiles.
   const acts = gal.querySelector(".hlp-acts");
   const hostActs = (host && Array.isArray(host.actions)) ? host.actions : [];
+  const CHEV = `<svg class="chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6l6 6-6 6"/></svg>`;
   if (!hostActs.length) acts.remove();
   else for (const a of hostActs) {
     const b = document.createElement("button");
-    b.type = "button"; b.textContent = a.label;
+    b.type = "button";
+    b.innerHTML = `${a.icon || ""}<span>${a.label}</span>${CHEV}`;
     b.onclick = () => { close(); try { a.run(); } catch {} };
     acts.appendChild(b);
   }
