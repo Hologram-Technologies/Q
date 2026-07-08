@@ -51,10 +51,9 @@ const LOCK = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-
 const css = DOC.createElement("style");
 css.id = "holo-pwr-css";
 css.textContent = `
-/* the rail power button — sits below the "You" avatar as the rail's last child; a lone glyph, like its siblings */
-.holo-pwr{display:flex;justify-content:center;position:relative;width:100%;margin-top:7px;padding-top:9px}
-.holo-pwr::before{content:"";position:absolute;top:0;left:50%;transform:translateX(-50%);width:22px;height:1px;
-  background:linear-gradient(90deg,transparent,rgba(255,255,255,.1),transparent)}
+/* the rail power button — sits below the "You" avatar as the rail's last child; a lone glyph, like its
+   siblings, at the SAME rail gap (the wrapper adds no extra spacing of its own) */
+.holo-pwr{display:flex;justify-content:center;width:100%}
 .holo-pwr-btn{color:var(--holo-dim,#a99db4)}
 .holo-pwr-btn svg{width:20px;height:20px;opacity:.82;transition:opacity .15s ease,filter .18s ease,transform .14s var(--holo-ease,ease)}
 .holo-pwr-btn:hover{background:var(--holo-disc,#2a1834);color:#7defc9;box-shadow:inset 0 0 0 1px rgba(52,211,166,.34)}
