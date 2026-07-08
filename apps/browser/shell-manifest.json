@@ -1,7 +1,7 @@
 {
  "v": 1,
- "created": 1783506999678,
- "aggregate": "22abb514ef338161a7d232ea3fe121cae3c3ce9950521bcfc176387e4d36b6d5",
+ "created": 1783508262263,
+ "aggregate": "0029ae22f23b7abeb0d908b903df3f513d2f2512d12bd0f64a8d4d9e5eaab85f",
  "assets": [
   {
    "path": "/apps/browser/browser-sw.js",
@@ -40,8 +40,8 @@
   },
   {
    "path": "/apps/browser/home.html",
-   "kappa": "66924f1433147312b6ff0932c18a56095c0edcd2ed62c3eb841e3a68bf6db6ac",
-   "bytes": 7382
+   "kappa": "f0b149b02bcbbfbd1541b9852d75af785e103dfc001690387ac78fae9ffd675a",
+   "bytes": 7392
   },
   {
    "path": "/apps/browser/icon.svg",
@@ -50,8 +50,8 @@
   },
   {
    "path": "/apps/browser/index.html",
-   "kappa": "95acc325bc0caebde781c1b5343ac22a91404f129e5527564a8df488f33bfd11",
-   "bytes": 96352
+   "kappa": "0ac26a660d86c9a91fcc489751422d9d9e521d9b5cb35a2e95d85b74407f9086",
+   "bytes": 96336
   },
   {
    "path": "/apps/browser/ipfs-sw.js",
@@ -200,13 +200,13 @@
   },
   {
    "path": "/apps/browser/sovereign-demo.html",
-   "kappa": "031f85633b09e61bcabdfaa26705262ddef18700d0824b0762bab189a252db93",
-   "bytes": 9898
+   "kappa": "1e6dfb377189479dafb00d56a4619526973e727cd36fa59b209c617f717efcec",
+   "bytes": 13186
   },
   {
    "path": "/apps/browser/_shared/holo-sovereign.mjs",
-   "kappa": "17c1eadd27d6643ef767422a764aee7dc2a8753cf931f65df900763db609da8a",
-   "bytes": 6329
+   "kappa": "8c5f07eaf9123b98981bf44cb600e1a4fe8d36fa61c849477b22538e3a673e58",
+   "bytes": 11591
   },
   {
    "path": "/apps/browser/_shared/holo-autofill.mjs",

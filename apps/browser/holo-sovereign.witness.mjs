@@ -67,5 +67,38 @@ ok("sameOrigin: scheme downgrade false", !sameOrigin("https://a.com", "http://a.
   ok("presentFor discloses existence, never the secret", p.hasLogin === true && p.secret === undefined && p.credential === undefined);
 }
 
-console.log(fails === 0 ? "\nALL GREEN — reveals only at the exact origin, spoof-proof, fail-closed for guests." : "\n" + fails + " FAILED");
+// ── WALLET (the second face): connect ≠ sign ≠ send, spoof-proof, key never exposed ──
+{
+  const b = makeBroker({ store, operator: "op1", stepUp, hostOrigin: () => "https://dapp.example" });
+  const c = await b.walletConnect("https://dapp.example");
+  ok("connect returns an ADDRESS (0x…40 hex), never a key", c.ok && /^0x[0-9a-f]{40}$/.test(c.address));
+  ok("connect response contains no key/secret/seed", c.ok && !c.key && !c.secret && !c.privateKey && !c.seed);
+  const s = await b.walletSign("https://dapp.example", "hello");
+  ok("personal_sign returns a signature after the gate", s.ok && /^0x[0-9a-f]{64}$/.test(s.signature));
+  const send = await b.walletSend("https://dapp.example", { to: "0xabc", value: "0x1" });
+  ok("send returns a tx hash only through the (fresh) gate", send.ok && /^0x/.test(send.txHash));
+}
+// guest dApp: no operator → connect/sign/send all fail-closed
+{
+  const b = makeBroker({ store, operator: null, stepUp, hostOrigin: () => "https://dapp.example" });
+  const c = await b.walletConnect("https://dapp.example");
+  ok("guest dApp connect refused (fail-closed)", !c.ok && c.refused === "no-identity");
+}
+// spoof: a dApp declaring a different origin than the host is refused (SEC-5)
+{
+  const b = makeBroker({ store, operator: "op1", stepUp, hostOrigin: () => "https://dapp.example" });
+  const c = await b.walletConnect("https://evil.example");
+  ok("wallet: page-declared origin ≠ host → refused (spoof-proof)", !c.ok && c.refused === "origin-mismatch");
+}
+// SEND is attenuated from CONNECT: a broker whose gate DENIES send refuses it even after a connect
+{
+  let calls = 0; const denySend = async (a) => { calls++; return a.kind !== "wallet.send"; };  // approve all but send
+  const b = makeBroker({ store, operator: "op1", stepUp: denySend, hostOrigin: () => "https://dapp.example" });
+  await b.walletConnect("https://dapp.example");
+  const s = await b.walletSign("https://dapp.example", "x");
+  const send = await b.walletSend("https://dapp.example", { to: "0x0" });
+  ok("SEC-2: sign allowed but SEND refused by its own gate (connect≠sign≠send)", s.ok && !send.ok && send.refused === "step-up-denied");
+}
+
+console.log(fails === 0 ? "\nALL GREEN — Pass reveals only at the exact origin; Wallet gives an address not a key, and connect≠sign≠send; all spoof-proof + fail-closed." : "\n" + fails + " FAILED");
 process.exit(fails ? 1 : 0);

@@ -92,5 +92,88 @@ export function makeBroker({ store, operator = null, stepUp = null, hostOrigin =
       if (!(await gate({ kind: "pass.totp", origin: originOf(origin) }))) return { ok: false, refused: "step-up-denied" };
       return { ok: true, code: cred.totp };   // (a real TOTP derives the live code; the demo stores a fixed one)
     },
+
+    // ── WALLET — the SECOND face of the SAME presence. SEC-2 attenuation: connect ≠ sign ≠ send. The dApp
+    // gets your ADDRESS, never a key. connect is low-friction (like MetaMask); sign needs the biometric;
+    // send needs a FRESH biometric BOUND to the transaction (a connected site can't drain you silently). ──
+    async walletConnect(declaredOrigin) {
+      const origin = trusted(declaredOrigin); if (!origin) return { ok: false, refused: "origin-mismatch" };
+      if (!operator) return { ok: false, refused: "no-identity" };
+      return { ok: true, address: addressFor(operator), chainId: "0x1" };   // real operator → holo-wdk derives it
+    },
+    async walletSign(declaredOrigin, message) {
+      const origin = trusted(declaredOrigin); if (!origin) return { ok: false, refused: "origin-mismatch" };
+      if (!operator) return { ok: false, refused: "no-identity" };
+      if (!(await gate({ kind: "wallet.sign", origin: originOf(origin), message }))) return { ok: false, refused: "step-up-denied" };
+      return { ok: true, signature: demoSignature(operator, "sign", message), address: addressFor(operator) };
+    },
+    async walletSend(declaredOrigin, tx) {
+      const origin = trusted(declaredOrigin); if (!origin) return { ok: false, refused: "origin-mismatch" };
+      if (!operator) return { ok: false, refused: "no-identity" };
+      // a SEND is the strongest capability — a FRESH biometric bound to THIS tx, never suppressible by a
+      // prior connect/sign window (the caller passes force:true to enforce.enforce → a real re-prompt).
+      if (!(await gate({ kind: "wallet.send", force: true, origin: originOf(origin), to: tx && tx.to, value: tx && tx.value }))) return { ok: false, refused: "step-up-denied" };
+      return { ok: true, txHash: demoSignature(operator, "send", JSON.stringify(tx || {})) };
+    },
   };
+}
+
+// a display address derived deterministically from the operator (NO key material). A real signed-in
+// operator's address comes from holo-wdk; here it's a stable stand-in so the demo shows a consistent "you".
+export function addressFor(operator) {
+  let h = 2166136261 >>> 0; const s = "holo-addr:" + String(operator);
+  for (let i = 0; i < s.length; i++) { h ^= s.charCodeAt(i); h = Math.imul(h, 16777619) >>> 0; }
+  let hex = ""; let x = h; for (let i = 0; i < 40; i++) { hex += (x & 0xf).toString(16); x = (Math.imul(x, 1103515245) + 12345) >>> 0; }
+  return "0x" + hex;
+}
+function demoSignature(operator, kind, payload) {
+  let h = 5381 >>> 0; const s = kind + "|" + operator + "|" + payload;
+  for (let i = 0; i < s.length; i++) h = (Math.imul(h, 33) ^ s.charCodeAt(i)) >>> 0;
+  let hex = ""; let x = h; for (let i = 0; i < 64; i++) { hex += (x & 0xf).toString(16); x = (Math.imul(x, 1103515245) + 12345) >>> 0; }
+  return "0x" + hex;   // demo stand-in; a real operator signs with holo-wdk (secp256k1), key never leaving the device
+}
+
+// ── EIP-1193 provider backed by the broker, announced via EIP-6963 — how a live dApp discovers "Hologram".
+// The dApp calls provider.request({method, params}); every privileged method routes through the broker's
+// gate. window.ethereum-freezing dApps still find it via the 6963 announce event (SEC-2, modern path). ──
+export function makeProvider(broker, origin) {
+  const listeners = {};
+  const provider = {
+    isHologram: true,
+    async request({ method, params }) {
+      params = params || [];
+      switch (method) {
+        case "eth_chainId": return "0x1";
+        case "eth_accounts": case "eth_requestAccounts": {
+          const r = await broker.walletConnect(origin);
+          if (!r.ok) throw Object.assign(new Error(r.refused), { code: 4001 });
+          emit("accountsChanged", [r.address]); return [r.address];
+        }
+        case "personal_sign": case "eth_sign": {
+          const r = await broker.walletSign(origin, params[0]);
+          if (!r.ok) throw Object.assign(new Error(r.refused), { code: 4001 });
+          return r.signature;
+        }
+        case "eth_sendTransaction": {
+          const r = await broker.walletSend(origin, params[0]);
+          if (!r.ok) throw Object.assign(new Error(r.refused), { code: 4001 });
+          return r.txHash;
+        }
+        default: throw Object.assign(new Error("unsupported method: " + method), { code: 4200 });
+      }
+    },
+    on(ev, cb) { (listeners[ev] || (listeners[ev] = [])).push(cb); },
+    removeListener(ev, cb) { listeners[ev] = (listeners[ev] || []).filter((f) => f !== cb); },
+  };
+  function emit(ev, data) { (listeners[ev] || []).forEach((cb) => { try { cb(data); } catch {} }); }
+  return provider;
+}
+// announce the provider the EIP-6963 way (works even when a dApp froze window.ethereum).
+export function announceProvider(provider, target = (typeof window !== "undefined" ? window : null)) {
+  if (!target) return;
+  const info = { uuid: "holo-" + (target.crypto && target.crypto.randomUUID ? target.crypto.randomUUID() : "0000"), name: "Hologram", icon: "data:image/svg+xml,%3Csvg/%3E", rdns: "id.holo.wallet" };
+  const detail = Object.freeze({ info, provider });
+  const fire = () => target.dispatchEvent(new CustomEvent("eip6963:announceProvider", { detail }));
+  target.addEventListener("eip6963:requestProvider", fire);
+  fire();
 }

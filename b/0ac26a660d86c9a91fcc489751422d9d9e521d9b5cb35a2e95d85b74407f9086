@@ -636,8 +636,8 @@
 
         // holo://pass — Holo Pass: your sovereign logins (a same-origin app page, no egress). Try it as a
         // guest; in a signed-in session it fronts the TEE-encrypted vault.
-        if (/^holo:\/\/(pass|passwords|sovereign)\b/i.test(input) || input === "holo://pass") {
-          t.title = "Holo Pass"; renderTabs(); setOmni("holo://pass"); setVerify({ verified: true, scheme: "holo" });
+        if (/^holo:\/\/(pass|passwords|sovereign|wallet)\b/i.test(input)) {
+          t.title = "Your presence"; renderTabs(); setOmni("holo://pass"); setVerify({ verified: true, scheme: "holo" });
           loadFrame(BASE + "sovereign-demo.html", t, t0, "holo"); return;
         }
 

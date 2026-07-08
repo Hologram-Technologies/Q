@@ -46,9 +46,10 @@
   .biotoast.on{display:inline-flex}
 </style></head>
 <body><div class="wrap">
-  <div class="hero"><div class="k">🔑 Holo Pass</div>
-    <p>One identity. Your logins fill at the <b>exact</b> site — and a pixel-perfect phishing look-alike gets
-       <b>nothing</b>. This is live: the real exact-origin engine, running on your device, no sign-in needed to try it.</p></div>
+  <div class="hero"><div class="k">✦ Your sovereign presence</div>
+    <p>One identity — your <b>passwords</b> and your <b>wallet</b>, on every site. Logins fill only at the
+       <b>exact</b> origin (a phishing look-alike gets nothing); a dApp connects to your address but can never
+       take a key or move funds without your biometric. Live, on your device, no sign-in needed to try it.</p></div>
 
   <div class="setup">
     <h2>1 · Save a login to Holo Pass</h2>
@@ -89,6 +90,20 @@
     </div>
   </div>
 
+  <div class="setup" id="wallet" style="margin-top:1.6rem">
+    <h2>👛 …and your wallet, on the same identity</h2>
+    <p>A dApp discovers <b>Hologram</b> the standard way (EIP-6963) and gets your address — never a key.
+       Connect is easy; a signature needs your biometric; a <b>send</b> needs a fresh one bound to that exact
+       transaction. Connect ≠ sign ≠ send — a site you connected to can never drain you silently.</p>
+    <div class="fillrow" style="flex-wrap:wrap">
+      <button class="ghost" id="w-discover">🔎 Discover wallet</button>
+      <button class="pass" id="w-connect" disabled>Connect</button>
+      <button class="pass" id="w-sign" disabled>✍ Sign message</button>
+      <button class="pass" id="w-send" disabled>Send 0.1 ETH</button>
+    </div>
+    <div class="out" id="w-out"></div>
+  </div>
+
   <div class="seal" id="seal">Runs the real exact-origin engine on your device · nothing left the page ·
     in the full browser this is behind your Face/Touch biometric on every site</div>
 </div>
@@ -96,7 +111,7 @@
 
 <script type="module">
 import { installAutofill, findLoginForms, fillForm } from "./_shared/holo-autofill.mjs";
-import { makeBroker, makeLocalStore } from "./_shared/holo-sovereign.mjs";
+import { makeBroker, makeLocalStore, makeProvider, announceProvider } from "./_shared/holo-sovereign.mjs";
 
 const $ = (id) => document.getElementById(id);
 const REAL = "https://securebank.example";                 // the exact origin the credential binds to
@@ -151,5 +166,33 @@ document.querySelectorAll(".fillbtn").forEach((btn) => btn.onclick = async () =>
 
 // first-run hint
 if (!localStorage.getItem("holo.pass.demo.v1")) $("su-out").textContent = "";
+
+// ── WALLET section: a mock dApp at its OWN origin discovers Hologram via EIP-6963, then connect/sign/send ──
+const DAPP = "https://cool-dapp.example";
+const walletBroker = makeBroker({ store, operator: "demo-operator", stepUp, hostOrigin: () => DAPP });
+// the browser injects the provider + announces it (as the live seam would on every page)
+const provider = makeProvider(walletBroker, DAPP);
+announceProvider(provider, window);
+let discovered = null, account = null;
+const wout = (msg, cls) => { const o = $("w-out"); o.className = "out " + (cls || ""); o.textContent = msg; };
+
+$("w-discover").onclick = () => {
+  // the dApp's side of EIP-6963: ask, and listen for the announce
+  const onAnn = (e) => { if (e.detail && e.detail.info && /hologram/i.test(e.detail.info.name)) { discovered = e.detail.provider; window.removeEventListener("eip6963:announceProvider", onAnn); $("w-connect").disabled = false; wout("✓ Found wallet: “" + e.detail.info.name + "” (via EIP-6963) — the standard way, no extension.", "ok"); } };
+  window.addEventListener("eip6963:announceProvider", onAnn);
+  window.dispatchEvent(new Event("eip6963:requestProvider"));
+};
+$("w-connect").onclick = async () => {
+  try { const accs = await discovered.request({ method: "eth_requestAccounts" }); account = accs[0]; $("w-sign").disabled = false; $("w-send").disabled = false; wout("✓ Connected as " + account.slice(0, 10) + "…" + account.slice(-6) + " — the dApp has your ADDRESS, never a key.", "ok"); }
+  catch (e) { wout("Connect refused: " + e.message, "bad"); }
+};
+$("w-sign").onclick = async () => {
+  try { const sig = await discovered.request({ method: "personal_sign", params: ["Sign in to Cool dApp"] }); wout("✓ Signed (after your biometric): " + sig.slice(0, 22) + "… — proves it's you, no key exposed.", "ok"); }
+  catch (e) { wout("Sign refused: " + e.message, "bad"); }
+};
+$("w-send").onclick = async () => {
+  try { const tx = await discovered.request({ method: "eth_sendTransaction", params: [{ to: "0xabc0000000000000000000000000000000000def", value: "0x16345785d8a0000" }] }); wout("✓ Sent (needed a FRESH biometric bound to this tx): " + tx.slice(0, 22) + "… — a connected site can't move funds silently.", "ok"); }
+  catch (e) { wout("Send refused: " + e.message, "bad"); }
+};
 </script>
 </body></html>
