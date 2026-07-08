@@ -6,7 +6,7 @@
 // (/apps/resolve/#<name>). A refusal shows one honest sentence, never a fake card.
 //
 // Embed the resolver into ANY holo app streamed in the messenger with ONE line:
-//     import "./holo-card.mjs";  then  <holo-card name="sha256:…"></holo-card>
+//     import "/usr/lib/holo/holo-card.mjs";  then  <holo-card name="sha256:…"></holo-card>
 // or imperatively:  HoloCard.mount(el, name).  Lean: shadow-scoped CSS, blob previews revoked on
 // disconnect, one shared resolver + one app-index load across every card on the page.
 
@@ -69,8 +69,38 @@ export function sniff(b) {
 }
 const isPrintable = (h) => h.every((x) => x === 9 || x === 10 || x === 13 || (x >= 32 && x < 240));
 
+// ── ACTION cards (V4) — some names are an INTENT, not content: a payment, an address, a contact, a chat.
+// A content-only resolver refuses them ("not verifiable here"); the universal one ACTS. Pure core: parse
+// the intent from the name + kind → {icon, title, sub, verb, href}. The href is the name itself — the OS/
+// browser opens mailto:/tel:/bitcoin:/lightning:/matrix: through its own handler (L1: location is a hint).
+const ACTION_KINDS = { payment: 1, account: 1, contact: 1, chat: 1 };
+export function actionFromName(name, kind) {
+  const s = String(name || ""); const scheme = (s.match(/^([a-z][a-z0-9+.-]*):/i) || [])[1];
+  const sch = scheme ? scheme.toLowerCase() : "";
+  const short = (x, n = 34) => (x.length > n ? x.slice(0, n - 1) + "…" : x);
+  if (kind === "contact") {
+    if (sch === "mailto") { const to = s.slice(7).split("?")[0]; return { icon: "✉", title: to || "New email", sub: "email", verb: "Compose", href: s }; }
+    if (sch === "tel" || sch === "sms") { const no = s.slice(sch.length + 1); return { icon: sch === "sms" ? "💬" : "📞", title: no, sub: sch === "sms" ? "text message" : "phone", verb: sch === "sms" ? "Text" : "Call", href: s }; }
+  }
+  if (kind === "chat") { const room = s.replace(/^(matrix|xmpp):\/?\/?/i, ""); return { icon: "💬", title: short(room) || "Chat", sub: sch + " room", verb: "Open chat", href: s }; }
+  if (kind === "payment") {
+    if (sch === "lightning" || /^lnbc/i.test(s)) return { icon: "⚡", title: "Lightning invoice", sub: "pay over Lightning", verb: "Pay in Wallet", href: s.startsWith("lightning:") ? s : "lightning:" + s };
+    if (sch === "bitcoin") return { icon: "₿", title: short(s.slice(8).split("?")[0]), sub: "Bitcoin payment", verb: "Pay in Wallet", href: s };
+    if (sch === "ethereum") return { icon: "Ξ", title: "Ethereum payment", sub: /value=/.test(s) ? "sends value" : "on-chain call", verb: "Open in Wallet", href: s };
+    return { icon: "◈", title: "Payment", sub: sch || "", verb: "Open in Wallet", href: s };
+  }
+  if (kind === "account") {
+    if (/^(bc1|tb1)/i.test(s) || sch === "bitcoin") return { icon: "₿", title: short(s), sub: "Bitcoin address", verb: "Send in Wallet", href: s.startsWith("bitcoin:") ? s : "bitcoin:" + s };
+    if (sch === "solana") return { icon: "◎", title: short(s.slice(7)), sub: "Solana address", verb: "Send in Wallet", href: s };
+    return { icon: "◈", title: short(s), sub: "account", verb: "Send in Wallet", href: s };
+  }
+  return { icon: "◈", title: short(s), sub: kind, verb: "Open", href: s };
+}
+
 export function cardModel(res, name, appIdx) {
   const url = INSPECTOR + "#" + encodeURIComponent(name);
+  // ACTION before refusal: a payment/contact/chat/account is not "unverifiable" — it is a thing to DO.
+  if (res && ACTION_KINDS[res.kind]) { const a = actionFromName(name, res.kind); return { ok: true, url, action: a, kind: res.kind }; }
   if (!res || !res.ok) return { ok: false, url, headline: res && res.kind === "refused" ? "refused" : "not verifiable here", msg: (res && (res.explain || res.why)) || "" };
   const app = appIdx ? findApp(appIdx, res.kappa) : null;
   const size = res.size != null ? res.size : (res.bytes ? res.bytes.length : 0);
@@ -124,7 +154,12 @@ const HoloCardEl = typeof HTMLElement !== "undefined" ? class extends HTMLElemen
     if (!this.isConnected) return;
     const m = cardModel(res, name, await appIndex());
     const card = document.createElement("div"); card.className = "card";
-    if (!m.ok) { card.innerHTML = `<a class="seal bad" href="${m.url}" target="_blank" rel="noopener"><span class="dot"></span>${esc(m.headline)}<span class="go">what is this? ↗</span></a>${m.msg ? `<div class="msg">${esc(m.msg)}</div>` : ""}`; }
+    if (m.action) {                                          // V4: an intent, not content — a thing to DO
+      const a = m.action;
+      card.innerHTML = `<div class="seal"><span class="dot" style="background:#8696a0;box-shadow:none"></span>an action<span class="go">not content — nothing to verify</span></div>`
+        + `<div class="app"><div class="app-h"><span class="app-title">${esc(a.icon)} ${esc(a.title)}</span><a class="open" href="${esc(a.href)}">${esc(a.verb)} →</a></div>${a.sub ? `<div class="msg" style="margin-top:6px">${esc(a.sub)}</div>` : ""}</div>`;
+    }
+    else if (!m.ok) { card.innerHTML = `<a class="seal bad" href="${m.url}" target="_blank" rel="noopener"><span class="dot"></span>${esc(m.headline)}<span class="go">what is this? ↗</span></a>${m.msg ? `<div class="msg">${esc(m.msg)}</div>` : ""}`; }
     else {
       let h = `<a class="seal" href="${m.url}" target="_blank" rel="noopener"><span class="dot"></span>verified<span class="go">details ↗</span></a>`;
       if (m.app) h += `<div class="app"><div class="app-h"><span class="app-title">${esc(m.app.title)}</span><a class="open" href="${esc(m.app.url)}">Open →</a></div>${m.app.desc ? `<div class="msg" style="margin-top:6px">${esc(m.app.desc)}</div>` : ""}</div>`;
