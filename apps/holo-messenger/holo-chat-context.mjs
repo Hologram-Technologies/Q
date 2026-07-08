@@ -192,6 +192,31 @@ export async function openContextChannel(ctx, { meName = null, label = null } = 
     }
   } catch {}
 
+  // cross-device on a HOSTED origin (github.io) — where the origin /signal relay 404s — rides the content-blind
+  // Nostr mailbox (holo-rendezvous R1/R2, public relays, SEC-7): sealed blobs only, keyed by a coordinate DERIVED
+  // from the room κ, so only holders of the room converge. Verify-on-receipt is the same _ingest gate (L5). A
+  // throwaway relay key signs events (relay-acceptance only, never a trust root). Fail-soft: no relay → no-op, and
+  // BroadcastChannel still carries same-device. `window.__holoChatMailbox` overrides the backend (tests / P6 inject
+  // a deterministic mailbox). Gated to 1:1 DM rooms + real hosted origins, so it never fires in Node/localhost.
+  let mail = null;
+  try {
+    const override = (typeof window !== "undefined" && window.__holoChatMailbox) || null;
+    const hosted = typeof location !== "undefined" && !!location.hostname && !/^(127\.0\.0\.1|localhost|\[::1\])$/.test(location.hostname);
+    if (cr.kind === "dm" && (override || (hosted && typeof WebSocket !== "undefined"))) {
+      const rdv = await import("../../usr/lib/holo/holo-rendezvous.mjs");
+      const coord = rdv.coordinate(room);
+      const mbox = override ? await override({ relays: rdv.DEFAULT_RELAYS }) : await rdv.makeNostrMailbox();
+      if (mbox && (!mbox.relayCount || mbox.relayCount() > 0)) {
+        const sub = mbox.liveGet(coord);
+        let ri = 0;
+        const timer = setInterval(async () => {
+          try { const arr = sub.collected || []; while (ri < arr.length) { const blob = arr[ri++]; let w; try { w = JSON.parse(blob); } catch { continue; } const m = await openWire(_key, w); if (m) _ingest(m); } } catch {}
+        }, 1200);
+        mail = { post: (sealed) => { try { mbox.put(coord, JSON.stringify(sealed)); } catch {} }, close: () => { try { clearInterval(timer); sub.close && sub.close(); mbox.close && mbox.close(); } catch {} } };
+      } else { try { mbox && mbox.close && mbox.close(); } catch {} }
+    }
+  } catch {}
+
   const send = async (text) => {
     const t = String(text == null ? "" : text).trim();
     if (!t) return null;
@@ -199,9 +224,10 @@ export async function openContextChannel(ctx, { meName = null, label = null } = 
     const seq = log.length ? (log[log.length - 1].seq | 0) + 1 : 0;
     const m = await makeMessage({ room, from: me, text: t, seq, ts: Date.now(), prev });
     await _ingest(m);
-    const sealed = await sealWire(_key, m);   // encrypt before it touches BroadcastChannel or the relay
+    const sealed = await sealWire(_key, m);   // encrypt before it touches BroadcastChannel or any relay/mailbox
     try { bc && bc.postMessage(sealed); } catch {}
     try { relay && relay.post({ kind: "holochat", data: sealed }); } catch {}
+    try { mail && mail.post(sealed); } catch {}
     return m;
   };
 
@@ -210,7 +236,7 @@ export async function openContextChannel(ctx, { meName = null, label = null } = 
     history: () => log.slice(),
     onMessage: (cb) => { listeners.add(cb); return () => listeners.delete(cb); },
     send,
-    close: () => { try { bc && bc.close(); } catch {} try { relay && relay.close(); } catch {} listeners.clear(); },
+    close: () => { try { bc && bc.close(); } catch {} try { relay && relay.close(); } catch {} try { mail && mail.close(); } catch {} listeners.clear(); },
   };
 }
 

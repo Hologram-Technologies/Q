@@ -18,17 +18,54 @@ const BASE = new URL("../../../", import.meta.url);       // /usr/lib/holo/holo-
 const INSPECTOR = new URL("apps/resolve/", BASE).href;
 const esc = (s) => String(s == null ? "" : s).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/"/g, "&quot;");
 
-// ── pure core (Node-witnessable): sniff media, build the render MODEL from a resolver result ──────────
+// ── pure core (Node-witnessable): sniff ANY common internet format by magic bytes, build the MODEL ────
+// Returns a MIME string for renderable media (image/audio/video/pdf) OR a "kind:<label>" tag for
+// recognized-but-not-inline-rendered formats (archives, fonts, wasm, office…) so the card labels them
+// honestly, OR null (fall through to a text preview). Every byte examined here is already VERIFIED.
 export function sniff(b) {
-  if (!b || b.length < 12) return null;
+  if (!b || b.length < 4) return null;
+  const a4 = String.fromCharCode(b[0], b[1], b[2], b[3]);
+  // images
   if (b[0] === 0x89 && b[1] === 0x50) return "image/png";
   if (b[0] === 0xff && b[1] === 0xd8) return "image/jpeg";
   if (b[0] === 0x47 && b[1] === 0x49 && b[2] === 0x46) return "image/gif";
-  if (b[0] === 0x52 && b[1] === 0x49 && b[2] === 0x46 && b[8] === 0x57 && b[9] === 0x45) return "image/webp";
-  if (b[4] === 0x66 && b[5] === 0x74 && b[6] === 0x79 && b[7] === 0x70) return "video/mp4";
-  if (b[0] === 0x1a && b[1] === 0x45 && b[2] === 0xdf) return "video/webm";
+  if (b[0] === 0x42 && b[1] === 0x4d) return "image/bmp";
+  if (a4 === "\x00\x00\x01\x00") return "image/x-icon";
+  if ((b[0] === 0x49 && b[1] === 0x49) || (b[0] === 0x4d && b[1] === 0x4d)) return "image/tiff";
+  if (b.length >= 12 && b[0] === 0x52 && b[1] === 0x49 && b[2] === 0x46 && b[8] === 0x57 && b[9] === 0x45) return "image/webp";
+  if (b.length >= 12 && b[4] === 0x66 && b[5] === 0x74 && b[6] === 0x79 && b[7] === 0x70) {
+    const brand = String.fromCharCode(b[8], b[9], b[10], b[11]);
+    if (brand === "avif" || brand === "avis") return "image/avif";
+    if (brand.startsWith("hei") || brand.startsWith("mif")) return "image/heic";
+    if (brand === "qt  ") return "video/quicktime";
+    return "video/mp4";                                    // isom / mp42 / M4V / M4A handled below
+  }
   if (b[0] === 0x3c && (b[1] === 0x73 || b[1] === 0x3f || b[1] === 0x21)) return "image/svg+xml";
-  return null;
+  // audio
+  if (b[0] === 0x49 && b[1] === 0x44 && b[2] === 0x33) return "audio/mpeg";     // ID3 (mp3)
+  if (b[0] === 0xff && (b[1] & 0xe0) === 0xe0) return "audio/mpeg";             // mp3 frame
+  if (a4 === "fLaC") return "audio/flac";
+  if (a4 === "OggS") return "audio/ogg";
+  if (b.length >= 12 && a4 === "RIFF" && String.fromCharCode(b[8], b[9], b[10], b[11]) === "WAVE") return "audio/wav";
+  // video
+  if (b[0] === 0x1a && b[1] === 0x45 && b[2] === 0xdf) return "video/webm";      // also mkv (matroska)
+  // documents
+  if (a4 === "%PDF") return "application/pdf";
+  // fonts (labeled, not inline-rendered)
+  if (a4 === "wOFF") return "kind:font (woff)";
+  if (a4 === "wOF2") return "kind:font (woff2)";
+  if (a4 === "\x00\x01\x00\x00" || a4 === "OTTO" || a4 === "true" || a4 === "ttcf") return "kind:font";
+  // executable / archive / compressed (labeled)
+  if (a4 === "\x00asm") return "kind:WebAssembly module";
+  if (b[0] === 0x50 && b[1] === 0x4b && (b[2] === 0x03 || b[2] === 0x05)) return "kind:archive (zip / office / epub)";
+  if (b[0] === 0x1f && b[1] === 0x8b) return "kind:archive (gzip)";
+  if (a4 === "\x28\xb5\x2f\xfd") return "kind:archive (zstd)";
+  if (b[0] === 0x42 && b[1] === 0x5a && b[2] === 0x68) return "kind:archive (bzip2)";
+  if (a4 === "\xfd7zX") return "kind:archive (xz)";
+  if (a4 === "7z\xbc\xaf") return "kind:archive (7z)";
+  if (a4 === "Rar!") return "kind:archive (rar)";
+  if (a4 === "ustar" || (b.length > 257 && String.fromCharCode(b[257], b[258], b[259], b[260], b[261]) === "ustar")) return "kind:archive (tar)";
+  return null;                                             // text-ish → the card shows a preview
 }
 const isPrintable = (h) => h.every((x) => x === 9 || x === 10 || x === 13 || (x >= 32 && x < 240));
 
@@ -40,7 +77,8 @@ export function cardModel(res, name, appIdx) {
   const model = { ok: true, url, kappa: res.kappa, size, kind: app ? "holo app · " + app.dir : res.kind, app: app ? { title: app.title, desc: app.desc, url: app.url } : null };
   if (!app && res.bytes) {
     const type = sniff(res.bytes);
-    if (type) model.media = { type };
+    if (type && type.startsWith("kind:")) model.binary = type.slice(5);   // labeled (font/wasm/archive) — no inline render
+    else if (type) model.media = { type };
     else { const head = res.bytes.subarray(0, 600); if (isPrintable(head)) { try { model.preview = new TextDecoder().decode(head) + (size > 600 ? "\n…" : ""); } catch {} } }
   }
   return model;
@@ -90,11 +128,19 @@ const HoloCardEl = typeof HTMLElement !== "undefined" ? class extends HTMLElemen
     else {
       let h = `<a class="seal" href="${m.url}" target="_blank" rel="noopener"><span class="dot"></span>verified<span class="go">details ↗</span></a>`;
       if (m.app) h += `<div class="app"><div class="app-h"><span class="app-title">${esc(m.app.title)}</span><a class="open" href="${esc(m.app.url)}">Open →</a></div>${m.app.desc ? `<div class="msg" style="margin-top:6px">${esc(m.app.desc)}</div>` : ""}</div>`;
-      h += `<div class="kv"><div class="k">κ</div><div class="v">${esc(m.kappa)}</div><div class="k">kind</div><div class="v">${esc(m.kind)}</div><div class="k">size</div><div class="v">${m.size.toLocaleString()} bytes</div></div>`;
+      h += `<div class="kv"><div class="k">κ</div><div class="v">${esc(m.kappa)}</div><div class="k">kind</div><div class="v">${esc(m.kind)}${m.binary ? " · " + esc(m.binary) : m.media ? " · " + esc(m.media.type) : ""}</div><div class="k">size</div><div class="v">${m.size.toLocaleString()} bytes</div></div>`;
       if (m.preview) h += `<pre>${esc(m.preview)}</pre>`;
       card.innerHTML = h;
       if (m.media && res.bytes) {
-        try { this._blob = URL.createObjectURL(new Blob([res.bytes], { type: m.media.type })); const n = document.createElement(m.media.type.startsWith("video") ? "video" : "img"); n.src = this._blob; if (n.tagName === "VIDEO") { n.controls = true; n.playsInline = true; } card.appendChild(n); } catch {}
+        try {
+          const t = m.media.type; this._blob = URL.createObjectURL(new Blob([res.bytes], { type: t }));
+          let n;
+          if (t.startsWith("video")) { n = document.createElement("video"); n.controls = true; n.playsInline = true; }
+          else if (t.startsWith("audio")) { n = document.createElement("audio"); n.controls = true; n.style.width = "100%"; }
+          else if (t === "application/pdf") { n = document.createElement("iframe"); n.style.cssText = "width:100%;height:60vh;border:0;border-radius:10px;margin-top:11px"; n.setAttribute("credentialless", ""); }
+          else { n = document.createElement("img"); }
+          n.src = this._blob; card.appendChild(n);
+        } catch {}
       }
     }
     root.querySelector(".card").replaceWith(card);

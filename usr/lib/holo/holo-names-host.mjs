@@ -58,12 +58,33 @@ export function makeHostResolver({ base, wasmGlue = null, fetchFn = null, lruSiz
   const R0 = makeNameResolver({ fetchFn: storeFetch, hashers, mirrors: [store], lruSize });
   const R1 = makeNameResolver({ fetchFn: rawFetch, hashers, mirrors: RUNGS, lruSize });
 
-  // TIER 0 first — a warm object fires zero network requests; only a byte-miss falls to the race.
-  // Non-byte outcomes (pointers, refusals, host-owned) are final at tier 0: retrying can't change them.
+  // THE WARM CACHE (L3 — the store IS the memory). A once-resolved object lives here keyed by its κ; a
+  // repeat resolve is a SYNCHRONOUS Map hit (~µs) that fires ZERO network AND skips the async store probe
+  // (caches.match is hundreds of µs — it must never be on the warm path). Bounded (SEC-8). Cold falls
+  // through: TIER 0 store (0-egress if the SW cached it) → TIER 1 the raced network rungs.
+  const warm = new Map();                                  // "axis:hex" → { kind, kappa, bytes }
+  const bump = (k, v) => { if (warm.has(k)) warm.delete(k); warm.set(k, v); if (warm.size > lruSize) warm.delete(warm.keys().next().value); };
+  const warmKeyOf = (rec) => {                             // the κ a content-derived name commits to
+    const hex = rec.hex || (rec.kappa ? rec.kappa.split(":").pop() : null);
+    if (!hex) return null;
+    const axis = rec.axis || (rec.kappa ? rec.kappa.split(":")[0] : null);
+    return (axis || "*") + ":" + hex;                      // bare hex: axis unknown until resolved → probe both
+  };
+
   async function resolve(name, caps = null) {
-    const a = await R0.resolve(name, caps);
-    if (a.ok || a.needsIngest || a.kind === "refused" || a.kind === "host-owned" || a.why === "kind-not-admitted") return a;
-    return R1.resolve(name, caps);
+    if (!caps) {                                           // caps present → honor attenuation, skip the warm shortcut
+      const rec = classify(name);
+      if (rec && (rec.kappa || rec.hex)) {
+        const k = warmKeyOf(rec);
+        let hit = k && warm.get(k);
+        if (!hit && rec.hex && !rec.axis) for (const a of Object.keys(AXES)) { hit = warm.get(a + ":" + rec.hex); if (hit) break; }   // bare hex: any axis
+        if (hit) return { ok: true, kind: hit.kind, kappa: hit.kappa, bytes: hit.bytes, source: "warm" };
+      }
+    }
+    let r = await R0.resolve(name, caps);                  // TIER 0: local store (SW/OPFS), 0-egress
+    if (!(r.ok || r.needsIngest || r.kind === "refused" || r.kind === "host-owned" || r.why === "kind-not-admitted")) r = await R1.resolve(name, caps);   // TIER 1: the raced rungs
+    if (r.ok && r.kappa && !caps) bump(r.kappa, { kind: r.kind, kappa: r.kappa, bytes: r.bytes });
+    return r;
   }
 
   // the surface-facing sugar: one honest sentence for every non-ok outcome (V-MAGIC — never a term to learn)
@@ -80,7 +101,7 @@ export function makeHostResolver({ base, wasmGlue = null, fetchFn = null, lruSiz
     return r;
   }
 
-  return { resolve, resolveOrExplain, classify, stats: () => ({ warm: R0.stats().cached, net: R1.stats().cached }), AXES };
+  return { resolve, resolveOrExplain, classify, stats: () => ({ warm: warm.size, store: R0.stats().cached, net: R1.stats().cached }), AXES };
 }
 
 export default { makeHostResolver, SMALL };

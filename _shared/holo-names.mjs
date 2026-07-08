@@ -70,7 +70,9 @@ export function classify(raw) {
   if (!s) return { kind: "empty" };
   let m;
   if ((m = AXIS_LABEL.exec(s))) { const axis = m[1], hex = m[2].toLowerCase(); if (hex.length !== AXES[axis]) return { kind: "refused", target: s, note: "wrong digest length for " + axis }; return { kind: "kappa", target: s, kappa: axis + ":" + hex, axis, hex }; }
-  if (WEAK_LABEL.test(s) || /^magnet:\?xt=urn:btih:/i.test(s)) return { kind: "refused", target: s, note: "weak axis (sha1/md5) — upstream excludes it; refused by name, never silently accepted" };
+  // BitTorrent v2 (btmh) is content-addressed on sha256 — translate it; v1 (btih) is sha1 → refused below.
+  if (/^magnet:\?.*xt=urn:btmh:/i.test(s)) { const m = /urn:btmh:1220([0-9a-f]{64})/i.exec(s); if (m) return { kind: "torrent", target: s, kappa: "sha256:" + m[1].toLowerCase(), axis: "sha256", note: "BitTorrent v2 — content-addressed (sha256)" }; return { kind: "torrent", target: s, note: "BitTorrent v2 — non-sha256 multihash" }; }
+  if (WEAK_LABEL.test(s) || /^magnet:\?xt=urn:btih:/i.test(s)) return { kind: "refused", target: s, note: "weak axis (sha1/md5 — incl. BitTorrent v1 btih) — upstream excludes it; refused by name, never silently accepted" };
   if (/^did:holo:/i.test(s)) { const p = s.split(":"); const axis = p[2], hex = (p[3] || "").toLowerCase(); return AXES[axis] && hex.length === AXES[axis] ? { kind: "did", target: s, kappa: axis + ":" + hex, axis, hex } : { kind: "did", target: s }; }
   if (/^did:/i.test(s)) return { kind: "did", target: s };
   if (/^[0-9a-fA-F]{64}$/.test(s)) return { kind: "kappa", target: s, axis: null, hex: s.toLowerCase(), note: "bare hex — axis resolved against the store in registry order" };
@@ -83,12 +85,24 @@ export function classify(raw) {
   if (/^(sha256|sha384|sha512)-[A-Za-z0-9+/]{20,}=*$/.test(s)) { try { const t = sriToKappa(s); return { kind: "sri", target: s, ...(t.kappa ? { kappa: t.kappa, axis: t.axis } : { note: t.note }) }; } catch { return null; } }
   if (/^0x[0-9a-fA-F]{64}$/.test(s)) return { kind: "eth-tx", target: s, kappa: "keccak256:" + s.slice(2).toLowerCase(), axis: "keccak256" };
   if (/^0x[0-9a-fA-F]{40}$/.test(s)) return { kind: "eth-address", target: s, note: "keccak-derived account — an entity, not content; resolve via chain name-records" };
+  // data: URI — content is INLINE, so it is trivially self-verifying (κ = hash of its own decoded bytes)
+  if (/^data:/i.test(s)) return { kind: "data", target: s, note: "inline content — self-verifying (κ is the hash of its own bytes)" };
+  // distinctive BARE web3 forms (no scheme prefix): Nostr (bech32) · Lightning · Bitcoin (bech32)
+  if (/^(npub|note|nevent|nprofile|naddr|nsec)1[023456789acdefghjklmnpqrstuvwxyz]{20,}$/.test(s)) { const t = s.slice(0, s.indexOf("1")); return { kind: "nostr", target: s, note: t === "npub" || t === "nprofile" ? "a Nostr identity" : t === "nsec" ? "a Nostr secret — never resolved" : "a Nostr event" }; }
+  if (/^ln(bc|tb|bcrt)[0-9][a-z0-9]{50,}$/i.test(s)) return { kind: "payment", target: s, note: "a Lightning invoice" };
+  if (/^(bc1|tb1)[a-z0-9]{20,}$/i.test(s)) return { kind: "account", target: s, note: "a Bitcoin address" };
+  // scheme-prefixed pointers across web2 + web3 — recognized and routed to their own door (mutable names /
+  // gateway-served content dereference at the ingest boundary → a signed name-record; L1: location is a hint).
+  const scheme = (s.match(/^([a-z][a-z0-9+.-]*):/i) || [])[1];
+  const SCHEME = { ar: "arweave", hyper: "p2pweb", dat: "p2pweb", sia: "p2pstore", storj: "p2pstore", ssb: "scuttlebutt", gemini: "altweb", gopher: "altweb", ftp: "web", ftps: "web", sftp: "web", ws: "socket", wss: "socket", mailto: "contact", tel: "contact", sms: "contact", ethereum: "payment", bitcoin: "payment", lightning: "payment", solana: "account", matrix: "chat", xmpp: "chat", at: "atproto", nostr: "nostr", blob: "local", file: "local", ed2k: "p2p", stun: "socket", turn: "socket" };
+  if (scheme) { const k = SCHEME[scheme.toLowerCase()]; if (k) return { kind: k, target: s, note: "a " + scheme.toLowerCase() + ": name — dereferenced through its own protocol at the ingest boundary" }; }
   const host = (s.replace(/^[a-z]+:\/\//i, "").split(/[/?#]/)[0] || "").toLowerCase();
   if (host.endsWith(".onion")) return { kind: "onion", target: s, note: "transport rung — content still κ-verified whatever carried it (SEC-7)" };
-  if (/^[a-z0-9-]+(\.[a-z0-9-]+)*\.eth$/i.test(host)) return { kind: "ens", target: s };
+  if (/\.eth$/i.test(host)) return { kind: "ens", target: s, note: "an Ethereum name (ENS) → on-chain contenthash" };
+  if (/\.(crypto|nft|x|wallet|bitcoin|dao|888|blockchain|zil)$/i.test(host)) return { kind: "ens", target: s, note: "a web3 domain (Unstoppable) → on-chain contenthash" };
   if (/^[a-z0-9][a-z0-9-]*~[a-z]{5}(-[a-z]{5})+$/.test(s)) return { kind: "truename", target: s, note: "hint, not proof — resolve re-derives slug + κ prefix (L5)" };
   if (/^[A-Za-z0-9][A-Za-z0-9_-]*\/[A-Za-z0-9._-]+(:[A-Za-z0-9._-]+)?$/.test(s) && !s.split("/")[0].includes(".")) return { kind: "model", target: s, note: "weights pointer — resolves to a κ-manifest name-record" };
-  return null;   // web / dnslink / app-directory / free text: the host surface's own business
+  return null;   // http(s) / dnslink / app-directory / free text: the host surface's own business
 }
 
 // ── THE ONE VERB — resolve(name, caps) → verified bytes (S1 slice 2) ──────────────────────────────────
