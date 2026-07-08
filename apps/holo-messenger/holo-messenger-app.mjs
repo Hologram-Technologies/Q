@@ -909,7 +909,7 @@ function buildModel() {
   return { conversations, threads, thread: (g) => { const c = convos.find((x) => x.meta.genesis === g); return c ? buildThread(c) : []; },
     identity: identity(), onSetName, makeInvite,
     onSend, onRetry, onReact, onReply, onEdit, onDelete, onForward, onAttach, onTyping, onView, onAddMember, onRemoveMember, onLoadEarlier, undoTidy, markDone, allClear, snooze, snoozedCount: snoozedCount(), clearObvious, unsnooze, forgetLearned, learnedCount: [..._verbLog.keys()].filter((g) => learnedVerb(g)).length,
-    onPin, onMute, onFavourite, onArchive, onBlock, onDeleteChat, targets, onNewChat,
+    onPin, onMute, onFavourite, onArchive, onBlock, onDeleteChat, targets, onNewChat, startPeerChat,
     networks: networksModel(), hub: { connected: netState.hub, homeserver: netState.homeserver },
     connectHub, markNetwork, submitBridgePassword, submitBridgeToken, submitBridgeCredentials, suggestEmail,
     connectPlatform, realNetworkIds: realNetworkIds(), qDigest, qAsk, qCatchUp, qDraft, bodyMatches, prefetch, resolveBridgeMedia, resolveEmailHtml, qContentActions, qSummarizeContent,
@@ -993,6 +993,54 @@ async function onNewChat(name) {
   convos.push(c);
   rebuild();
   return genesis;
+}
+
+// ── HOLO-MESSENGER-P2P (M2): a device-to-device conversation, welded onto the already-built serverless
+// holo-chat-context channel (signed + κ-chained + E2E + verify-on-receipt). NO message server: same-device via
+// BroadcastChannel, cross-device via the content-blind rendezvous relay (signalBase). The messenger `thread` is the
+// PROJECTION we render; the channel is the transport AND the L5 gate (it re-verifies every inbound frame before it
+// ever reaches us). Idempotent per room κ. Fail-soft: any error → null, the UI just doesn't get a peer chat.
+async function startPeerChat({ peerName, peerKappa, ctx } = {}) {
+  try {
+    const { openContextChannel } = await import("./holo-chat-context.mjs");
+    const label = String(peerName || peerKappa || "Peer");
+    const context = ctx || { kind: "dm", ref: [operator || "me", String(peerKappa || label)], label };
+    const chan = await openContextChannel(context, { meName: operator || undefined, label });
+    const genesis = chan.room;   // the STABLE, shared room κ — same on every device that holds the link (L2)
+    const existing = convos.find((x) => x.meta.genesis === genesis);
+    if (existing) { if (!existing.channel) existing.channel = chan; rebuild(); return genesis; }
+    const thread = makeThread({ genesis, backend: null, now, signer: principal });
+    const c = { meta: { platform: "holo", kind: "dm", chat: label, name: label, peer: true, genesis }, thread, sender: null, peer: true, channel: chan, members: rosterMembers([label]) };
+    for (const m of chan.history()) { try { await thread.ingest({ text: m.text, sender: m.from === chan.me ? "Me" : label, sentAt: m.ts, chat: label, source: "peer" }); } catch {} }   // backfill persisted κ-chain
+    chan.onMessage(async (m) => {
+      if (!m || m.from === chan.me) return;   // my own send is already painted optimistically by onSend
+      try { await thread.ingest({ text: m.text, sender: label, sentAt: m.ts, chat: label, source: "peer" }); } catch {}   // already L5-verified inside the channel before this fires
+      if (genesis !== lastViewed && !prefs.block.has(genesis)) unread.set(genesis, (unread.get(genesis) || 0) + 1);
+      _touch(genesis); rebuildSoon();
+    });
+    convos.push(c);
+    _touch(genesis); rebuild();
+    return genesis;
+  } catch (e) { try { window.__peerErr = String((e && e.stack) || e); } catch {} return null; }
+}
+try { if (typeof window !== "undefined") window.HoloPeer = { start: startPeerChat, me: () => operator, send: (g, t) => onSend(g, t), view: (g) => { const c = convos.find((x) => x.meta.genesis === g); return c ? c.thread.view().map((v) => ({ text: v.text, sender: v.sender, kappa: v.kappa })) : null; } }; } catch {}
+// P3 — restore persisted peer chats on boot. Their κ-chain lives in the OPFS/localStorage room index keyed by room κ
+// (Law L3: the store IS the memory). Each stored index entry carries {room,kappa,kind,v,canon} — exactly a verified
+// context-room — so openContextChannel re-opens it WITHOUT re-deriving (and rebuilds the seal key from canon). History
+// + the live channel survive a reload, offline. Fire-and-forget after Q; fully fail-soft.
+async function restorePeerChats() {
+  try {
+    const { listRooms } = await import("./holo-chat-context.mjs");
+    const rooms = await listRooms();
+    for (const r of rooms || []) {
+      if (!r || !r.room || r.kind !== "dm") continue;               // only 1:1 peer chats
+      if (prefs.deleted.has(r.room)) continue;                       // a deleted chat stays deleted
+      if (convos.find((x) => x.meta.genesis === r.room)) continue;   // already live
+      try { await startPeerChat({ peerName: r.label || "Peer", ctx: r }); } catch {}
+    }
+    rebuild();
+  } catch (e) { try { window.__peerRestoreErr = String((e && e.stack) || e); } catch {} }
+  try { window.__peerRestored = true; } catch {}
 }
 
 // ── BU0: bidirectional bridge seam. A *connector* owns an external network. INBOUND: it calls ingestExternal()
@@ -2157,7 +2205,7 @@ async function buildQ() {
     const onnxSeed = { respond: async function* (history) { const r = await ensureOnnxSeed(); if (!r || !r.respond) return; yield* r.respond(history); } };
     const _qPersona = () => { try { return (qBrain.persona ? qBrain.persona() : "") + _qStyle; } catch (e) { return ""; } };   // Q's LIVE grounded self-knowledge (M0) + the human-voice style (Q_STYLE) — so Q is truthfully self-aware AND talks like a warm human, never a chatbot
     c.q = makeQResponder({ thread: c.thread, brain: qBrain, now, passport, persona: _qPersona, retrieve: qGroundedContext, seed: seedLookup, onnxSeed, polish: _grammarTidy, split: _qSplit, brainReady: () => { try { const i = qBrain.info && qBrain.info(); return !!(i && i.ready); } catch (e) { return false; } } });
-    qGroup = makeQGroupResponder({ brain: qBrain, now, passport, persona: _qPersona, polish: _grammarTidy });   // group @Q replies get the SAME identity-guard + humanize voice as the 1:1 chat
+    qGroup = makeQGroupResponder({ brain: qBrain, now, passport, persona: _qPersona, polish: _grammarTidy });
     // LIVE CALL bridge (q-live-hero.mjs): the realtime voice loop (createQLive) generates the reply + speaks it
     // ITSELF, so it writes each finished turn into the Q thread as a real κ bubble WITHOUT re-triggering generation
     // (unlike qSend→qReply). ONE raw ingest for both sides → the turn renders + the summon layer seals it to the
@@ -2166,7 +2214,7 @@ async function buildQ() {
       window.HoloQ = window.HoloQ || {};
       window.HoloQ.liveIngest = async (role, text) => { const t = String(text || "").trim(); if (!t) return null; let r = null; try { r = await c.thread.ingest({ text: t, sender: (role === "me" || role === "Me") ? "Me" : "Q", sentAt: now(), chat: "Q", source: "holo" }); } catch (e) {} try { _touch(c.meta.genesis); rebuildSoon(); } catch (e) {} return r; };
       window.HoloQ.persona = () => { try { return _qPersona(); } catch (e) { return ""; } };
-    } catch (e) {}
+    } catch (e) {}   // group @Q replies get the SAME identity-guard + humanize voice as the 1:1 chat
     // PROACTIVE WARM: the fast BitNet κ-object (0.69 GB, streamed blocks + async GPU upload) loads WITHOUT the
     // main-thread freeze the old 491MB qwen whole-load caused, so we warm it in the BACKGROUND shortly after the
     // inbox paints. Q then answers every turn from the real engine (the seed / ONNX tiers only cover the brief
@@ -2445,13 +2493,34 @@ async function holoPay(genesis, { kind = "send", amount, asset = "USDC", memo = 
   if (kind === "send") {
     const directTo = await resolveRecipientAddress(c);
     const { w, mode } = HoloPay.getWallet();
-    if (directTo && mode === "full" && w && typeof w.pay === "function") {
-      let r; try { r = await w.pay({ chain: "base", to: directTo, amount: Number(amount), token: asset }); }   // wallet's own biometric Confirm
-      catch (e) { return { ok: false, error: /declin|cancel/i.test(String(e && e.message)) ? "payment declined" : String((e && e.message) || e) }; }
-      const receipt = `💸 Sent $${Number(amount).toFixed(2)} to ${toName}${memo ? ` · “${memo}”` : ""} ✓ · settled on-chain`;
-      await onSend(genesis, receipt);
-      logQAction("pay", genesis, toName, "$" + Number(amount) + (memo ? " · " + memo : ""), false);
-      return { ok: true, kind, direct: true, live: true, tx: r && r.tx };
+    if (directTo && mode === "full" && w) {
+      // ── A2 INTENT RAIL (chains disappear) — you name WHAT (a dollar amount to a peer); the router derives HOW
+      //    (funding chain, gas folded, bridge legs) and shows ONE card (outcome·total·time) behind ONE biometric.
+      //    The sender never picks a network. A refusal (no funds / unwired route) falls through to the claim link. ──
+      if (typeof w.intent === "function") {
+        let prop = null; try { prop = await w.intent({ verb: "send", asset: "USD", amount: Number(amount), to: directTo }); } catch {}
+        if (prop && prop.ok && prop.proposal && !prop.proposal.refused) {
+          let r; try { r = await w.realizeIntent(prop.proposal.kappa, { verb: "send", asset: "USD", amount: Number(amount), to: directTo }); }
+          catch (e) { return { ok: false, error: /declin|cancel/i.test(String(e && e.message)) ? "payment declined" : String((e && e.message) || e) }; }
+          if (r && r.error) return { ok: false, error: /declin|cancel/i.test(r.error) ? "payment declined" : r.error };
+          if (r && r.ok && r.receipt) {
+            const total = prop.proposal.card && prop.proposal.card.total;
+            const receipt = `💸 Sent $${Number(amount).toFixed(2)} to ${toName}${memo ? ` · “${memo}”` : ""} ✓${total ? " · " + total + " total" : " · settled"}`;
+            await onSend(genesis, receipt);
+            logQAction("pay", genesis, toName, "$" + Number(amount) + (memo ? " · " + memo : ""), false);
+            return { ok: true, kind, direct: true, live: true, intent: true, tx: r.receipt.kappa };
+          }
+          // realize returned neither ok nor error → fall through to the claim link (never a fake "sent")
+        }
+        // proposal refused or router unavailable → honest fall-through to the claim-link rail below.
+      } else if (typeof w.pay === "function") {   // legacy wallet with no intent rail → the old direct send
+        let r; try { r = await w.pay({ chain: "base", to: directTo, amount: Number(amount), token: asset }); }   // wallet's own biometric Confirm
+        catch (e) { return { ok: false, error: /declin|cancel/i.test(String(e && e.message)) ? "payment declined" : String((e && e.message) || e) }; }
+        const receipt = `💸 Sent $${Number(amount).toFixed(2)} to ${toName}${memo ? ` · “${memo}”` : ""} ✓ · settled on-chain`;
+        await onSend(genesis, receipt);
+        logQAction("pay", genesis, toName, "$" + Number(amount) + (memo ? " · " + memo : ""), false);
+        return { ok: true, kind, direct: true, live: true, tx: r && r.tx };
+      }
     }
   }
   let intent; try { intent = await HoloPay.createPayment({ kind, amount: Number(amount), asset, fiat: "USD", toName: kind === "send" ? toName : null, fromName, to, memo }); }
@@ -2621,6 +2690,14 @@ async function onSend(genesis, text) {
   const _tidy = await _grammarCorrect(text);   // ← flawless grammar, on-device, before it goes anywhere
   text = _tidy.text;
   if (c.isQ) { await qReply(c, text); return; }   // Q = on-device brain (streamed, signed), not a network peer
+  if (c.peer && c.channel) {   // M2: a device-to-device chat — ride the serverless holo-chat-context channel, no server
+    try { await c.thread.ingest({ text, sender: "Me", sentAt: now(), chat: c.meta.chat, source: "peer" }); } catch {}   // optimistic paint, carries its κ
+    try { await c.channel.send(text); } catch {}   // seal + sign + κ-chain + post over BroadcastChannel/rendezvous
+    bumpAffinity(genesis, 4); _logVerb(genesis, "reply");
+    _touch(genesis); rebuild();
+    checkMentions(c);   // @Q still works inside a peer chat
+    return;
+  }
   bumpAffinity(genesis, 4);   // SE-F: replying is the strongest signal you care about this conversation
   _logVerb(genesis, "reply");   // M5: you reply to this one — never auto-clear it
   recordAction("message.send", { genesis, network: c.meta.platform || "holo", len: String(text).length });   // P0
@@ -2871,6 +2948,7 @@ export async function boot(rootEl, injected = null) {
   }
 
   await buildQ();   // Q joins the unified inbox as a pinned, always-here contact (on-device brain)
+  try { restorePeerChats(); } catch {}   // P3: re-open persisted device-to-device chats (OPFS κ-chain) — non-blocking
   try { window.__hydrated = hydrateInbox(); } catch { window.__hydrated = 0; }   // local-first: restore the last-seen inbox snapshot BEFORE the first paint → returning users see every chat instantly
   // ADOPT the speculative warm paint if it already mounted (identity-independent snapshot rendered during the
   // tap): just refresh it in place — Q, prefs, and any live deltas fold in via one update, no cold re-mount.
