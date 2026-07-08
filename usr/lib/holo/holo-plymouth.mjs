@@ -326,7 +326,10 @@ function make2dPlayer(overlay, layer, canvas, onLive) {
       try { onLive(); } catch {}
       const t = liveTarget(); pose.cx = t.cx; pose.cy = t.cy; pose.cap = t.cap;   // snap to the current pose…
       draw(0);                                             // …and paint frame 0 NOW (instant first paint, even before rAF)
-      if (!reducedMotion()) raf = requestAnimationFrame(loop);                    // then animate (reduced motion holds this frame)
+      // ALWAYS run the sprite cycle — a contained in-place loop, like a loading spinner. Under reduced motion
+      // the loop SNAPS the pose (no glide across the screen), so the emblem still LIVES without jarring motion.
+      // (Gating the whole loop on reduced motion was the "static emblem on mobile" bug: many phones enable it.)
+      raf = requestAnimationFrame(loop);
     }
   }
   return {
@@ -414,7 +417,7 @@ const GPU_WORKER_SRC =
   " try{bmp.close();}catch(err){}\n" +
   " tex[i]=rec;\n" +
   " while(tex[prefix])prefix++;\n" +
-  " if(!started&&prefix>0){started=true;self.postMessage({t:'first'});if(reduced){render(0,0,0.016,0);}else{raf=requestAnimationFrame(loop);}}\n" +
+  " if(!started&&prefix>0){started=true;self.postMessage({t:'first'});render(0,0,0.016,0);raf=requestAnimationFrame(loop);}\n" +
   "}\n" +
   "function loop(now){\n" +
   " raf=requestAnimationFrame(loop);\n" +

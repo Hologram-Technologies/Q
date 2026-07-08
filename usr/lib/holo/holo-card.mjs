@@ -104,6 +104,77 @@ const HoloCardEl = typeof HTMLElement !== "undefined" ? class extends HTMLElemen
 export function define() { try { if (HoloCardEl && typeof customElements !== "undefined" && !customElements.get(TAG)) customElements.define(TAG, HoloCardEl); } catch {} }
 export function mount(el, name) { const c = document.createElement(TAG); c.setAttribute("name", String(name)); el.appendChild(c); return c; }
 define();
-try { if (typeof window !== "undefined") window.HoloCard = Object.assign(window.HoloCard || {}, { define, mount, TAG }); } catch {}
 
-export default { define, mount, cardModel, sniff, TAG };
+// ── MONEY CARD (A2·R5) — the ONE renderer for a payment κ-object, in its three states. Pure core is
+//    node-witnessable. A payment MATURES request → proposal → receipt in the SAME card. It shows outcome ·
+//    total · time and NEVER a chain, gas, or venue word (A2's fold, re-asserted at the render layer). Feeds
+//    from the intent router's proposal.card, from holo-pay.parsePayment, or from an intent-realize receipt. ──
+const _FIATSYM = { USD: "$", EUR: "€", GBP: "£" };
+export function moneyFmt(amount, asset, fiat) {   // fiat-clear formatting: abstract the asset, show money
+  const a = Number(amount);
+  if (fiat && _FIATSYM[fiat]) return _FIATSYM[fiat] + a.toFixed(2);
+  return (a % 1 === 0 ? a : a.toFixed(4).replace(/0+$/, "")) + " " + (asset || "");
+}
+const _NOCHAIN = /\b(chain|gas|gwei|wei|network|bridge|route|rpc|erc-?20|evm|mainnet|l2|base|arbitrum|optimism|polygon|ethereum|solana|avalanche|bsc|plasma|hyperliquid)\b/i;
+export function moneyModel(m) {
+  const o = m || {};
+  // 1 · intent-router PROPOSAL (or refusal) — carries .card {outcome,total,etaSeconds,sentence}
+  if (o.card && (o.card.sentence || o.card.outcome != null)) {
+    if (o.refused) return { ok: false, state: "proposal", headline: "Can't route this yet", msg: o.reason || "" };
+    return { ok: true, state: "proposal", headline: o.card.outcome != null ? ("They get " + o.card.outcome) : o.card.sentence,
+      lines: [["Total", o.card.total], ["Time", o.card.etaSeconds != null ? ("about " + o.card.etaSeconds + "s") : ""]].filter((x) => x[1]),
+      sentence: o.card.sentence, kappa: o.kappa, action: "Confirm" };
+  }
+  // 2 · holo-pay INTENT — {kind:"send"|"request", amount, asset, fiat, toName, fromName, memo, kappa}
+  if (o.kind === "send" || o.kind === "request") {
+    const money = moneyFmt(o.amount, o.asset, o.fiat);
+    if (o.kind === "request") return { ok: true, state: "request", headline: (o.fromName || "Someone") + " requests " + money, sub: o.memo ? ("“" + o.memo + "”") : "", kappa: o.kappa, action: "Pay" };
+    return { ok: true, state: "proposal", headline: "Send " + money + (o.toName ? (" to " + o.toName) : ""), sub: o.memo ? ("“" + o.memo + "”") : "", kappa: o.kappa, action: "Send" };
+  }
+  // 3 · RECEIPT — {state:"receipt"|receipt:{kappa}|kappa, amount?, asset?, fiat?, toName?}
+  if (o.state === "receipt" || o.receipt) {
+    const money = o.amount != null ? moneyFmt(o.amount, o.asset, o.fiat) : "";
+    const k = (o.receipt && (o.receipt.kappa || o.receipt)) || o.kappa;
+    return { ok: true, state: "receipt", headline: "Sent" + (money ? " " + money : "") + (o.toName ? (" to " + o.toName) : ""), sub: o.memo ? ("“" + o.memo + "”") : "", kappa: k, action: "View" };
+  }
+  return { ok: false, state: "unknown", headline: "Not a payment", msg: "" };
+}
+// true iff NO chain/gas/venue word leaked into any human-facing field (A2's fold, render-layer guard).
+export function moneyClean(model) {
+  const fields = [model.headline, model.sub, model.msg, model.sentence, ...(model.lines || []).flat()].filter(Boolean).join(" ");
+  return !_NOCHAIN.test(fields);
+}
+// imperative renderer — the ONE money card in any host (React bubble, standalone). onAction(model) fires the
+// state's verb (Pay/Send/Confirm/View). Refusals render one honest line, never a fake card.
+const MONEY_STYLE = `
+.mcard{background:#111b21;border:1px solid #1f2c33;border-radius:14px;padding:13px 15px;max-width:420px;font:14px/1.45 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;color:#e9edef}
+.mcard .top{display:flex;align-items:center;gap:9px;font-weight:650}
+.mcard .dot{width:9px;height:9px;border-radius:50%;background:#00a884;box-shadow:0 0 10px #00a884;flex:0 0 auto}
+.mcard.bad .dot{background:#f15c6d;box-shadow:0 0 10px #f15c6d}
+.mcard .sub{margin-top:5px;color:#8696a0;font-size:13px}
+.mcard .lines{margin-top:9px;display:grid;grid-template-columns:auto 1fr;gap:3px 12px;font-size:13px}
+.mcard .lines .k{color:#8696a0}.mcard .lines .v{text-align:right;font-weight:600}
+.mcard .act{margin-top:12px;width:100%;background:#00a884;color:#06231c;border:0;border-radius:10px;padding:9px 14px;font-size:14px;font-weight:650;cursor:pointer}
+.mcard .foot{margin-top:9px;color:#8696a0;font-size:11px;letter-spacing:.02em}
+@media(prefers-color-scheme:light){.mcard{background:#fff;border-color:#e3e8eb;color:#0b141a}.mcard .sub,.mcard .lines .k,.mcard .foot{color:#667781}}`;
+export function mountMoney(el, model, { onAction = null } = {}) {
+  if (typeof document === "undefined" || !el) return null;
+  const m = model && model.state ? model : moneyModel(model);
+  const wrap = document.createElement("div");
+  const label = m.state === "receipt" ? "Holo Pay · receipt" : m.state === "request" ? "Holo Pay · request" : "Holo Pay";
+  let h = `<style>${MONEY_STYLE}</style><div class="mcard${m.ok ? "" : " bad"}"><div class="top"><span class="dot"></span>${esc(m.headline)}</div>`;
+  if (m.sub) h += `<div class="sub">${esc(m.sub)}</div>`;
+  if (m.msg) h += `<div class="sub">${esc(m.msg)}</div>`;
+  if (m.lines && m.lines.length) h += `<div class="lines">${m.lines.map(([k, v]) => `<span class="k">${esc(k)}</span><span class="v">${esc(v)}</span>`).join("")}</div>`;
+  if (m.ok && m.action) h += `<button class="act" type="button">${esc(m.action)}</button>`;
+  h += `<div class="foot">${esc(label)} · verified on this device</div></div>`;
+  wrap.innerHTML = h;
+  const btn = wrap.querySelector(".act");
+  if (btn && onAction) btn.onclick = () => onAction(m);
+  el.appendChild(wrap);
+  return wrap;
+}
+
+try { if (typeof window !== "undefined") window.HoloCard = Object.assign(window.HoloCard || {}, { define, mount, TAG, moneyModel, moneyClean, mountMoney, moneyFmt }); } catch {}
+
+export default { define, mount, cardModel, sniff, TAG, moneyModel, moneyClean, mountMoney, moneyFmt };

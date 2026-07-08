@@ -535,7 +535,12 @@
           $("appRisk").className = "risk " + (moves ? "warn" : "ok");
           $("appRisk").querySelector("span:first-child").textContent = moves ? "⚠" : "✓";
           $("appRiskMsg").textContent = moves ? "This moves value. It cannot be undone once signed." : "Nothing moves. This signature only proves intent.";
-          const rows = req.type === "swap" ? {
+          // an INTENT confirms the OUTCOME, never the plumbing — no chain, no gas, no route word (A2's fold).
+          const rows = req.type === "intent" ? {
+            ...(req.to ? { "They get": (req.outcomeUsd != null ? "$" + Number(req.outcomeUsd).toFixed(2) : (req.amount + "")) + " · " + short(req.to, 6) } : {}),
+            "Total cost": req.totalUsd != null ? "$" + Number(req.totalUsd).toFixed(2) : (req.feesUsd != null ? "$" + Number(req.feesUsd).toFixed(2) + " fees" : ""),
+            Time: req.etaSeconds != null ? "about " + req.etaSeconds + " seconds" : "",
+          } : req.type === "swap" ? {
             From: req.inAmount ? fmtTok(req.inputMint, req.inAmount) : (req.amount + " " + (tokByMint(req.inputMint)?.symbol || "")),
             "To (≈)": fmtTok(req.outputMint, req.outAmount),
             "Min received": fmtTok(req.outputMint, req.minOut),

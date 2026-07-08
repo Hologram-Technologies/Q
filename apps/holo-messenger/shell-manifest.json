@@ -1,22 +1,22 @@
 {
  "v": 1,
- "created": 1783509895128,
- "aggregate": "dc1921d1ffec5b9c84e5e54586121933453d000c7b6dde03e3230626c24d0c12",
+ "created": 1783509965698,
+ "aggregate": "9037f085ba5aa90f8d9026246ee8c79ee1b52e4ce13d4a78baa4c6b7791c8f93",
  "assets": [
   {
    "path": "/apps/holo-messenger/app.html",
-   "kappa": "f4235713f3ddc42c5a017c06d369a02b00d0abfa32ffdeab053df3b5604d67d8",
-   "bytes": 22470
+   "kappa": "62579458e5c224d11094c889ad61ad77eccaba699881195954a3a1bc20c9b654",
+   "bytes": 23150
   },
   {
    "path": "/apps/holo-messenger/_vendor/ui/chat-ui.bundle.js",
-   "kappa": "95b3f8a599041c3add9be1d5a2524c4bcfa5e9deeeec31b80c4829707d951642",
+   "kappa": "32b489b874d0577195cb987304e664d60caea2044bd28e9758eb6b7848fab0f8",
    "bytes": 524001
   },
   {
    "path": "/apps/holo-messenger/_vendor/ui/chat-ui.bundle.css",
-   "kappa": "e7cbe3b8aacc74446fa91c030f00bcfc5b100d028d7cf3c475beca53e4f25717",
-   "bytes": 183883
+   "kappa": "030130baa42b99ef49e40676862bc5c9241afcea252a1be5c8c63366d4c08c8e",
+   "bytes": 184281
   },
   {
    "path": "/apps/holo-messenger/holo-messenger-login.mjs",
@@ -94,6 +94,11 @@
    "bytes": 6357
   },
   {
+   "path": "/apps/holo-messenger/_vendor/ui/chunk-4MZXOCV2.js",
+   "kappa": "a2ac22c3a8b541f08787faafe9aa19bd14a315d1af8516fe7d1f31dba998ef28",
+   "bytes": 2228
+  },
+  {
    "path": "/apps/holo-messenger/_vendor/ui/chunk-67U7RCKQ.js",
    "kappa": "438bd84d968d05dadd9f0ac1fd49a00c9d24f88a4ac45a9f46df236e7af2961e",
    "bytes": 2228
@@ -112,6 +117,11 @@
    "path": "/apps/holo-messenger/_vendor/ui/chunk-BNASBBAK.js",
    "kappa": "d090908e06e8d0a2d3fcc01ce1f608eef8ef2e8ec2038c732a84cbe239d32ab1",
    "bytes": 434064
+  },
+  {
+   "path": "/apps/holo-messenger/_vendor/ui/chunk-DKCO25ZZ.js",
+   "kappa": "dcefbefa520b792be78fd6c5553fae4cfa3db0a3749802005119d02ca1867537",
+   "bytes": 6357
   },
   {
    "path": "/apps/holo-messenger/_vendor/ui/chunk-EJ2FITLI.js",

@@ -269,6 +269,12 @@ export function installWalletBroker({ present = null, reveal = null } = {}) {
     balance: (chain) => readCall({ kind: "balance", chain: chain || "base" }).then((r) => r.balance),
     sign: async (args) => { await wakeWallet(); return call({ kind: "sign", chain: args.chain || "base", message: args.message }).then((r) => r.signature); },   // payload-bound biometric Confirm (used as the send gate)
     pay: async (args) => { await wakeWallet(); return call({ kind: "send", chain: args.chain || "base", to: args.to, amount: args.amount, token: args.token }).then((r) => ({ tx: r.hash })); },   // gated by the wallet's biometric
+    // ── A2 INTENT RAIL — chains disappear. You name WHAT (asset·amount·to); the router derives HOW (funding
+    //    chain, gas folded, bridge legs) and returns ONE proposal card. `intent()` is a free READ (derive, never
+    //    gates); `realizeIntent()` runs the whole route behind the ONE biometric bound to the proposal κ. No chain
+    //    is ever named here — that is the whole point. Refusals come back honestly ({ok:false, proposal.refused}).
+    intent: (i) => readCall({ kind: "intent", intent: { verb: i.verb || "send", asset: i.asset || "USD", amount: i.amount, to: i.to, ...(i.toChain ? { toChain: i.toChain } : {}) } }, { timeoutMs: 12000 }),
+    realizeIntent: async (proposalKappa, i) => { await wakeWallet(); return call({ kind: "intent-realize", proposalKappa, intent: { verb: i.verb || "send", asset: i.asset || "USD", amount: i.amount, to: i.to, ...(i.toChain ? { toChain: i.toChain } : {}) } }); },   // ONE face over the whole route
     // ── on-chain HTLC settlement (Holo Pay live mode). fund/claim/refund MOVE value → they reveal + gate; the two
     //    reads (configured?, does a swap exist?) never gate. The wallet maps asset→token, converts decimals, and
     //    resolves the HoloHTLC address for the chain (holo-htlc.js). Absent config → htlcConfigured false → custodial.

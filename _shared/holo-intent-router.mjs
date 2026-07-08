@@ -166,7 +166,7 @@ export async function handleIntent(req, ctx) {
   if (proposal.refused) return { ok: false, proposal: publicView(proposal), error: proposal.reason };
   if (req.proposalKappa && req.proposalKappa !== proposal.kappa)
     return { ok: false, drift: true, proposal: publicView(proposal), error: "The route changed since you saw it. Review the fresh card." };
-  const approved = await ctx.gate({ type: "intent", chain: proposal.legs[0].call.chain || proposal.legs[0].call.srcChain, amount: intentObj.intent.amount, to: intentObj.intent.to, _who: "Intent - one approval covers the whole route.", _plain: proposal.card.sentence, kappaBound: proposal.kappa });
+  const approved = await ctx.gate({ type: "intent", chain: proposal.legs[0].call.chain || proposal.legs[0].call.srcChain, amount: intentObj.intent.amount, to: intentObj.intent.to, _who: "One approval covers the whole route.", _plain: proposal.card.sentence, _card: proposal.card, outcomeUsd: proposal.outcomeUsd, totalUsd: proposal.totalUsd, feesUsd: proposal.feesUsd, etaSeconds: proposal.etaSeconds, kappaBound: proposal.kappa });
   if (!approved) return { error: "declined by you" };
   ctx.approvals.arm(proposal);
   const done = [];

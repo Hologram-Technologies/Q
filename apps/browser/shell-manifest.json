@@ -1,7 +1,7 @@
 {
  "v": 1,
- "created": 1783508262263,
- "aggregate": "0029ae22f23b7abeb0d908b903df3f513d2f2512d12bd0f64a8d4d9e5eaab85f",
+ "created": 1783509965747,
+ "aggregate": "ed763ffb783d3f214eee624995ef40b9d6f7d3d535c3ef5169715344a3345ff9",
  "assets": [
   {
    "path": "/apps/browser/browser-sw.js",
@@ -50,13 +50,13 @@
   },
   {
    "path": "/apps/browser/index.html",
-   "kappa": "0ac26a660d86c9a91fcc489751422d9d9e521d9b5cb35a2e95d85b74407f9086",
-   "bytes": 96336
+   "kappa": "093155a782a3961924146a5c60df8dfd61abcb15fb2101f6bc96326422fa8e4c",
+   "bytes": 96213
   },
   {
    "path": "/apps/browser/ipfs-sw.js",
-   "kappa": "505055f940f512dcee01c85ed0d7b9c84b2c9de5f83cb95e0787e07bff54e0b7",
-   "bytes": 11358
+   "kappa": "2a8dfb8afa1ba33182cc917ad2640e9ccb2f677e43bdf46936cbb6f015159b01",
+   "bytes": 11359
   },
   {
    "path": "/apps/browser/onion-browse.html",
@@ -67,6 +67,16 @@
    "path": "/apps/browser/peer-host.html",
    "kappa": "27cdae8c6ed427844dc41b41c95d19beb05f446181becb821edbe105273c4062",
    "bytes": 4953
+  },
+  {
+   "path": "/apps/browser/sovereign-demo.html",
+   "kappa": "1e6dfb377189479dafb00d56a4619526973e727cd36fa59b209c617f717efcec",
+   "bytes": 13186
+  },
+  {
+   "path": "/apps/browser/_shared/holo-autofill.mjs",
+   "kappa": "55ff69e2df03924b69fb35c2c47da068d5e91ffb3fbd49eeec15c3eebcca0866",
+   "bytes": 6361
   },
   {
    "path": "/apps/browser/_shared/holo-browser.js",
@@ -159,6 +169,11 @@
    "bytes": 5846
   },
   {
+   "path": "/apps/browser/_shared/holo-sovereign.mjs",
+   "kappa": "8c5f07eaf9123b98981bf44cb600e1a4fe8d36fa61c849477b22538e3a673e58",
+   "bytes": 11591
+  },
+  {
    "path": "/apps/browser/_shared/holo-webrtc-link.mjs",
    "kappa": "dc39a62d58ab1e09de6040a319ddfaac6da82b112de64b3e08f9e46c4d952bc7",
    "bytes": 2795
@@ -197,21 +212,6 @@
    "path": "/apps/browser/_spike/onion/witness-report.txt",
    "kappa": "17c2a10f64232f7d28d3781e141fe798496a25c1843a8f1f5c911453236be3fb",
    "bytes": 1271
-  },
-  {
-   "path": "/apps/browser/sovereign-demo.html",
-   "kappa": "1e6dfb377189479dafb00d56a4619526973e727cd36fa59b209c617f717efcec",
-   "bytes": 13186
-  },
-  {
-   "path": "/apps/browser/_shared/holo-sovereign.mjs",
-   "kappa": "8c5f07eaf9123b98981bf44cb600e1a4fe8d36fa61c849477b22538e3a673e58",
-   "bytes": 11591
-  },
-  {
-   "path": "/apps/browser/_shared/holo-autofill.mjs",
-   "kappa": "55ff69e2df03924b69fb35c2c47da068d5e91ffb3fbd49eeec15c3eebcca0866",
-   "bytes": 6361
   }
  ]
 }
