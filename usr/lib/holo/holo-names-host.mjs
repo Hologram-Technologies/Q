@@ -95,6 +95,16 @@ export function makeHostResolver({ base, wasmGlue = null, fetchFn = null, lruSiz
   async function resolve(name, caps = null) {
     if (!caps) {                                           // caps present → honor attenuation, skip the warm shortcut
       const rec = classify(name);
+      // Nostr note (V2): a SELF-authenticating pointer — the id IS a sha256 of the note (NIP-01), so it
+      // resolves from ANY untrusted relay and re-derives. Lazy-load the pointer module (keeps host lean).
+      if (rec && rec.kind === "nostr") {
+        try {
+          const { resolveNostr } = await import("./holo-pointers.mjs");
+          const r = await resolveNostr(name, { sha256hex: hashers.sha256, WebSocket: (typeof WebSocket !== "undefined" ? WebSocket : null) });
+          if (r.ok) { bump(r.kappa, { kind: "nostr", kappa: r.kappa, bytes: r.bytes }); return { ok: true, kind: "nostr", kappa: r.kappa, bytes: r.bytes, source: r.via, trust: r.trust, author: r.author, event: r.event }; }
+          return { ok: false, kind: "nostr", why: r.why };
+        } catch (e) { return { ok: false, kind: "nostr", why: String(e && e.message || e).slice(0, 60) }; }
+      }
       // data: URI — inline, self-verifying, zero network. Decode → the κ is the hash of its own bytes (L5).
       if (rec && rec.kind === "data") {
         const d = decodeDataURI(name);

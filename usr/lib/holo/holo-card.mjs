@@ -105,6 +105,8 @@ export function cardModel(res, name, appIdx) {
   const app = appIdx ? findApp(appIdx, res.kappa) : null;
   const size = res.size != null ? res.size : (res.bytes ? res.bytes.length : 0);
   const model = { ok: true, url, kappa: res.kappa, size, kind: app ? "holo app · " + app.dir : res.kind, app: app ? { title: app.title, desc: app.desc, url: app.url } : null };
+  if (res.trust) model.trust = res.trust;                  // V5: how this proved itself (self-verifying / via a shown resolver)
+  if (res.author) model.author = res.author;
   if (!app && res.bytes) {
     const type = sniff(res.bytes);
     if (type && type.startsWith("kind:")) model.binary = type.slice(5);   // labeled (font/wasm/archive) — no inline render
@@ -131,9 +133,10 @@ a{color:inherit;text-decoration:none}
 .kv{margin-top:10px;display:grid;grid-template-columns:56px 1fr;gap:4px 12px;font-size:12px}
 .kv .k{color:#8696a0}.kv .v{word-break:break-all;font-family:ui-monospace,Consolas,monospace;font-size:11px}
 .msg{margin-top:7px;color:#8696a0;font-size:13px}
+.trust{margin-top:10px;padding:8px 11px;background:#0d1f1a;border:1px solid #17493b;border-radius:9px;color:#7fe0c4;font-size:12px;line-height:1.4}
 img,video{max-width:100%;border-radius:10px;margin-top:11px;display:block}
 pre{margin-top:11px;background:#0d161c;border:1px solid #1f2c33;border-radius:9px;padding:10px;font-size:11px;color:#cfd8dc;max-height:180px;overflow:auto;white-space:pre-wrap;word-break:break-all}
-@media(prefers-color-scheme:light){:host{color:#0b141a}.card{background:#fff;border-color:#e3e8eb}.kv .k,.go,.msg{color:#667781}pre{background:#f6f8f9;border-color:#e3e8eb;color:#3b4a54}}`;
+@media(prefers-color-scheme:light){:host{color:#0b141a}.card{background:#fff;border-color:#e3e8eb}.kv .k,.go,.msg{color:#667781}pre{background:#f6f8f9;border-color:#e3e8eb;color:#3b4a54}.trust{background:#eafaf3;border-color:#bfe9d8;color:#0a6b4d}}`;
 
 let _R = null, _idxP = null;
 const resolver = () => (_R ||= makeHostResolver({ base: BASE.href, wasmGlue: new URL("apps/q/pkg/holospaces_web.js", BASE).href }));
@@ -163,8 +166,9 @@ const HoloCardEl = typeof HTMLElement !== "undefined" ? class extends HTMLElemen
     else {
       let h = `<a class="seal" href="${m.url}" target="_blank" rel="noopener"><span class="dot"></span>verified<span class="go">details ↗</span></a>`;
       if (m.app) h += `<div class="app"><div class="app-h"><span class="app-title">${esc(m.app.title)}</span><a class="open" href="${esc(m.app.url)}">Open →</a></div>${m.app.desc ? `<div class="msg" style="margin-top:6px">${esc(m.app.desc)}</div>` : ""}</div>`;
-      h += `<div class="kv"><div class="k">κ</div><div class="v">${esc(m.kappa)}</div><div class="k">kind</div><div class="v">${esc(m.kind)}${m.binary ? " · " + esc(m.binary) : m.media ? " · " + esc(m.media.type) : ""}</div><div class="k">size</div><div class="v">${m.size.toLocaleString()} bytes</div></div>`;
+      h += `<div class="kv"><div class="k">κ</div><div class="v">${esc(m.kappa)}</div><div class="k">kind</div><div class="v">${esc(m.kind)}${m.binary ? " · " + esc(m.binary) : m.media ? " · " + esc(m.media.type) : ""}</div>${m.author ? `<div class="k">author</div><div class="v">${esc(m.author)}</div>` : ""}<div class="k">size</div><div class="v">${m.size.toLocaleString()} bytes</div></div>`;
       if (m.preview) h += `<pre>${esc(m.preview)}</pre>`;
+      if (m.trust) h += `<div class="trust">✓ ${esc(m.trust)}</div>`;    // V5: the proof, in plain words
       card.innerHTML = h;
       if (m.media && res.bytes) {
         try {
