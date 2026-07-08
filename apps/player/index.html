@@ -3254,6 +3254,45 @@
       // explicit intents only (verbs / surfaces / playback); a plain query falls through so the bar still just searches.
       const findTitle = (name) => { const n = String(name).trim().toLowerCase(); if (!n) return null; const p = pool(); return p.find((it) => (it.name || "").toLowerCase() === n) || p.find((it) => (it.name || "").toLowerCase().startsWith(n)) || p.find((it) => (it.name || "").toLowerCase().includes(n)) || null; };
       const navClick = (tab) => { const b = [...document.querySelectorAll("nav [data-tab]")].find((x) => x.dataset.tab === tab); if (b) navTo(tab, b); return !!b; };
+      // ── M5 concierge (S1/S2) — semantic "like X" + mood/constraint queries → a real ranked pressable result set,
+      // drawn ONLY from the pool (grounded, never invented), rendered in the search surface with a Q-narrated header. ──
+      const RUNTIME_MIN = (it) => it.runtimeSec ? it.runtimeSec / 60 : (it.runtime || 0);
+      function similarTo(it, n = 30) {
+        if (!it) return [];
+        const G = new Set(it.genres || []), TP = new Set(it.topics || []);
+        const scored = pool().filter((x) => x.id !== it.id).map((x) => {
+          let s = 0; for (const g of (x.genres || [])) if (G.has(g)) s += 2; for (const tp of (x.topics || [])) if (TP.has(tp)) s += 1;
+          if (x.kind === it.kind) s += 0.5; if (it.rating && x.rating && Math.abs(x.rating - it.rating) < 1.2) s += 0.4;
+          return { x, s };
+        }).filter((o) => o.s > 0).sort((a, b) => b.s - a.s).map((o) => o.x);
+        return (window.HoloRank ? HoloRank.rank(scored, { resume: getResume, focus: (it.topics || [])[0], salt: SALT }) : scored).slice(0, n);
+      }
+      const MOODS = [[/\bfunny|comed(y|ies)|laugh|light-?hearted|feel-?good\b/, "Comedy"], [/\bscary|horror|frighten|spooky\b/, "Horror"], [/\btense|thriller|suspense|edge of\b/, "Thriller"], [/\bsad|emotional|cry|tear-?jerker|moving\b/, "Drama"], [/\baction|explosion|adrenaline\b/, "Action"], [/\bromant|love story|date night\b/, "Romance"], [/\bkids?|family|children|wholesome\b/, "Family"], [/\bsci-?fi|space|futur|dystop\b/, "Science Fiction"], [/\bdocumentar|docu\b/, "Documentary"], [/\bmystery|whodunit|detective\b/, "Mystery"], [/\bcrime|heist|gangster|mafia\b/, "Crime"], [/\bfantasy|magic|dragon\b/, "Fantasy"], [/\bwar\b/, "War"], [/\banime|animat\b/, "Animation"], [/\bwestern\b/, "Western"]];
+      function moodQuery(t) {
+        const genres = MOODS.filter(([re]) => re.test(t)).map(([, g]) => g);
+        const unseen = /\b(not seen|haven'?t seen|unseen|never seen|new to me)\b/.test(t);
+        const wantMovie = /\bmovies?|films?\b/.test(t), wantShow = /\b(shows?|series|tv shows?)\b/.test(t);
+        let maxMin = 0; const um = t.match(/\b(?:under|less than|below|max)\s+(\d+)\s*(hours?|hrs?|h|minutes?|mins?|m)\b/) || t.match(/\b(\d+)\s*(hours?|hrs?|h|minutes?|mins?|m)\s+or\s+less\b/);
+        if (um) { const n = +um[1]; maxMin = /^h|hour|hr/.test(um[2]) ? n * 60 : n; } else if (/\bshort\b/.test(t)) maxMin = 100;
+        if (!(genres.length || unseen || maxMin || wantMovie || wantShow)) return null;
+        const list = pool().filter((it) => {
+          if (genres.length && !(it.genres || []).some((g) => genres.includes(g))) return false;
+          if (wantMovie && it.kind && it.kind !== "movie") return false;
+          if (wantShow && !(it.kind === "series" || it.kind === "show" || it.kind === "episode")) return false;
+          if (unseen) { const r = getResume(it); if (r && r.pos) return false; }
+          if (maxMin) { const mn = RUNTIME_MIN(it); if (mn && mn > maxMin) return false; }
+          return true;
+        });
+        const ranked = (window.HoloRank ? HoloRank.rank(list, { resume: getResume, salt: SALT }) : list).slice(0, 36);
+        const bits = []; if (maxMin) bits.push(maxMin < 60 ? maxMin + "-min or less" : "under " + Math.round(maxMin / 60) + "h"); if (genres.length) bits.push(genres.join(" · ")); if (wantMovie) bits.push("movies"); else if (wantShow) bits.push("shows"); if (unseen) bits.push("you haven't seen");
+        return { list: ranked, label: bits.join(", ") };
+      }
+      function qResults(headHTML, list) {
+        show("search");
+        const hd = $("searchHead"); if (hd) hd.innerHTML = headHTML + `<span style="color:var(--dim);font-size:var(--t1);font-weight:500;margin-left:var(--s2)">${list.length} title${list.length === 1 ? "" : "s"}</span>`;
+        const g = $("searchGrid"); if (g) { g.innerHTML = ""; list.forEach((it) => g.appendChild(card(it))); }
+        const em = $("searchEmpty"); if (em) em.hidden = list.length > 0;
+      }
       async function playerCommand(text) {
         const raw = String(text || "").trim(); if (!raw) return false;
         const t = raw.toLowerCase().replace(/[.?!]+$/, "");
@@ -3266,15 +3305,31 @@
         if (/^(shows?|series|tv ?shows?)$/.test(t)) return navClick("shows");
         if (/^apps?$/.test(t)) return navClick("apps");
         if (/^(more info|what(?:'s| is) this|details)$/.test(t)) { if (current) { openDetail(current); return true; } return false; }
-        if (/\b(more like this|similar|recommend|something like)\b/.test(t)) { if (current) { openDetail(current); return true; } show("home"); return true; }
+        // S1 — semantic "something like X": a real neighbour-ranked result set (not just the detail page).
+        { const lk = t.match(/\b(?:something|anything|some|more|stuff|shows?|movies?)\s+(?:just\s+)?like\s+(.+)/) || t.match(/\bsimilar to\s+(.+)/);
+          if (lk || /\b(more like this|similar|recommend)\b/.test(t)) {
+            const q2 = lk ? lk[1].trim().replace(/^(the|a)\s+/, "") : "";
+            const seed = q2 ? findTitle(q2) : current;
+            // Grounding guard: only offer "similar to X" if the matched title really IS what was asked for
+            // (findTitle is fuzzy) — otherwise fall to an honest search for the requested title, never a wrong seed.
+            const good = seed && (!q2 || (seed.name || "").toLowerCase().includes((q2.split(/\s+/)[0] || "")));
+            if (good) { qResults(`Because you wanted something like <b>${esc(seed.name)}</b>`, similarTo(seed)); return true; }
+            if (q2) { runSearch(q2); return true; }
+            if (current) { openDetail(current); return true; } show("home"); return true;
+          } }
         const m = t.match(/^(play|watch|put on|start|stream|find|show me|pull up|open)\s+(.+)/);
         if (m) {
           const verb = m[1], target = m[2].trim().replace(/^(the|a)\s+/, "");
+          // S2 — "show me something funny and short" → mood/constraint result set BEFORE trying to match a title.
+          const mood = moodQuery(target);
+          if (mood && mood.list.length) { qResults(`Q found something ${esc(mood.label)}`, mood.list); return true; }
           const it = findTitle(target);
           if (it) { /^(find|show me|open|pull up)$/.test(verb) ? openDetail(it) : play(it); return true; }
           try { if (window.HoloLive && await window.HoloLive.command(raw)) return true; } catch {}
           runSearch(target); return true;
         }
+        // S2 — a bare mood/constraint utterance (no verb): "something tense under 2 hours I haven't seen".
+        { const mood = moodQuery(t); if (mood && mood.list.length) { qResults(`Q found something ${esc(mood.label)}`, mood.list); return true; } }
         return false;   // a plain query → caller searches/browses
       }
       // Voice/host entry — like HoloLive.command. Voice ACTS (a bare title plays); the search bar only searches.
