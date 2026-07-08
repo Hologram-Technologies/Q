@@ -38,6 +38,19 @@ const WEB_PROXY = APP_BASE + "web?url=";             // holo-serve's dumb-pipe l
 // ruleset before it is fetched/minted, and matching content scripts are inlined into served HTML.
 // Only bytes that re-derived to a κ-verified extension (holo-ext.install, Law L5) ever reach here. ─
 let EXT = { dnr: [], contentScripts: [] };
+// The seam's rules live in-memory, so a terminated-then-restarted SW (they are ephemeral) would forget
+// them and silently stop blocking until the page happens to re-push. Persist them to a Cache and reload
+// on first use → ad-blocking survives SW restarts AND loads that never re-pushed (Law L3: the store is
+// the memory). ESTORE holds one entry; ensureExt() hydrates EXT lazily, once per SW lifetime.
+const ESTORE = "holo-browser-ext-v1";
+let EXT_LOADED = false;
+async function ensureExt() {
+  if (EXT_LOADED) return;
+  EXT_LOADED = true;
+  if (EXT.dnr.length) return;                 // page already pushed this lifetime — that wins
+  try { const c = await caches.open(ESTORE); const r = await c.match("/__ext"); if (r) { const j = await r.json(); EXT = { dnr: Array.isArray(j.dnr) ? j.dnr : [], contentScripts: Array.isArray(j.contentScripts) ? j.contentScripts : [] }; } } catch {}
+}
+async function persistExt() { try { const c = await caches.open(ESTORE); await c.put("/__ext", new Response(JSON.stringify({ dnr: EXT.dnr, contentScripts: EXT.contentScripts }), { headers: { "content-type": "application/json" } })); } catch {} }
 const REQTYPE = { document: "main_frame", iframe: "sub_frame", frame: "sub_frame", script: "script", style: "stylesheet", image: "image", imageset: "image", font: "font", media: "media", track: "media", object: "object", embed: "object", worker: "script", "": "xmlhttprequest" };
 const resourceTypeOf = (req) => req.mode === "navigate" ? (req.destination === "iframe" || req.destination === "frame" ? "sub_frame" : "main_frame") : (REQTYPE[req.destination] || "xmlhttprequest");
 // match a request URL against the compiled DNR ruleset → the winning action ({type:"allow"} if none).
@@ -48,6 +61,26 @@ function dnrAction(url, resourceType) {
 
 self.addEventListener("install", () => self.skipWaiting());
 self.addEventListener("activate", (e) => e.waitUntil(self.clients.claim()));
+
+// ── ad-κ SURROGATES — "synthesize, don't hole" (SEC-8 bounded). A blocked ad/tracker request must NOT
+// return a bare empty body: a blocked SCRIPT that a page expects to define gtag/ga/fbq throws
+// ReferenceError and cascades into breaking the real page; a blocked IMAGE shows a broken-image icon;
+// a blocked FRAME collapses layout. Return a benign, correctly-typed stand-in instead — the tracker is
+// gone, the page stays whole. This is what makes ad-blocking SEAMLESS, not just present. ──
+const SURR_GIF = Uint8Array.of(0x47,0x49,0x46,0x38,0x39,0x61,1,0,1,0,0x80,0,0,0,0,0,0,0,0,0,0x21,0xf9,4,1,0,0,0,0,0x2c,0,0,0,0,1,0,1,0,0,2,2,0x44,1,0,0x3b);  // 1×1 transparent GIF
+// no-op stand-ins for the analytics/consent globals pages call inline (prevents "X is not defined")
+const SURR_JS = "(function(){var n=function(){};try{var w=self;w.ga=w.ga||n;w.gtag=w.gtag||n;w.fbq=w.fbq||n;w.dataLayer=w.dataLayer||[];w._gaq=w._gaq||{push:n};w.__tcfapi=w.__tcfapi||n;w.googletag=w.googletag||{cmd:{push:n},pubads:function(){return{}}};}catch(e){}})();";
+function adSurrogate(resourceType, extId) {
+  const H = (ct) => ({ "content-type": ct, "x-holo-blocked": String(extId || "1"), "x-holo-surrogate": "1", ...COEPH });
+  switch (resourceType) {
+    case "script": return new Response(SURR_JS, { status: 200, headers: H("application/javascript; charset=utf-8") });
+    case "image":  return new Response(SURR_GIF, { status: 200, headers: H("image/gif") });
+    case "stylesheet": return new Response("", { status: 200, headers: H("text/css; charset=utf-8") });
+    case "sub_frame": return new Response("<!doctype html><meta charset=utf-8><title></title>", { status: 200, headers: H("text/html; charset=utf-8") });
+    case "font": case "media": case "object": return new Response(new Uint8Array(), { status: 200, headers: H("application/octet-stream") });
+    default: return new Response("", { status: 200, headers: H("text/plain; charset=utf-8") });   // xhr/fetch/other → empty, benign
+  }
+}
 
 // ── base64url for the web token (isomorphic; no Buffer in a SW) ──────────────────────
 const enc = (s) => btoa(unescape(encodeURIComponent(s))).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
@@ -486,6 +519,7 @@ async function serveWeb(realUrl, req, event) {
   // sg_ss token. That JS RUNS in our renderer, the relative location update stays on the
   // same-origin wrapper URL, and the query-merge in the fetch handler maps it back onto the
   // real URL — so the redemption flows through the seam naturally. Do not strip sg_ss/sei.
+  await ensureExt();                                   // hydrate the seam from the store if a restarted SW forgot it
   const act = dnrAction(realUrl, "main_frame");        // an enabled extension may block/redirect the page itself
   if (act.type === "block") { await broadcast({ type: "ext-blocked", url: realUrl, extId: act.extId, ruleId: act.ruleId, resourceType: "main_frame" }); return blockedPage(realUrl, act); }
   if (act.type === "redirect" && act.redirect && act.redirect.url) return Response.redirect(new URL(VIEW + "w/" + enc(act.redirect.url), self.location.origin).href, 302);
@@ -647,9 +681,10 @@ async function handleExternal(event, url) {
     return Response.redirect(new URL(VIEW + "w/" + enc(url.href), self.location.origin).href, 302);
   // a subresource (css/js/img/font/…) → declarativeNetRequest FIRST (block/redirect), then proxy +
   // mint + re-derive on the fly. This is where uBlock-Origin-Lite-style filtering actually bites.
+  await ensureExt();                                   // a restarted SW reloads the ad/tracker ruleset from the store
   const rt = resourceTypeOf(event.request);
   const act = dnrAction(url.href, rt);
-  if (act.type === "block") { broadcast({ type: "ext-blocked", url: url.href, extId: act.extId, ruleId: act.ruleId, resourceType: rt }); return new Response(new Uint8Array(), { status: 200, headers: { "content-type": "text/plain", "x-holo-blocked": String(act.extId || "1"), ...COEPH } }); }
+  if (act.type === "block") { broadcast({ type: "ext-blocked", url: url.href, extId: act.extId, ruleId: act.ruleId, resourceType: rt }); return adSurrogate(rt, act.extId); }   // synthesize a benign stand-in — never a page-breaking hole
   if (act.type === "redirect" && act.redirect && act.redirect.url) return Response.redirect(act.redirect.url, 302);
   return serveSub(url.href, event.request).catch(() => new Response("", { status: 502, headers: COEPH }));
 }
@@ -659,7 +694,7 @@ self.addEventListener("message", (e) => {
   // the page owns/mints a holo://κ document and hands the bytes to the loader's store.
   if (m.type === "kput" && m.kappa && m.bytes) { kPut(m.kappa, m.bytes, m.meta || {}).then(() => { if (e.ports && e.ports[0]) e.ports[0].postMessage({ ok: true }); }); }
   // the page projects its enabled κ-verified extensions onto the seam (compiled DNR + content scripts).
-  if (m.type === "setext") { EXT = { dnr: Array.isArray(m.dnr) ? m.dnr : [], contentScripts: Array.isArray(m.contentScripts) ? m.contentScripts : [] }; if (e.ports && e.ports[0]) e.ports[0].postMessage({ ok: true, dnr: EXT.dnr.length, contentScripts: EXT.contentScripts.length }); }
+  if (m.type === "setext") { EXT = { dnr: Array.isArray(m.dnr) ? m.dnr : [], contentScripts: Array.isArray(m.contentScripts) ? m.contentScripts : [] }; EXT_LOADED = true; persistExt(); if (e.ports && e.ports[0]) e.ports[0].postMessage({ ok: true, dnr: EXT.dnr.length, contentScripts: EXT.contentScripts.length }); }
   // the page tells the seam WHO is signed in (operator κ from the TEE presence) → the egress
   // gives each identity its own persistent Chrome. A SW can't read localStorage, so the page pushes it.
   if (m.type === "setop") { EGRESS_OPERATOR = typeof m.operator === "string" ? m.operator : ""; persistOp(EGRESS_OPERATOR); if (e.ports && e.ports[0]) e.ports[0].postMessage({ ok: true }); }

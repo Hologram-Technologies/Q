@@ -124,6 +124,18 @@
       #renderer.on { display: block; }
       #ntp { position: absolute; inset: 0; overflow: auto; padding: var(--holo-size-m); display: none; }
       #ntp.on { display: block; }
+      /* loading veil — a calm shimmer instead of a blank frame while a page/IPFS object resolves + verifies */
+      #ldg { position:absolute; inset:0; display:none; place-items:center; z-index:6; opacity:0; transition:opacity .2s ease;
+             background:radial-gradient(900px 520px at 50% 32%, #0e1730, var(--bg,#070a12) 70%); }
+      #ldg.on { display:grid; opacity:1; }
+      .ldg-card { display:flex; flex-direction:column; align-items:center; gap:14px; text-align:center; color:var(--ink,#eaf0fb); }
+      .ldg-glyph { width:44px; height:44px; color:#a78bfa; animation:ldgspin 2.4s linear infinite; filter:drop-shadow(0 0 14px rgba(167,139,250,.5)); }
+      @keyframes ldgspin { to { transform:rotate(360deg); } }
+      .ldg-t { font:600 15px system-ui,-apple-system,"Segoe UI",Roboto,sans-serif; letter-spacing:-.01em; }
+      .ldg-bar { width:212px; height:4px; border-radius:99px; background:rgba(255,255,255,.09); overflow:hidden; }
+      .ldg-bar span { display:block; width:38%; height:100%; border-radius:99px; background:linear-gradient(90deg,#7c5cff,#4dd0e1); animation:ldgslide 1.15s ease-in-out infinite; }
+      @keyframes ldgslide { 0%{transform:translateX(-130%)} 100%{transform:translateX(330%)} }
+      .ldg-s { font:11px ui-monospace,"SF Mono",Menlo,Consolas,monospace; color:#7d8aa6; }
       .ntp-wrap { max-width: 980px; margin: 0 auto; }
       .ntp-hero { text-align: center; padding: var(--holo-size-m) 0 var(--holo-size-s); }
       .ntp-hero .logo { width: 56px; height: 56px; color: var(--acc); margin: 0 auto 0.6rem; display: block; }
@@ -226,6 +238,16 @@
       </div>
       <iframe id="renderer" title="Page renderer" referrerpolicy="no-referrer-when-downgrade"
         sandbox="allow-scripts allow-forms allow-same-origin allow-popups allow-modals allow-downloads"></iframe>
+      <!-- ── loading veil: never a blank frame. Shows a calm shimmer + honest status while a page/IPFS
+           object resolves + verifies; fades out the instant the renderer paints (or on timeout). ── -->
+      <div id="ldg" aria-hidden="true">
+        <div class="ldg-card">
+          <svg class="ldg-glyph" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="3.5"/><path d="M12 3a9 9 0 0 0-7.8 4.5M12 21a9 9 0 0 0 7.8-4.5M21 12a9 9 0 0 0-4.5-7.8"/></svg>
+          <div class="ldg-t" id="ldgT">Resolving…</div>
+          <div class="ldg-bar"><span></span></div>
+          <div class="ldg-s">verifying every block · re-derived on your device · Law L5</div>
+        </div>
+      </div>
     </div>
 
     <div id="toast" role="status" aria-live="polite"></div>
@@ -662,7 +684,9 @@
         }
         pendingByView.set(viewUrl, { tab, t0, input: viewUrl });
         const f = $("renderer");
+        showLoading(scheme);                                    // calm shimmer, never a blank frame
         f.onload = () => {
+          hideLoading();
           // update the tab title from the rendered document when same-origin (the SW serves same-origin)
           try { const d = f.contentDocument; if (d && d.title) { tab.title = d.title; renderTabs(); } } catch {}
           tab.loading = false;
@@ -671,6 +695,18 @@
         };
         f.src = viewUrl;
       }
+      // the loading veil — honest per-scheme status; a safety timeout hides it even if onload never fires.
+      let ldgTimer = null;
+      function showLoading(scheme) {
+        const el = $("ldg"); if (!el) return;
+        const label = scheme === "ipfs" || scheme === "ipns" ? "Resolving on IPFS"
+          : scheme === "holo" || scheme === "kappa" ? "Opening κ object"
+          : (scheme === "http" || scheme === "https") ? "Loading page" : "Resolving…";
+        const t = $("ldgT"); if (t) t.textContent = label + "…";
+        el.classList.add("on"); el.setAttribute("aria-hidden", "false");
+        clearTimeout(ldgTimer); ldgTimer = setTimeout(hideLoading, 30000);
+      }
+      function hideLoading() { const el = $("ldg"); if (el) { el.classList.remove("on"); el.setAttribute("aria-hidden", "true"); } clearTimeout(ldgTimer); }
 
       async function resolveEns(name) {
         const IPFS = await import("../../_shared/holo-ipfs.js");
@@ -841,9 +877,15 @@
       const saveIndex = () => localStorage.setItem(LS_KEY, JSON.stringify(mgr.list().map((e) => ({ kappa: e.kappa, source: e.source, enabled: e.enabled }))));
 
       // ── project the enabled, κ-verified extensions onto the loading seam (browser-sw.js) ──
+      // Retry until the SW is ACTIVE: on a cold first load the worker may still be installing when we
+      // push, and a message to a non-active worker is dropped — which silently left ad-block off. The SW
+      // also persists what it receives, so this push seeds the store for every future (restarted) SW.
       async function pushSeam() {
         const b = mgr.seamBundle();
-        try { const reg = await navigator.serviceWorker.getRegistration(VIEW); const w = reg && (reg.active || reg.waiting); if (w) w.postMessage({ type: "setext", dnr: b.dnr, contentScripts: b.contentScripts }); } catch {}
+        for (let i = 0; i < 25; i++) {
+          try { const reg = await navigator.serviceWorker.getRegistration(VIEW); const w = reg && reg.active; if (w) { w.postMessage({ type: "setext", dnr: b.dnr, contentScripts: b.contentScripts }); return b; } } catch {}
+          await new Promise((r) => setTimeout(r, 150));
+        }
         return b;
       }
 
@@ -1076,7 +1118,11 @@
       }
 
       window.HoloExtensions = { manager: mgr, install: installBytes, installFromInput, installFromIpfs, installFromKappa, installFromPath, installFromStore, installDemo, catalog: CATALOG, seamBundle: () => mgr.seamBundle(), open: () => open(true), matchPattern, autoInstallShield };
-      render(); hydrate().then(autoInstallShield);
+      // hydrate restores installed extensions from IDB → auto-install the shield if it's the first run →
+      // ALWAYS push the seam to the SW. The unconditional push is the fix for ad-block silently dying on
+      // the 2nd+ visit: previously the seam was pushed ONLY during the one-time install, so a later load
+      // (flag already set, no install) left a freshly-started SW with an EMPTY ruleset and nothing blocked.
+      render(); hydrate().then(async () => { await autoInstallShield(); await pushSeam(); });
       } catch (err) { console.error("[holo-ext] store init failed:", err); }
     </script>
     <script src="/.holo/sha256/b4dbe84b9234d9b4672a632159fc7cbafb94c0af6da7cec9eedf2c325fe1667b.js" data-holo-shared="holo-theme.js"></script>

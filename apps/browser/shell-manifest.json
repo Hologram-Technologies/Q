@@ -1,12 +1,12 @@
 {
  "v": 1,
- "created": 1783503577034,
- "aggregate": "f4adf5c3a20cb6cff845aa35f5e3817d827225e4bd007e999af4245b5abe0a58",
+ "created": 1783504735775,
+ "aggregate": "ab862c1fd6fd3c978163e16e79f70865f298cdc2679f252152b2dde15edf2b75",
  "assets": [
   {
    "path": "/apps/browser/browser-sw.js",
-   "kappa": "0cd800a3823c0766a46402159df971b67792cdc4a9267268f5380979e2593713",
-   "bytes": 56164
+   "kappa": "f0892c8b1448e99702831a84593fd04fd8aab4496db6f34ed157b187194389e5",
+   "bytes": 59536
   },
   {
    "path": "/apps/browser/ext/holo-shield.crx",
@@ -50,8 +50,8 @@
   },
   {
    "path": "/apps/browser/index.html",
-   "kappa": "507bfe89eeed66e5df7469e35251b14f6aa8a2d21b1971eda304636a6dff7c7d",
-   "bytes": 91905
+   "kappa": "804cfc30afe547248a858ee7af8fb036877a93da824db155130e49bcbb913f4b",
+   "bytes": 95868
   },
   {
    "path": "/apps/browser/ipfs-sw.js",
