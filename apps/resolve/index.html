@@ -60,10 +60,10 @@
 </main>
 
 <script type="module">
-import names, { classify } from "../../usr/lib/holo/holo-names.mjs";
-import { makeHostResolver } from "../../usr/lib/holo/holo-names-host.mjs";
-import { loadAppIndex } from "../../usr/lib/holo/holo-app-index.mjs";
-import "../../usr/lib/holo/holo-card.mjs";                        // the ONE shared verified card (<holo-card>)
+import names, { classify } from "/usr/lib/holo/holo-names.mjs";
+import { makeHostResolver } from "/usr/lib/holo/holo-names-host.mjs";
+import { loadAppIndex } from "/usr/lib/holo/holo-app-index.mjs";
+import "/usr/lib/holo/holo-card.mjs";                        // the ONE shared verified card (<holo-card>)
 
 const $ = (id) => document.getElementById(id);
 const BASE = new URL("../../", location.href);                     // the bundle root, on ANY mount (root or /Q/)
@@ -146,10 +146,14 @@ $("benchgo").addEventListener("click", async () => {
   try { const mf = await (await fetch(new URL("apps/holo-messenger/shell-manifest.json", BASE), { cache: "no-store" })).json(); κ = "sha256:" + mf.assets.find((a) => /app\.html$/.test(a.path)).kappa; } catch {}
   if (!κ) { btn.textContent = "⚡ benchmark unavailable here"; return; }
   await R.resolve(κ);                                       // prime the warm cache (cold, once)
-  // universality stress: EVERY name kind, classified live (the internet's names, one resolver)
+  // universality stress: the WHOLE internet's naming universe (web2 + web3), classified live, one resolver
   const uni = ["blake3:" + "a".repeat(64), "sha256:" + "a".repeat(64), "did:holo:sha256:" + "a".repeat(64),
-    names.kappaToCid("sha256:" + "a".repeat(64)), "sha256-47DEQpj8HBSa+/TImW+5JCeuQeRkm5NMpJWZG3hSuFU=",
-    "0x" + "b".repeat(64), "vitalik.eth", "http://x.onion/", "org/model:latest", "ada~natom-hipit-gimis"];
+    names.kappaToCid("sha256:" + "a".repeat(64)), "ipns://docs.ipfs.tech", "sha256-47DEQpj8HBSa+/TImW+5JCeuQeRkm5NMpJWZG3hSuFU=",
+    "0x" + "b".repeat(64), "0x" + "c".repeat(40), "vitalik.eth", "brad.crypto", "http://x.onion/",
+    "ar://AbCdEf", "hyper://x/", "ssb:x", "magnet:?xt=urn:btmh:1220" + "a".repeat(64), "data:text/plain;base64,aGVsbG8=",
+    "npub1qpzry9x8gf2tvdw0s3jn54khce6mua7lqpzry9x8gf2tvd", "bc1qw508d6qejxtdg4y5r3zarvary0c5xw7kv8f3t4",
+    "ethereum:0x" + "c".repeat(40), "at://did:plc:xyz/app.bsky.feed.post/abc", "matrix:r/room:server",
+    "gemini://x.gmi/", "mailto:a@b.com", "org/model:latest", "ada~natom-hipit-gimis", "https://example.org"];
   const kinds = new Set(uni.map((n) => (classify(n) || { kind: "web" }).kind));
   // measure WARM latency (served from your device's store — 0 network) and count egress with a spy
   let egress = 0; const realFetch = window.fetch; window.fetch = (...a) => { egress++; return realFetch(...a); };
@@ -166,7 +170,7 @@ $("benchgo").addEventListener("click", async () => {
       <div class="sc-sub">the resolver runs on your device; a DNS lookup runs on someone else's server.</div>
       ${row("Speed", `<b>${fmtLat}</b> warm — <b>~${x.toLocaleString()}× faster</b> than a ~${DOH}ms DNS lookup`)}
       ${row("Throughput", `<b>~${perSec.toLocaleString()}</b> verified resolves / second, on your device`)}
-      ${row("Universal", `<b>${kinds.size} kinds of name</b> understood by one resolver — κ · CID · Ethereum · SRI · onion · ENS · truename · model · web`)}
+      ${row("Universal", `<b>${kinds.size} kinds of name</b> understood by one resolver — κ · CID · IPNS · Ethereum · ENS · SRI · onion · Arweave · Nostr · Bitcoin · BitTorrent · AT/Bluesky · Matrix · Gemini · model · truename · web`)}
       ${row("Privacy", `<b>${egress} network requests</b> — the warm answer never left your device (a DNS query always does)`)}
       ${row("Security", `every byte <b>re-derived to its hash</b> before you saw it — a forged answer is refused, not trusted`)}
       ${row("Sovereignty", `zero setup, works offline after first touch — no provider, no box, no config`)}
