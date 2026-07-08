@@ -2338,15 +2338,31 @@
 
       // P4 — idle prefetch: after Home renders, warm the few top-ranked source-backed titles so the first click
       // on the wall is already warm. Debounced; warmStream is idempotent + RD-free (probe only, no magnet).
-      let _idleWarmT = 0;
+      let _idleWarmT = 0, _warmGen = 0;
+      // M4 speculative warmth — HoloRank's prediction stands in for your hover: on idle after a render, pre-resolve
+      // the top predicted source-backed titles into streamCache so the FIRST press is already warm. Hardened per the
+      // instant-pipeline guardrails: skip on metered/slow/backgrounded, cap concurrency, cancel on the next render.
       function scheduleIdleWarm() {
         clearTimeout(_idleWarmT);
         _idleWarmT = setTimeout(() => {
           try {
+            const c = navigator.connection;
+            if (document.hidden || (c && (c.saveData || /(^|-)2g$/.test(c.effectiveType || "")))) return;   // respect the device
+            const my = ++_warmGen;
             const ranked = window.HoloRank ? HoloRank.rank(pool(), { resume: getResume, salt: SALT }) : pool();
-            ranked.filter((x) => x._sourceId && !(x.availability && x.availability.playable)).slice(0, 3).forEach(warmStream);
+            const targets = ranked.filter((x) => x._sourceId && !(x.availability && x.availability.playable) && !streamCache.has(streamKey(x))).slice(0, 6);
+            let i = 0, active = 0; const CAP = 2;   // never a thundering herd; a real press always jumps ahead
+            const ric = window.requestIdleCallback || ((f) => setTimeout(f, 120));
+            const pump = () => {
+              if (my !== _warmGen || document.hidden) return;   // superseded by a newer render, or tab hidden → stop
+              while (active < CAP && i < targets.length) {
+                active++;
+                Promise.resolve(warmStream(targets[i++])).catch(() => {}).finally(() => { active--; if (my === _warmGen) ric(pump); });
+              }
+            };
+            ric(pump);
           } catch {}
-        }, 1500);
+        }, 1200);
       }
       let _warmedNext = null;   // P4 binge: guard so the next episode is warmed once per title
       // P4 — benchmark surface: median press→first-frame per path from the perf log (window.holoInstant.summary()).
