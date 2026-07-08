@@ -114,17 +114,22 @@
           background: linear-gradient(180deg, rgba(13,17,23,0.94), rgba(9,11,14,0.92));
           border-right: 1px solid var(--line); backdrop-filter: blur(18px); }
         #top.solid { background: rgba(13,17,23,0.96); border-bottom: 0; }
-        .me { align-self: flex-start; margin-bottom: var(--s2); }
-        nav { flex-direction: column; align-items: stretch; gap: 0.12rem; width: 100%; background: transparent; border-radius: 0; padding: 0; }
+        /* Brand mark — sized + aligned to the nav's optical left edge. */
+        .me { order: 0; align-self: flex-start; width: 2.15rem; height: 2.15rem; margin: var(--s1) 0 var(--s3) var(--s2); }
+        /* Search sits at the TOP under the mark (Apple-TV pattern) — always open, full width. */
+        .search { order: 1; display: flex; width: 100%; max-width: none; height: 2.7rem; margin-bottom: var(--s3); }
+        nav { order: 2; flex-direction: column; align-items: stretch; gap: 0.14rem; width: 100%; background: transparent; border-radius: 0; padding: 0; }
         nav .nav-ic { display: none; }
-        nav button { justify-content: flex-start; gap: var(--s2); padding: var(--s2); border-radius: 10px; font-size: 1.02rem; width: 100%; text-align: left; }
-        nav button .ti { display: inline-flex; }
-        nav button:hover { background: rgba(255,255,255,0.06); }
+        nav button { justify-content: flex-start; gap: var(--s3); padding: var(--s2) var(--s3); border-radius: 11px; font-size: 1.02rem; font-weight: 600; width: 100%; text-align: left; color: var(--dim); transition: color 0.14s, background 0.14s; }
+        nav button .ti { display: inline-flex; width: 1.4rem; height: 1.4rem; flex: 0 0 auto; }
+        nav button:hover { color: var(--ink); background: rgba(255,255,255,0.06); }
         nav button.on { color: var(--ink); background: rgba(255,255,255,0.13); }
         nav button.on .ti { color: var(--acc); stroke: var(--acc); }
-        .sp { margin: auto 0 0; }
-        .search { display: flex; width: 100%; max-width: none; order: 2; }
-        .gear, .addbtn { align-self: flex-start; }
+        /* Footer utility tray — pushed to the bottom, quiet until hovered; the rail stays pure NAV. */
+        .sp { order: 3; margin: auto 0 0; }
+        .addbtn { order: 4; } .gear { order: 5; }
+        .addbtn, .gear { align-self: flex-start; margin-left: var(--s2); }
+        .clock, .ready-pill { display: none; }   /* time + "% ready" are hero/rail chrome, not sidebar clutter */
         #library, #search { padding-top: var(--s4); }
       }
 
@@ -179,6 +184,9 @@
       .hero-mute { flex: 0 0 auto; width: var(--s4); height: var(--s4); border-radius: 50%; background: rgba(255,255,255,0.08); border: 0; color: var(--dim); display: inline-flex; align-items: center; justify-content: center; cursor: pointer; transition: color 0.15s, background 0.15s; }
       .hero-mute:hover { color: var(--ink); background: rgba(255,255,255,0.14); }
       .hero-mute .icon { width: 1.3rem; height: 1.3rem; }
+      /* The hero trailer's mute floats ON the billboard (bottom-right), Apple-TV style — never in the nav rail. */
+      .hero .hero-mute { position: absolute; right: var(--s5); bottom: var(--s5); z-index: 9; background: rgba(2,6,12,0.55); backdrop-filter: blur(8px); color: var(--ink); }
+      .hero .hero-mute:hover { background: rgba(2,6,12,0.8); }
       /* "Your apps" — circular brand tiles (Google-TV style), springy on hover. */
       /* The 11 tiles spread edge-to-edge across the row and NEVER scroll: a flex row with space-between, and a
          tile diameter that scales with the viewport (clamp) so the set always fits, however wide the window. The
@@ -1700,8 +1708,8 @@
           if (native) { try { fr.contentWindow.postMessage({ type: "holo-video-control", action: m ? "mute" : "unmute" }, "*"); } catch {} }
           else if (m) ytCmd(fr, "mute"); else unmute();
         };
-        const hdr = $("top"), oldMb = hdr.querySelector(".hero-mute"); if (oldMb) oldMb.remove();   // no dup on re-render
-        hdr.insertBefore(mb, $("gear"));   // header, immediately left of the settings gear
+        const oldMb = document.querySelector(".hero .hero-mute, #top .hero-mute"); if (oldMb) oldMb.remove();   // no dup on re-render
+        h.appendChild(mb);   // float the mute ON the billboard (bottom-right), Apple-TV style — never in the nav rail
       }
       // Sintel's official upload has no hi-res thumb; use a verified alternate backdrop.
       const BACKDROP_OVERRIDE = { "sintel-dash": "https://i.ytimg.com/vi/HomAZcKm3Jo/maxresdefault.jpg" };
@@ -2086,7 +2094,7 @@
           const c = this.clip; c.style.left = b.left + "px"; c.style.top = b.top + "px"; c.style.width = b.width + "px"; c.style.height = b.height + "px";
           c.style.borderRadius = getComputedStyle(pic).borderRadius;
           const cover = (b.width / b.height > 16 / 9) ? { w: b.width, h: b.width * 9 / 16 } : { w: b.height * 16 / 9, h: b.height };
-          const SS = 2.5; this.fr.style.width = Math.ceil(cover.w * SS) + "px"; this.fr.style.height = Math.ceil(cover.h * SS) + "px";
+          const OVER = 1.15, SS = 2.5; this.fr.style.width = Math.ceil(cover.w * OVER * SS) + "px"; this.fr.style.height = Math.ceil(cover.h * OVER * SS) + "px";
           this.fr.style.transform = `translate(-50%,-50%) scale(${1 / SS})`;
           return true;
         },
