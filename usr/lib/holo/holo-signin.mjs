@@ -108,8 +108,8 @@ const HL_CSS = `#holo-login{position:fixed;inset:0;z-index:2147483000;color:var(
 #holo-login *{box-sizing:border-box}
 #holo-login .hl-wall{position:fixed;inset:0;z-index:0;background:var(--wall) center/cover no-repeat}
 #holo-login .hl-frost{position:fixed;inset:0;z-index:1;background:transparent;pointer-events:none}
-#holo-login .hl-lock{position:fixed;inset:0;z-index:2;display:grid;justify-items:center;align-items:start;padding:calc(38.2vh - var(--avatar)/2) var(--g2) var(--g2);padding-top:calc(38.2dvh - var(--avatar)/2);pointer-events:none}
-@media (max-height:620px){#holo-login .hl-lock{padding-top:calc(28vh - var(--avatar)/2);padding-top:calc(28dvh - var(--avatar)/2)}}
+#holo-login .hl-lock{position:fixed;inset:0;z-index:2;display:grid;justify-items:center;align-items:start;padding:calc(61.8vh - var(--avatar)/2) var(--g2) var(--g2);padding-top:calc(61.8dvh - var(--avatar)/2);pointer-events:none}
+@media (max-height:620px),(max-width:500px){#holo-login .hl-lock{padding-top:calc(56vh - var(--avatar)/2);padding-top:calc(56dvh - var(--avatar)/2)}}
 #holo-login .hl-panel{display:flex;flex-direction:column;align-items:center;text-align:center;width:var(--field);max-width:92vw;pointer-events:auto;animation:hl-rise .7s cubic-bezier(.4,0,.2,1) .05s both}
 #holo-login .hl-avatar{width:var(--avatar);height:var(--avatar);border-radius:50%;display:grid;place-items:center;color:#fff;font-size:calc(var(--avatar)*.37);font-weight:600;box-shadow:0 .6em 1.8em rgba(0,0,0,.4),inset 0 0 0 2px rgba(255,255,255,.6)}
 #holo-login .hl-avatar svg{width:62%;height:62%;opacity:.92}

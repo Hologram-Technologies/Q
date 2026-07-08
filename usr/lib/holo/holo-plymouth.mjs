@@ -219,20 +219,22 @@ const reducedMotion = () => { try { return matchMedia("(prefers-reduced-motion: 
 // behavior. Force a rung: ?emblem=gpu | ?emblem=2d.
 const POSES = {
   boot:   { cx: 0.5, cy: 0.46, cap: 0.62 },
-  greet:  { cx: 0.5, cy: 0.20, cap: 0.38, anchor: true, mult: 2.6 },
-  verify: { cx: 0.5, cy: 0.20, cap: 0.42, anchor: true, mult: 2.8 },
+  greet:  { cx: 0.5, cy: 0.36, cap: 0.50, anchor: true, mult: 8 },
+  verify: { cx: 0.5, cy: 0.36, cap: 0.54, anchor: true, mult: 8 },
 };
-// anchored poses GROW UPWARD from the avatar slot: the emblem's bottom edge stays pinned to the slot's
-// bottom, so a larger emblem rises toward the sky and never crowds the identity button beneath it. The
-// clamp keeps its top on screen on short windows (it can never grow past the slot-bottom-to-sky span).
+// GOLDEN HERO: the emblem grows UPWARD from the identity slot (its bottom pinned just above the button) to
+// fill the upper golden-major section — its centre lands on the upper golden line (38.2vh) while the
+// identity sits on the lower golden line (61.8vh). Capped by the vertical space (to a golden top margin)
+// AND by screen width, so it is as large as the composition allows yet never overflows or crowds the button.
 function anchorTarget(overlay, p, fallback) {
   try {
     const a = overlay.querySelector(".hl-avatar");
     if (a) {
       const r = a.getBoundingClientRect();
       if (r.width) {
-        const cap = Math.min(r.width * (p.mult || 2.6), Math.max(r.width, r.top + r.height - 24));
-        return { cx: r.left + r.width / 2, cy: r.top + r.height - cap / 2, cap };
+        const topGap = Math.round(window.innerHeight * 0.06);        // golden breathing room above the emblem
+        const cap = Math.max(r.width, Math.min(r.width * (p.mult || 8), r.bottom - topGap, window.innerWidth * 0.9));
+        return { cx: r.left + r.width / 2, cy: r.bottom - cap / 2, cap };
       }
     }
   } catch {}

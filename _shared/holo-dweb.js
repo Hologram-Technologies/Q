@@ -37,6 +37,14 @@ export const SECTIONS = [
       { name: "ens.eth", desc: "the Ethereum Name Service, on the dweb", kind: "ens", target: "ens.eth", tags: ["ens", "names"] },
     ],
   },
+  {
+    title: "Onion · the private web", note: "Tor hidden services — the address IS the key (self-authenticating)",
+    entries: [
+      { name: "Tor Project", desc: "the project's own onion site", kind: "onion", target: "2gzyxa5ihm7nsggfxnu52rck2vv4rvmdlkiu3zzui5du4xyclen53wid.onion", tags: ["onion", "tor", "privacy"] },
+      { name: "DuckDuckGo", desc: "private search, over onion", kind: "onion", target: "duckduckgogg42xjoc72x3sjasowoarfbgcmvfimaftt6twagswzczad.onion", tags: ["onion", "search", "privacy"] },
+      { name: "BBC News", desc: "global news, mirrored on the onion web", kind: "onion", target: "bbcnewsd73hkzno2ini43t4gblxvycyac5aw4gnv7t2rccijh7745uqd.onion", tags: ["onion", "news"] },
+    ],
+  },
 ];
 
 // Hologram-native apps as first-class entries in the SAME substrate (loader opens at <base>).
@@ -57,10 +65,23 @@ export const APPS = [
 // their behavior below, byte-for-byte.
 import { classify as universalClassify } from "./holo-names.mjs";
 const CID_RE = /^(Qm[1-9A-HJ-NP-Za-km-z]{44}|b[a-z2-7]{50,}|z[1-9A-HJ-NP-Za-km-z]{40,}|f[0-9a-f]{60,})$/;
+// The onion web. A v3 .onion host is base32(ed25519 pubkey) — 56 chars — so the address IS a
+// content-derived, self-authenticating name, exactly like a CID. v2 (16 chars) is deprecated/weaker.
+const ONION_V3_RE = /^[a-z2-7]{56}\.onion$/i;
+const ONION_V2_RE = /^[a-z2-7]{16}\.onion$/i;
+// host authority of any input: strip a leading scheme, then take up to the first / ? # and drop any :port.
+export function onionHost(raw) {
+  const s = String(raw || "").trim().replace(/^[a-z][a-z0-9+.-]*:\/\//i, "");
+  return s.split(/[/?#]/)[0].split(":")[0].toLowerCase();
+}
 export function classify(raw) {
   let s = String(raw || "").trim();
   if (!s) return { kind: "empty" };
   if (/^@demo$/i.test(s)) return { kind: "demo", target: "@demo" };
+  // the onion web — MUST precede the web (https) and dnslink (.tld) branches, or a .onion reads as DNS.
+  { const h = onionHost(s);
+    if (ONION_V3_RE.test(h)) return { kind: "onion", target: s };
+    if (ONION_V2_RE.test(h)) return { kind: "onion", target: s, legacy: true }; }
   try { const u = universalClassify(s); if (u) return u; } catch {}
   if (/^https?:\/\//i.test(s)) return { kind: "web", target: s };               // a web2 URL (gateway/DNSLink/save-to-dweb)
   const head = s.split("/")[0];
@@ -75,10 +96,12 @@ export const UOR_CONTEXT = Object.freeze([
   "https://schema.org/",
   { holo: "https://hologram.os/ns#", rel: "schema:additionalType", via: "holo:via", address: "holo:address", links: { "@id": "schema:hasPart", "@container": "@set" } },
 ]);
-const TYPE = { ipfs: "WebSite", ipns: "WebSite", dnslink: "WebSite", ens: "WebSite", web: "WebPage", app: "SoftwareApplication", demo: "WebSite" };
+const TYPE = { ipfs: "WebSite", ipns: "WebSite", dnslink: "WebSite", ens: "WebSite", web: "WebPage", app: "SoftwareApplication", demo: "WebSite", onion: "WebSite" };
 export function toUorObject(entry) {
   let id;
   try { if (entry.kind === "ipfs" && CID_RE.test(String(entry.target).split("/")[0])) id = cidToDid(String(entry.target).split("/")[0]) || holoUri(String(entry.target).split("/")[0]); } catch {}
+  // an onion's own pubkey is its verifiable id — mirror the CID→did:holo derivation for the private web.
+  try { if (entry.kind === "onion") { const h = onionHost(entry.target); if (/\.onion$/i.test(h)) id = "holo://onion/" + h.replace(/\.onion$/i, ""); } } catch {}
   if (!id) id = entry.kind === "app" ? "holo://" + entry.id : "holo://" + (entry.target || entry.name).toLowerCase().replace(/[^a-z0-9.]+/g, "-");
   return {
     "@context": UOR_CONTEXT,
