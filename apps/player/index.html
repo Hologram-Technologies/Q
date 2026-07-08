@@ -3324,6 +3324,15 @@
         if (/^(shows?|series|tv ?shows?)$/.test(t)) return navClick("shows");
         if (/^apps?$/.test(t)) return navClick("apps");
         if (/^(more info|what(?:'s| is) this|details)$/.test(t)) { if (current) { openDetail(current); return true; } return false; }
+        // M7 — "watch party for X" / "watch together": start a synced, any-browser room (SharePlay, serverless).
+        { const wp = t.match(/\b(?:start (?:a )?)?watch\s*(?:party|together|with\s+\w+)(?:\s+(?:for|of|on)\s+(.+))?/);
+          if (wp) {
+            const name = (wp[1] || "").trim().replace(/^(the|a)\s+/, "");
+            const it = name ? findTitle(name) : current;
+            if (it) { if (canPlay(it)) play(it); else openDetail(it); setTimeout(() => { try { startWatch(); } catch {} }, 450); return true; }
+            if (current) { try { startWatch(); } catch {} return true; }
+            toast("Play something first, then start a watch party"); return true;
+          } }
         // S1 — semantic "something like X": a real neighbour-ranked result set (not just the detail page).
         { const lk = t.match(/\b(?:something|anything|some|more|stuff|shows?|movies?)\s+(?:just\s+)?like\s+(.+)/) || t.match(/\bsimilar to\s+(.+)/);
           if (lk || /\b(more like this|similar|recommend)\b/.test(t)) {
