@@ -23,30 +23,39 @@ const $ = (s, r) => (r || DOC).querySelector(s);
 const css = DOC.createElement("style");
 css.id = "q-summon-css";
 css.textContent = `
-:root{ --q-rail-w: var(--holo-rail-w, 60px); --q-drawer-w: min(94vw, max(440px, 44vw)); }
+/* EXACT Holo Wallet parity: reference the wallet's OWN width var (so Q and the wallet are pixel-identical and
+   never drift), and the wallet's env gap. Wallet = a compact, focused lane (22vw, 360px floor) — NOT a wide panel. */
+:root{ --q-rail-w: var(--holo-rail-w, 60px); --q-drawer-w: var(--holo-wallet-w, min(92vw, max(360px, 22vw))); --q-env-gap: var(--holo-env-gap, 0px); }
 
-/* DOCK — squeeze the home canvas LEFT by the drawer width (the wallet's own mechanism, mirrored for Q) */
-html.q-docked .holo-wa-root{ width: calc(100vw - var(--q-drawer-w))!important; }
+/* DOCK — byte-for-byte the wallet's dock (html.holo-wallet-docked → html.q-docked): reserve the lane on the right,
+   every fixed layer keeps its own internal layout just narrower, and the canvas WIDGETS re-centre so the WHOLE
+   composition stays centred and proportional in the freed space — exactly what the wallet does. */
+html.q-docked .holo-wa-root{ width: calc(100vw - var(--q-drawer-w) - var(--q-env-gap))!important; }
+html[data-holo-expanded].q-docked .holo-wa-root{ width: calc(100vw - var(--q-drawer-w))!important; }
 html.q-docked .holo-home-space{ right: var(--q-drawer-w)!important; }
-html.q-docked .holo-home-wall,html.q-docked .holo-home-scrim{ right: var(--q-drawer-w)!important; }
+html.q-docked .holo-home-wall,html.q-docked .holo-home-scrim{ right: calc(var(--q-drawer-w) + var(--q-env-gap))!important; }
 html.q-docked .holo-home-orb,html.q-docked .holo-global-orb{ right: calc(var(--q-drawer-w) + clamp(22px,3.2vw,48px))!important; }
 html.q-docked .holo-home-quote{ left: calc(var(--q-rail-w) + (100vw - var(--q-rail-w) - var(--q-drawer-w)) / 2)!important; }
-html.q-docked .holo-wa-root .cs-main-container{ right: var(--q-drawer-w)!important; }
-/* smooth squeeze both ways */
-.holo-home-space,.holo-home-wall,.holo-home-scrim,.holo-home-orb,.holo-global-orb,.holo-home-quote,.holo-wa-root{
-  transition: right .38s cubic-bezier(.4,0,.2,1), left .38s cubic-bezier(.4,0,.2,1), width .38s cubic-bezier(.4,0,.2,1)!important; }
+/* WIDGETS (greeting · % ring · quote) re-centre in the freed canvas via --holo-aside-w — the EXACT mechanism the
+   wallet uses (set on open below): holo-widgets' deskBounds() reserves the lane and glides each widget to the new
+   centre, so relative position + proportion are preserved. They are JS-positioned, so this is JS, not a transform. */
+html.q-docked .holo-wa-root .cs-main-container{ right: calc(var(--q-drawer-w) + var(--q-env-gap))!important; }
+html[data-holo-expanded].q-docked .holo-wa-root .cs-main-container{ right: var(--q-drawer-w)!important; }
+/* ONE motion curve, the wallet's (.28s var(--holo-ease)) — the push glides in/out with the drawer, no jank */
+.holo-wa-root,.holo-home-space,.holo-home-wall,.holo-home-scrim,.holo-home-orb,.holo-global-orb,.holo-home-quote{
+  transition: right .28s var(--holo-ease,cubic-bezier(.4,0,.2,1)), left .28s var(--holo-ease,cubic-bezier(.4,0,.2,1)), width .28s var(--holo-ease,cubic-bezier(.4,0,.2,1))!important; }
 
-/* THE DRAWER — the hero, re-framed on the RIGHT. Wallet width, chrome background (no starfield). */
+/* THE DRAWER — the hero re-framed as the wallet's panel: wallet width, #0d1117 == the nav rail (rail + Q are ONE
+   continuous chrome, NO seam / border / shadow — immersive, exactly like the wallet), same .26s entrance curve. */
 html.q-drawer .holo-hero{
-  inset:0 0 0 auto!important; width:var(--q-drawer-w)!important;
-  background:var(--holo-chrome,#0d1117)!important;
+  inset:0 0 0 auto!important; width:var(--q-drawer-w)!important; overflow:hidden!important;
+  background:#0d1117!important;
   padding-top:0!important; align-items:stretch!important; justify-content:flex-start!important;
-  border-left:1px solid rgba(255,255,255,.06);
-  box-shadow:-16px 0 60px rgba(0,0,0,.5);
-  animation:q-drawer-in .42s ease both!important; touch-action:auto!important;
+  border-left:0!important; box-shadow:none!important;
+  animation:q-drawer-in .26s var(--holo-ease,ease) both!important; touch-action:auto!important;
 }
-/* opacity-only (NO transform): a transform on .holo-hero would make its position:fixed composer hero-relative.
-   The motion comes from the DOCK — the canvas squeezing left as Q fades in (exactly like the wallet). */
+/* opacity-only (NO transform on .holo-hero): a transform would make its position:fixed composer hero-relative.
+   The glide comes from the DOCK — the canvas squeezing left as Q appears — identical to the wallet's feel. */
 @keyframes q-drawer-in{ from{opacity:0} to{opacity:1} }
 /* header row: a small living orb + status, top-left of the drawer (absolute within the hero → tracks the panel) */
 html.q-drawer .holo-hero-orb{ position:absolute!important; top:15px!important; left:17px!important; width:42px!important; height:42px!important; min-width:0!important; margin:0!important; filter:drop-shadow(0 0 12px rgba(91,140,255,.5))!important; }
@@ -182,8 +191,22 @@ window.addEventListener("keydown", bargeIn, { capture: true, passive: true });
 const heroOpen = () => !!$(".holo-hero");
 let titleEl = null;
 function ensureTitle() { if (!titleEl) { titleEl = DOC.createElement("div"); titleEl.id = "q-drawer-title"; titleEl.textContent = "Q"; DOC.body.appendChild(titleEl); } }
-function openClasses() { HTML.classList.add("q-drawer", "q-docked"); ensureTitle(); }
-function closeClasses() { HTML.classList.remove("q-drawer", "q-docked"); }
+// ── canvas widgets re-centre exactly like the wallet: reserve the drawer lane in --holo-aside-w (concrete px),
+//    which holo-widgets' deskBounds() reads to shift the composition centre, and nudge its resize-keyed recenter()
+//    across the slide so the greeting · % ring · quote GLIDE into the freed space in lockstep (never stranded). ──
+function asidePx() {
+  const hero = $(".holo-hero");
+  if (hero) { const w = Math.round(hero.getBoundingClientRect().width); if (w >= 1) return w; }
+  return Math.round(Math.min(0.92 * innerWidth, Math.max(360, 0.22 * innerWidth)));   // == --holo-wallet-w, if the hero isn't measurable yet
+}
+function pulseReflow() {   // mirror holo-aside.reflowGlide: the CSS squeeze doesn't change innerWidth, so tick resize across the .28s glide
+  let n = 0; const tick = () => { try { window.dispatchEvent(new Event("resize")); } catch {} };
+  tick(); const id = setInterval(() => { tick(); if (++n >= 9) clearInterval(id); }, 48);
+}
+function reserveAside() { if (innerWidth <= 640) return; try { HTML.style.setProperty("--holo-aside-w", asidePx() + "px"); } catch {} pulseReflow(); }
+function releaseAside() { try { HTML.style.removeProperty("--holo-aside-w"); } catch {} pulseReflow(); }
+function openClasses() { HTML.classList.add("q-drawer", "q-docked"); ensureTitle(); requestAnimationFrame(reserveAside); }
+function closeClasses() { HTML.classList.remove("q-drawer", "q-docked"); releaseAside(); }
 function onOrbDown(e) {
   if (heroOpen()) return;
   const orb = e.target && e.target.closest && e.target.closest(".holo-home-orb, .holo-global-orb");
