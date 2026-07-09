@@ -15,6 +15,11 @@
 // It never loads inside the native shell (which already owns these keys) or inside an embedded frame.
 
 import { createKeymap } from "../../usr/lib/holo/holo-keys.js";
+import { classifyIntent, fuzzyScore } from "../../usr/lib/holo/holo-intent-classify.mjs";
+// holo-names' classify is the ONE naming-universe classifier (κ/did/CID/SRI/ENS/nostr/…); reused, not rebuilt.
+// Loaded lazily + fail-soft so a hiccup degrades the resolve lane to a plain web hand-off, never breaks the bar.
+let classifyName = null;
+import("../../usr/lib/holo/holo-names.mjs").then((m) => { classifyName = m.classify || (m.default && m.default.classify) || null; }).catch(() => {});
 
 (function () {
   "use strict";
@@ -22,16 +27,20 @@ import { createKeymap } from "../../usr/lib/holo/holo-keys.js";
   const W = window, D = document;
 
   // ── activation gate ───────────────────────────────────────────────────────────────────────────
-  // Desktop only: a wide viewport AND a fine pointer (a phone has no keyboard, so the layer is inert
-  // there and the dot stays hidden — "desktop mode only"). Skip when the native shell already provides
-  // the layer, and skip when embedded (the host frame owns the keys). Idempotent.
+  // Desktop only: a wide viewport AND a real pointing device present — a phone/tablet has no keyboard, so
+  // the layer is inert there and the dot stays hidden ("desktop mode only, no mobile"). We test
+  // `any-pointer: fine` (a mouse/trackpad/stylus EXISTS) rather than the PRIMARY pointer, so a touchscreen
+  // laptop — which IS a desktop — still gets it, while a touch-only phone/tablet does not. `hover: hover`
+  // is accepted as an equivalent desktop signal. Skip inside the native shell (it owns the keys) and when
+  // embedded (the host frame owns them). Idempotent.
   try {
     if (W.__holoKeysMounted) return;
     if (W.top !== W.self) return;                                              // embedded → host owns keys
     if (W.cefQuery || W.__world || D.documentElement.classList.contains("native-chrome")) return; // native shell
-    const wide = W.matchMedia && W.matchMedia("(min-width: 760px)").matches;
-    const fine = W.matchMedia && W.matchMedia("(pointer: fine)").matches;
-    if (!wide || !fine) return;
+    const mm = (q) => !!(W.matchMedia && W.matchMedia(q).matches);
+    const wide = mm("(min-width: 760px)");
+    const desktopPointer = mm("(any-pointer: fine)") || mm("(hover: hover)");
+    if (!wide || !desktopPointer) return;
     W.__holoKeysMounted = true;
   } catch (e) { return; }
 
@@ -58,7 +67,10 @@ import { createKeymap } from "../../usr/lib/holo/holo-keys.js";
   #hk-scrim .hk-results{ max-height:52vh; overflow:auto; border-top:1px solid #21262d; }
   #hk-scrim .hk-row{ display:flex; align-items:center; gap:12px; padding:10px 16px; cursor:pointer; color:#c9d1d9; font-size:15px; }
   #hk-scrim .hk-row .hk-ic{ width:22px; text-align:center; opacity:.9; flex:0 0 auto; }
-  #hk-scrim .hk-row .hk-grp{ margin-left:auto; color:#6e7681; font-size:12px; }
+  #hk-scrim .hk-row .hk-lbl{ overflow:hidden; text-overflow:ellipsis; white-space:nowrap; min-width:0; }
+  #hk-scrim .hk-row .hk-grp{ margin-left:auto; color:#6e7681; font-size:12px; flex:0 0 auto; padding-left:8px; }
+  #hk-scrim .hk-lane{ padding:9px 16px 4px; font-size:11px; letter-spacing:.05em; text-transform:uppercase; color:#565f6b; }
+  #hk-scrim .hk-lane:first-child{ padding-top:6px; }
   #hk-scrim .hk-row kbd,#hk-cheat kbd{ background:#21262d; border:1px solid #30363d; border-radius:6px; padding:2px 8px;
     font:600 12px ui-monospace,monospace; color:#e6edf3; white-space:nowrap; }
   #hk-scrim .hk-row.sel{ background:color-mix(in srgb,var(--hk-accent) 16%,transparent); color:#fff; }
@@ -139,6 +151,21 @@ import { createKeymap } from "../../usr/lib/holo/holo-keys.js";
   // open a sibling Hologram app — "../<dir>/" from /apps/holo-messenger/app.html resolves to /apps/<dir>/,
   // correct whether the bundle is served at the origin root or a subpath (e.g. /Q/).
   const openApp = (dir) => { try { W.open(new URL("../" + dir + "/", location.href).href, "_blank", "noopener"); return true; } catch { return false; } };
+  // resolve ANY name through the proven /apps/resolve surface — it classifies + VERIFIES bytes (Law L5) and
+  // renders the shared <holo-card>. We hand off via #hash (the resolve app auto-resolves from location.hash),
+  // so the bar never reimplements verification; it only classifies (µs, local) to preview the lane.
+  const openResolve = (s) => { try { W.open(new URL("../resolve/#" + encodeURIComponent(s), location.href).href, "_blank", "noopener"); return true; } catch { return false; } };
+  const openWebSearch = (q) => { try { W.open(new URL("../browser/#q=" + encodeURIComponent(q), location.href).href, "_blank", "noopener"); return true; } catch { return false; } };
+  // ask Q: summon the drawer, then seed the hero input + send once it has mounted (retry a few frames).
+  const askQ = (text) => {
+    summonQ();
+    let n = 10; const fill = () => {
+      const inp = $("#holo-hero-input");
+      if (inp) { inp.value = text; inp.dispatchEvent(new Event("input", { bubbles: true })); const send = $(".holo-hero-send"); if (send) send.click(); return; }
+      if (n-- > 0) setTimeout(fill, 120);
+    };
+    setTimeout(fill, 140); return true;
+  };
 
   // ── the keymap — messenger-appropriate commands (mirrors the shell's binding style) ──────────────
   const km = createKeymap({ apple, seqMs: 900 });
@@ -174,27 +201,77 @@ import { createKeymap } from "../../usr/lib/holo/holo-keys.js";
     keymapDid = "holo://" + [...new Uint8Array(h)].map((x) => x.toString(16).padStart(2, "0")).join("").slice(0, 30) + "…";
   } catch {} })();
 
-  // ── spotlight + command palette — one overlay, searchable, arrow-key driven ──────────────────────
+  // ── THE COMMAND BAR — one input, intent classified per keystroke into lanes (chats · commands · apps ·
+  //    Q · resolve · web). Ctrl+K = the full bar; Ctrl+Shift+P = commands only. Every row is {ic,label,sub?,
+  //    kbd?,group,run}; the flat `list` drives ↑/↓/Enter, group headers render when `group` changes. ──────
+  const KINDW = { kappa: "a content address", did: "a sovereign object id", holo: "a holospace member",
+    ipfs: "an IPFS name", ipns: "an IPNS name", sri: "a Subresource Integrity hash", ens: "an Ethereum name",
+    "eth-tx": "an Ethereum transaction", "eth-address": "an Ethereum account", nostr: "a Nostr name",
+    payment: "a payment request", account: "an on-chain account", torrent: "a BitTorrent v2 name",
+    data: "inline content", model: "a weights pointer", truename: "a truename", onion: "an onion address",
+    refused: "refused — weak / malformed", web: "the open web" };
+
   let mode = "spot", list = [], sel = 0;
-  const commandsFor = (m) => km.registry.filter((c) => c.title && (m === "pal" ? true : c.group !== "Session"));
-  function render(term) {
-    const t = (term || "").toLowerCase();
-    list = commandsFor(mode).filter((c) => (c.title + " " + c.group).toLowerCase().includes(t));
-    sel = 0; paint();
+  const cmdRows = (q) => km.registry.filter((c) => c.title && c.group !== "Session")
+    .map((c) => ({ sc: fuzzyScore(q, c.title + " " + c.group), c }))
+    .filter((x) => x.sc > 0).sort((a, b) => b.sc - a.sc).slice(0, q ? 6 : 7)
+    .map((x) => ({ ic: x.c.icon || "›", label: x.c.title, kbd: (km.label(x.c.spec) && !/^app:/.test(x.c.id)) ? km.label(x.c.spec) : "", group: "Commands", run: () => { try { x.c.run(); } catch {} } }));
+  const appRows = (q) => APPS.map(([name, dir, ic]) => ({ sc: fuzzyScore(q, name), name, dir, ic }))
+    .filter((x) => x.sc > 0).sort((a, b) => b.sc - a.sc).slice(0, q ? 5 : 4)
+    .map((x) => ({ ic: x.ic, label: x.name, sub: "App", group: "Apps", run: () => openApp(x.dir) }));
+  const chatRows = (q, cap) => {
+    const seen = new Set(), out = [];
+    for (const r of convRows()) {
+      const el = r.querySelector(".cs-conversation__name") || r.querySelector("[class*='name']");
+      const name = el ? el.textContent.trim() : ""; if (!name || seen.has(name)) continue; seen.add(name);
+      const sc = fuzzyScore(q, name); if (sc > 0) out.push({ sc, name, r });
+    }
+    return out.sort((a, b) => b.sc - a.sc).slice(0, cap).map((x) => ({ ic: "💬", label: x.name, sub: "Chat", group: q ? "Chats" : "Recent chats", run: () => { try { x.r.click(); } catch {} } }));
+  };
+  const appHit = (s) => { const a = APPS.find(([, dir]) => dir === s.toLowerCase()); return a ? { ic: a[2], label: a[0], sub: "App", group: "Apps", run: () => openApp(a[1]) } : null; };
+
+  function buildList(term) {
+    const it = classifyIntent(term, classifyName), q = it.q;
+    if (it.lane === "command") return cmdRows(q);
+    if (it.lane === "ask") return [{ ic: "◍", label: q || "Ask Q…", sub: "Ask Q", group: "Q", run: () => askQ(q) }, ...chatRows(q, 3)];
+    if (it.lane === "resolve") {
+      const what = KINDW[(it.name && it.name.kind) || "web"] || "open it";
+      const rows = [{ ic: "◆", label: q, sub: "Resolve · " + what + (it.name && it.name.kappa ? " · " + String(it.name.kappa).slice(0, 22) + "…" : ""), group: "Resolve", run: () => openResolve(q) }];
+      const a = appHit(q); if (a) rows.push(a);
+      return rows;
+    }
+    if (it.lane === "empty") return [...chatRows("", 4), ...appRows("")];
+    // term: search everything, then a web fall-through so the bar is never a dead end
+    const rows = [...chatRows(q, 5), ...appRows(q), ...cmdRows(q)];
+    rows.push({ ic: "🌐", label: `Search the web for “${q}”`, sub: "Web", group: "Web", run: () => openWebSearch(q) });
+    return rows;
   }
+  function render(term) { list = (mode === "pal") ? cmdRows((term || "").trim()) : buildList(term || ""); sel = 0; paint(); }
   function paint() {
-    sResults.innerHTML = list.length ? list.map((c, i) =>
-      `<div class="hk-row${i === sel ? " sel" : ""}" data-i="${i}"><span class="hk-ic">${c.icon || "›"}</span><span>${esc(c.title)}</span>`
-      + (km.label(c.spec) && !/^app:/.test(c.id) ? `<kbd class="hk-grp">${esc(km.label(c.spec))}</kbd>` : `<span class="hk-grp">${esc(c.group)}</span>`)
-      + `</div>`).join("") : `<div class="hk-empty">No matches</div>`;
+    let html = "", lastG = null;
+    list.forEach((it, i) => {
+      if (it.group !== lastG) { html += `<div class="hk-lane">${esc(it.group)}</div>`; lastG = it.group; }
+      html += `<div class="hk-row${i === sel ? " sel" : ""}" data-i="${i}"><span class="hk-ic">${it.ic || "›"}</span><span class="hk-lbl">${esc(it.label)}</span>`
+        + (it.kbd ? `<kbd class="hk-grp">${esc(it.kbd)}</kbd>` : it.sub ? `<span class="hk-grp">${esc(it.sub)}</span>` : "") + `</div>`;
+    });
+    sResults.innerHTML = html || `<div class="hk-empty">${mode === "pal" ? "No commands" : "Type to search — Enter to search the web"}</div>`;
     [...sResults.querySelectorAll(".hk-row[data-i]")].forEach((r) => {
       r.onmouseenter = () => { sel = +r.dataset.i; mark(); };
       r.onclick = () => runSel(+r.dataset.i);
     });
   }
   const mark = () => [...sResults.querySelectorAll(".hk-row[data-i]")].forEach((r, i) => r.classList.toggle("sel", i === sel));
-  function runSel(i) { const c = list[i != null ? i : sel]; closeAll(); if (c) try { c.run(); } catch {} }
-  function openOverlay(m) { mode = m; scrim.classList.add("open"); sTitle.textContent = m === "pal" ? "Command palette" : "Search & open"; sInput.value = ""; sInput.placeholder = m === "pal" ? "Run a command…" : "Search commands, open an app…"; render(""); sInput.focus(); }
+  function runSel(i) {
+    const it = list[i != null ? i : sel];
+    if (!it && mode !== "pal") { const q = (sInput.value || "").trim(); closeAll(); if (q) openWebSearch(q); return; }  // Enter on empty → web
+    closeAll(); if (it) try { it.run(); } catch {}
+  }
+  function openOverlay(m) {
+    mode = m; scrim.classList.add("open");
+    sTitle.textContent = m === "pal" ? "Command palette" : "Search everything";
+    sInput.value = ""; sInput.placeholder = m === "pal" ? "Run a command…" : "Search chats · run a command (>) · ask Q · paste a κ / link · open an app";
+    render(""); sInput.focus();
+  }
   const openSpot = () => openOverlay("spot");
   const openPalette = () => openOverlay("pal");
   sInput.addEventListener("input", () => render(sInput.value));
@@ -261,6 +338,7 @@ import { createKeymap } from "../../usr/lib/holo/holo-keys.js";
 
   // ── test surface (a headless witness / the console can drive the layer) ──────────────────────────
   W.HoloKeys = { km, openSpot, openPalette, openCheat, closeAll, get keymapDid() { return keymapDid; },
-    actions: { focusSearch, newChat, summonQ, cycleChat, openApp, signOut } };
-  try { console.info("[holo-keys] desktop keyboard layer live ·", km.registry.filter((c) => c.title).length, "commands ·", modSymbol + " K spotlight · ? shortcuts"); } catch {}
+    classify: (s) => classifyIntent(s, classifyName), get list() { return list; }, render, _build: buildList,
+    actions: { focusSearch, newChat, summonQ, cycleChat, openApp, openResolve, openWebSearch, askQ, signOut } };
+  try { console.info("[holo-keys] command bar live ·", km.registry.filter((c) => c.title).length, "commands · " + modSymbol + " K = search everything (chats · commands · apps · Q · resolve · web) · ? shortcuts"); } catch {}
 })();
