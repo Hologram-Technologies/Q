@@ -265,7 +265,7 @@ const reducedMotion = () => { try { return matchMedia("(prefers-reduced-motion: 
 
 // ── the player: ONE facade, two backends, the same choreography ────────────────────────────────────────
 // Poses are draw-space (crisp at any scale — CSS transforms would blur the canvas):
-//   boot   — dead-center, up to 62vmin: the machine booting, exactly like the metal
+//   boot   — dead-center HERO, up to 95vmin / 1.35× natural: the machine booting, larger than life
 //   greet  — the living emblem IS your identity: it lands on the avatar slot (anchored, a touch larger)
 //   verify — the emblem leans in slightly while the enclave checks you (CSS pulses brightness)
 // Anchored poses track the .hl-avatar rect live (the circle itself is hidden — the animation replaces it);
@@ -278,7 +278,10 @@ const reducedMotion = () => { try { return matchMedia("(prefers-reduced-motion: 
 // canvas is consumed); any missing capability falls open to the proven 2D player below, byte-identical
 // behavior. Force a rung: ?emblem=gpu | ?emblem=2d.
 const POSES = {
-  boot:   { cx: 0.5, cy: 0.46, cap: 0.62 },
+  // boot is the HERO: dead-centre of the screen, larger than life. `up` lets the sprite grow past its
+  // natural size (bounded, so a soft render never turns to mush) — both players EASE it like cap, so the
+  // hand-off to greet is ONE continuous shrink-and-glide, never a snap.
+  boot:   { cx: 0.5, cy: 0.5, cap: 0.95, up: 1.35 },
   greet:  { cx: 0.5, cy: 0.36, cap: 0.50, anchor: true, mult: 8 },
   verify: { cx: 0.5, cy: 0.36, cap: 0.54, anchor: true, mult: 8 },
 };
@@ -373,8 +376,9 @@ function make2dPlayer(overlay, layer, canvas, onLive) {
     const iw = img.naturalWidth || img.width, ih = img.naturalHeight || img.height;
     const cw = canvas.width / dpr, ch = canvas.height / dpr;
     const vmin = Math.min(cw, ch);
-    // Plymouth centers the sprite at its natural size; the pose caps it (boot ≈ the metal, greet = emblem)
-    const s = Math.min(1, (vmin * pose.cap) / Math.max(iw, ih));
+    // Plymouth centers the sprite at its natural size; the pose caps it (boot = hero, greet = emblem).
+    // pose.up (eased) bounds how far past natural size the sprite may grow — 1 everywhere but the boot hero.
+    const s = Math.min(pose.up || 1, (vmin * pose.cap) / Math.max(iw, ih));
     const w = iw * s, h = ih * s;
     const cx = cw * pose.cx, cy = ch * pose.cy;
     ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
@@ -393,6 +397,7 @@ function make2dPlayer(overlay, layer, canvas, onLive) {
     pose.cx += (tgt.cx - pose.cx) * k;
     pose.cy += (tgt.cy - pose.cy) * k;
     pose.cap += (tgt.cap - pose.cap) * k;
+    pose.up = (pose.up || 1) + ((tgt.up || 1) - (pose.up || 1)) * k;
     const idx = Math.floor((now - t0) / (1000 / FPS)) % Math.max(prefix, 1);
     draw(idx);
   }
@@ -401,7 +406,7 @@ function make2dPlayer(overlay, layer, canvas, onLive) {
     if (!started && prefix > 0) {                          // first drawable frame → the splash is alive
       started = true;
       try { onLive(); } catch {}
-      const t = liveTarget(); pose.cx = t.cx; pose.cy = t.cy; pose.cap = t.cap;   // snap to the current pose…
+      const t = liveTarget(); pose.cx = t.cx; pose.cy = t.cy; pose.cap = t.cap; pose.up = t.up || 1;   // snap to the current pose…
       draw(0);                                             // …and paint frame 0 NOW (instant first paint, even before rAF)
       // ALWAYS run the sprite cycle — a contained in-place loop, like a loading spinner. Under reduced motion
       // the loop SNAPS the pose (no glide across the screen), so the emblem still LIVES without jarring motion.
@@ -417,7 +422,7 @@ function make2dPlayer(overlay, layer, canvas, onLive) {
       img.onerror = () => { try { URL.revokeObjectURL(img.src); } catch {} };
       img.src = URL.createObjectURL(new Blob([bytes], { type: "image/png" }));
     },
-    pose(name) { target = POSES[name] || POSES.greet; if (reducedMotion()) { const t = liveTarget(); pose.cx = t.cx; pose.cy = t.cy; pose.cap = t.cap; if (images[0]) draw(0); } },
+    pose(name) { target = POSES[name] || POSES.greet; if (reducedMotion()) { const t = liveTarget(); pose.cx = t.cx; pose.cy = t.cy; pose.cap = t.cap; pose.up = t.up || 1; if (images[0]) draw(0); } },
     ink(on) { const flip = inkOn !== !!on; inkOn = !!on; return flip && started; },   // true → frames need a re-key (caller replays)
     reset() { images.length = 0; prefix = 0; t0 = 0; started = false; },
     destroy() { alive = false; cancelAnimationFrame(raf); removeEventListener("resize", size); },
@@ -433,7 +438,7 @@ const GPU_WORKER_SRC =
   "var dpr=1,reduced=false,cw=0,chh=0;\n" +
   "var tex=[],pend=[];\n" +
   "var prefix=0,started=false,t0=0,raf=0,last=0;\n" +
-  "var pose={cx:0,cy:0,cap:0},target=null,ink=0;\n" +
+  "var pose={cx:0,cy:0,cap:0,up:1},target=null,ink=0;\n" +
   "var WGSL=''+\n" +
   "'struct U { rect: vec4<f32>, misc: vec4<f32> };\\n'+\n" +
   "'@group(0) @binding(0) var<uniform> u: U;\\n'+\n" +
@@ -464,7 +469,7 @@ const GPU_WORKER_SRC =
   " if(d.t==='probe'){Promise.resolve().then(async function(){var ok=false;try{ok=!!(self.navigator&&navigator.gpu&&await navigator.gpu.requestAdapter());}catch(err){}self.postMessage({t:'probe',ok:ok});});}\n" +
   " else if(d.t==='init'){init(d).catch(function(err){self.postMessage({t:'err',m:String(err)});});}\n" +
   " else if(d.t==='frame'){frame(d.i,d.buf);}\n" +
-  " else if(d.t==='pose'){target={cx:d.cx,cy:d.cy,cap:d.cap};if(!pose.cap){pose.cx=d.cx;pose.cy=d.cy;pose.cap=d.cap;}if(reduced&&started){pose.cx=d.cx;pose.cy=d.cy;pose.cap=d.cap;render(0,0,0.016,0);}}\n" +
+  " else if(d.t==='pose'){target={cx:d.cx,cy:d.cy,cap:d.cap,up:d.up||1};if(!pose.cap){pose.cx=d.cx;pose.cy=d.cy;pose.cap=d.cap;pose.up=target.up;}if(reduced&&started){pose.cx=d.cx;pose.cy=d.cy;pose.cap=d.cap;pose.up=target.up;render(0,0,0.016,0);}}\n" +
   " else if(d.t==='ink'){ink=d.on?1:0;if(reduced&&started)render(0,0,0.016,0);}\n" +
  " else if(d.t==='resize'){dpr=d.dpr;cw=d.w;chh=d.h;if(canvas&&ctx){canvas.width=Math.max(1,Math.round(cw*dpr));canvas.height=Math.max(1,Math.round(chh*dpr));}}\n" +
   " else if(d.t==='reset'){for(var i=0;i<tex.length;i++){if(tex[i]){try{tex[i].tex.destroy();}catch(err){}}}tex.length=0;pend.length=0;prefix=0;started=false;t0=0;}\n" +
@@ -510,8 +515,8 @@ const GPU_WORKER_SRC =
   " var a=tex[idx];if(!a||!ctx||!pipeline)return;\n" +
   " var b=tex[nxt]||a;\n" +
   " if(target){var k=reduced?1:Math.min(1,(dt||0.016)*5.5);\n" +
-  "  pose.cx+=(target.cx-pose.cx)*k;pose.cy+=(target.cy-pose.cy)*k;pose.cap+=(target.cap-pose.cap)*k;}\n" +
-  " var s=Math.min(1,pose.cap/Math.max(a.w,a.h));\n" +
+  "  pose.cx+=(target.cx-pose.cx)*k;pose.cy+=(target.cy-pose.cy)*k;pose.cap+=(target.cap-pose.cap)*k;pose.up+=((target.up||1)-pose.up)*k;}\n" +
+  " var s=Math.min(pose.up||1,pose.cap/Math.max(a.w,a.h));\n" +
   " var w=a.w*s*dpr,h=a.h*s*dpr;\n" +
   " var u=new Float32Array([pose.cx*dpr,pose.cy*dpr,w,h,phase||0,canvas.width,canvas.height,ink]);\n" +
   " device.queue.writeBuffer(ubuf,0,u);\n" +
@@ -546,11 +551,11 @@ async function makeGpuPlayer(overlay, layer, canvas, onLive) {
   let target = POSES.boot, watch = 0, last = null;
   const send = () => {
     const p = target, cw = innerWidth, ch = innerHeight, vmin = Math.min(cw, ch);
-    let t = { cx: cw * p.cx, cy: ch * p.cy, cap: vmin * p.cap };
-    if (p.anchor) { t = anchorTarget(overlay, p, t); const o = posOffset(); t = { cx: t.cx + o.x, cy: t.cy + o.y, cap: t.cap }; }
-    if (!last || Math.abs(t.cx - last.cx) > 0.25 || Math.abs(t.cy - last.cy) > 0.25 || Math.abs(t.cap - last.cap) > 0.25) {
+    let t = { cx: cw * p.cx, cy: ch * p.cy, cap: vmin * p.cap, up: p.up || 1 };
+    if (p.anchor) { t = anchorTarget(overlay, p, t); const o = posOffset(); t = { cx: t.cx + o.x, cy: t.cy + o.y, cap: t.cap, up: 1 }; }
+    if (!last || Math.abs(t.cx - last.cx) > 0.25 || Math.abs(t.cy - last.cy) > 0.25 || Math.abs(t.cap - last.cap) > 0.25 || Math.abs((t.up || 1) - (last.up || 1)) > 0.001) {
       last = t;
-      try { worker.postMessage({ t: "pose", cx: t.cx, cy: t.cy, cap: t.cap }); } catch {}
+      try { worker.postMessage({ t: "pose", cx: t.cx, cy: t.cy, cap: t.cap, up: t.up || 1 }); } catch {}
     }
   };
   const tick = () => { watch = requestAnimationFrame(tick); send(); };   // one rect read per frame — nothing else
@@ -837,16 +842,21 @@ export function attachPlymouth(overlay, host) {
     const my = ++gen;
     player.reset();
     layer.classList.remove("done");
+    // The emblem IS the identity mark from the very first instant — the enclosed avatar circle never
+    // paints while a splash is on (any device). Frame-0 below makes the slot's paint immediate, so
+    // claiming it here never leaves it empty; only an explicit "Off" pick brings the circle back.
+    overlay.classList.add("hlp-anchor");
     // INSTANT first paint (zero network): feed the cached/seeded frame-0 the moment we start — so a first-EVER
     // boot's emblem materialises with the module (no wait for the cold CDN), then the streamed frames continue
     // the animation. The default theme falls back to the embedded DEFAULT_FF even before it is sealed.
+    let seeded = false;
     try {
       const s = readState();
       const ff = (s.theme === theme && s.firstFrame) ? s.firstFrame : (theme === DEFAULT_THEME ? DEFAULT_FF : null);
-      if (ff) { const b = Uint8Array.from(atob(ff.split(",").pop()), (c) => c.charCodeAt(0)); if (b.length) player.frame(0, b); }
+      if (ff) { const b = Uint8Array.from(atob(ff.split(",").pop()), (c) => c.charCodeAt(0)); if (b.length) { player.frame(0, b); seeded = true; } }
     } catch {}
     loadFrames(theme, (i, bytes) => { if (my === gen) player.frame(i, bytes); }, () => my !== gen)
-      .catch(() => { if (my === gen && state.on) { layer.classList.remove("on"); overlay.classList.remove("hlp-anchor"); } });   // no frames at all → wallpaper + circle stay
+      .catch(() => { if (my === gen && state.on && !seeded) { layer.classList.remove("on"); overlay.classList.remove("hlp-anchor"); } });   // NOTHING painted (no frame-0, no stream) → wallpaper + circle return; a seeded frame-0 keeps the emblem standing
   }
   // the host baseline (app.html) may have painted a synchronous frame-0 still; remove it once live
   function dropBaseline() { try { const b = document.getElementById("hl-plymouth-base"); if (b) { b.style.opacity = "0"; setTimeout(() => b.remove(), 900); } } catch {} }
@@ -855,10 +865,12 @@ export function attachPlymouth(overlay, host) {
   // minimum flash and NEVER longer than a hard cap — no fixed multi-second wait. Skippable by any tap/key.
   // A supercomputer is ready when it is ready, not on a timer. Counted from the baseline's 0-ms frame
   // (window.__hlBootT0) so the beat measures REAL boot latency, not module-load time.
-  // A deliberate HERO: the emblem holds large, dead-centre, for ~3s, THEN glides into the identity slot as the
-  // whole login reveals together. (Was readiness-gated 320–1400ms, which made the emblem flick away instantly and
-  // the chrome pop in on its own separate timers.) Still skippable by a tap/key; hard cap protects a slow network.
-  const BOOT_MIN = 2800, BOOT_MAX = 3400;
+  // A deliberate HERO: the emblem holds large, dead-centre, for ~5s — a real machine powering up — THEN
+  // shrinks slightly and glides into the identity slot as the ENTIRE login (panel · Manifesto · wordmark ·
+  // the ⋯ door) reveals in one beat. Runs on every device (the hold is stillness, not motion — under
+  // reduced motion the pose SNAPS instead of gliding, so nothing sweeps the screen). Skippable by any
+  // tap/key; the hard cap protects a slow network from holding the machine hostage.
+  const BOOT_MIN = 5000, BOOT_MAX = 5600;
   const bootT0 = (() => { try { return window.__hlBootT0 || Date.now(); } catch { return Date.now(); } })();
   let bootDone = false, bootTimer = 0;
   const endBoot = () => {
@@ -867,10 +879,13 @@ export function attachPlymouth(overlay, host) {
   };
   const panelEl = overlay.querySelector("#holo-login-panel");
   const bootable = overlay.classList.contains("hl-boot") || !panelEl || !panelEl.childElementCount;
-  if (state.on && bootable && !reducedMotion()) {
+  if (state.on && bootable) {
     overlay.classList.add("hl-boot");
+    // the module OWNS the beat from here — the host baseline's module-never-arrived fallback must not
+    // lift hl-boot mid-hero (it fired at 1.5s and popped the panel while the emblem was still centre-stage)
+    try { clearTimeout(window.__hlBootFallback); } catch {}
     bootTimer = setTimeout(endBoot, Math.max(250, BOOT_MAX - (Date.now() - bootT0)));   // hard cap — never stall on a slow network
-    onEmblemLive = () => { if (bootDone) return; clearTimeout(bootTimer); bootTimer = setTimeout(endBoot, Math.max(0, BOOT_MIN - (Date.now() - bootT0))); };   // alive → rise after the min flash
+    onEmblemLive = () => { if (bootDone) return; clearTimeout(bootTimer); bootTimer = setTimeout(endBoot, Math.max(0, BOOT_MIN - (Date.now() - bootT0))); };   // alive → hold the hero, then one reveal
     overlay.addEventListener("pointerdown", endBoot, { once: true, capture: true });
     document.addEventListener("keydown", endBoot, { once: true, capture: true });
   } else if (state.on) { setTimeout(endBoot, 0); }
