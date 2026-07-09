@@ -1,11 +1,12 @@
-// q-summon.mjs — tap the Q orb and Q slides in from the RIGHT as a docked drawer, exactly like Holo Wallet:
-// same width, same chrome (#0d1117 = --holo-chrome), and it SQUEEZES the home canvas to the left (the wallet's
-// own dock mechanism, mirrored) rather than covering it. It is the messenger's OWN Q — one brain, one voice,
-// one memory — re-framed as a docked panel. Four welds, all additive, all fail-soft:
+// q-summon.mjs — tap the Q orb and Q slides in from the RIGHT as an OVERLAY drawer, exactly like Holo Wallet:
+// same width, same chrome (#0d1117 = --holo-chrome), FLOATING above the home canvas (the wallet's own overlay
+// mechanism, mirrored) rather than squeezing it — the desktop keeps its full width so every widget holds its
+// exact position and relative size. It is the messenger's OWN Q — one brain, one voice, one memory — re-framed
+// as a floating panel. Four welds, all additive, all fail-soft:
 //
-//   1. THE DOCKED DRAWER — the fully-wired hero (`.holo-hero`) is restyled in place into a RIGHT panel of the
-//      wallet width, background var(--holo-chrome) (seamless chrome, no starfield); `html.q-docked` pulls the
-//      home wall/scrim/greeting/orb/quote in by the drawer width so the canvas re-centers in the freed space.
+//   1. THE FLOATING DRAWER — the fully-wired hero (`.holo-hero`) is restyled in place into a RIGHT panel of the
+//      wallet width, background var(--holo-chrome) (seamless chrome, no starfield), position:fixed on the right;
+//      `html.q-drawer` reveals it over the canvas. The canvas is untouched — no re-centre, no reflow.
 //   2. THE VOICE AT t=0 — the tap IS the autoplay gesture, so Q greets you out loud the instant it opens
 //      (on-device Kokoro if warm, OS-voice floor otherwise — never mute), name-personalized (firstName()).
 //   3. THE WARM BRAIN — window.HoloQ.warm() + the instant seed first-responder, pre-warmed at home-idle, so
@@ -19,7 +20,7 @@ import { kappo, kappoVerify } from "../../_shared/holo-kappa.mjs";
 const DOC = document, HTML = DOC.documentElement;
 const $ = (s, r) => (r || DOC).querySelector(s);
 
-// ── the drawer skin: a right-side panel of wallet dimensions + rail chrome, and the DOCK that squeezes home ──
+// ── the drawer skin: a right-side panel of wallet dimensions + rail chrome, floating over the canvas (no squeeze) ──
 const css = DOC.createElement("style");
 css.id = "q-summon-css";
 css.textContent = `
@@ -27,23 +28,10 @@ css.textContent = `
    never drift), and the wallet's env gap. Wallet = a compact, focused lane (22vw, 360px floor) — NOT a wide panel. */
 :root{ --q-rail-w: var(--holo-rail-w, 60px); --q-drawer-w: var(--holo-wallet-w, min(92vw, max(360px, 22vw))); --q-env-gap: var(--holo-env-gap, 0px); }
 
-/* DOCK — byte-for-byte the wallet's dock (html.holo-wallet-docked → html.q-docked): reserve the lane on the right,
-   every fixed layer keeps its own internal layout just narrower, and the canvas WIDGETS re-centre so the WHOLE
-   composition stays centred and proportional in the freed space — exactly what the wallet does. */
-html.q-docked .holo-wa-root{ width: calc(100vw - var(--q-drawer-w) - var(--q-env-gap))!important; }
-html[data-holo-expanded].q-docked .holo-wa-root{ width: calc(100vw - var(--q-drawer-w))!important; }
-html.q-docked .holo-home-space{ right: var(--q-drawer-w)!important; }
-html.q-docked .holo-home-wall,html.q-docked .holo-home-scrim{ right: calc(var(--q-drawer-w) + var(--q-env-gap))!important; }
-html.q-docked .holo-home-orb,html.q-docked .holo-global-orb{ right: calc(var(--q-drawer-w) + clamp(22px,3.2vw,48px))!important; }
-html.q-docked .holo-home-quote{ left: calc(var(--q-rail-w) + (100vw - var(--q-rail-w) - var(--q-drawer-w)) / 2)!important; }
-/* WIDGETS (greeting · % ring · quote) re-centre in the freed canvas via --holo-aside-w — the EXACT mechanism the
-   wallet uses (set on open below): holo-widgets' deskBounds() reserves the lane and glides each widget to the new
-   centre, so relative position + proportion are preserved. They are JS-positioned, so this is JS, not a transform. */
-html.q-docked .holo-wa-root .cs-main-container{ right: calc(var(--q-drawer-w) + var(--q-env-gap))!important; }
-html[data-holo-expanded].q-docked .holo-wa-root .cs-main-container{ right: var(--q-drawer-w)!important; }
-/* ONE motion curve, the wallet's (.28s var(--holo-ease)) — the push glides in/out with the drawer, no jank */
-.holo-wa-root,.holo-home-space,.holo-home-wall,.holo-home-scrim,.holo-home-orb,.holo-global-orb,.holo-home-quote{
-  transition: right .28s var(--holo-ease,cubic-bezier(.4,0,.2,1)), left .28s var(--holo-ease,cubic-bezier(.4,0,.2,1)), width .28s var(--holo-ease,cubic-bezier(.4,0,.2,1))!important; }
+/* OVERLAY — no dock, no squeeze. Q FLOATS above the canvas (html.q-drawer .holo-hero is position:fixed on the right);
+   the desktop keeps its FULL width so the greeting · % ring · quote · orb hold their EXACT position and relative size.
+   This matches the wallet's overlay behaviour — ONE rule for every right slide-out: the canvas never moves. The old
+   q-docked squeeze rules are gone (they shifted the composition and, via --holo-aside-w below, re-flowed the widgets). */
 
 /* THE DRAWER — the hero re-framed as the wallet's panel: wallet width, #0d1117 == the nav rail (rail + Q are ONE
    continuous chrome, NO seam / border / shadow — immersive, exactly like the wallet), same .26s entrance curve. */
@@ -55,12 +43,12 @@ html.q-drawer .holo-hero{
   animation:q-drawer-in .26s var(--holo-ease,ease) both!important; touch-action:auto!important;
 }
 /* opacity-only (NO transform on .holo-hero): a transform would make its position:fixed composer hero-relative.
-   The glide comes from the DOCK — the canvas squeezing left as Q appears — identical to the wallet's feel. */
+   The panel simply fades/floats in over the right lane — the canvas underneath never moves (overlay, like the wallet). */
 @keyframes q-drawer-in{ from{opacity:0} to{opacity:1} }
 /* header row: a small living orb + status, top-left of the drawer (absolute within the hero → tracks the panel) */
 html.q-drawer .holo-hero-orb{ position:absolute!important; top:15px!important; left:17px!important; width:42px!important; height:42px!important; min-width:0!important; margin:0!important; filter:drop-shadow(0 0 12px rgba(91,140,255,.5))!important; }
 html.q-drawer .holo-hero-orb.listening{ filter:drop-shadow(0 0 20px rgba(125,239,201,.6))!important; }
-html.q-drawer .holo-hero-status{ position:absolute!important; top:26px!important; left:70px!important; margin:0!important; font-size:10.5px!important; letter-spacing:.18em!important; }
+html.q-drawer .holo-hero-status{ display:none!important; }   /* DEDUP: the header shows ONE clean "Q" (#q-drawer-title); this duplicated it */
 html.q-drawer .holo-hero-x{ position:absolute!important; top:13px!important; right:13px!important; width:34px; height:34px; }
 html.q-drawer .holo-hero-stage{ max-width:none!important; width:100%!important; margin-top:62px!important; padding:0 10px!important; align-items:stretch!important; }
 html.q-drawer .holo-hero-thread{ max-width:none!important; width:100%!important; padding:8px 8px 88px!important; -webkit-mask-image:none!important; mask-image:none!important; }
@@ -72,21 +60,19 @@ html.q-drawer .holo-hero-brief,html.q-drawer .holo-hero-auto,html.q-drawer .holo
 /* composer pill centered WITHIN the right drawer */
 html.q-drawer .holo-hero-compose{ left:calc(100vw - var(--q-drawer-w) / 2)!important; width:min(calc(var(--q-drawer-w) - 26px), 92vw)!important; bottom:calc(16px + env(safe-area-inset-bottom))!important; }
 
-/* the header title "Q" — top-left of the drawer */
-#q-drawer-title{position:fixed;top:16px;left:calc(100vw - var(--q-drawer-w) + 70px);z-index:302;color:#f4f7fc;font:650 17px/1 -apple-system,"Segoe UI",Roboto,sans-serif;letter-spacing:.2px;pointer-events:none;opacity:0;transition:opacity .3s ease}
+/* the ONE header name "Q" — vertically centred beside the orb (the header is just orb + Q + ✕, nothing else) */
+#q-drawer-title{position:fixed;top:27px;left:calc(100vw - var(--q-drawer-w) + 68px);z-index:302;color:#f4f7fc;font:650 16px/1 -apple-system,"Segoe UI",Roboto,sans-serif;letter-spacing:.2px;pointer-events:none;opacity:0;transition:opacity .3s ease}
 html.q-drawer #q-drawer-title{opacity:1}
-/* κ-chain proof chip — bottom-left, inside the drawer */
-#q-kappa-chip{position:fixed;left:calc(100vw - var(--q-drawer-w) + 12px);bottom:14px;z-index:340;font:11px/1.45 ui-monospace,Menlo,Consolas,monospace;
-  color:#9fd3ff;background:rgba(10,14,20,.55);backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);
-  border:1px solid rgba(255,255,255,.12);border-radius:10px;padding:5px 10px;pointer-events:none;opacity:0;transition:opacity .5s ease .25s}
-#q-kappa-chip.on{opacity:.7}
-#q-kappa-chip.bad{color:#ffb3c0;border-color:rgba(255,120,140,.4)}
+/* κ-chain still seals + verifies every message silently (window.QSummon.verify()); the proof chip is HIDDEN — it
+   was redundant clutter that overlapped the composer. A conversation, not a dashboard. */
+#q-kappa-chip{display:none!important}
 /* SUGGESTION CHIPS — inside the right drawer, above the composer */
 #q-hero-chips{position:fixed;left:calc(100vw - var(--q-drawer-w));width:var(--q-drawer-w);box-sizing:border-box;bottom:calc(env(safe-area-inset-bottom) + 74px);z-index:305;
-  display:flex;gap:8px;justify-content:center;flex-wrap:wrap;padding:0 14px;pointer-events:none;
+  display:flex;gap:8px;justify-content:flex-start;flex-wrap:nowrap!important;overflow-x:auto;overflow-y:hidden;-webkit-overflow-scrolling:touch;scrollbar-width:none;padding:0 14px;pointer-events:none;
   opacity:0;transform:translateY(6px);transition:opacity .45s ease,transform .45s cubic-bezier(.4,0,.2,1)}
-#q-hero-chips.on{opacity:1;transform:none}
-#q-hero-chips button{pointer-events:auto;white-space:nowrap;color:#eef3fb;border-radius:20px;padding:7px 13px;font-size:12.5px;
+#q-hero-chips::-webkit-scrollbar{display:none}   /* ONE clean row that scrolls sideways on any width — never a 4-row stack */
+#q-hero-chips.on{opacity:1;transform:none;pointer-events:auto}
+#q-hero-chips button{pointer-events:auto;flex:0 0 auto;white-space:nowrap;color:#eef3fb;border-radius:20px;padding:7px 13px;font-size:12.5px;
   cursor:pointer;border:1px solid rgba(255,255,255,.13);background:rgba(255,255,255,.05);
   backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);transition:transform .14s ease,border-color .16s ease,background .16s ease}
 #q-hero-chips button:hover{border-color:rgba(139,123,255,.55);transform:translateY(-1px);background:rgba(255,255,255,.09)}
@@ -202,20 +188,11 @@ window.addEventListener("keydown", bargeIn, { capture: true, passive: true });
 const heroOpen = () => !!$(".holo-hero");
 let titleEl = null;
 function ensureTitle() { if (!titleEl) { titleEl = DOC.createElement("div"); titleEl.id = "q-drawer-title"; titleEl.textContent = "Q"; DOC.body.appendChild(titleEl); } }
-// ── canvas widgets re-centre exactly like the wallet: reserve the drawer lane in --holo-aside-w (concrete px),
-//    which holo-widgets' deskBounds() reads to shift the composition centre, and nudge its resize-keyed recenter()
-//    across the slide so the greeting · % ring · quote GLIDE into the freed space in lockstep (never stranded). ──
-function asidePx() {
-  const hero = $(".holo-hero");
-  if (hero) { const w = Math.round(hero.getBoundingClientRect().width); if (w >= 1) return w; }
-  return Math.round(Math.min(0.92 * innerWidth, Math.max(360, 0.22 * innerWidth)));   // == --holo-wallet-w, if the hero isn't measurable yet
-}
-function pulseReflow() {   // mirror holo-aside.reflowGlide: the CSS squeeze doesn't change innerWidth, so tick resize across the .28s glide
-  let n = 0; const tick = () => { try { window.dispatchEvent(new Event("resize")); } catch {} };
-  tick(); const id = setInterval(() => { tick(); if (++n >= 9) clearInterval(id); }, 48);
-}
-function reserveAside() { if (innerWidth <= 640) return; try { HTML.style.setProperty("--holo-aside-w", asidePx() + "px"); } catch {} pulseReflow(); }
-function releaseAside() { try { HTML.style.removeProperty("--holo-aside-w"); } catch {} pulseReflow(); }
+// ── OVERLAY: the canvas stays put, so there is NO lane to reserve and NO widget to re-centre. We never set
+//    --holo-aside-w (holo-widgets keeps its full-width layout, every widget exactly where it was) and never pulse
+//    resize — Q simply floats over the right lane. releaseAside still clears any stale value defensively. ──
+function reserveAside() { /* overlay — canvas is untouched, nothing to reserve */ }
+function releaseAside() { try { HTML.style.removeProperty("--holo-aside-w"); } catch {} }
 function openClasses() { HTML.classList.add("q-drawer", "q-docked"); ensureTitle(); requestAnimationFrame(reserveAside); }
 function closeClasses() { HTML.classList.remove("q-drawer", "q-docked"); releaseAside(); }
 function onOrbDown(e) {
@@ -263,7 +240,7 @@ function chip() {
 }
 
 // ── suggestion chips (drawer-docked; drive the hero's React input) ─────────────────────────────────────────
-const CHIPS = ["Tell me something amazing", "Write me something beautiful", "Help me think through something", "Tell me a joke"];
+const CHIPS = ["Tell me something amazing", "Write something beautiful", "Help me think", "Tell a joke"];
 let chipsEl = null;
 function heroHasUserMsg() { try { return !!DOC.querySelector(".holo-hero-bubble.me"); } catch { return false; } }
 function driveSend(text) {
