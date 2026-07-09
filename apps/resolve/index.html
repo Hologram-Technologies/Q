@@ -42,9 +42,9 @@
 <body>
 <main>
   <h1>Holo Resolve</h1>
-  <p class="sub">One input for every name the internet has — κ labels, IPFS CIDs, Ethereum hashes, SRI, onion, truenames. Every byte re-derives before you see it.</p>
+  <p class="sub">One box for the whole internet. Paste <b>any</b> name — a CID, an ENS domain, a Nostr note, a Bluesky post, an IPFS site, an Ethereum hash, a payment, an email — and get back the <b>verified thing</b>. Content proves itself; pointers resolve through sources you can see; nothing unverified is ever shown.</p>
   <div class="box">
-    <input id="name" autocomplete="off" spellcheck="false" placeholder="paste any name — sha256:… · a CID · 0x… · sha256-… · anything" autofocus>
+    <input id="name" autocomplete="off" spellcheck="false" placeholder="paste anything — vitalik.eth · a CID · an npub · at://… · ipns://… · lightning:… · a κ" autofocus>
     <button id="go">Resolve</button>
   </div>
   <div id="kindline"></div>
@@ -72,6 +72,10 @@ const KIND_WORDS = {
   ipns: "a mutable IPFS name", ens: "an Ethereum name", "eth-tx": "an Ethereum transaction hash",
   "eth-address": "an Ethereum account", sri: "a subresource-integrity hash", onion: "a Tor onion service",
   truename: "a speakable κ alias", model: "an AI model tag", refused: "refused", empty: "",
+  nostr: "a Nostr note", atproto: "a Bluesky record", arweave: "an Arweave file", torrent: "a BitTorrent file",
+  data: "inline, self-verifying content", payment: "a payment", account: "a crypto address", contact: "a contact",
+  chat: "a chat room", scuttlebutt: "a Scuttlebutt message", p2pweb: "a peer-to-peer site", p2pstore: "a p2p storage name",
+  altweb: "a Gemini/Gopher page", socket: "a live socket", local: "a local object", p2p: "a peer-to-peer name",
 };
 
 // ── THE ONE HOST BINDING (holo-names-host): store answers first (zero network on warm), then the
@@ -129,8 +133,14 @@ async function renderChips() {
       chips.push(["…and as an IPFS CID", names.kappaToCid("sha256:" + a.kappa)]);
     }
   } catch {}
-  chips.push(["an Ethereum tx hash", "0x" + "b".repeat(64)]);
-  chips.push(["a torrent (refused, honestly)", "magnet:?xt=urn:btih:" + "d".repeat(40)]);
+  // …then the WHOLE internet, one tap each — every one resolves to a real, verified thing:
+  chips.push(["vitalik.eth", "vitalik.eth"]);                                  // ENS → his site's CID, via a shown RPC
+  chips.push(["a live IPFS site", "ipns://docs.ipfs.tech"]);                   // IPNS/DNSLink → current CID, via DoH
+  chips.push(["a Bluesky account", "at://bsky.app"]);                          // atproto → DID-anchored identity
+  chips.push(["a Lightning invoice", "lightning:lnbc1u1pjxyz00pp5"]);          // an intent → a Pay action, not a dead link
+  chips.push(["an email", "mailto:hi@hologram.dev"]);                          // an intent → Compose
+  chips.push(["an inline image", "data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' width='120' height='120'><circle cx='60' cy='60' r='52' fill='%2300a884'/></svg>"]); // self-verifying, 0 network
+  chips.push(["a forgery — refused, honestly", "magnet:?xt=urn:btih:" + "d".repeat(40)]);   // weak axis → one honest sentence
   $("chips").innerHTML = chips.map(([label, v]) => `<span class="chip" data-v="${v.replace(/"/g, "&quot;")}">${label}</span>`).join("");
 }
 $("chips").addEventListener("click", (e) => {
