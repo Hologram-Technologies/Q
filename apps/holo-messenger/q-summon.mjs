@@ -58,7 +58,32 @@ html.q-drawer .holo-hero-open{ display:none!important; }
 /* CLEAN q-chat look: hide the inbox brief / auto-tidy / ledger — a conversation, not a dashboard */
 html.q-drawer .holo-hero-brief,html.q-drawer .holo-hero-auto,html.q-drawer .holo-hero-ledger{ display:none!important; }
 /* composer pill centered WITHIN the right drawer */
-html.q-drawer .holo-hero-compose{ left:calc(100vw - var(--q-drawer-w) / 2)!important; width:min(calc(var(--q-drawer-w) - 26px), 92vw)!important; bottom:calc(16px + env(safe-area-inset-bottom))!important; }
+html.q-drawer .holo-hero-compose{ left:calc(100vw - var(--q-drawer-w) / 2)!important; width:min(calc(var(--q-drawer-w) - 26px), 92vw)!important; bottom:calc(16px + env(safe-area-inset-bottom))!important; background:#2a3942!important; }
+html.q-drawer .holo-hero-input::placeholder{ color:rgba(233,237,239,.5)!important; }
+
+/* ── WHATSAPP CHAT — Q (incoming) grey bubble on the LEFT with a tail; you (outgoing) green bubble on the RIGHT
+   with a tail; a small dim time (+ read tick) inside each bubble; a 3-dot "typing…" bubble. No wallpaper — just
+   the chrome ground, exactly like the ask. Familiar, human, real-time. ── */
+html.q-drawer .holo-hero,html.q-drawer .holo-hero-thread{ background:#0d1117!important; background-image:none!important; }
+html.q-drawer .holo-hero-bubble{ position:relative!important; font-size:14.6px!important; line-height:20px!important;
+  padding:6px 9px 7px 10px!important; box-shadow:0 1px .6px rgba(0,0,0,.2)!important; margin:1px 0 3px!important; max-width:80%!important; }
+/* Q — incoming grey, left, square top-left corner + a little tail */
+html.q-drawer .holo-hero-bubble.q{ background:#202c33!important; color:#e9edef!important; align-self:flex-start!important; margin-right:auto!important; border-radius:0 8px 8px 8px!important; }
+html.q-drawer .holo-hero-bubble.q::before{ content:""!important; position:absolute!important; top:0; left:-8px; border-right:8px solid #202c33; border-top:8px solid transparent; }
+/* you — outgoing green, right, square top-right corner + a little tail */
+html.q-drawer .holo-hero-bubble.me{ background:#005c4b!important; color:#e9edef!important; align-self:flex-end!important; margin-left:auto!important; margin-right:0!important; border-radius:8px 0 8px 8px!important; }
+html.q-drawer .holo-hero-bubble.me::before{ content:""!important; position:absolute!important; top:0; right:-8px; border-left:8px solid #005c4b; border-top:8px solid transparent; }
+/* the in-bubble time (+ tick) — floats bottom-right, the text wraps around it, just like WhatsApp */
+.q-time{ float:right!important; margin:5px -1px -3px 12px!important; font-size:11px!important; line-height:15px!important; color:rgba(233,237,239,.42)!important; user-select:none!important; white-space:nowrap!important; }
+.holo-hero-bubble.me .q-time{ color:rgba(233,237,239,.6)!important; }
+.q-time .q-tick{ margin-left:3px!important; color:#53bdeb!important; letter-spacing:-3px!important; }
+/* the 3-dot TYPING bubble — Q "typing…", like WhatsApp */
+html.q-drawer .holo-hero-bubble.q.typing{ padding:12px 15px!important; min-width:0!important; }
+html.q-drawer .holo-hero-bubble.q.typing > :not(.q-typing){ display:none!important; }
+.q-typing{ display:inline-flex!important; gap:5px; align-items:center; height:8px; }
+.q-typing i{ width:7px;height:7px;border-radius:50%;background:rgba(233,237,239,.55);display:inline-block;animation:qdot 1.25s infinite ease-in-out; }
+.q-typing i:nth-child(2){ animation-delay:.16s } .q-typing i:nth-child(3){ animation-delay:.32s }
+@keyframes qdot{ 0%,58%,100%{ transform:translateY(0);opacity:.35 } 28%{ transform:translateY(-4px);opacity:1 } }
 
 /* the ONE header name "Q" — vertically centred beside the orb (the header is just orb + Q + ✕, nothing else) */
 #q-drawer-title{position:fixed;top:27px;left:calc(100vw - var(--q-drawer-w) + 68px);z-index:302;color:#f4f7fc;font:650 16px/1 -apple-system,"Segoe UI",Roboto,sans-serif;letter-spacing:.2px;pointer-events:none;opacity:0;transition:opacity .3s ease}
@@ -188,11 +213,12 @@ window.addEventListener("keydown", bargeIn, { capture: true, passive: true });
 const heroOpen = () => !!$(".holo-hero");
 let titleEl = null;
 function ensureTitle() { if (!titleEl) { titleEl = DOC.createElement("div"); titleEl.id = "q-drawer-title"; titleEl.textContent = "Q"; DOC.body.appendChild(titleEl); } }
-// ── OVERLAY: the canvas stays put, so there is NO lane to reserve and NO widget to re-centre. We never set
-//    --holo-aside-w (holo-widgets keeps its full-width layout, every widget exactly where it was) and never pulse
-//    resize — Q simply floats over the right lane. releaseAside still clears any stale value defensively. ──
-function reserveAside() { /* overlay — canvas is untouched, nothing to reserve */ }
-function releaseAside() { try { HTML.style.removeProperty("--holo-aside-w"); } catch {} }
+// ── SQUEEZE via the ONE shared contract (HoloAside, defined in the messenger bundle): opening Q squeezes the
+//    home canvas from the right by the drawer's own width and glides the body-level widgets to stay centred in
+//    it — identical to Wallet + Inbox. Never dims. Fail-soft: if HoloAside isn't up yet, fall back to clearing
+//    any stale --holo-aside-w directly (overlay), so Q always opens. ──
+function reserveAside() { try { if (window.HoloAside) window.HoloAside.open("q"); } catch (e) {} }
+function releaseAside() { try { if (window.HoloAside) window.HoloAside.close("q"); else HTML.style.removeProperty("--holo-aside-w"); } catch (e) {} }
 function openClasses() { HTML.classList.add("q-drawer", "q-docked"); ensureTitle(); requestAnimationFrame(reserveAside); }
 function closeClasses() { HTML.classList.remove("q-drawer", "q-docked"); releaseAside(); }
 function onOrbDown(e) {
@@ -263,6 +289,11 @@ function showChips() {
 }
 function hideChips() { if (chipsEl) chipsEl.classList.remove("on"); }
 
+// ── WhatsApp finishing touches: a dim in-bubble time (+ read tick for you), and a 3-dot "typing…" bubble ──
+function hhmm() { const d = new Date(); return String(d.getHours()).padStart(2, "0") + ":" + String(d.getMinutes()).padStart(2, "0"); }
+function stamp(b, role) { if (!b || b.querySelector(".q-time")) return; const s = DOC.createElement("span"); s.className = "q-time"; s.innerHTML = hhmm() + (role === "me" ? ' <span class="q-tick">✓✓</span>' : ""); b.appendChild(s); }
+function injectDots(b) { if (!b || b.querySelector(".q-typing")) return; const s = DOC.createElement("span"); s.className = "q-typing"; s.innerHTML = "<i></i><i></i><i></i>"; b.appendChild(s); }
+
 // observe the hero: seal each bubble; manage the docked-drawer lifecycle
 const mo = new MutationObserver((muts) => {
   for (const mut of muts) {
@@ -271,9 +302,11 @@ const mo = new MutationObserver((muts) => {
       if (n.classList && n.classList.contains("holo-hero")) { openClasses(); verifyChain(); chip(); setTimeout(showChips, 300); }
       const bubbles = n.classList && n.classList.contains("holo-hero-bubble") ? [n] : (n.querySelectorAll ? n.querySelectorAll(".holo-hero-bubble") : []);
       for (const b of bubbles) {
-        if (b.classList.contains("typing")) continue;
+        if (b.classList.contains("typing")) { injectDots(b); continue; }   // Q "typing…" — 3 animated dots
         const role = b.classList.contains("me") ? "me" : "q";
-        const k = seal(role, (b.textContent || "").trim());
+        const text = (b.textContent || "").trim();   // capture BEFORE the stamp — the time must NOT enter the κ-seal
+        stamp(b, role);                               // WhatsApp in-bubble time + read tick
+        const k = seal(role, text);
         if (role === "me") hideChips();
         if (k && role === "q") bargeIn();
       }
