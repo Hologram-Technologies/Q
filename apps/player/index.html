@@ -1052,6 +1052,8 @@
       import { createM3UProvider } from "./holo-source-m3u.mjs";
       import { loadLive as loadIPTV, loadFreeTV, langName } from "./holo-source-iptv.mjs";   // Holo Live — world's free/legal/public TV (iptv-org + Free-TV)
       import { makeMediaIndex } from "./holo-media-index.mjs";   // the κ-Home (K1): rows resolved verify-or-refuse from the media-index κ
+      import { openVerifiedAudio, openVerifiedCleanAudio, cleanFileIndex, verifiedBlobURL, fileIndexByName, pickWebseed } from "./holo-media-stream.mjs";   // K3: bytes verified before the decoder
+      import { torrentView } from "./holo-torrent-kappa.mjs";   // K3: any .torrent file is a native chunk table (drop → play via webseeds)
       import { PREMIUM, buildPremium } from "./holo-live-premium.mjs";   // Holo Live Premium — marquee channels, official sources
       import { loadPluto } from "./holo-source-pluto.mjs";   // Pluto TV — official free FAST channels (breadth: movies/docs/sport/kids)
       import { loadTwitchTop, loadTwitchGames, loadTwitchGameStreams } from "./holo-source-twitch.mjs";   // Twitch — live games, esports, IRL
@@ -1575,27 +1577,64 @@
         if (it.__book) return playBook(it.__card, it.kappa);
         if (it.__liveId) { loadLiveChannels().then(() => { const c = chanById().get(it.__liveId) || (premiumChannels || []).find((x) => x.id === it.__liveId); c ? LiveStage.reveal(c) : showLive(); }).catch(() => showLive()); return; }
         if (it.live) return LiveStage.reveal(it);
+        // K3 — short films upgrade IN PLACE to piece-verified local bytes (features keep direct-stream, honestly unlabeled)
+        if (it.__kind === "film" && it.__card && it.__card.stream && it.__card.stream.torrent && !it._kappaBound && window.HoloMediaIndex) {
+          it._kappaBound = true;
+          window.HoloMediaIndex.card(it.__card.stream.torrent).then(async (view) => {
+            if (!view || !pickWebseed(view)) return;
+            const fi = fileIndexByName(view, decodeURIComponent((it.src || "").split("/").pop()));
+            if (fi < 0 || view.files[fi].length > 150e6) return;     // big feature → stays direct, no chip
+            const u = await verifiedBlobURL(view, fi, "video/mp4", { onRefuse: (e) => toast(String(e.message || e)) });
+            it.src = u; it.playSrc = u; it.availability = { playable: true, source: "kappa", kappa: view.infoHash, playSrc: u, type: "video/mp4" };
+            toast("κ-verified — every byte checked");
+          }).catch(() => {});
+        }
         return openDetail(it);
       }
       // Audiobooks — a minimal floating audio sheet (chapters from the card; position remembered per book-κ).
+      // K3: when the card carries a torrent-manifest (or a dropped .torrent view), every chapter streams
+      // piece-VERIFIED via MSE — the κ-chip lights only on the verified path; a refused piece stops loudly.
       let _bookEl = null;
-      function closeBook() { if (_bookEl) { try { _bookEl.querySelector("audio").pause(); } catch (e) {} _bookEl.remove(); _bookEl = null; } }
-      function playBook(card, hex) {
+      function closeBook() { if (_bookEl) { try { _bookEl._vclose && _bookEl._vclose(); } catch (e) {} try { _bookEl.querySelector("audio").pause(); } catch (e) {} _bookEl.remove(); _bookEl = null; } }
+      async function playBook(card, hex) {
         const ch = (card.meta && card.meta.chapters) || (card.stream && card.stream.url ? [{ name: card.title, url: card.stream.url }] : []);
         if (!ch.length) return;
         closeBook();
+        // the chunk table, in preference order: a dropped torrent's live view · the card's clean per-file
+        // chunk-manifest (robust, no cross-file spans) · the card's torrent-manifest (webseed pieces).
+        let view = card.__view || null, clean = null;
+        try {
+          if (!view && card.stream && card.stream.manifest && window.HoloMediaIndex) clean = await window.HoloMediaIndex.card(card.stream.manifest);
+          const tk = card.stream && card.stream.torrent;
+          if (!view && !clean && tk && window.HoloMediaIndex) view = await window.HoloMediaIndex.card(tk);
+        } catch (e) {}
+        if (view && !pickWebseed(view)) view = null;                 // no HTTP source → honest fallback, no chip
         const posKey = "holo.book." + hex;
         let pos = {}; try { pos = JSON.parse(localStorage.getItem(posKey) || "{}"); } catch (e) {}
         const el = document.createElement("div");
         el.style.cssText = "position:fixed;right:18px;bottom:18px;width:min(380px,92vw);z-index:60;background:#10121bf2;border:1px solid #ffffff1f;border-radius:16px;padding:14px;-webkit-backdrop-filter:blur(14px);backdrop-filter:blur(14px);box-shadow:0 24px 60px #000b;color:#eceef5";
         el.innerHTML = `<div style="display:flex;align-items:center;gap:10px;margin-bottom:10px">
             <div style="flex:1;min-width:0"><div style="font-weight:700;font-size:14px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${esc(card.title)}</div>
-            <div style="font-size:11px;opacity:.55">Audiobook · ${ch.length} chapter${ch.length === 1 ? "" : "s"}</div></div>
+            <div style="font-size:11px;opacity:.55">Audiobook · ${ch.length} chapter${ch.length === 1 ? "" : "s"} <span data-chip style="color:#7ee787;font-weight:600"></span></div></div>
             <button class="btn" data-x style="padding:.35rem .6rem">✕</button></div>
           <select data-ch style="width:100%;margin-bottom:10px;background:#0c0e16;color:#eceef5;border:1px solid #ffffff1f;border-radius:10px;padding:.5rem;font:inherit">${ch.map((c, i) => `<option value="${i}">${esc(c.name)}</option>`).join("")}</select>
           <audio controls style="width:100%" preload="metadata"></audio>`;
-        const audio = el.querySelector("audio"), sel = el.querySelector("[data-ch]");
-        const cue = (i, t) => { sel.value = String(i); audio.src = ch[i].url; if (t) audio.currentTime = t; audio.play().catch(() => {}); };
+        const audio = el.querySelector("audio"), sel = el.querySelector("[data-ch]"), chip = el.querySelector("[data-chip]");
+        let vs = null;
+        el._vclose = () => { if (vs) { try { vs.close(); } catch (e) {} vs = null; } };
+        const cue = async (i, t) => {
+          sel.value = String(i); el._vclose(); chip.textContent = ""; audio.removeAttribute("src");
+          const base = (ch[i].url || "").split("/").pop();
+          const onRefuse = (e2) => { toast(String(e2.message || e2)); chip.textContent = "⚠ refused"; chip.style.color = "#ff7b72"; };
+          try {
+            if (clean) { const fi = cleanFileIndex(clean, base); if (fi >= 0) vs = openVerifiedCleanAudio(clean, fi, { onRefuse }); }
+            else if (view) { const fi = fileIndexByName(view, base); if (fi >= 0) vs = openVerifiedAudio(view, fi, { onRefuse }); }
+            if (vs) { audio.src = vs.url || await vs.done; chip.textContent = "· κ-verified"; chip.style.color = "#7ee787"; }
+          } catch (e2) { el._vclose(); vs = null; }
+          if (!audio.getAttribute("src")) audio.src = ch[i].url;     // honest fallback: direct stream, NO chip
+          if (t) audio.currentTime = t;
+          audio.play().catch(() => {});
+        };
         sel.onchange = () => cue(+sel.value, 0);
         audio.onended = () => { if (+sel.value + 1 < ch.length) cue(+sel.value + 1, 0); };
         audio.ontimeupdate = () => { if ((audio.currentTime | 0) % 5 === 0) try { localStorage.setItem(posKey, JSON.stringify({ i: +sel.value, t: audio.currentTime })); } catch (e) {} };
@@ -1603,6 +1642,43 @@
         document.body.appendChild(el); _bookEl = el;
         cue(Math.min(pos.i || 0, ch.length - 1), pos.t || 0);
       }
+      // ── DROP ANY .torrent → it plays, verified (K3) ────────────────────────────────────────────────
+      // The .torrent IS a chunk table: pieces stream from its HTTP webseeds, each SHA-1-re-derived before
+      // the decoder. Audio → the chapter sheet (multi-file books just work); video ≤400MB → a verified
+      // Blob in a floating player. Swarm-only torrents (no webseed) get an honest refusal — a browser has
+      // no TCP; we never pretend. Content-neutral tooling: what you drop is yours to have rights to.
+      function playDropVideo(title, url) {
+        closeBook();
+        const el = document.createElement("div");
+        el.style.cssText = "position:fixed;right:18px;bottom:18px;width:min(560px,94vw);z-index:60;background:#10121bf2;border:1px solid #ffffff1f;border-radius:16px;padding:12px;-webkit-backdrop-filter:blur(14px);backdrop-filter:blur(14px);box-shadow:0 24px 60px #000b;color:#eceef5";
+        el.innerHTML = `<div style="display:flex;align-items:center;gap:10px;margin-bottom:8px"><div style="flex:1;min-width:0;font-weight:700;font-size:13px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${esc(title)} <span style="color:#7ee787;font-weight:600">· κ-verified</span></div><button class="btn" data-x style="padding:.35rem .6rem">✕</button></div><video controls autoplay style="width:100%;border-radius:10px;background:#000"></video>`;
+        el.querySelector("video").src = url;
+        el.querySelector("[data-x]").onclick = () => { try { el.querySelector("video").pause(); } catch (e) {} try { URL.revokeObjectURL(url); } catch (e) {} el.remove(); };
+        document.body.appendChild(el); _bookEl = el;
+      }
+      addEventListener("dragover", (e) => { if ([...(e.dataTransfer && e.dataTransfer.types || [])].includes("Files")) e.preventDefault(); }, true);
+      addEventListener("drop", async (e) => {
+        const f = [...((e.dataTransfer && e.dataTransfer.files) || [])].find((x) => /\.torrent$/i.test(x.name));
+        if (!f) return;
+        e.preventDefault(); e.stopImmediatePropagation();
+        try {
+          const view = await torrentView(new Uint8Array(await f.arrayBuffer()));
+          if (!pickWebseed(view)) return toast("No HTTP source in this torrent — a browser can't reach a bare swarm");
+          const media = view.files.map((x, i) => ({ ...x, i })).filter((x) => /\.(mp3|m4a|ogg|oga|mp4|m4v|webm)$/i.test(x.path)).sort((a, b) => b.length - a.length);
+          if (!media.length) return toast("No playable media in this torrent");
+          const audioFiles = media.filter((x) => /\.(mp3|m4a|ogg|oga)$/i.test(x.path));
+          if (audioFiles.length) {
+            const card = { title: view.name, stream: {}, meta: { chapters: audioFiles.sort((a, b) => a.path.localeCompare(b.path)).map((x) => ({ name: x.path.split("/").pop(), url: x.path })) } };
+            card.__view = view;
+            playBook(card, "bt:" + view.infoHash);
+          } else {
+            const m = media[0];
+            if (m.length > 400e6) return toast("Too large to verify in-browser for now (" + (m.length / 1e6 | 0) + "MB)");
+            toast("Verifying " + m.path.split("/").pop() + " by κ…");
+            playDropVideo(view.name, await verifiedBlobURL(view, m.i, /\.webm$/i.test(m.path) ? "video/webm" : "video/mp4", { onRefuse: (x) => toast(String(x.message || x)) }));
+          }
+        } catch (err) { toast("Not a readable torrent: " + (err.message || err)); }
+      }, true);
       function renderHome() {
         const ranked = window.HoloRank ? HoloRank.rank(pool(), { resume: getResume, salt: SALT }) : pool();
         // The billboard's signature is the living background trailer — so bias the featured set toward titles

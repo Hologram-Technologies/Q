@@ -58,3 +58,10 @@ export async function mintIndex(rows, meta = {}) {
 }
 
 export const verifyIndex = verifyCard;   // same contract: re-derive or refuse
+
+// mint any κ-object (e.g. a torrent-manifest chunk table) with the same JCS + sha256 discipline.
+export async function mintObject(obj) {
+  const bytes = _enc.encode(jcs(obj));
+  const hex = await sha256hex(bytes);
+  return { obj, bytes, hex, kappa: "sha256:" + hex };
+}

@@ -17,7 +17,8 @@
 import { readFileSync, writeFileSync, mkdirSync, existsSync } from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
-import { mintCard, mintIndex, sha256hex } from "./holo-media-card.mjs";
+import { mintCard, mintIndex, mintObject, sha256hex } from "./holo-media-card.mjs";
+import { torrentView } from "./holo-torrent-kappa.mjs";
 
 const HERE = path.dirname(fileURLToPath(import.meta.url));
 const APPS = path.resolve(HERE, "..");                     // holo-apps/apps
@@ -36,6 +37,28 @@ const dataUrlBytes = (u) => { const m = /^data:([^;,]+);base64,(.*)$/.exec(u || 
 
 const cards = [];   // { hex, card }
 async function emit(fields) { const m = await mintCard(fields); writeFileSync(path.join(BDIR, m.hex), m.bytes); cards.push(m); return m.hex; }
+
+// ── torrent-manifest per IA item — the .torrent IS the chunk table (K3): piece SHA-1s + webseeds,
+// minted from a ~30KB download instead of the media's gigabytes. Fail-open: no torrent → url-only card.
+const _tmCache = new Map();
+async function mintTorrentManifest(iaId) {
+  if (_tmCache.has(iaId)) return _tmCache.get(iaId);
+  let kappa = null;
+  try {
+    const r = await fetch(`https://archive.org/download/${iaId}/${iaId}_archive.torrent`, UA);
+    if (r.ok) {
+      const view = await torrentView(new Uint8Array(await r.arrayBuffer()));
+      const m = await mintObject({ v: 1, kind: "torrent-manifest", ia: iaId, name: view.name, infoHash: view.infoHash,
+        pieceLength: view.pieceLength, totalLength: view.totalLength, multi: view.multi,
+        webseeds: view.webseeds.filter((u) => /^https:/.test(u)), files: view.files, pieces: view.pieces });
+      writeFileSync(path.join(BDIR, m.hex), m.bytes);
+      kappa = m.kappa;
+      console.log(`torrent ✓ ${iaId} (${view.pieces.length} pieces · ${view.files.length} files)`);
+    }
+  } catch (e) { console.error("torrent ✗ " + iaId + ": " + e.message); }
+  _tmCache.set(iaId, kappa);
+  return kappa;
+}
 
 // ── games — the .holo library (fully κ-native already: ROM κ + baked art) ─────────────────────────
 async function mintGames() {
@@ -70,8 +93,9 @@ async function mintFilms() {
       const art0 = await fetchBytes(`https://archive.org/services/img/${id}`);
       const art = art0 ? { kappa: "sha256:" + await put(art0.bytes), type: art0.type || "image/jpeg" } : null;
       const md = meta.metadata || {};
+      const tm = await mintTorrentManifest(id);
       out.push(await emit({ kind: "film", title: String(md.title || id).slice(0, 120), year: +String(md.year || md.date || "").slice(0, 4) || undefined,
-        art, stream: { url: `https://archive.org/download/${id}/${encodeURIComponent(mp4.name)}` },
+        art, stream: { url: `https://archive.org/download/${id}/${encodeURIComponent(mp4.name)}`, ...(tm ? { torrent: tm } : {}) },
         meta: { source: "internet-archive", ia: id, license: String(md.licenseurl || "public-domain").slice(0, 120) } }));
       console.log("film ✓ " + id);
     } catch (e) { console.error("film ✗ " + id + ": " + e.message); }
@@ -105,6 +129,37 @@ async function mintLive() {
   return out;
 }
 
+// ── clean per-file chunk table (K3 robust path) — hash a single media file in 4MB windows, NO cross-file
+// spans (unlike a multi-file torrent whose pieces bleed into non-CORS neighbours). Streamed so a 550MB
+// book never sits in RAM; each chunk sha256 = the browser verifies with crypto.subtle (no wasm needed).
+const CHUNK = 4 << 20;
+async function chunkTable(url) {
+  const r = await fetch(url, UA); if (!r.ok || !r.body) return null;
+  const reader = r.body.getReader();
+  const chunks = []; let buf = new Uint8Array(0), total = 0;
+  const flush = async (bytes) => { const d = await crypto.subtle.digest("SHA-256", bytes); chunks.push({ sha256: Buffer.from(d).toString("hex"), size: bytes.length }); total += bytes.length; };
+  for (;;) {
+    const { done, value } = await reader.read();
+    if (value) { const m = new Uint8Array(buf.length + value.length); m.set(buf); m.set(value, buf.length); buf = m; while (buf.length >= CHUNK) { await flush(buf.subarray(0, CHUNK)); buf = buf.slice(CHUNK); } }
+    if (done) break;
+  }
+  if (buf.length) await flush(buf);
+  return { chunkSize: CHUNK, size: total, chunks };
+}
+async function mintCleanBookManifest(iaId, chapters) {
+  const files = [];
+  for (const ch of chapters) {
+    const t = await chunkTable(ch.url).catch(() => null);
+    if (!t) { console.error("  chunk ✗ " + ch.url.split("/").pop()); return null; }   // all-or-nothing per book → honest chip
+    files.push({ url: ch.url, name: ch.name, size: t.size, chunkSize: t.chunkSize, chunks: t.chunks });
+    process.stdout.write(".");
+  }
+  const m = await mintObject({ v: 1, kind: "chunk-manifest", ia: iaId, files });
+  writeFileSync(path.join(BDIR, m.hex), m.bytes);
+  console.log(` clean-manifest ✓ ${iaId} (${files.length} files)`);
+  return m.kappa;
+}
+
 // ── audiobooks — LibriVox via the IA librivoxaudio collection (public domain, mp3 chapters) ───────
 const BOOK_IDS = ["pride_and_prejudice_librivox", "adventures_sherlock_holmes_rg_librivox", "art_of_war_librivox",
   "meditations_marcus_aurelius_mfs_librivox", "alices_adventures_1003_librivox", "count_monte_cristo_0711_librivox"];
@@ -120,8 +175,12 @@ async function mintBooks() {
       const art0 = await fetchBytes(`https://archive.org/services/img/${id}`);
       const art = art0 ? { kappa: "sha256:" + await put(art0.bytes), type: art0.type || "image/jpeg" } : null;
       const md = meta.metadata || {};
+      // Short books get a clean per-file chunk-manifest (fully κ-verified playback); large ones stay direct
+      // for now (chip absent — honest) to keep the mint bounded. Torrent manifest kept as a source hint.
+      const tm = await mintTorrentManifest(id);
+      const clean = chapters.length <= 12 ? await mintCleanBookManifest(id, chapters).catch(() => null) : null;
       out.push(await emit({ kind: "audiobook", title: String(md.title || id).replace(/\s*\(?librivox\)?/i, "").slice(0, 120),
-        art, stream: { url: chapters[0].url }, meta: { source: "librivox", ia: id, chapters: chapters.slice(0, 100), license: "public-domain" } }));
+        art, stream: { url: chapters[0].url, ...(clean ? { manifest: clean } : {}), ...(tm ? { torrent: tm } : {}) }, meta: { source: "librivox", ia: id, chapters: chapters.slice(0, 100), license: "public-domain" } }));
       console.log("book ✓ " + id + " (" + chapters.length + " ch)");
     } catch (e) { console.error("book ✗ " + id + ": " + e.message); }
   }
