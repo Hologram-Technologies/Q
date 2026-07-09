@@ -3,24 +3,24 @@
   "v": 1,
   "name": "holospaces-web",
   "channel": "resolver",
-  "seq": 1,
+  "seq": 2,
   "assets": {
    "glue": {
-    "blake3": "bd4118a57c12e421fa18aff14c6948e7f70916817a1994ecfad5f30303cca69a",
-    "sha256": "b9f8a887de588c5193dc65ca9ce206a70c6df53595b848e0ce0299c2d88a5753",
-    "bytes": 127867,
-    "hint": "apps/q/pkg/holospaces_web.js"
+    "blake3": "8993d93001da373dd4acd2d75b93e4ecf80000cbac4a78d492db440e4c7f883f",
+    "sha256": "a5b5d9c559a1d2812c33e9d7a4b1c24bb03059482503a23356e4c9c32d4d8b88",
+    "bytes": 118072,
+    "hint": "usr/lib/holo/holowhat/holospaces_web.js"
    },
    "wasm": {
-    "blake3": "12861f3bd9cf81ce33116b0020f26b4fd11aa6f1ad206173b382c1ac2e1f4c77",
-    "sha256": "9d90b4ea8bccee8c239073c7ec7dd5158c6d11f1f668487570d17475d79e661e",
-    "bytes": 6469596,
-    "hint": "apps/q/pkg/holospaces_web_bg.wasm"
+    "blake3": "4faa4eed56ecb1fb7ad22e1a35bc55fff12569124e59631dc0edb445c17ac72a",
+    "sha256": "00cfa4960b319ba1ba7291cddb20dea130a407ce8b42426218854f4f68f4dcd7",
+    "bytes": 2926068,
+    "hint": "usr/lib/holo/holowhat/holospaces_web_bg.wasm"
    }
   },
-  "at": "2026-07-09T16:19:50.232Z"
+  "at": "2026-07-09T16:43:20.387Z"
  },
- "sig": "QjfrnoQ7qO3H9y+VraTnQbOUEVuS8rn0BbUn+cZJRKTdJw4foOjiKCIRwttqkqqBY/Vco2Qd++NpWt1CWDOICg==",
+ "sig": "o/IRuCep+lmC4lrqj36SnwTH7u2v3dHKZFWjSxOc8/51Sh94pY/fQdKlBqZ3aEBpgv2wRIJdb+os456N4XegDw==",
  "pub": "snYY6y35gdZ1ngOE5E+G1BGFjlTo2MfpfP8h6yc7r+M=",
  "alg": "Ed25519"
 }
