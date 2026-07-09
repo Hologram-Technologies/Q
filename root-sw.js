@@ -17,13 +17,16 @@ const esc = (s) => s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 const EV_RE = new RegExp("^" + esc(BASE) + "/apps/([a-z0-9-]+)/(.+)$");
 
 self.addEventListener("install", () => self.skipWaiting());
-// on activate, load the evicted-apps registry so the fetch handler can decide SYNCHRONOUSLY (zero overhead
-// for non-evicted apps: they never enter the rescue path).
-let _evicted = null;   // Set<appName> | null (untried)
-self.addEventListener("activate", (e) => e.waitUntil((async () => {
-  try { const r = await fetch(BASE + "/evicted.json", { cache: "no-store" }); _evicted = new Set(r.ok ? ((await r.json()).apps || []) : []); } catch (x) { _evicted = new Set(); }
-  await self.clients.claim();
-})()));
+// The evicted-apps registry: RESTART-SAFE. The browser kills an idle worker and restarts it on the next
+// fetch — but "activate" fires once per VERSION, so registry state loaded only there would be null after
+// every restart and the rescue would silently die for long-lived registrations. Lazy + memoized instead:
+// the resolved Set gives the fetch handler its synchronous fast path; a restarted worker re-fetches once.
+let _evicted = null;    // resolved Set<appName> (sync fast path) | null until first resolution
+let _evictedP = null;   // in-flight load (dedup)
+const evictedSet = () => _evicted || (_evictedP ||= fetch(BASE + "/evicted.json", { cache: "no-store" })
+  .then((r) => (r.ok ? r.json() : { apps: [] })).then((j) => (_evicted = new Set(j.apps || [])))
+  .catch(() => { _evictedP = null; return new Set(); }));
+self.addEventListener("activate", (e) => e.waitUntil(evictedSet().then(() => self.clients.claim())));
 
 const _closures = new Map();   // app → { mirror, files } | null
 async function evictedClosure(app) {
@@ -66,11 +69,14 @@ self.addEventListener("fetch", (e) => {
     return;
   }
 
-  // evicted-app rescue: bytes moved to the κ-mirror still resolve, by blake3 κ, verified (M3)
-  if (_evicted && _evicted.size) {
+  // evicted-app rescue: bytes moved to the κ-mirror still resolve, by blake3 κ, verified (M3).
+  // Sync fast path once the registry resolved; a freshly-restarted worker (registry unknown) answers app
+  // paths through the async check instead — identical behavior, one memoized registry fetch per lifetime.
+  {
     const ev = p.match(EV_RE);
-    if (ev && _evicted.has(ev[1]) && ev[2] !== "holo-evicted.json") {
+    if (ev && ev[2] !== "holo-evicted.json" && (_evicted ? _evicted.has(ev[1]) : true)) {
       e.respondWith((async () => {
+        if (!(await evictedSet()).has(ev[1])) return fetch(req);
         const cl = await evictedClosure(ev[1]);
         const rel = ev[2].split("?")[0];
         const b3 = cl && cl.files && cl.files[rel];
