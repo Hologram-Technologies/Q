@@ -2,6 +2,11 @@
  "apps": [
   "video",
   "animate",
-  "holo-linux"
+  "holo-linux",
+  "player",
+  "music",
+  "browser",
+  "holo-games",
+  "hub"
  ]
 }
