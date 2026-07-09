@@ -93,6 +93,17 @@ html.q-drawer #q-drawer-title{opacity:1}
 #q-hero-chips button:active{transform:scale(.96)}
 @media (prefers-reduced-motion:reduce){#q-hero-chips{transition:opacity .2s ease}}
 
+/* SUBTLE latency read — tok/s + TTFT of the last real reply, whisper-quiet in the header (WhatsApp-clean: the
+   chat stays a conversation; this is a faint monospace glance, never a dashboard). Data-only, off the hot path. */
+#q-stats{position:fixed;top:19px;right:56px;z-index:303;pointer-events:none;white-space:nowrap;
+  font:600 10.5px/1 ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;letter-spacing:.02em;
+  display:flex;gap:7px;align-items:center;opacity:0;transition:opacity .45s ease}
+html.q-drawer #q-stats.on{opacity:.5}
+#q-stats .qs-s{color:#9fd3ff}                 /* tok/s */
+#q-stats .qs-t{color:#7fefc9}                 /* TTFT — fast (warm-KV) reads mint */
+#q-stats .qs-t.cold{color:#ffce8a}            /* a slow first token (cold prefill) reads a warmer amber */
+@media (max-width:640px){ #q-stats{top:calc(16px + env(safe-area-inset-top,0px));right:62px} }
+
 /* ── MOBILE: a phone is a first-class Q device — the drawer goes FULL-BLEED (100vw/100dvh), not a 94vw panel
    with a dead sliver. No canvas squeeze (the sheet OWNS the screen, native-chat style); safe-area insets for
    the notch/home-bar; and the composer floats above the soft keyboard via --q-kb (visualViewport, set below). */
@@ -300,6 +311,24 @@ const mo = new MutationObserver((muts) => {
   }
 });
 mo.observe(DOC.body, { childList: true, subtree: true });
+
+// ── subtle tok/s + TTFT read (standalone-parity, but always-on + whisper-quiet instead of ?stats-gated) ──
+// Pulls the last REAL brain turn's metrics from window.HoloQ.stats() ({ttft,tokps,at}); seed/instant replies
+// carry no engine stats so it simply shows the last measured reply. Off the hot path (a 1s poll, data-only).
+let statsEl = null, statsAt = -1;
+function renderStats() {
+  if (!heroOpen()) { if (statsEl) statsEl.classList.remove("on"); return; }
+  let s = null; try { s = window.HoloQ && window.HoloQ.stats && window.HoloQ.stats(); } catch {}
+  if (!s || !s.at || s.at === statsAt) return;
+  const ttft = Math.round(s.ttft || 0), tps = Math.round(s.tokps || 0);
+  if (!ttft && !tps) return;
+  statsAt = s.at;
+  if (!statsEl) { statsEl = DOC.createElement("div"); statsEl.id = "q-stats"; statsEl.title = "last reply · time-to-first-token · tokens/sec"; DOC.body.appendChild(statsEl); }
+  const cold = ttft >= 500;   // a slow first token ≈ cold prefill; a fast one ≈ warm-KV reuse
+  statsEl.innerHTML = (tps ? `<span class="qs-s">${tps} tok/s</span>` : "") + (ttft ? `<span class="qs-t${cold ? " cold" : ""}">${ttft} ms</span>` : "");
+  statsEl.classList.add("on");
+}
+setInterval(renderStats, 1000);
 
 // ── debug/verification surface ────────────────────────────────────────────────────────────────────────────
 window.QSummon = {
