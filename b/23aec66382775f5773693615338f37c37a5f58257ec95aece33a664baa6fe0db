@@ -1,0 +1,15 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Holo Resolve</title><style>html,body{height:100%;margin:0;background:#0b141a}</style>
+<script>
+// Holo Resolve is UNIFIED into the root (github.io/Q). This stub forwards any already-shared
+// /apps/resolve link — /apps/resolve/#<name> or /apps/resolve/?resolve=<name> — to the root: …/#<name>.
+(function () {
+  try {
+    var q = new URLSearchParams(location.search).get("resolve");
+    var h = (location.hash || "").replace(/^#/, "");
+    var n = h || (q ? encodeURIComponent(q) : "");
+    location.replace(new URL("../../" + (n ? "#" + n : ""), location.href).href);
+  } catch (e) { location.replace(new URL("../../", location.href).href); }
+})();
+</script></head><body></body></html>

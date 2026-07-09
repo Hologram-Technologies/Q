@@ -14,12 +14,12 @@
 //
 // It never loads inside the native shell (which already owns these keys) or inside an embedded frame.
 
-import { createKeymap } from "/usr/lib/holo/holo-keys.js";
-import { classifyIntent, fuzzyScore } from "/usr/lib/holo/holo-intent-classify.mjs";
+import { createKeymap } from "../../usr/lib/holo/holo-keys.js";
+import { classifyIntent, fuzzyScore } from "../../usr/lib/holo/holo-intent-classify.mjs";
 // holo-names' classify is the ONE naming-universe classifier (κ/did/CID/SRI/ENS/nostr/…); reused, not rebuilt.
 // Loaded lazily + fail-soft so a hiccup degrades the resolve lane to a plain web hand-off, never breaks the bar.
 let classifyName = null;
-import("/usr/lib/holo/holo-names.mjs").then((m) => { classifyName = m.classify || (m.default && m.default.classify) || null; }).catch(() => {});
+import("../../usr/lib/holo/holo-names.mjs").then((m) => { classifyName = m.classify || (m.default && m.default.classify) || null; }).catch(() => {});
 
 (function () {
   "use strict";
@@ -90,7 +90,8 @@ import("/usr/lib/holo/holo-names.mjs").then((m) => { classifyName = m.classify |
   #hk-cheat .cheat-link{ background:0; border:0; padding:0; cursor:pointer; font:inherit; color:#58a6ff; text-decoration:underline; text-underline-offset:2px; }
 
   /* ambient which-key dot — one breathing point of light; hold the modifier → it blooms a legend. */
-  #hk-dot{ position:fixed; left:50%; bottom:16px; transform:translateX(-50%); z-index:2147481900; display:none;
+  /* bottom lines the dot up with the Q orb's vertical centre (orb: bottom clamp(48,7.5vh,88) + height clamp(70,8.6vh,104)/2) */
+  #hk-dot{ position:fixed; left:50%; bottom:calc(clamp(48px,7.5vh,88px) + clamp(70px,8.6vh,104px)/2 - 12px); transform:translateX(-50%); z-index:2147481900; display:none;
     align-items:center; gap:9px; pointer-events:none; }
   #hk-dot.show{ display:inline-flex; }
   #hk-dot .hk-core{ display:block; width:8px; height:8px; padding:0; border:0; border-radius:50%; cursor:pointer; pointer-events:auto;
@@ -276,7 +277,7 @@ import("/usr/lib/holo/holo-names.mjs").then((m) => { classifyName = m.classify |
   //    full inspector). The card self-resolves against the bundle root, so it is correct on any mount.
   //    Fail-soft: if the card module hiccups, the bar silently keeps the hand-off row it already shows. ───
   let _cardReady = false, _prevQ = "", _prevT = 0;
-  import("/usr/lib/holo/holo-card.mjs").then(() => { _cardReady = true; if (scrim.classList.contains("open")) updatePreview(sInput.value); }).catch(() => {});
+  import("../../usr/lib/holo/holo-card.mjs").then(() => { _cardReady = true; if (scrim.classList.contains("open")) updatePreview(sInput.value); }).catch(() => {});
   function updatePreview(term) {
     const it = classifyIntent(term || "", classifyName), q = it.q;
     const show = _cardReady && it.lane === "resolve" && q.length > 1;

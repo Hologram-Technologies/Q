@@ -17,7 +17,7 @@
 <meta name="apple-mobile-web-app-title" content="Hologram">
 <link rel="apple-touch-icon" href="./icon.svg">
 
-<link rel="stylesheet" href="./_vendor/ui/chat-ui.bundle.css?v=1bf21c666e95">
+<link rel="stylesheet" href="./_vendor/ui/chat-ui.bundle.css?v=692f08eda8a2">
 <style>html,body{height:100%;margin:0;background:#0b141a;color-scheme:dark}#root{height:100vh}</style>
 <!-- IMMERSIVE CHAT — the open conversation wears the SAME wallpaper as home. The home wallpaper is already
      painted ONCE, edge-to-edge, by the fixed .holo-backdrop canvas (the shared holo.theme.v1 wallpaper, run
@@ -272,7 +272,7 @@
 
 <script type="module">
   // ?v=N - bump on each deploy so the browser can never serve a stale cached bundle (the cause of a frozen/old build).
-  import "./_vendor/ui/chat-ui.bundle.js?v=f4bed815edfc";   // → window.HoloMessengerUI
+  import "./_vendor/ui/chat-ui.bundle.js?v=931ab53f814f";   // → window.HoloMessengerUI
   // Opt-in: render the WhatsApp UX from STREAMING shadcn κ-components instead of the chatscope bundle.
   // Lazy — the module loads ONLY when opted in (?ui=shadcn or holo.ui.shadcn=1); the default boot never
   // parses it. Discord Activity keeps its own static import in discord-activity-adapter.mjs.
@@ -308,7 +308,7 @@
   import("./q-summon.mjs?v=5").catch(() => {});
   // Q LIVE CALL — tap Call in the hero → realtime voice conversation (createQLive: streaming voice,
   // hands-free turns, barge-in). Additive + fail-soft: no mic/WebGPU → a clear message, chat still works.
-  import("./q-live-hero.mjs?v=3").catch(() => {});
+  import("./q-live-hero.mjs?v=4").catch(() => {});
   // POWER & SESSION — one power button at the very bottom of the rail. Tap → a calm sheet in the sign-in's own
   // teal vocabulary: live session uptime + who you are + Lock & Sign Out (window.holo.signOut → the clean gate,
   // box secured). Additive + fail-soft: no rail / no signOut → the control just doesn't appear.
