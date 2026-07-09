@@ -34,6 +34,9 @@ export function createTTS(opts = {}) {
     if (loading) return loading;
     loading = (async () => {
       const base = moduleBase();
+      // Q bundle: the usr-lib kokoro vendor is NOT shipped — the HD path is Plan B (/_shared vendor, voice-out.js).
+      // Bail here WITHOUT a network probe; a fetch would 404 in every boot console before falling through.
+      if (!cfg.vendorShipped) throw new Error("kokoro vendor not shipped under usr/lib — use the /_shared plan");
       // configure the shared transformers env BEFORE kokoro imports it (same module URL = same instance).
       const TF = await import(/* @vite-ignore */ new URL(cfg.tfLib, base).href);
       if (TF.env) {

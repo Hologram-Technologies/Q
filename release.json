@@ -20,12 +20,12 @@
   "prov:Entity",
   "holstr:Entry"
  ],
- "holstr:seq": 13,
- "holstr:prev": "did:holo:sha256:852d9713a182af47e7a500c8567ba07da50b48881cc00a685765376f8f6c7cee",
+ "holstr:seq": 14,
+ "holstr:prev": "did:holo:sha256:af9079fa5a7015e4e0b29703938a0fbcd2692815306c68800238e49a8a607eb2",
  "holstr:kind": "release",
  "holstr:payload": {
-  "shell": "c92508099533a68a455ad7c6d482cb89dd2398cbc8b81861ff07c1eaa549b468",
-  "manifest": "63062c4ac289fffa9df0102519664d6844f3766dff463c74494586af3ae69882",
+  "shell": "5ad1a48a9695b61c8da3415d1457eb69ac8688fc8c99014d24b108c592bfa791",
+  "manifest": "f399ae897b7b6d737a3cde213615dab375b6cc6be2e43bc112434c492c8825b2",
   "runtime": {
    "apps/q/pkg/holospaces_web.js": "b9f8a887de588c5193dc65ca9ce206a70c6df53595b848e0ce0299c2d88a5753",
    "apps/q/pkg/holospaces_web_bg.wasm": "9d90b4ea8bccee8c239073c7ec7dd5158c6d11f1f668487570d17475d79e661e",
@@ -36,24 +36,25 @@
    "usr/lib/pkg/holospaces_web_bg.wasm": "3370b22070b56218a57df6406e2e4ba7cc171e942d4d1f2ae4297ea2c4c08d9c"
   },
   "apps": {
-   "browser": "ed2158402765f39afdbe9f34a8556555768473e336fd185738098acfc4e1cbf7",
-   "holo-linux": "0d58cf3ddc35c101224f242fd53339fc7f9eef3f043af6ce0839df2d3b555acd",
-   "holo-messenger": "766064d90382a4a776d9d6e7abd7c7973226177b08f37278474e1a8bb3430fa0",
-   "holo-money": "0d247f076de920af276262e7287b8628f30eceea191ef20bdba4ca943051415a",
-   "music": "2ea908b972c91666af8cbaf5035d87faedb71c4e5d5a709326e2397817e9a040",
-   "player": "402ba8688015a4654676823f1673f5a8ed1c190a4470d7c406454415fafbd264",
-   "q": "6458a9782f20e53077f296b1c521ee8b5746dbbeb5c892127cb9c904517e55b6",
-   "resolve": "197514b9e8f002fe247792b560b2fae06a441481ffe6be34187bf929b626cb0e",
+   "browser": "e181aa25b70fdd99a76ed1155dec98bf0d4ff8833df782583990b64f76a011fa",
+   "files": "ea1f14380a68d07475d4e6be7e8d71959131cdf7804c3515662c5945e410d6d2",
+   "holo-games": "3b78f97fdc74fdb6be36980ee63e8b685f661965526de5cd3fa997624d0a54d5",
+   "holo-messenger": "8e01c504c755f7279daec442381475621edca70dc56d6497501a6c1297690b29",
+   "holo-money": "f00cac91e066181842873164c824f90e3c61b8160051c2012414eb7f44d36394",
+   "hub": "f3626a5a2eeef441d8439bb4b379592f4d682155c4e074249912bd2ade94dc20",
+   "music": "42a2436a5457992c0388af4c5ee062e9d5340ab0b15f12b2c78e8c93a4818ac7",
+   "player": "21344806730114aa27b6f3a3ab9ca3d44e8aff6cac159b9c4fe6091f00e7acd5",
+   "q": "bb01430040bb991fb00979ddf88e90bb0e15b114a4c31f1ef6f215d4de17813d",
+   "resolve": "23aec66382775f5773693615338f37c37a5f58257ec95aece33a664baa6fe0db",
    "self": "0511772584510f0888d97dd5a72bf986ad6791bd8e305063ddd8a82c39888a70",
-   "spaces": "00566dbbfe60f4291416c9823f7bae58f700f5f352f3aedfdaed680663954f0f",
-   "ui": "e8d731bd1fcedf2f8b02c11baa2dd4bbdc124b4b35a03683e30217d63cbc0ed0",
-   "video": "b71c272506c76b747c88c2dda30748f22c7f91c0cdef604064b6a2346f43572a"
+   "spaces": "d8aebefb67e7fc7802e757b9a7d95bb881e6d75b4a9bc4bd4227634541757e51",
+   "ui": "f2af676d9804685f773120551021b72848b06c9c510ee0238b95b8f0fac66925"
   }
  },
- "prov:generatedAtTime": "2026-07-08T15:02:21.933Z",
+ "prov:generatedAtTime": "2026-07-09T14:05:34.667Z",
  "holstr:op": "did:holo:sha256:87599792c7b13fad9d6c57d3b89d2cef35e4715869f5cde597ab60ca92699f0b",
- "id": "did:holo:sha256:af9079fa5a7015e4e0b29703938a0fbcd2692815306c68800238e49a8a607eb2",
- "holstr:sig": "4yU7FlhkLI8IbU4ayOv0LYrkTe8qQtey8BMhSROXJiTVcNG44PJESDWWEE9LlU8CbrruqmLbLyhq8h0b4xv7Ag==",
+ "id": "did:holo:sha256:4ba44bc0fc872832722a9ee89233a7588ef5d5e77eced8f15957b787ffc3feac",
+ "holstr:sig": "G5dmKklIdbga9oKmZlgBSU+husP5uwIctsVAM+92zZo3ywjuc3fMbU3icmL1Ygr5ppuoumhS1w953rWFOlm3Bw==",
  "holstr:alg": "Ed25519",
  "holstr:pub": "snYY6y35gdZ1ngOE5E+G1BGFjlTo2MfpfP8h6yc7r+M="
 }
