@@ -450,6 +450,57 @@
       ],
       "dcat:landingPage": "apps/hub/index.html",
       "schema:image": "apps/hub/hologram.svg"
+    },
+    {
+      "@id": "did:holo:sha256:ba6924d144a0267e1edb4f61cf4e3b1b9031d547f14c38adb75ef550026b87e1",
+      "holo:root": "did:holo:sha256:ba6924d144a0267e1edb4f61cf4e3b1b9031d547f14c38adb75ef550026b87e1",
+      "@type": [
+        "schema:SoftwareApplication",
+        "schema:WebApplication"
+      ],
+      "schema:name": "Holo Files",
+      "schema:identifier": "org.hologram.HoloFiles",
+      "holo:words": "chuckle.nation.cruel",
+      "schema:alternateName": "chuckle.nation.cruel",
+      "schema:description": "The native file explorer for Hologram OS one window onto the whole verified object universe, plus your writable OPFS home. Feels native on every OS.",
+      "schema:applicationCategory": "UtilitiesApplication",
+      "holo:categories": [
+        "System",
+        "Utility"
+      ],
+      "schema:keywords": [
+        "files",
+        "explorer",
+        "finder",
+        "file manager",
+        "opfs",
+        "content-addressing",
+        "uor",
+        "fhs",
+        "holospace",
+        "law-l5",
+        "native",
+        "serverless",
+        "privacy"
+      ],
+      "dcat:landingPage": "apps/files/index.html",
+      "schema:image": "apps/files/icon.svg",
+      "schema:softwareRequirements": [
+        "holo-files.js",
+        "holo-platform.js",
+        "holo-ui-kernel.js",
+        "holo-theme.js",
+        "holo-ux.js",
+        "holo-capability.mjs",
+        "holo-object.js",
+        "holo-mobile.css",
+        "holo-webdav.js",
+        "holo-find.js",
+        "holo-resolve.js",
+        "holo-federate.js",
+        "holo-answer.js",
+        "holo-ask.js"
+      ]
     }
   ]
 }
