@@ -2693,7 +2693,7 @@
       const inLang = (c) => (c.languages || []).includes(liveLanguage);
       // Lead the chosen language (no-op for the English default → curated English experience unchanged). Matching
       // channels first, the rest after, so a rail leads the language yet never goes empty.
-      const langLead = (list) => liveLanguage === "eng" ? list : [...list.filter(inLang), ...list.filter((c) => !inLang(c))];
+      const langLead = (list) => [...list.filter(inLang), ...list.filter((c) => !inLang(c))];   // lead the chosen language — English by DEFAULT → English channels first, the rest of the world after
       const langTop = (n) => { const seen = new Set(); const out = []; for (const c of [...premiumChannels, ...liveChannels]) { if (!inLang(c)) continue; const k = (c.name || "").toLowerCase(); if (seen.has(k)) continue; seen.add(k); out.push(c); } return (typeof rankRes === "function" ? rankRes(out) : out).slice(0, n); };
       const premiumForLang = () => liveLanguage === "eng" ? premiumChannels : (langTop(24).length ? langTop(24) : premiumChannels);
       // One intuitive category bar — every major kind of live, one tap. Sports/Gaming open their rich hubs; the
@@ -3034,9 +3034,9 @@
             add(liveRail("Top channels", rankRes(base).slice(0, 24)));
           } else {
             add(liveScaleBanner());
-            add(liveRail("Popular worldwide", rankRes(base).filter((c) => (c._resH || 0) >= 720).slice(0, 24)));
+            add(liveRail("Popular worldwide", langLead(rankRes(base).filter((c) => (c._resH || 0) >= 720)).slice(0, 24)));
           }
-          for (const [key, label] of LIVE_CATS) add(liveRail(label, rankRes(base.filter((c) => (c.topics || []).includes(key))).slice(0, 24)));
+          for (const [key, label] of LIVE_CATS) add(liveRail(label, langLead(rankRes(base.filter((c) => (c.topics || []).includes(key)))).slice(0, 24)));
           return;
         }
         if (liveCategory === "home") {
@@ -3064,10 +3064,10 @@
         const key = liveCategory, inCat = (c) => (c.topics || []).includes(key);
         const prem = premiumChannels.filter(inCat), pluto = plutoChannels.filter(inCat);
         const iptv = rankRes(liveChannels.filter((c) => inCat(c) && c.provider !== "pluto"));
-        add(stationCircleRail("Top " + catLabel(key).toLowerCase(), rankRes([...prem, ...pluto, ...iptv]).slice(0, 16)));
+        add(stationCircleRail("Top " + catLabel(key).toLowerCase(), langLead(rankRes([...prem, ...pluto, ...iptv])).slice(0, 16)));
         add(liveRail("Premium", prem));
-        add(liveRail("On Pluto TV", pluto.slice(0, 24)));
-        add(liveRail(catLabel(key) + " worldwide", iptv.slice(0, 30)));
+        add(liveRail("On Pluto TV", langLead(pluto).slice(0, 24)));
+        add(liveRail(catLabel(key) + " worldwide", langLead(iptv).slice(0, 30)));
         if (!prem.length && !pluto.length && !iptv.length) wrap.innerHTML = `<div class="live-load">No ${catLabel(key).toLowerCase()} channels found yet.</div>`;
       }
       // The "god-like access" line — states the scale of the universe in one quiet sentence.
