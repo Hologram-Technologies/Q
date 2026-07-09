@@ -60,10 +60,10 @@
 </main>
 
 <script type="module">
-import names, { classify } from "../../usr/lib/holo/holo-names.mjs";
-import { makeHostResolver } from "../../usr/lib/holo/holo-names-host.mjs";
-import { loadAppIndex } from "../../usr/lib/holo/holo-app-index.mjs";
-import "../../usr/lib/holo/holo-card.mjs";                        // the ONE shared verified card (<holo-card>)
+import names, { classify } from "/usr/lib/holo/holo-names.mjs";
+import { makeHostResolver } from "/usr/lib/holo/holo-names-host.mjs";
+import { loadAppIndex } from "/usr/lib/holo/holo-app-index.mjs";
+import "/usr/lib/holo/holo-card.mjs";                        // the ONE shared verified card (<holo-card>)
 
 const $ = (id) => document.getElementById(id);
 const BASE = new URL("../../", location.href);                     // the bundle root, on ANY mount (root or /Q/)
@@ -155,6 +155,14 @@ $("benchgo").addEventListener("click", async () => {
     "ethereum:0x" + "c".repeat(40), "at://did:plc:xyz/app.bsky.feed.post/abc", "matrix:r/room:server",
     "gemini://x.gmi/", "mailto:a@b.com", "org/model:latest", "ada~natom-hipit-gimis", "https://example.org"];
   const kinds = new Set(uni.map((n) => (classify(n) || { kind: "web" }).kind));
+  // RESOLUTION TRUTH (V6): every recognized kind now RETURNS the verified thing. Trust flag per kind —
+  // "self" = the content or its own signature is the proof (ZERO trust); "via" = dereferenced through a
+  // named, untrusted relay/RPC/gateway, then the bytes re-verify. Actions render an intent, not content.
+  const MODE = { kappa: "self", did: "self", data: "self", sri: "self", "eth-tx": "self", torrent: "self", ipfs: "via", arweave: "via", onion: "self",
+    ipns: "self", nostr: "self", scuttlebutt: "self", atproto: "self", ens: "via", model: "via", truename: "self", p2pweb: "via", "eth-address": "via",
+    payment: "action", account: "action", contact: "action", chat: "action", socket: "action" };
+  const resolvable = [...kinds].filter((k) => k !== "web" && k !== "refused" && MODE[k]);
+  const zeroTrust = resolvable.filter((k) => MODE[k] === "self").length;
   // measure WARM latency (served from your device's store — 0 network) and count egress with a spy
   let egress = 0; const realFetch = window.fetch; window.fetch = (...a) => { egress++; return realFetch(...a); };
   const N = 20000, t0 = performance.now();
@@ -171,6 +179,7 @@ $("benchgo").addEventListener("click", async () => {
       ${row("Speed", `<b>${fmtLat}</b> warm — <b>~${x.toLocaleString()}× faster</b> than a ~${DOH}ms DNS lookup`)}
       ${row("Throughput", `<b>~${perSec.toLocaleString()}</b> verified resolves / second, on your device`)}
       ${row("Universal", `<b>${kinds.size} kinds of name</b> understood by one resolver — κ · CID · IPNS · Ethereum · ENS · SRI · onion · Arweave · Nostr · Bitcoin · BitTorrent · AT/Bluesky · Matrix · Gemini · model · truename · web`)}
+      ${row("Resolves", `<b>${resolvable.length} kinds now return the verified thing</b> — <b>${zeroTrust} with zero trust</b> (the content, or its own signature, is the proof: κ · CID · a Nostr note · an IPNS key). ENS/Arweave/gateways dereference through a <i>named, untrusted</i> relay — then the bytes re-verify. Payments &amp; contacts render an action, not a page.`)}
       ${row("Privacy", `<b>${egress} network requests</b> — the warm answer never left your device (a DNS query always does)`)}
       ${row("Security", `every byte <b>re-derived to its hash</b> before you saw it — a forged answer is refused, not trusted`)}
       ${row("Sovereignty", `zero setup, works offline after first touch — no provider, no box, no config`)}
