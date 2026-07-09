@@ -14,12 +14,12 @@
 //
 // It never loads inside the native shell (which already owns these keys) or inside an embedded frame.
 
-import { createKeymap } from "../../usr/lib/holo/holo-keys.js";
-import { classifyIntent, fuzzyScore } from "../../usr/lib/holo/holo-intent-classify.mjs";
+import { createKeymap } from "/usr/lib/holo/holo-keys.js";
+import { classifyIntent, fuzzyScore } from "/usr/lib/holo/holo-intent-classify.mjs";
 // holo-names' classify is the ONE naming-universe classifier (κ/did/CID/SRI/ENS/nostr/…); reused, not rebuilt.
 // Loaded lazily + fail-soft so a hiccup degrades the resolve lane to a plain web hand-off, never breaks the bar.
 let classifyName = null;
-import("../../usr/lib/holo/holo-names.mjs").then((m) => { classifyName = m.classify || (m.default && m.default.classify) || null; }).catch(() => {});
+import("/usr/lib/holo/holo-names.mjs").then((m) => { classifyName = m.classify || (m.default && m.default.classify) || null; }).catch(() => {});
 
 (function () {
   "use strict";
@@ -78,6 +78,7 @@ import("../../usr/lib/holo/holo-names.mjs").then((m) => { classifyName = m.class
   #hk-scrim .hk-row.sel{ background:color-mix(in srgb,var(--hk-accent) 16%,transparent); color:#fff; }
   #hk-scrim .hk-row.sel .hk-grp{ color:#b9c2cf; }
   #hk-scrim .hk-empty{ padding:16px; color:#6e7681; font-size:14px; }
+  #hk-scrim .hk-preview:not(:empty){ border-top:1px solid #21262d; max-height:48vh; overflow:auto; padding:12px 16px 16px; }
   /* cheat sheet */
   #hk-cheat .hk-sheet{ width:min(56rem,94vw); margin-top:8vh; background:#0d1117; border:1px solid #30363d;
     border-radius:14px; box-shadow:0 24px 80px rgba(0,0,0,.6); overflow:hidden; animation:hk-rise .16s cubic-bezier(.4,0,.2,1); }
@@ -120,11 +121,11 @@ import("../../usr/lib/holo/holo-names.mjs").then((m) => { classifyName = m.class
 
   // ── overlay DOM ──────────────────────────────────────────────────────────────────────────────
   const mk = (html) => { const d = D.createElement("div"); d.innerHTML = html; return d.firstElementChild; };
-  const scrim = mk(`<div id="hk-scrim"><div class="hk-sheet"><div class="hk-title"></div><input autocomplete="off" spellcheck="false"/><div class="hk-results"></div></div></div>`);
+  const scrim = mk(`<div id="hk-scrim"><div class="hk-sheet"><div class="hk-title"></div><input autocomplete="off" spellcheck="false"/><div class="hk-results"></div><div class="hk-preview"></div></div></div>`);
   const cheat = mk(`<div id="hk-cheat"><div class="hk-sheet"></div></div>`);
   const dot = mk(`<div id="hk-dot"><button class="hk-core" type="button" aria-label="Keyboard shortcuts" title="Shortcuts"></button><span class="hk-tag"></span><div class="hk-legend"></div></div>`);
   D.body.appendChild(scrim); D.body.appendChild(cheat); D.body.appendChild(dot);
-  const sTitle = $(".hk-title", scrim), sInput = $("input", scrim), sResults = $(".hk-results", scrim);
+  const sTitle = $(".hk-title", scrim), sInput = $("input", scrim), sResults = $(".hk-results", scrim), sPreview = $(".hk-preview", scrim);
   // click the backdrop to dismiss
   [scrim, cheat].forEach((s) => s.addEventListener("click", (e) => { if (e.target === s) closeAll(); }));
 
@@ -270,7 +271,25 @@ import("../../usr/lib/holo/holo-names.mjs").then((m) => { classifyName = m.class
     rows.push({ ic: "🌐", label: `Search the web for “${q}”`, sub: "Web", group: "Web", run: () => openWebSearch(q) });
     return rows;
   }
-  function render(term) { list = (mode === "pal") ? cmdRows((term || "").trim()) : buildList(term || ""); sel = 0; paint(); }
+  function render(term) { list = (mode === "pal") ? cmdRows((term || "").trim()) : buildList(term || ""); sel = 0; paint(); updatePreview(mode === "pal" ? "" : (term || "")); }
+
+  // ── INLINE RESOLUTION — the shell itself resolves anything. When the query is an addressable name, mount
+  //    the ONE shared <holo-card> right in the bar and let it VERIFY + render inline (Enter still opens the
+  //    full inspector). The card self-resolves against the bundle root, so it is correct on any mount.
+  //    Fail-soft: if the card module hiccups, the bar silently keeps the hand-off row it already shows. ───
+  let _cardReady = false, _prevQ = "", _prevT = 0;
+  import("/usr/lib/holo/holo-card.mjs").then(() => { _cardReady = true; if (scrim.classList.contains("open")) updatePreview(sInput.value); }).catch(() => {});
+  function updatePreview(term) {
+    const it = classifyIntent(term || "", classifyName), q = it.q;
+    const show = _cardReady && it.lane === "resolve" && q.length > 1;
+    clearTimeout(_prevT);
+    if (!show) { if (_prevQ) { _prevQ = ""; sPreview.textContent = ""; } return; }
+    if (q === _prevQ) return;                                   // already showing this exact name
+    _prevT = setTimeout(() => {                                 // debounce — resolve on a pause, not every keystroke
+      _prevQ = q; sPreview.textContent = "";
+      try { const c = D.createElement("holo-card"); c.setAttribute("name", q); sPreview.appendChild(c); } catch {}
+    }, 240);
+  }
   function paint() {
     let html = "", lastG = null;
     list.forEach((it, i) => {
@@ -323,7 +342,7 @@ import("../../usr/lib/holo/holo-names.mjs").then((m) => { classifyName = m.class
   }
   cheat.addEventListener("click", (e) => { if (!e.target.closest("[data-hint-toggle]")) return; setDotHidden(!dotHidden()); openCheat(); });
 
-  function closeAll() { scrim.classList.remove("open"); cheat.classList.remove("open"); bloom(false); }
+  function closeAll() { scrim.classList.remove("open"); cheat.classList.remove("open"); bloom(false); if (sPreview) { sPreview.textContent = ""; _prevQ = ""; } }
 
   // ── the ambient hint dot — hold the modifier → bloom the live legend (projected from the keymap) ──
   const legend = $(".hk-legend", dot), core = $(".hk-core", dot), tag = $(".hk-tag", dot);
