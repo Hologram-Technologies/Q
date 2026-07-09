@@ -351,6 +351,7 @@ const glyphFor = (n) => n.kind === "dir" ? osFolder() : n.kind === "app" ? I.app
 
 /* ── native-OS adaptation (the same shell, tuned to the host) ───────────────────────── */
 const P = HoloFiles.platform();
+const PF = P.files || {};   // the host file-manager idiom table (N3): ONE source for every OS-specific word/verb/default
 const SKIN = HoloFiles.skinFor(P);
 root.setAttribute("data-os", P.os);
 root.setAttribute("data-touch", P.touch ? "1" : "0");
@@ -360,7 +361,7 @@ try { if (window.self !== window.top) root.setAttribute("data-embedded", "1"); }
 root.style.setProperty("--accent", P.accent || "#3aa0ff");
 if (P.font) root.style.setProperty("--sys", P.font);
 document.title = "Holo Files";   // the OS is implicit in the native chrome — not stated in the window
-const mod = (e) => P.apple ? e.metaKey : e.ctrlKey;
+const mod = (e) => P.modKey==="meta" ? e.metaKey : e.ctrlKey;
 
 /* ── state + history ────────────────────────────────────────────────────────────────── */
 let view = localStorage.getItem("holo.files.view") || SKIN.defaultView || "details";
@@ -412,12 +413,7 @@ async function filterByTag(id){
    The Hologram-internal locations (the κ graph, Holospaces, OS Runtime, the OPFS sandbox) are DEMOTED
    into one collapsed "Hologram" disclosure at the bottom — a power user expands it; a new user never
    sees jargon. Native group labels per OS. The known folders + drives load async from the host. */
-const SIDE_CFG = {
-  windows:{ places:"Quick access", drives:"This PC" }, macos:{ places:"Favourites", drives:"Locations" },
-  ios:{ places:"Favourites", drives:"Locations" }, ipados:{ places:"Favourites", drives:"Locations" },
-  android:{ places:"", drives:"Storage" }, chromeos:{ places:"", drives:"Storage" }, linux:{ places:"", drives:"Other Locations" },
-};
-const sideCfg = SIDE_CFG[P.os] || SIDE_CFG.windows;
+const sideCfg = { places: PF.places || "Quick access", drives: PF.drives || "This PC" };   // N3: from the ONE idiom table
 let nativePlaces = { folders:[], drives:[] };   // real device folders + volumes (loaded from the host)
 let holoOpen = localStorage.getItem("holo.files.holoOpen")==="1";   // the demoted "Hologram" group
 let _sideNodes = [];
@@ -460,6 +456,15 @@ function openLocation(loc, push=true){ if(push) pushHist(); trail = [loc]; sel=n
 async function drillInto(n, push=true){
   if(n.source==="trash"){ await HoloFiles.restoreTrash(n); listCache.clear(); render(); toast("Restored "+n.name); return; }   // opening a bin item restores it
   if(n.kind==="file"){ select(n); return; }
+  // NATIVE MIRROR (N1): real-folder affordances. Connect = the platform's own picker; a mount that
+  // lost its grant re-arms with this tap (the click IS the required user gesture); the note is honest.
+  if(n.source==="mount-connect"){ try{ const id=await HoloFiles.deviceMounts.mountPick(); if(id){ listCache.clear(); render(); toast("Connected"); } }catch(e){ toast("Couldn't connect: "+(e.message||e)); } return; }
+  if(n.source==="mount-none"){ toast("Real folders need Chrome or Edge — your Hologram home works everywhere"); return; }
+  if(n.source==="mount-dir" && n._mountState && n._mountState!=="granted"){
+    const st=await HoloFiles.deviceMounts.remount(String(n.path).slice(6).split("/")[0]);
+    if(st!=="granted"){ toast("This folder needs permission to open"); return; }
+    listCache.clear();
+  }
   if(push) pushHist();
   trail = [...trail, n]; sel=null; selSet.clear(); anchorIdx=-1; render();
 }
@@ -734,10 +739,10 @@ async function renderDetails(n){
     <div class="dpad">
       <div class="dname">${esc(n.name)}</div>
       <div class="dmeta">
-        <div class="drow"><span class="l">Where</span><span class="v">${esc(prettyPath(n))}</span></div>
-        <div class="drow"><span class="l">${P.apple?"Kind":"Type"}</span><span class="v">${typeLabel(n)}</span></div>
+        <div class="drow"><span class="l">${PF.where||"Where"}</span><span class="v">${esc(prettyPath(n))}</span></div>
+        <div class="drow"><span class="l">${PF.kind||"Type"}</span><span class="v">${typeLabel(n)}</span></div>
         ${n.bytes!=null?`<div class="drow"><span class="l">Size</span><span class="v">${fmtBytes(n.bytes)}</span></div>`:""}
-        ${n.mtime?`<div class="drow"><span class="l">${P.apple?"Modified":"Date modified"}</span><span class="v">${fmtDate(n.mtime)}</span></div>`:""}
+        ${n.mtime?`<div class="drow"><span class="l">${PF.dateModified||"Modified"}</span><span class="v">${fmtDate(n.mtime)}</span></div>`:""}
         ${n.kind==="file"?`<div class="drow"><span class="l">Tags</span><span class="v"><span class="tagpick">${TAGS.map(t=>`<i class="dtd ${tagsOf(n).includes(t.id)?'on':''}" data-tag="${t.id}" style="--c:${t.color}" title="${t.name}"></i>`).join("")}</span></span></div>`:""}
       </div>
       ${n.did?`<div class="kapparow"><button class="kappatoggle" id="kappatoggle"><span class="kchev">${I.chev}</span>Content address</button><div class="kappabody" id="kappabody" hidden><div class="kval">${esc(n.did)}</div><button class="kverify" id="verify">${I.verified}<span>Verify</span></button></div></div>`:""}
@@ -770,7 +775,7 @@ async function renderHome(){
   let count="";
   list.innerHTML = `<div id="homepg">
     <div class="hhead"><img src="icon.svg" alt=""><h1>Holo Files</h1></div>
-    <div class="hsub">Every object self-verifying by its content address (κ). Your Home, private and writable.</div>
+    <div class="hsub">Your files — private, on this device.</div>
     <div class="qsec">Quick access</div>
     <div class="qgrid" id="qgrid">${LOCS.map((l,i)=>`
       <div class="qcard" data-loc="${i}">
@@ -794,9 +799,10 @@ async function renderHome(){
 function openFile(n){
   if(typeof pickMode!=="undefined" && pickMode && n.kind==="file"){ choosePick(n); return; }   // picker: double-click a file → choose it
   if(n.source==="trash"){ HoloFiles.restoreTrash(n).then(()=>{ listCache.clear(); render(); toast("Restored "+n.name); }); return; }
+  if(n.source==="mount-connect" || n.source==="mount-none"){ drillInto(n); return; }   // N1: the real-folder affordances activate either way
   if(n.kind==="app" || n._appId){ launchHolospace(n._appId || n.role); return; }
   if(n.kind==="file"){ select(n); openProperties(n); return; }   // ONE PLANE (F3): open = resolve
-  select(n); toast("Selected · use Verify to re-derive its κ");
+  select(n);
 }
 function launchHolospace(id){ if(!id) return; try{ parent.postMessage({ type:"holo-open", id }, "*"); }catch{} toast("Opening "+id+" …"); }
 
@@ -805,13 +811,16 @@ $("#emptybin").onclick = async ()=>{ if(!confirm("Empty the Recycle Bin? This pe
 // device write errors read clean: a 403 means the write capability isn't granted (keys-not-prompts).
 const devErr=(e)=>{ const m=String(e&&e.message||e); return /403|refused/.test(m) ? "Device writes are off — grant permission to edit your disk" : "Couldn't complete: "+m; };
 const isDevice=(n)=> !!(n && n._absPath);
+const isMount=(n)=> !!(n && String(n.path||"").startsWith("mount:"));   // N2: a granted real folder (web tier)
 $("#newfolder").onclick = async ()=>{ const n=cur(); const name = prompt("New folder name","untitled folder"); if(!name) return;
   if(n.source==="desktop"){ HoloFiles.deskMkdir(n, name); toast("Created "+name); return; }
   if(isDevice(n)){ try{ await HoloFiles.deviceMkdir(n._absPath, name); listCache.delete(n.id); render(); toast("Created "+name); }catch(e){ toast(devErr(e)); } return; }
+  if(isMount(n)){ try{ await HoloFiles.mountMkdir(n.path, name); listCache.delete(n.id); render(); toast("Created "+name); }catch(e){ toast("Couldn't create: "+(e.message||e)); } return; }
   if(n.source!=="opfs") return; try{ await HoloFiles.mkdir(n.path, name); listCache.delete(n.id); render(); toast("Created "+name); }catch(e){ toast("Couldn't create: "+(e.message||e)); } };
 async function renameSel(){ const n=sel; if(!n) return;
   if(n.source==="desktop"){ const name=prompt("Rename",n.name); if(!name||name===n.name) return; HoloFiles.deskRename(n,name); return; }
   if(isDevice(n)){ const name=prompt("Rename",n.name); if(!name||name===n.name) return; try{ await HoloFiles.deviceRename(n._absPath, name); listCache.delete(cur().id); sel=null; selSet.clear(); anchorIdx=-1; render(); toast("Renamed to "+name); }catch(e){ toast(devErr(e)); } return; }
+  if(isMount(n)){ const name=prompt("Rename",n.name); if(!name||name===n.name) return; try{ await HoloFiles.mountRename(cur().path, n.name, name); listCache.delete(cur().id); sel=null; selSet.clear(); anchorIdx=-1; render(); toast("Renamed to "+name); }catch(e){ toast("Rename failed: "+(e.message||e)); } return; }
   if(n.source!=="opfs") return; const name=prompt("Rename",n.name); if(!name||name===n.name) return; const parent=cur(); try{ await HoloFiles.rename(parent.path, n.name, name); listCache.delete(parent.id); sel=null; selSet.clear(); anchorIdx=-1; render(); }catch(e){ toast("Rename failed: "+(e.message||e)); } }
 /* ── clipboard: Cut / Copy / Paste (Home via OPFS · Desktop via the κ bridge) ── */
 let clip=null;
@@ -828,25 +837,27 @@ async function deleteSel(){ const all=(selSet.size>1?selectedNodes():(sel?[sel]:
   const desk=all.filter(n=>n.source==="desktop"); if(desk.length){ if(!confirm(`Delete ${desk.length===1?desk[0].name:desk.length+" items"} from the desktop?`)) return; desk.forEach(n=>HoloFiles.deskRemove(n)); sel=null; selSet.clear(); toast(`Deleted ${desk.length} item${desk.length===1?"":"s"}`); return; }
   const tr=all.filter(n=>n.source==="trash"); if(tr.length){ if(!confirm(`Permanently delete ${tr.length===1?tr[0].name:tr.length+" items"}? This cannot be undone.`)) return; for(const n of tr){ try{ await HoloFiles.removeTrash(n); }catch{} } listCache.clear(); sel=null; selSet.clear(); render(); toast(`Permanently deleted ${tr.length} item${tr.length===1?"":"s"}`); return; }
   const dev=all.filter(isDevice); if(dev.length){ if(!confirm(`Delete ${dev.length===1?dev[0].name:dev.length+" items"}? Moves to the Recycle Bin.`)) return; let ok=0; for(const n of dev){ try{ await HoloFiles.deviceDelete(n._absPath); ok++; }catch(e){ toast(devErr(e)); } } listCache.clear(); sel=null; selSet.clear(); render(); toast(`Moved ${ok} item${ok===1?"":"s"} to the Recycle Bin`); return; }
+  const mnt=all.filter(isMount); if(mnt.length){ if(!confirm(`Permanently delete ${mnt.length===1?mnt[0].name:mnt.length+" items"} from your device? This folder is real — there is no Recycle Bin here.`)) return; let ok=0; for(const n of mnt){ try{ const parts=String(n.path).split("/"); const nm=parts.pop(); await HoloFiles.mountRemove(parts.join("/"), nm); ok++; }catch(e){ toast("Couldn't delete: "+(e.message||e)); } } listCache.clear(); sel=null; selSet.clear(); render(); toast(`Deleted ${ok} item${ok===1?"":"s"}`); return; }
   const sn=all.filter(n=>n.source==="opfs"); if(!sn.length) return; let ok=0; for(const n of sn){ try{ await HoloFiles.recycle(n); ok++; }catch{} } listCache.clear(); sel=null; selSet.clear(); render(); toast(`Moved ${ok} item${ok===1?"":"s"} to Recycle Bin · ⌘Z or Recycle Bin to restore`); }
 
 /* ── context menu ───────────────────────────────────────────────────────────────────── */
 function openCtx(e,n,pane='a'){
-  const m=$("#ctx"); const writable = (n.source==="opfs" || isDevice(n)) && pane==='a';     // editable: Home (OPFS) + the device
+  const m=$("#ctx"); const writable = (n.source==="opfs" || isDevice(n) || isMount(n)) && pane==='a';     // editable: Home (OPFS) + the device (bridge or web mounts)
   const drill = pane==='b'?drillP2:drillInto, pick = pane==='b'?selectP2:select;
   const cloudable = n.kind==="file" && (n.source==="opfs"||n.did||n._realPath) && n.source!=="cloud";
   const addressable = n.did||n.source==="opfs"||n.source==="cloud";
   const mi=(ic,label,fn,cls="")=>({ic,label,fn,cls});
   const items=[
     mi(I.open, (n.kind==="dir"||n.kind==="app")?"Open":"Select", ()=> (n.kind==="dir"||n.kind==="app")?drill(n):pick(n)),
-    ...(n._appId||n.kind==="app"?[mi(I.open,"Launch holospace ↗",()=>launchHolospace(n._appId||n.role))]:[]),
+    ...(n._appId||n.kind==="app"?[mi(I.open,"Open ↗",()=>launchHolospace(n._appId||n.role))]:[]),
     mi(I.info2,"Get info / preview",()=>{ pick(n); openProperties(n); }),
-    mi(I.info2,P.apple?"Get Info":"Properties",()=>{ pick(n); openInfoDialog(n); }),
+    mi(I.info2,PF.getInfo||"Properties",()=>{ pick(n); openInfoDialog(n); }),
     ...(writable?[mi(I.copy,"Copy",()=>{pick(n);copySel();},"sepb"),mi(I.copy,"Cut",()=>{pick(n);cutSel();})]:[]),
     ...(writable&&clip&&clip.nodes.length?[mi(I.copy,`Paste ${clip.nodes.length} item${clip.nodes.length===1?"":"s"}`,()=>pasteHere())]:[]),
     ...(isDevice(n)?[mi(I.copy,"Copy path",()=>{ try{ navigator.clipboard.writeText(n._absPath); }catch{} toast("Path copied"); })]:[]),
     ...(window.Q&&n.kind!=="location"?[mi(I.spark,"Ask Q about this",()=>askQAbout(n))]:[]),
     ...(addressable?[mi(I.qr,"Share…",()=>openShareSheet(n),"sepb"),mi(I.shield,"Verify · re-derive κ",()=>{pick(n);setTimeout(()=>$("#verify")&&$("#verify").click(),60);}),mi(I.copy,"Copy holo://κ",()=>copyKappa(n))]:[]),
+    ...(isMount(n)&&n.kind==="file"?[mi(I.copy,"Copy to Home",()=>copyMountToHome(n),"sepb")]:[]),
     ...(cloudable?[mi(I.cloudup,"Send to Holo Cloud",()=>sendToCloud(n),"sepb")]:[]),
     mi(I.cloud,"Open Holo Cloud ↗",()=>openInCloud(),cloudable?"":"sepb"),
     ...(n.kind==="file" && extOf(n.name)==="zip" ? [mi(I.archive,"Extract here",()=>doExtract(n),"sepb")] : []),
@@ -886,7 +897,7 @@ function sortItems(list){
 }
 const esc=(s)=>String(s==null?"":s).replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
 const kshort=(d)=>{ const h=String(d||"").split(":").pop(); return h?h.slice(0,10)+"…":""; };
-const typeLabel=(n)=> n.kind==="dir"?"Folder":n.kind==="app"?"Holospace":n.kind==="location"?"Location":(extOf(n.name)?extOf(n.name).toUpperCase()+" file":"File");
+const typeLabel=(n)=> n.kind==="dir"?"Folder":n.kind==="app"?"App":n.kind==="location"?"Location":(extOf(n.name)?extOf(n.name).toUpperCase()+" file":"File");
 const tint=(n)=> n.kind==="dir"||n.kind==="location"?"var(--accent)":n.kind==="app"?"#2dd4bf": kindOf(n.name)==="image"?"#f59e7a":kindOf(n.name)==="code"?"#7cc4ff":kindOf(n.name)==="data"?"#a78bfa":"var(--dim)";
 const prettyPath=(n)=> n._realPath ? n._realPath : n.path.startsWith("holospace:")?"Holospaces / "+n.path.slice("holospace:".length).replace(/\//g," / "): n.path.startsWith("os:")?"OS Runtime / "+n.path.slice("os:".length).replace(/\//g," / "): n.path;
 function emptyState(){ const w=cur().source==="opfs"; return `<div class="empty"><div>${cur().source==="opfs"?"This folder is empty":"Nothing here"}</div>${w?`<button class="ebtn" id="emk">${I.newfolder}<span>New folder</span></button>`:""}</div>`; }
@@ -913,7 +924,7 @@ addEventListener("click",closeMenus);
 reflectView();
 
 /* ── Command palette (Ctrl/⌘+P) — fuzzy-run any explorer action, like VS Code / Files ── */
-const modLabel=(k)=> (P.apple?"⌘":"Ctrl")+" "+k;
+const modLabel=(k)=> (P.modSymbol||"Ctrl")+" "+k;
 let _palItems=[], _palSel=0;
 function paletteCommands(){
   const C=[]; const add=(label,run,hint)=>C.push({label,run,hint:hint||""});
@@ -984,7 +995,7 @@ addEventListener("keydown",(e)=>{
 async function runLocalSearch(){
   const q=$("#q").value.trim();
   if(!q){ searchMode=false; render(); return; }
-  searchMode=true; $("#list").innerHTML=`<div class="empty">Searching the substrate…</div>`;
+  searchMode=true; $("#list").innerHTML=`<div class="empty">Searching…</div>`;
   let res=[]; try{ res=await HoloFiles.searchAll(q); }catch{}
   if($("#q").value.trim()!==q) return;                 // a newer keystroke won
   items=res; sel=null; renderSearchResults(q,res); setStatus();
@@ -992,7 +1003,7 @@ async function runLocalSearch(){
 async function runEnter(){
   const q=$("#q").value.trim(); if(!q) return;
   let r=null; try{ r=await HoloFiles.resolveInput(q); }catch{}
-  if(r && r.kind==="node"){ openLocation(LOCS[3]); $("#q").value=""; searchMode=false; setTimeout(()=>select(r.node),60); toast("Resolved κ → "+r.node.name); return; }
+  if(r && r.kind==="node"){ openLocation(LOCS[3]); $("#q").value=""; searchMode=false; setTimeout(()=>select(r.node),60); toast("Found "+r.node.name); return; }
   await runWebSearch(q);
 }
 async function runWebSearch(q){
@@ -1030,6 +1041,16 @@ async function sendToCloud(n){
   let ok=0,last=null; for(const x of sn){ try{ last=await HoloFiles.sendToCloud(x); ok++; }catch{} }
   listCache.clear(); toast(`✓ ${ok} in Holo Cloud${(ok===1&&last)?` · ${kshort(last.did)}`:""}`);
   if(ok) osNotify({title:`${ok} file${ok===1?"":"s"} saved to Holo Cloud`, body:(ok===1?n.name:ok+" files")+" — synced across your devices.", deepLink:{kind:"address",value:"cloud"}, icon:"☁"});
+}
+// N2: bring a real-device file INTO the Hologram home (the ONE ingest door — sealed, chipped, explicit).
+async function copyMountToHome(n){
+  try{
+    const {bytes}=await HoloFiles.read(n, 512*1024*1024);
+    const I=await import("../../_shared/holo-home-ingest.mjs");
+    const r=await I.homeIngest(bytes,{ name:n.name, dir:"Downloads", from:"device" });
+    await r.sealed; listCache.clear();
+    toast("Copied to Home / Downloads");
+  }catch(e){ toast("Couldn't copy: "+(e.message||e)); }
 }
 async function copyKappa(n){
   let did=n.did;
@@ -1271,7 +1292,7 @@ async function openShareSheet(n){
   $("#shclose").onclick=closeShare;
   $("#shcopy").onclick=()=>{ (navigator.clipboard?navigator.clipboard.writeText(link):Promise.reject()).then(()=>toast("Copied "+link),()=>toast(link)); };
   const c2=$("#shcopy2"); if(c2) c2.onclick=()=>{ (navigator.clipboard?navigator.clipboard.writeText(httpsLink):Promise.reject()).then(()=>toast("Copied link"),()=>toast(httpsLink)); };
-  const nb=$("#shnative"); if(nb) nb.onclick=()=>{ try{ navigator.share({title:n.name, text:"A self-verifying Hologram object", url:link}); }catch(e){} };
+  const nb=$("#shnative"); if(nb) nb.onclick=()=>{ try{ navigator.share({title:n.name, text:n.name, url:link}); }catch(e){} };
   const pb=$("#shpub"); if(pb) pb.onclick=async ()=>{ pb.disabled=true; pb.innerHTML="Saving…"; const out=$("#shpubout");
     try{ const r=await HoloFiles.sendToCloud(n); out.innerHTML=`✓ In your Holo Cloud · synced across your devices · <span class="shk">${esc(kshort(r.did))}</span> · <a href="#" id="shopencloud">open ↗</a>`;
       const oc=$("#shopencloud"); if(oc) oc.onclick=(e)=>{e.preventDefault(); openInCloud();};
@@ -1362,13 +1383,18 @@ function setupDnD(){
   const main=$("#main"), dz=$("#dropz");
   const writableHere=()=> cur() && cur().source==="opfs";
   const hasDrop=(dt)=>{ if(!dt) return false; const t=[...(dt.types||[])]; return t.includes("Files")||t.includes("text/uri-list")||t.includes("text/plain"); };
-  main.addEventListener("dragover",(e)=>{ if(dragSrc){ if(dragFromPane==="b" && writableHere()){ e.preventDefault(); dz.classList.add("on"); } return; } if(!writableHere()) return; if(!hasDrop(e.dataTransfer)) return; e.preventDefault(); dz.classList.add("on"); });
+  // N5 MAGIC: a dropped FOLDER mounts (anywhere in Files) — dragover accepts it even off a writable view.
+  const dtHasFolder=(dt)=>{ try{ return [...(dt.items||[])].some(i=>i.kind==="file" && i.getAsFileSystemHandle); }catch{ return false; } };
+  main.addEventListener("dragover",(e)=>{ if(dragSrc){ if(dragFromPane==="b" && writableHere()){ e.preventDefault(); dz.classList.add("on"); } return; } if(!writableHere() && !dtHasFolder(e.dataTransfer)) return; if(!writableHere() && !hasDrop(e.dataTransfer) && !dtHasFolder(e.dataTransfer)) return; e.preventDefault(); dz.classList.add("on"); });
   main.addEventListener("dragleave",(e)=>{ if(!main.contains(e.relatedTarget)) dz.classList.remove("on"); });
   main.addEventListener("drop", async (e)=>{
-    dz.classList.remove("on"); if(dragSrc){ if(dragFromPane==="b" && writableHere()){ e.preventDefault(); const srcs=dragSrc; dragSrc=null; await dropAcross(cur().path, srcs); } return; } if(!writableHere()) return; const dt=e.dataTransfer; if(!dt) return;
-    if(dt.files && dt.files.length){ e.preventDefault(); const files=[...dt.files], dest=cur().path; toast(`Uploading ${files.length} file${files.length===1?"":"s"}…`); let ok=0; for(const f of files){ try{ await HoloFiles.createFile(dest, f.name, await f.arrayBuffer()); ok++; }catch{} } listCache.delete(cur().id); render(); toast(`Uploaded ${ok} file${ok===1?"":"s"} to ${cur().name}`); return; }
+    dz.classList.remove("on"); if(dragSrc){ if(dragFromPane==="b" && writableHere()){ e.preventDefault(); const srcs=dragSrc; dragSrc=null; await dropAcross(cur().path, srcs); } return; } const dt=e.dataTransfer; if(!dt) return;
+    // a dropped FOLDER → mount it + open (the magical move: your real folder is just there, from any view)
+    if(HoloFiles.deviceMounts && dtHasFolder(dt)){ e.preventDefault(); try{ const ids=await HoloFiles.deviceMounts.mountDrop(dt); if(ids.length){ listCache.clear(); await loadNativePlaces(); const m=(await HoloFiles.deviceMounts.mounts()).find(x=>x.id===ids[0]); if(m) openLocation({name:m.name,path:"mount:"+m.id,kind:"dir",source:"mount-dir",writable:true,id:"mount:"+m.id}); toast("Connected "+ids.length+" folder"+(ids.length===1?"":"s")); return; } }catch(err){ toast("Couldn't connect: "+(err.message||err)); } }
+    if(!writableHere()) return;
+    if(dt.files && dt.files.length){ e.preventDefault(); const files=[...dt.files], dest=cur().path; toast(`Adding ${files.length} file${files.length===1?"":"s"}…`); let ok=0; for(const f of files){ try{ await HoloFiles.createFile(dest, f.name, await f.arrayBuffer()); ok++; }catch{} } listCache.delete(cur().id); render(); toast(`Added ${ok} file${ok===1?"":"s"}`); return; }
     const txt=(dt.getData("text/uri-list")||dt.getData("text/plain")||"").trim();        // a κ / holo:// link dropped in → materialize
-    if(/holo:\/\/|did:holo:|\b[0-9a-f]{64}\b/i.test(txt)){ e.preventDefault(); try{ const r=await HoloFiles.materialize(txt, cur().path); listCache.delete(cur().id); render(); toast("✨ Materialized "+r.name+" from κ"); }catch(err){ toast("Couldn't materialize: "+(err.message||err)); } }
+    if(/holo:\/\/|did:holo:|\b[0-9a-f]{64}\b/i.test(txt)){ e.preventDefault(); try{ const r=await HoloFiles.materialize(txt, cur().path); listCache.delete(cur().id); render(); toast("Added "+r.name); }catch(err){ toast("Couldn't add: "+(err.message||err)); } }
   });
 }
 
@@ -1392,7 +1418,7 @@ html[data-embedded] #tabstrip{display:none}   /* embedded in the shell: the fram
 #dropz{position:fixed;inset:0;z-index:75;display:none;place-items:center;background:#0a1530cc;backdrop-filter:blur(3px)}
 #dropz.on{display:grid} #dropz .dzc{border:2px dashed var(--accent);border-radius:18px;padding:42px 64px;color:var(--ink);font:650 16px var(--sys);background:#0d1424ee;text-align:center;pointer-events:none} #dropz .dzc svg{width:30px;height:30px;opacity:.85}
 </style>`);
-document.body.insertAdjacentHTML("beforeend", `<div id="dropz"><div class="dzc">${I.cloudup}<div style="margin-top:10px">Drop files or a <b>holo://κ</b> link to add here</div></div></div>`);
+document.body.insertAdjacentHTML("beforeend", `<div id="dropz"><div class="dzc">${I.cloudup}<div style="margin-top:10px">Drop files here</div></div></div>`);
 
 /* ── dual-pane — a second, independent pane; drag across to copy/move ───────────────── */
 function toggleDual(){ dualOn=!dualOn; document.body.classList.toggle("dual",dualOn); $("#dualToggle").classList.toggle("on",dualOn); if(dualOn){ p2.trail.length?renderP2():openP2(LOCS[0]); } }
@@ -1455,7 +1481,7 @@ body.dual #main{flex:1 1 50%;border-right:1px solid var(--line)} body.dual #pane
 
 /* ── sort & group menu · status column · .zip archives ──────────────────────────────── */
 // status = the content-addressed analog of git status: sealed (κ-pinned, immutable) vs local (working copy).
-const statusOf=(n)=> (n.kind==="dir"||n.kind==="app")?{label:"",cls:""}: n.did?{label:"sealed",cls:"st-sealed"}: n.source==="opfs"?{label:"local",cls:"st-local"}:{label:"",cls:""};
+const statusOf=(n)=> (n.kind==="dir"||n.kind==="app")?{label:"",cls:""}: n.did?{label:"",cls:"st-sealed"}: {label:"",cls:""};   // N4: the verified chip is a glyph, not a word
 function groupKeyOf(n){
   if(groupBy==="kind") return n.kind==="dir"?"Folders":n.kind==="app"?"Holospaces":"Files";
   if(groupBy==="type") return n.kind==="dir"?"Folders":n.kind==="app"?"Holospaces":(extOf(n.name)?extOf(n.name).toUpperCase()+" files":"Files");
@@ -1465,7 +1491,7 @@ function groupKeyOf(n){
 function groupsOf(){ if(groupBy==="none") return [{key:null,idxs:items.map((_,i)=>i)}]; const m=new Map(); items.forEach((n,i)=>{ const k=groupKeyOf(n); if(!m.has(k)) m.set(k,[]); m.get(k).push(i); }); return [...m.entries()].map(([key,idxs])=>({key,idxs})); }
 function openSortMenu(){
   const m=$("#sortmenu"), rb=($("#moreBtn")||$("#sortBtn")).getBoundingClientRect();   // anchor under ⋯ (the sort control now lives in the More menu)
-  const keys=[["name","Name"],["bytes","Size"],["kind","Type"],["did","Content address (κ)"]], grps=[["none","None"],["kind","Kind"],["type","Type"],["tag","Tag"]];
+  const keys=[["name","Name"],["bytes","Size"],["kind",PF.kind||"Type"],["mtime",PF.dateModified||"Modified"]], grps=[["none","None"],["kind","Kind"],["type","Type"],["tag","Tag"]];
   m.innerHTML=`<div class="mhdr">Sort by</div>`+keys.map(([k,l])=>`<div class="mi" data-sk="${k}"><span class="mck">${sortKey===k?"✓":""}</span><span>${l}</span></div>`).join("")
     +`<div class="mi sepb" data-dir="asc"><span class="mck">${sortDir>0?"✓":""}</span><span>Ascending</span></div><div class="mi" data-dir="desc"><span class="mck">${sortDir<0?"✓":""}</span><span>Descending</span></div>`
     +`<div class="mhdr sepb">Group by</div>`+grps.map(([k,l])=>`<div class="mi" data-gb="${k}"><span class="mck">${groupBy===k?"✓":""}</span><span>${l}</span></div>`).join("");
