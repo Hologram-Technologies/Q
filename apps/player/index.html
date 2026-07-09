@@ -1051,6 +1051,7 @@
       import { createPeertubeProvider } from "./holo-source-peertube.mjs";
       import { createM3UProvider } from "./holo-source-m3u.mjs";
       import { loadLive as loadIPTV, loadFreeTV, langName } from "./holo-source-iptv.mjs";   // Holo Live — world's free/legal/public TV (iptv-org + Free-TV)
+      import { makeMediaIndex } from "./holo-media-index.mjs";   // the κ-Home (K1): rows resolved verify-or-refuse from the media-index κ
       import { PREMIUM, buildPremium } from "./holo-live-premium.mjs";   // Holo Live Premium — marquee channels, official sources
       import { loadPluto } from "./holo-source-pluto.mjs";   // Pluto TV — official free FAST channels (breadth: movies/docs/sport/kids)
       import { loadTwitchTop, loadTwitchGames, loadTwitchGameStreams } from "./holo-source-twitch.mjs";   // Twitch — live games, esports, IRL
@@ -1379,8 +1380,8 @@
         if (land && it.logoUrl) { const lg = pic.querySelector(".cap .logo"); if (lg) paintImgEl(lg, it.logoUrl); }
         // Prefetch-on-hover: warm the detail backdrop κ so opening the title is instant (very-fast).
         el.addEventListener("pointerenter", () => { const b = it.backdrop || it.posterUrl; if (b && window.HoloArtCache) { try { HoloArtCache.url(artSrc(b, 780)); } catch {} } try { resolveTrailer(it); } catch {} }, { once: true });   // warm art + the trailer id so hover-play is instant
-        el.addEventListener("click", () => (it.__game ? launchGame(it.gameRef, it.gameResume) : it.live ? LiveStage.reveal(it) : openDetail(it)));   // game → launch in the games space; live → tune in; else detail
-        el.addEventListener("keydown", (e) => { if (e.key === "Enter") (it.__game ? launchGame(it.gameRef, it.gameResume) : it.live ? LiveStage.reveal(it) : openDetail(it)); });
+        el.addEventListener("click", () => selectItem(it));   // ONE kind-router: game → launch · book → audio sheet · live → tune in · else detail
+        el.addEventListener("keydown", (e) => { if (e.key === "Enter") selectItem(it); });
         if (it.live) {
           // Live: hovering PRE-BUFFERS the channel (instant zap), no in-card trailer.
           el.addEventListener("pointerenter", () => LiveStage.warm(it));
@@ -1523,11 +1524,12 @@
         return sec;
       }
 
-      // ── Games on the Holo TV Home — a row that launches into the Holo Games space (one surface) ──────────
-      // Both apps are same-origin under /Q/, so we hand the game to the (kept-alive) games holospace: a durable
-      // localStorage intent (read on the games app's boot, cold-open safe) + the live launch channel (instant when
-      // already mounted), then switch spaces via the OS bridge. The game warm-boots there in the same rail chrome.
-      let holoGameItems = [];
+      // ── THE κ-HOME (K1) — the Home's media rows resolve from the κ-addressed media-index ──────────────────
+      // ONE renderer for Films · Games · Live TV · Audiobooks: the index (apps/player/media-index.json → κ) is
+      // resolved verify-or-refuse by holo-media-index.mjs; every tile's art is a verified κ-blob (object URL —
+      // CacheStorage-warm on revisit, paints offline). A refused card = an absent tile, never a broken Home; a
+      // missing index = the Home exactly as before (the index is an upgrade, not a dependency). This REPLACED
+      // the hand-rolled games + live rows — three row mechanisms collapsed into kappaRows().
       function launchGame(ref, resume) {
         try {
           localStorage.setItem("holo-games-pending-launch", JSON.stringify({ ref, resume: !!resume, ts: Date.now() }));
@@ -1536,28 +1538,70 @@
         try { if (window.parent && window.parent !== window && window.parent.__holoOpenSpace) return window.parent.__holoOpenSpace("games"); } catch (e) {}
         location.href = "../holo-games/index.html";
       }
-      async function loadHoloGames() {
-        try {
-          const j = await (await fetch("../holo-games/holos/catalog.json")).json();
-          holoGameItems = (j.games || []).filter((g) => g && g.title && (g.kappa || g.holo)).map((g) => ({
-            id: "game:" + (g.kappa || g.title), name: g.title, __game: true, gameRef: g.kappa || g.title,
-            gameResume: false, posterUrl: g.poster || "", src: "#game",
-          }));
-          if (holoGameItems.length && views.home && !views.home.hidden) renderHome();
-        } catch (e) {}
+      let kappaIdxRows = [];   // [{label, kind, items}] — fully materialized, verified tiles only
+      function cardToItem(c, hex) {
+        const it = { id: "kappa:" + hex, name: c.title, kappa: hex, year: c.year, __kind: c.kind, __card: c };
+        if (c.kind === "film") { it.src = c.stream && c.stream.url; it.playSrc = it.src; it.type = "video/mp4"; it.source = "open"; it.availability = { playable: true, source: "kappa", playSrc: it.src, type: it.type }; }
+        else if (c.kind === "game") { it.__game = true; it.gameRef = ((c.stream && c.stream.kappa) || "sha256:").replace(/^sha256:/, "") || c.title; }
+        else if (c.kind === "live") { it.__liveId = c.stream && c.stream.channel; }
+        else if (c.kind === "audiobook") { it.__book = true; }
+        return it;
       }
-      const gamesRail = () => holoGameItems.length ? rail("Games", holoGameItems, { shape: "landscape", sub: "play instantly" }) : null;
-      loadHoloGames();
-      // Live TV ON the Home — reuses the player's own live machinery (featuredChannels + liveRail + liveCard →
-      // LiveStage warm-zap). Lazy-mounted by the Home rail observer; re-rendered once channels finish loading (idle).
-      function liveHomeRail() {
+      async function loadKappaHome() {
         try {
-          const chans = (typeof featuredChannels === "function") ? featuredChannels() : [];
-          if (!chans || !chans.length) return null;
-          const sec = liveRail("Live TV", chans.slice(0, 18));
-          if (sec) ensureRailObserver().observe(sec);
-          return sec;
-        } catch (e) { return null; }
+          const MI = makeMediaIndex(); window.HoloMediaIndex = MI;
+          await MI.open();
+          const rows = [];
+          for (const row of MI.rows()) {
+            const items = [];
+            for (const hex of row.cards) {
+              const c = await MI.card(hex); if (!c) continue;              // refused → tile absent, Home lives (L5)
+              const it = cardToItem(c, hex);
+              it.posterUrl = (await MI.artURL(c)) || "";                   // verified κ-art as a same-document blob URL
+              items.push(it);
+            }
+            if (items.length) rows.push({ label: row.label, kind: row.kind, items });
+          }
+          kappaIdxRows = rows;
+          if (views.home && !views.home.hidden) renderHome();
+        } catch (e) { /* never blank — the Home renders without the index */ }
+      }
+      loadKappaHome();
+      const KAPPA_ROW_SUB = { film: "public domain · played by κ", game: "play instantly", live: "tune in", audiobook: "LibriVox · free" };
+      const kappaRows = () => kappaIdxRows.map((r) => rail(r.label, r.items, { shape: "landscape", sub: KAPPA_ROW_SUB[r.kind] || "" })).filter(Boolean);
+      // ONE kind-router for every tile the Home shows (κ or classic) — film/detail · game · live · audiobook.
+      function selectItem(it) {
+        if (it.__game) return launchGame(it.gameRef, it.gameResume);
+        if (it.__book) return playBook(it.__card, it.kappa);
+        if (it.__liveId) { loadLiveChannels().then(() => { const c = chanById().get(it.__liveId) || (premiumChannels || []).find((x) => x.id === it.__liveId); c ? LiveStage.reveal(c) : showLive(); }).catch(() => showLive()); return; }
+        if (it.live) return LiveStage.reveal(it);
+        return openDetail(it);
+      }
+      // Audiobooks — a minimal floating audio sheet (chapters from the card; position remembered per book-κ).
+      let _bookEl = null;
+      function closeBook() { if (_bookEl) { try { _bookEl.querySelector("audio").pause(); } catch (e) {} _bookEl.remove(); _bookEl = null; } }
+      function playBook(card, hex) {
+        const ch = (card.meta && card.meta.chapters) || (card.stream && card.stream.url ? [{ name: card.title, url: card.stream.url }] : []);
+        if (!ch.length) return;
+        closeBook();
+        const posKey = "holo.book." + hex;
+        let pos = {}; try { pos = JSON.parse(localStorage.getItem(posKey) || "{}"); } catch (e) {}
+        const el = document.createElement("div");
+        el.style.cssText = "position:fixed;right:18px;bottom:18px;width:min(380px,92vw);z-index:60;background:#10121bf2;border:1px solid #ffffff1f;border-radius:16px;padding:14px;-webkit-backdrop-filter:blur(14px);backdrop-filter:blur(14px);box-shadow:0 24px 60px #000b;color:#eceef5";
+        el.innerHTML = `<div style="display:flex;align-items:center;gap:10px;margin-bottom:10px">
+            <div style="flex:1;min-width:0"><div style="font-weight:700;font-size:14px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${esc(card.title)}</div>
+            <div style="font-size:11px;opacity:.55">Audiobook · ${ch.length} chapter${ch.length === 1 ? "" : "s"}</div></div>
+            <button class="btn" data-x style="padding:.35rem .6rem">✕</button></div>
+          <select data-ch style="width:100%;margin-bottom:10px;background:#0c0e16;color:#eceef5;border:1px solid #ffffff1f;border-radius:10px;padding:.5rem;font:inherit">${ch.map((c, i) => `<option value="${i}">${esc(c.name)}</option>`).join("")}</select>
+          <audio controls style="width:100%" preload="metadata"></audio>`;
+        const audio = el.querySelector("audio"), sel = el.querySelector("[data-ch]");
+        const cue = (i, t) => { sel.value = String(i); audio.src = ch[i].url; if (t) audio.currentTime = t; audio.play().catch(() => {}); };
+        sel.onchange = () => cue(+sel.value, 0);
+        audio.onended = () => { if (+sel.value + 1 < ch.length) cue(+sel.value + 1, 0); };
+        audio.ontimeupdate = () => { if ((audio.currentTime | 0) % 5 === 0) try { localStorage.setItem(posKey, JSON.stringify({ i: +sel.value, t: audio.currentTime })); } catch (e) {} };
+        el.querySelector("[data-x]").onclick = closeBook;
+        document.body.appendChild(el); _bookEl = el;
+        cue(Math.min(pos.i || 0, ch.length - 1), pos.t || 0);
       }
       function renderHome() {
         const ranked = window.HoloRank ? HoloRank.rank(pool(), { resume: getResume, salt: SALT }) : pool();
@@ -1577,8 +1621,7 @@
         add(appsRow());   // "Your apps" — circular streaming-platform tiles (Google-TV style)
         if (myAdds.length) add(rail("Yours", myAdds, { shape: "landscape", sub: "added by you" }));
         add(rail(taste.cold ? "Recommended for you" : "Top picks for you", ranked.slice(1, 13)));
-        add(gamesRail());   // Games ON the Holo TV Home — one surface (tiles launch into the games space)
-        add(liveHomeRail());   // Live TV ON the Home — tune in instantly (reuses LiveStage warm-zap)
+        for (const r of kappaRows()) add(r);   // the κ-Home rows (Films · Games · Live TV · Audiobooks) — resolved by hash
         // Top 10 today — most acclaimed, numbered (Netflix signature).
         const top10 = [...pool()].filter((it) => (it.source === "tmdb" || it.source === "open") && hasPosterArt(it)).sort((a, b) => (b.rating || (b.quality || 0) * 10) - (a.rating || (a.quality || 0) * 10)).slice(0, 10);
         add(rankRail("Top 10 today", top10));

@@ -18,7 +18,19 @@ import { verifyCard, sha256hex } from "./holo-media-card.mjs";
 export function makeMediaIndex({ base, load, pointer } = {}) {
   const B = base || new URL("../../b/", import.meta.url);              // origin-b store rung (root + /Q/ safe)
   const P = pointer || new URL("./media-index.json", import.meta.url); // the κ pointer (path = convenience only)
-  const _load = load || (async (hex) => { const r = await fetch(new URL(hex, B)); return r.ok ? new Uint8Array(await r.arrayBuffer()) : null; });
+  // Default loader: CacheStorage-first (0-egress revisits + OFFLINE browse), then the origin-b rung — the
+  // fetched bytes are cached RAW; verification happens on EVERY read above this layer, so a poisoned cache
+  // entry refuses exactly like a poisoned fetch (Law L5 is not delegated to the cache).
+  const CACHE = "holo-media-b";
+  const _hasCaches = typeof caches !== "undefined";
+  const _load = load || (async (hex) => {
+    const url = new URL(hex, B);
+    if (_hasCaches) { try { const hit = await (await caches.open(CACHE)).match(url); if (hit) return new Uint8Array(await hit.arrayBuffer()); } catch {} }
+    const r = await fetch(url); if (!r.ok) return null;
+    const bytes = new Uint8Array(await r.arrayBuffer());
+    if (_hasCaches) { try { await (await caches.open(CACHE)).put(url, new Response(bytes.slice())); } catch {} }
+    return bytes;
+  });
   const warm = new Map();                                              // hex → verified parsed card (µs tier)
   const artWarm = new Map();                                           // hex → object URL of verified art
   const stats = { warm: 0, loads: 0, refused: 0 };
@@ -37,7 +49,13 @@ export function makeMediaIndex({ base, load, pointer } = {}) {
 
   return {
     async open() {
-      const p = typeof P === "object" && P.kappa ? P : await (await fetch(P)).json();
+      // Pointer: network-first (a re-mint propagates), CacheStorage-fallback (offline still opens).
+      const p = (typeof P === "object" && P.kappa) ? P : await (async () => {
+        try { const r = await fetch(P, { cache: "no-cache" }); if (r.ok) { if (_hasCaches) { try { await (await caches.open(CACHE)).put(P, r.clone()); } catch {} } return await r.json(); } } catch {}
+        if (_hasCaches) { try { const hit = await (await caches.open(CACHE)).match(P); if (hit) return await hit.json(); } catch {} }
+        return null;
+      })();
+      if (!p || !p.kappa) throw new Error("media-index pointer unavailable");
       index = await object(p.kappa);
       if (!index || index.kind !== "media-index") { index = null; throw new Error("media-index REFUSED (κ mismatch or missing)"); }
       return index;
