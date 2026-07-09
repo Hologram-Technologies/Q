@@ -1268,7 +1268,21 @@ async function openShareSheet(n){
   const hex=await kappaHexOf(n);
   if(!hex){ body.innerHTML=`<div class="shspin">Couldn't derive a content address for this item.</div><button class="shbtn" onclick="">Close</button>`; body.querySelector("button").onclick=closeShare; return; }
   const link="holo://"+hex;
-  let qrSvg=""; try{ const QR=await import("../../_shared/holo-qr.js"); qrSvg=QR.toSVG(link,{margin:2,scale:8,dark:"#0b0f17",light:"#ffffff",rounded:.16}); }catch(e){}
+  // CARRY tier (Teleport T3): if the bytes fit, the LINK CARRIES THE FILE — scan/open = receive,
+  // no server involved (the payload rides the URL fragment, which never touches the wire).
+  let carry=null;
+  try{
+    if(n.kind==="file"){
+      const r=await HoloFiles.read(n, 2*1024*1024);
+      if(r.bytes.length===r.size){   // NEVER carry a truncated read — whole bytes or no carry tier
+        const C=await import("../../_shared/holo-carry.mjs");
+        const enc=await C.carryEncode(r.bytes,{name:n.name, base:location.href.split("#")[0]});
+        if(enc.tier) carry=enc;
+      }
+    }
+  }catch{}
+  let qrSvg=""; try{ const QR=await import("../../_shared/holo-qr.js"); qrSvg=QR.toSVG(carry&&carry.tier==="qr"?carry.url:link,{margin:2,scale:8,dark:"#0b0f17",light:"#ffffff",rounded:.16}); }catch(e){}
+  if(carry&&carry.tier==="link") qrSvg="";   // honest: the carry link is too big for a QR — no misleading address-QR
   const inCloud=n.source==="cloud";
   // HONEST REACH (F4): the ADDRESS is universal, the BYTES may not be. Probe where this κ resolves
   // right now (the origin κ-route, /.holo/sha256/<hex>) and say which it is — never imply global
@@ -1278,9 +1292,14 @@ async function openShareSheet(n){
   body.innerHTML=`
     <div class="shqr">${qrSvg||'<div class="shspin">QR unavailable</div>'}</div>
     <div class="shname">${esc(n.name)}</div>
+    ${carry?`<div class="shlink"><span class="shk">${esc(carry.url)}</span><button id="shcarry" class="shbtn primary">Copy</button></div>`:""}
     <div class="shlink"><span class="shk">${esc(link)}</span><button id="shcopy" class="shbtn">Copy</button></div>
     ${httpsLink?`<div class="shlink"><span class="shk">${esc(httpsLink)}</span><button id="shcopy2" class="shbtn">Copy</button></div>`:""}
-    <div class="shnote">${world
+    <div class="shnote">${carry
+      ? (carry.tier==="qr"
+        ? "This link <b>carries the file</b> — scan the code or send it, and it opens on any device. No server, nothing stored in between."
+        : "This link <b>carries the file</b> — too big for a QR, so send the link whole (copy or Share). It opens on any device; no server involved.")
+      : world
       ? "Anyone with this address can fetch the exact bytes and verify them — the address <b>is</b> the content."
       : "This address resolves <b>on this device</b> today — the bytes live in your home. Save to Holo Cloud to let your other devices (and shared links) resolve it."}</div>
     <div class="shrow">
@@ -1292,7 +1311,8 @@ async function openShareSheet(n){
   $("#shclose").onclick=closeShare;
   $("#shcopy").onclick=()=>{ (navigator.clipboard?navigator.clipboard.writeText(link):Promise.reject()).then(()=>toast("Copied "+link),()=>toast(link)); };
   const c2=$("#shcopy2"); if(c2) c2.onclick=()=>{ (navigator.clipboard?navigator.clipboard.writeText(httpsLink):Promise.reject()).then(()=>toast("Copied link"),()=>toast(httpsLink)); };
-  const nb=$("#shnative"); if(nb) nb.onclick=()=>{ try{ navigator.share({title:n.name, text:n.name, url:link}); }catch(e){} };
+  const cc=$("#shcarry"); if(cc) cc.onclick=()=>{ (navigator.clipboard?navigator.clipboard.writeText(carry.url):Promise.reject()).then(()=>toast("Copied — this link carries the file"),()=>toast("Copy failed")); };
+  const nb=$("#shnative"); if(nb) nb.onclick=()=>{ try{ navigator.share({title:n.name, text:n.name, url:(carry?carry.url:link)}); }catch(e){} };
   const pb=$("#shpub"); if(pb) pb.onclick=async ()=>{ pb.disabled=true; pb.innerHTML="Saving…"; const out=$("#shpubout");
     try{ const r=await HoloFiles.sendToCloud(n); out.innerHTML=`✓ In your Holo Cloud · synced across your devices · <span class="shk">${esc(kshort(r.did))}</span> · <a href="#" id="shopencloud">open ↗</a>`;
       const oc=$("#shopencloud"); if(oc) oc.onclick=(e)=>{e.preventDefault(); openInCloud();};
@@ -1578,6 +1598,28 @@ renderSide();
     const home = nativePlaces.folders.find(n=>n._home) || nativePlaces.folders[0] || nativePlaces.drives[0];
     if(home) openLocation(home,false);
     else { await seedHome(); openLocation(LOCS[0],false); }   // fallback (older host w/o userdirs): OPFS Home
+  }
+  // ── CARRY RECEIVE (Teleport T2): the link IS the file. #recv=… → decode (re-derive the κ, refuse
+  // a mismatch) → seal into Home/Downloads through the ONE door → SCRUB the payload from the URL +
+  // history (privacy: the bytes were only ever in the fragment) → show the file. Guest-capable.
+  if(location.hash.startsWith("#recv=")){
+    const carryHash = location.hash;
+    try{ history.replaceState(null, "", location.pathname + location.search); }catch{}
+    (async()=>{
+      try{
+        const C = await import("../../_shared/holo-carry.mjs");
+        const got = await C.carryDecode(carryHash);
+        if(got.error === "verify"){ toast("Couldn't receive — this link's contents don't match its seal"); return; }
+        if(got.error){ toast("This link couldn't be read"); return; }
+        const I = await import("../../_shared/holo-home-ingest.mjs");
+        const r = await I.homeIngest(got.bytes, { name: got.name, dir: "Downloads", from: "carry" });
+        await r.sealed;
+        listCache.clear();
+        openLocation({name:"Downloads",path:"/home/user/Downloads",kind:"dir",source:"opfs",writable:true,id:"recv-dl"},false);
+        toast("Received " + got.name);
+        setTimeout(()=>{ const row=[...document.querySelectorAll("#list [data-i]")].find(e=>e.textContent.includes(got.name)); if(row) row.click(); }, 600);
+      }catch(e){ toast("Couldn't receive: "+(e.message||e)); }
+    })();
   }
 })();
 </script>
