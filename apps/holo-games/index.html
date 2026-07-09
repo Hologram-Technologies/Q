@@ -15,105 +15,166 @@
   OS catalog + reseal land via the seal flow (path-only until then).
 -->
 <style>
-  :root { color-scheme: dark; --accent: #ff5c8a; }
-  html, body { margin: 0; height: 100%; background: #07080c; color: #cfd6e4; font: 13px ui-monospace, SFMono-Regular, Menlo, monospace; }
+  :root {
+    color-scheme: dark;
+    --accent: #ff5c8a; --accent-2: #a855f7;
+    --bg: #08090d; --elev: #14171f; --line: #ffffff14;
+    --text: #eceef5; --muted: #8b93a7;
+    --grad: linear-gradient(135deg, var(--accent), var(--accent-2));
+    --radius: 16px; --radius-sm: 12px;
+    --ease: cubic-bezier(.22,.61,.36,1);
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; height: 100%; background: var(--bg); color: var(--text); overflow-x: hidden;
+    font: 15px/1.5 -apple-system, "SF Pro Display", system-ui, "Segoe UI", Roboto, Inter, sans-serif;
+    -webkit-font-smoothing: antialiased; text-rendering: optimizeLegibility; }
   #root { height: 100%; }
-  /* ── Home ── */
-  #home { height: 100%; overflow: auto; box-sizing: border-box; padding: 18px 22px 40px; }
-  #home h1 { font-size: 20px; margin: 4px 0 2px; letter-spacing: .5px; }
-  #home .sub { opacity: .5; margin-bottom: 14px; }
-  #search { width: 100%; max-width: 420px; background: #0d1018; color: #cfd6e4; border: 1px solid #2a3140; border-radius: 10px; padding: 9px 12px; font: inherit; margin-bottom: 18px; }
-  .shelf-title { font-size: 13px; opacity: .7; margin: 18px 0 8px; text-transform: uppercase; letter-spacing: 1px; }
-  .rail { display: flex; gap: 12px; overflow-x: auto; padding-bottom: 8px; }
-  .card { flex: 0 0 auto; width: 150px; cursor: pointer; border-radius: var(--holo-radius, 12px); overflow: hidden; background: #0d1018; border: 1px solid #1c2230; transition: transform .12s, border-color .12s; }
-  .card:hover { transform: translateY(-3px); border-color: var(--accent); }
-  .poster { width: 150px; height: 135px; display: block; image-rendering: pixelated; background: #000; }
-  .card .meta { padding: 7px 9px; }
-  .card .t { font-size: 12px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-  .card .s { font-size: 10px; opacity: .5; }
-  .card .resume { font-size: 10px; color: var(--accent); }
-  .badge { font-size: 9px; padding: 1px 5px; border-radius: 6px; background: #1c2230; opacity: .8; }
-  .badge.ok { background: #1f3d2a; color: #7ee787; }
-  .card .fav { position: absolute; top: 8px; right: 8px; font-size: 16px; opacity: 0; transition: opacity .12s; text-shadow: 0 1px 4px #000; }
-  .card { position: relative; }
+  ::-webkit-scrollbar { width: 10px; height: 10px; }
+  ::-webkit-scrollbar-thumb { background: #ffffff1c; border-radius: 10px; }
+  ::-webkit-scrollbar-track { background: transparent; }
+  button { font: inherit; color: var(--text); background: #ffffff0d; border: 1px solid var(--line);
+    border-radius: var(--radius-sm); padding: 9px 15px; cursor: pointer;
+    transition: background .18s var(--ease), border-color .18s var(--ease), transform .1s var(--ease); }
+  button:hover { background: #ffffff18; border-color: #ffffff2e; }
+  button:active { transform: scale(.97); }
+
+  /* ── Home / library ── */
+  #home { height: 100%; overflow-y: auto; padding: clamp(20px,4vw,40px) clamp(16px,4vw,52px) 72px;
+    background:
+      radial-gradient(120% 62% at 88% -12%, #ff5c8a22, transparent 60%),
+      radial-gradient(90% 52% at -8% -4%, #a855f71c, transparent 55%); }
+  .home-top { display: flex; align-items: center; gap: 16px; margin: 2px 0 20px; }
+  .home-top .spacer { flex: 1; }
+  #home h1 { font-size: clamp(24px,3.4vw,34px); font-weight: 800; letter-spacing: -.02em; margin: 0;
+    background: linear-gradient(120deg, #fff, #c2c8db); -webkit-background-clip: text; background-clip: text; color: transparent; }
+  #home .sub { display: none; }
+  #search { width: 100%; max-width: 460px; background: #0c0e16cc; color: var(--text); border: 1px solid var(--line);
+    border-radius: 14px; padding: 13px 16px; font: inherit; margin: 0 0 18px;
+    transition: border-color .18s var(--ease), background .18s var(--ease); }
+  #search:focus { outline: none; border-color: var(--accent); background: #0c0e16; }
+  #search::placeholder { color: var(--muted); }
+
+  #filters { display: flex; gap: 9px; flex-wrap: wrap; margin: 0 0 26px; }
+  .chip { font-size: 13px; font-weight: 600; padding: 8px 15px; border-radius: 999px; background: #ffffff0d;
+    border: 1px solid var(--line); color: var(--muted); cursor: pointer; transition: all .18s var(--ease); }
+  .chip:hover { color: var(--text); border-color: #ffffff2e; }
+  .chip.on { background: var(--grad); border-color: transparent; color: #fff; box-shadow: 0 6px 20px #ff5c8a44; }
+
+  .shelf-title { font-size: 16px; font-weight: 700; letter-spacing: -.01em; color: var(--text); margin: 28px 2px 14px; }
+  .shelf-title .cnt { color: var(--muted); font-weight: 500; font-size: 13px; margin-left: 4px; }
+  .rail { display: flex; gap: 16px; overflow-x: auto; padding: 4px 2px 14px; scrollbar-width: none; scroll-snap-type: x proximity; }
+  .rail::-webkit-scrollbar { display: none; }
+
+  .card { position: relative; flex: 0 0 auto; width: 168px; cursor: pointer; border-radius: var(--radius);
+    overflow: hidden; background: var(--elev); box-shadow: 0 8px 24px #0006;
+    transition: transform .22s var(--ease), box-shadow .22s var(--ease); scroll-snap-align: start; }
+  .card::after { content: ""; position: absolute; inset: 0; border-radius: inherit; border: 1px solid #ffffff12; pointer-events: none; transition: border-color .22s var(--ease); }
+  .card:hover { transform: translateY(-6px) scale(1.02); box-shadow: 0 22px 46px #000b; }
+  .card:hover::after { border-color: var(--accent); }
+  .poster { width: 100%; aspect-ratio: 1 / .92; display: block; object-fit: cover; image-rendering: pixelated; background: #05060a; }
+  .card .meta { position: absolute; left: 0; right: 0; bottom: 0; padding: 28px 12px 11px;
+    background: linear-gradient(0deg, #05060af5 0%, #05060abb 46%, transparent 100%); }
+  .card .t { font-size: 13.5px; font-weight: 650; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .card .s { font-size: 11px; color: var(--muted); margin-top: 2px; display: flex; align-items: center; gap: 5px; }
+  .card .resume { color: var(--accent); font-weight: 600; }
+  .badge { display: none; }                              /* drop dev provenance labels — the art speaks */
+  .badge.ok { display: inline-flex; align-items: center; color: #7ee787; font-size: 11px; }
+  .card .fav { position: absolute; top: 9px; right: 10px; font-size: 17px; opacity: 0; z-index: 2;
+    transition: opacity .18s var(--ease); text-shadow: 0 2px 6px #000; }
   .card:hover .fav, .card .fav.on { opacity: 1; }
   .card .fav.on { color: #ffd23f; }
-  /* filter chips */
-  #filters { display: flex; gap: 8px; flex-wrap: wrap; margin: 0 0 14px; }
-  .chip { font-size: 12px; padding: 5px 12px; border-radius: 999px; background: #0d1018; border: 1px solid #2a3140; cursor: pointer; }
-  .chip:hover { border-color: #4a5468; }
-  .chip.on { background: var(--accent); border-color: var(--accent); color: #fff; }
-  /* detail panel */
-  #detail { display: none; position: fixed; inset: 0; z-index: 25; background: #05060ad8; backdrop-filter: blur(10px); place-items: center; }
-  #detail.show { display: grid; }
-  .dcard { width: min(760px, 92vw); display: grid; grid-template-columns: 260px 1fr; gap: 24px; background: #0d1018; border: 1px solid #2a3140; border-radius: var(--holo-radius-lg, 16px); padding: 24px; box-shadow: 0 30px 90px #000a; }
-  .dcard .dcover { width: 260px; height: 234px; border-radius: var(--holo-radius, 12px); object-fit: cover; image-rendering: pixelated; background: #000; }
-  .dcard .dtitle { font-size: 26px; font-weight: 800; margin: 2px 0 6px; }
-  .dcard .dmeta { opacity: .6; margin-bottom: 18px; font-size: 13px; }
-  .dcard .dbtns { display: flex; gap: 10px; flex-wrap: wrap; }
-  .dcard .dbtns button { padding: 10px 20px; font-size: 14px; }
-  .dcard .dbtns button.primary { background: var(--accent); border-color: var(--accent); color: #fff; font-weight: 700; }
-  .dclose { position: absolute; top: 18px; right: 22px; font-size: 26px; cursor: pointer; opacity: .6; }
-  /* ── mobile / any-device ── */
-  html, body { overflow-x: hidden; }
-  @media (max-width: 680px) {
-    #home { padding: 14px 12px 40px; }
-    #home h1 { font-size: 18px; }
-    #search { max-width: 100%; }
-    .card { width: 120px; } .poster { width: 120px; height: 108px; }
-    .card .t, .card .s { width: 120px; }
-    .dcard { grid-template-columns: 1fr; gap: 14px; padding: 16px; text-align: center; }
-    .dcard .dcover { width: 100%; height: auto; aspect-ratio: 10/9; }
-    .dcard .dbtns { justify-content: center; }
-    #tv-hero .ht { font-size: 30px; } #tv-hero .herometa { left: 5vw; max-width: 88vw; }
-    .tv-tile { width: 132px; } .tv-tile img { width: 132px; height: 118px; }
-  }
-  .addrow { margin: 8px 0 4px; display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
-  .seeall { flex: 0 0 auto; width: 150px; height: 135px; display: grid; place-items: center; border-radius: var(--holo-radius, 12px); background: #0d1018; border: 1px dashed #2a3140; cursor: pointer; font-size: 12px; opacity: .8; }
-  .seeall:hover { border-color: var(--accent); }
-  .vgrid-vp { height: 72vh; overflow: auto; position: relative; }
+  .seeall { flex: 0 0 auto; width: 168px; align-self: stretch; display: grid; place-items: center; border-radius: var(--radius);
+    background: #ffffff08; border: 1px dashed #ffffff24; cursor: pointer; font-size: 13px; color: var(--muted); transition: all .18s var(--ease); }
+  .seeall:hover { border-color: var(--accent); color: var(--text); }
+
+  .addrow { margin: 0 0 8px; display: flex; flex-wrap: wrap; gap: 10px; align-items: center; }
+  label.btn { background: #ffffff0d; color: var(--text); border: 1px solid var(--line); border-radius: var(--radius-sm);
+    padding: 9px 15px; cursor: pointer; font-size: 13.5px; transition: all .18s var(--ease); }
+  label.btn:hover { border-color: #ffffff2e; background: #ffffff18; }
+  .add-detail { display: none; }                         /* remove file-format jargon */
+  .vgrid-vp { height: 74vh; overflow: auto; position: relative; }
   .vgrid-inner { position: relative; }
-  label.btn { background: #141925; color: #cfd6e4; border: 1px solid #2a3140; border-radius: var(--holo-radius-sm, 8px); padding: 7px 13px; cursor: pointer; }
-  label.btn:hover { border-color: #4a5468; }
-  /* ── Player ── */
-  #player { display: none; height: 100%; grid-template-rows: auto 1fr auto; gap: 10px; padding: 10px; box-sizing: border-box; }
-  #player.show { display: grid; }
-  #pbar { display: flex; gap: 8px; align-items: center; justify-self: center; flex-wrap: wrap; }
-  button { background: #141925; color: #cfd6e4; border: 1px solid #2a3140; border-radius: var(--holo-radius-sm, 8px); padding: 6px 12px; cursor: pointer; font: inherit; }
-  button:hover { border-color: #4a5468; }
-  #out { justify-self: center; align-self: center; max-width: 92vw; max-height: 72vh; border-radius: 10px; box-shadow: 0 20px 70px #000a; }
-  #hud { white-space: pre; opacity: .8; justify-self: center; text-align: center; line-height: 1.5; }
-  #drop { position: fixed; inset: 0; display: none; place-items: center; background: #000a; font-size: 22px; z-index: 9; }
+
+  /* detail modal */
+  #detail { display: none; position: fixed; inset: 0; z-index: 25; background: #05060ae4;
+    -webkit-backdrop-filter: blur(18px); backdrop-filter: blur(18px); place-items: center; padding: 20px; }
+  #detail.show { display: grid; animation: fadein .2s var(--ease); }
+  @keyframes fadein { from { opacity: 0 } to { opacity: 1 } }
+  .dcard { position: relative; width: min(720px, 94vw); display: grid; grid-template-columns: 250px 1fr; gap: 28px;
+    background: linear-gradient(180deg, #171a26, #0f111a); border: 1px solid #ffffff16; border-radius: 22px;
+    padding: 28px; box-shadow: 0 40px 120px #000c; }
+  .dcard .dcover { width: 250px; aspect-ratio: 1 / 1.08; border-radius: 14px; object-fit: cover; image-rendering: pixelated; background: #05060a; box-shadow: 0 16px 40px #0008; }
+  .dcard .dtitle { font-size: 28px; font-weight: 800; letter-spacing: -.02em; margin: 4px 0 6px; }
+  .dcard .dmeta { color: var(--muted); margin-bottom: 22px; font-size: 14px; }
+  .dcard .dbtns { display: flex; gap: 10px; flex-wrap: wrap; }
+  .dcard .dbtns button { padding: 11px 20px; font-size: 14px; border-radius: 12px; }
+  .dcard .dbtns button.primary { background: var(--grad); border-color: transparent; color: #fff; font-weight: 700; box-shadow: 0 8px 24px #ff5c8a44; }
+  .dclose { position: absolute; top: 16px; right: 20px; font-size: 22px; cursor: pointer; color: var(--muted); }
+  .dclose:hover { color: var(--text); }
+
+  @media (max-width: 680px) {
+    #home { padding: 16px 14px 64px; }
+    .card { width: 132px; } .seeall { width: 132px; }
+    .dcard { grid-template-columns: 1fr; gap: 16px; padding: 18px; text-align: center; }
+    .dcard .dcover { width: 62%; margin: 0 auto; }
+    .dcard .dbtns { justify-content: center; }
+  }
+  /* ── Player — full-bleed, cinematic; the chrome floats and auto-hides ── */
+  #player { display: none; position: relative; height: 100%;
+    background: radial-gradient(130% 92% at 50% 32%, #0c0e16 0%, #07080c 54%, #000 100%); }
+  #player.show { display: block; }
+  #player.immersed { cursor: none; }
+  #pbar { position: fixed; top: 0; left: 0; right: 0; z-index: 8; display: flex; align-items: center; gap: 8px;
+    padding: calc(12px + env(safe-area-inset-top)) 18px 16px;
+    background: linear-gradient(#05060af2, #05060a99 55%, transparent);
+    transition: opacity .35s var(--ease), transform .35s var(--ease); }
+  #pbar.hidden { opacity: 0; transform: translateY(-110%); pointer-events: none; }
+  #pbar #now { font-weight: 600; font-size: 14px; opacity: .9; margin-left: 4px; max-width: 46vw; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  #pbar .grow { flex: 1; }
+  #pbar button { background: #ffffff14; border: 1px solid #ffffff1a; border-radius: 11px; padding: 9px 13px; font-size: 15px; line-height: 1; }
+  #pbar button:hover { background: #ffffff26; }
+  #out { position: absolute; inset: 0; margin: auto; max-width: 96vw; max-height: 94vh; border-radius: 14px;
+    image-rendering: pixelated; box-shadow: 0 30px 90px #000c, 0 0 0 1px #ffffff10, 0 0 130px #ff5c8a14; }
+  #hud { display: none; }                                 /* dev telemetry off — it's pure game now */
+  #drop { position: fixed; inset: 0; display: none; place-items: center; background: #05060ade; font-size: 18px; color: var(--text); z-index: 12;
+    -webkit-backdrop-filter: blur(8px); backdrop-filter: blur(8px); }
   #drop.show { display: grid; }
-  #slots { display: none; position: fixed; right: 14px; top: 56px; width: 260px; max-height: 70vh; overflow: auto; background: #0d1018ee; border: 1px solid #2a3140; border-radius: var(--holo-radius, 12px); padding: 10px; z-index: 8; backdrop-filter: blur(8px); }
+  #slots { display: none; position: fixed; right: 16px; top: 66px; width: 284px; max-height: 72vh; overflow: auto;
+    background: #10121bf2; border: 1px solid #ffffff16; border-radius: 16px; padding: 12px; z-index: 9;
+    -webkit-backdrop-filter: blur(14px); backdrop-filter: blur(14px); box-shadow: 0 24px 60px #000b; }
   #slots.show { display: block; }
-  #slots .sv { display: flex; gap: 8px; align-items: center; padding: 6px; border-radius: var(--holo-radius-sm, 8px); }
-  #slots .sv:hover { background: #1a2030; }
-  #slots .sv img { width: 56px; height: 50px; border-radius: 5px; image-rendering: pixelated; background:#000; }
+  #slots .sv { display: flex; gap: 10px; align-items: center; padding: 8px; border-radius: 11px; transition: background .15s; }
+  #slots .sv:hover { background: #ffffff10; }
+  #slots .sv img { width: 60px; height: 54px; border-radius: 8px; image-rendering: pixelated; background: #000; object-fit: cover; }
   #slots .sv .info { flex: 1; min-width: 0; }
-  #slots .sv .info .l { font-size: 11px; } #slots .sv .info .d { font-size: 10px; opacity: .5; }
-  #slots .sv button { padding: 3px 7px; font-size: 11px; }
-  #toast { position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%); background: var(--accent); color: #fff; padding: 8px 16px; border-radius: 20px; opacity: 0; transition: opacity .2s; z-index: 10; pointer-events: none; }
-  /* ── Fullscreen "Netflix" TV mode ── */
+  #slots .sv .info .l { font-size: 12px; font-weight: 600; } #slots .sv .info .d { font-size: 11px; color: var(--muted); }
+  #slots .sv button { padding: 5px 9px; font-size: 12px; }
+  #toast { position: fixed; bottom: calc(26px + env(safe-area-inset-bottom)); left: 50%; transform: translateX(-50%);
+    background: #12141ceb; color: var(--text); border: 1px solid #ffffff1a; padding: 11px 20px; border-radius: 14px;
+    font-size: 13.5px; opacity: 0; transition: opacity .22s var(--ease); z-index: 30; pointer-events: none;
+    -webkit-backdrop-filter: blur(10px); backdrop-filter: blur(10px); box-shadow: 0 16px 40px #000a; }
+
+  /* ── Fullscreen "TV" browse — cinematic, controller-first ── */
   #tv { display: none; position: fixed; inset: 0; z-index: 20; background: #05060a; overflow: hidden; flex-direction: column; }
   #tv.show { display: flex; }
-  #tv-hero { position: relative; height: 46vh; background-size: cover; background-position: center; flex: 0 0 auto; }
-  #tv-hero .scrim { position: absolute; inset: 0; background: linear-gradient(90deg, #05060aee 0%, #05060a99 40%, #05060a33 70%), linear-gradient(0deg, #05060a 0%, #05060a00 50%); }
-  #tv-hero .herometa { position: absolute; left: 6vw; bottom: 8%; max-width: 60vw; }
-  #tv-hero .ht { font-size: 44px; font-weight: 800; letter-spacing: .5px; text-shadow: 0 3px 18px #000; }
-  #tv-hero .hs { opacity: .75; margin: 8px 0 14px; font-size: 15px; }
-  #tv-hero .play { display: inline-block; background: var(--accent); color: #fff; font-weight: 700; padding: 10px 26px; border-radius: 999px; }
-  #tv-rows { flex: 1; overflow-y: auto; padding: 18px 0 40px; }
-  .tv-row { margin: 0 0 22px; }
-  .tv-rowlabel { font-size: 14px; opacity: .7; margin: 0 0 10px 6vw; letter-spacing: 1px; text-transform: uppercase; }
-  .tv-tiles { display: flex; gap: 18px; overflow-x: auto; padding: 6px 6vw; scrollbar-width: none; }
+  #tv-hero { position: relative; height: 52vh; background-size: cover; background-position: center; flex: 0 0 auto; }
+  #tv-hero .scrim { position: absolute; inset: 0; background: linear-gradient(90deg, #05060af5 0%, #05060abb 38%, #05060a22 72%), linear-gradient(0deg, #05060a 2%, transparent 55%); }
+  #tv-hero .herometa { position: absolute; left: 6vw; bottom: 9%; max-width: 62vw; }
+  #tv-hero .ht { font-size: clamp(34px,5vw,56px); font-weight: 800; letter-spacing: -.02em; text-shadow: 0 4px 24px #000; }
+  #tv-hero .hs { color: #c6ccddcc; margin: 10px 0 18px; font-size: 16px; }
+  #tv-hero .play { display: inline-block; background: var(--grad); color: #fff; font-weight: 700; padding: 12px 32px; border-radius: 999px; box-shadow: 0 10px 30px #ff5c8a55; }
+  #tv-rows { flex: 1; overflow-y: auto; padding: 20px 0 44px; }
+  .tv-row { margin: 0 0 24px; }
+  .tv-rowlabel { font-size: 15px; font-weight: 700; color: #c6ccddcc; margin: 0 0 12px 6vw; }
+  .tv-tiles { display: flex; gap: 18px; overflow-x: auto; padding: 8px 6vw; scrollbar-width: none; }
   .tv-tiles::-webkit-scrollbar { display: none; }
-  .tv-tile { flex: 0 0 auto; width: 168px; cursor: pointer; transition: transform .15s; opacity: .8; }
-  .tv-tile img { width: 168px; height: 150px; border-radius: var(--holo-radius, 12px); image-rendering: pixelated; background: #000; display: block; border: 3px solid transparent; }
-  .tv-tile .tt { font-size: 12px; margin-top: 6px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; width: 168px; opacity: .7; }
-  .tv-tile.foc { transform: scale(1.12); opacity: 1; }
-  .tv-tile.foc img { border-color: var(--accent); box-shadow: 0 12px 36px #000a, 0 0 0 4px #ff5c8a44; }
-  .tv-tile.foc .tt { opacity: 1; }
+  .tv-tile { flex: 0 0 auto; width: 186px; cursor: pointer; transition: transform .18s var(--ease); opacity: .72; }
+  .tv-tile img { width: 186px; aspect-ratio: 1 / .9; object-fit: cover; border-radius: 14px; image-rendering: pixelated; background: #000; display: block; border: 3px solid transparent; }
+  .tv-tile .tt { font-size: 13px; margin-top: 8px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; width: 186px; color: var(--muted); }
+  .tv-tile.foc { transform: scale(1.14); opacity: 1; }
+  .tv-tile.foc img { border-color: var(--accent); box-shadow: 0 16px 44px #000c, 0 0 0 4px #ff5c8a3a; }
+  .tv-tile.foc .tt { color: var(--text); }
+  @media (max-width: 680px) { #tv-hero { height: 44vh; } .tv-tile, .tv-tile img { width: 140px; } .tv-tile .tt { width: 140px; } }
 
   /* ═══════════ MOBILE / TOUCH — every game playable, fast and immersive on a phone ═══════════
      The whole engine is untouched; this is the missing mobile layer: an on-screen gamepad, a
@@ -125,26 +186,16 @@
   .add-detail { opacity: .5; }
   @media (max-width: 680px) { .add-detail { display: none; } }   /* drop dev jargon on phones */
 
-  /* immersive player: a deep void backdrop; the bar floats and auto-hides during play ───────── */
-  #player { background: radial-gradient(125% 90% at 50% 26%, #0b0c12 0%, #07080c 60%, #000 100%); }
-  body.touch #player.show { grid-template-rows: 1fr; padding: 0; gap: 0; place-items: stretch; }
-  body.touch #pbar { position: fixed; top: 0; left: 0; right: 0; z-index: 8; justify-content: flex-start;
-    align-items: center; gap: 6px; padding: calc(7px + env(safe-area-inset-top)) 12px 10px;
-    background: linear-gradient(#000c 0%, #0007 58%, #0000 100%);
-    transition: opacity .3s ease, transform .3s ease; }
-  body.touch #pbar.hidden { opacity: 0; transform: translateY(-115%); pointer-events: none; }
-  body.touch #pbar #now { font-size: 12px; max-width: 44vw; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-  body.touch #pbar button { padding: 8px 11px; font-size: 16px; line-height: 1; border-radius: 10px; }
+  /* immersive player on touch: bigger tap targets, full-bleed frame (pads sit over the game) ── */
+  body.touch #pbar { padding: calc(9px + env(safe-area-inset-top)) 12px 12px; }
+  body.touch #pbar button { padding: 10px 12px; font-size: 17px; border-radius: 12px; }
   body.touch #btn-fs { display: none; }               /* the phone player is already full-bleed */
-  body.touch #hud { display: none; }                  /* drop the dev telemetry (κ/fps/super-res) */
   body.touch #out { border-radius: 0; box-shadow: none; }
   @media (orientation: portrait) {
-    body.touch #out { width: 100vw; height: auto; max-width: 100vw; max-height: none;
-      align-self: start; justify-self: center; margin-top: calc(46px + env(safe-area-inset-top)); }
+    body.touch #out { width: 100vw; height: auto; max-width: 100vw; max-height: none; }
   }
   @media (orientation: landscape) {
-    body.touch #out { height: 100vh; height: 100dvh; width: auto; max-width: 100vw; max-height: 100dvh;
-      align-self: center; justify-self: center; }
+    body.touch #out { height: 100dvh; width: auto; max-width: 100vw; max-height: 100dvh; }
   }
 
   /* ── on-screen gamepad — glassy, multi-touch, frame-accurate (wired into touchBits) ───────── */
@@ -189,11 +240,14 @@
 
 <div id="root">
   <div id="home">
-    <h1>Holo Games</h1>
-    <div class="sub">a κ-native console library · drop a ROM to add a game</div>
-    <input id="search" placeholder="Search games or systems…">
+    <div class="home-top">
+      <h1>Holo Games</h1>
+      <div class="spacer"></div>
+      <button id="btn-tv" title="Cinematic TV mode">📺<span class="lbl"> TV Mode</span></button>
+    </div>
+    <input id="search" placeholder="Search your library…">
     <div id="filters"></div>
-    <div class="addrow"><label class="btn">+ Add ROM<span class="add-detail"> · .holo · .dat · catalog .json</span> <input id="file" type="file" accept=".gb,.gbc,.gba,.nes,.sfc,.smc,.md,.gen,.bin,.holo,.dat,.json" hidden></label> <button id="btn-tv">📺 TV Mode</button> <button id="btn-stream">🔗 Stream URL</button></div>
+    <div class="addrow"><label class="btn">＋ Add game <input id="file" type="file" accept=".gb,.gbc,.gba,.nes,.sfc,.smc,.md,.gen,.bin,.holo,.dat,.json" hidden></label> <button id="btn-stream">🔗 Stream</button></div>
     <div id="continue-wrap" style="display:none"><div class="shelf-title">Continue playing</div><div id="continue-rail" class="rail"></div></div>
     <div id="shelves"></div>
   </div>
@@ -201,11 +255,12 @@
   <div id="player">
     <div id="pbar">
       <button id="btn-back" title="Library">‹<span class="lbl"> Library</span></button>
-      <span id="now" style="opacity:.7"></span>
-      <button id="btn-save" title="Save">⤓<span class="lbl"> Save</span></button>
-      <button id="btn-slots" title="Saves">≣<span class="lbl"> Saves</span></button>
-      <button id="btn-share" title="Share">⤴<span class="lbl"> Share</span></button>
-      <button id="btn-fs" title="Fullscreen">⛶<span class="lbl"> Fullscreen</span></button>
+      <span id="now"></span>
+      <span class="grow"></span>
+      <button id="btn-save" title="Save">⤓</button>
+      <button id="btn-slots" title="Saves">≣</button>
+      <button id="btn-share" title="Share">⤴</button>
+      <button id="btn-fs" title="Fullscreen">⛶</button>
     </div>
     <canvas id="out" width="1280" height="1152"></canvas>
     <div id="hud">…</div>
@@ -218,7 +273,7 @@
     </div>
   </div>
 </div>
-<div id="drop">drop a ROM to add it to your library</div>
+<div id="drop">Drop a game to add it to your library</div>
 <div id="toast"></div>
 <div id="tv"></div>
 <div id="detail"></div>
@@ -280,7 +335,7 @@ function mergeCatalog(games) {
 try { mergeCatalog((await (await fetch("./holos/catalog.json")).json()).games); } catch (e) {}
 async function importCatalog(src) {
   try { const json = typeof src === "string" ? await (await fetch(src)).json() : JSON.parse(await src.text()); const n = mergeCatalog(json.games); await renderHome(); toast(`Catalog: +${n} game${n === 1 ? "" : "s"}`); }
-  catch (e) { toast("Bad catalog (need {games:[…]})"); }
+  catch (e) { toast("Couldn't read that catalog"); }
 }
 window.__mergeCatalog = (games) => { const n = mergeCatalog(games); renderHome(); return n; };
 
@@ -427,9 +482,9 @@ window.__romStats = () => ({ fetches: romFetches });
 
 async function play(game, resume) {
   const tBoot = performance.now();                     // bench: time-to-playable (felt instant), measured live
-  try { await ensureComp(); } catch (e) { toast("Graphics unavailable — try again"); return; }
+  try { await ensureComp(); } catch (e) { toast("Couldn't start graphics — try again"); return; }
   const resolved = await resolveGame(game);
-  if (!resolved) { toast(game.holo ? "κ mismatch — refused (L5)" : "No ROM"); return; }
+  if (!resolved) { toast(game.holo ? "Couldn't verify this game" : "Nothing to play yet"); return; }
   const rom = resolved.rom;
   // κ-ROM: content-address + verify-on-read before the core sees a byte
   const store = new KappaBlockStore({ blockSize: 512, totalBytes: rom.length, hash: subtleHashHex });
@@ -444,7 +499,7 @@ async function play(game, resume) {
   fitOutput();                                         // mobile-aware super-res target (keeps phones at 60fps)
   comp.setSharpen(SHARP[game.system] ?? 0.6);
   comp.setSource(geom.width, geom.height);
-  if (resume) { const sv = await latestSave(cur.kappa); const st = await trustedState(sv); if (st === false) toast("Save failed integrity check — refused"); else if (st) { try { core.unserialize(st); } catch (e) {} } }
+  if (resume) { const sv = await latestSave(cur.kappa); const st = await trustedState(sv); if (st === false) toast("That save couldn't be verified"); else if (st) { try { core.unserialize(st); } catch (e) {} } }
   else if (resolved.warmSave) { try { core.unserialize(resolved.warmSave); } catch (e) {} }   // warm-boot: skip the cold boot, resume a playable frame instantly
   document.getElementById("now").textContent = `${game.title} · ${SYS[game.system].name}`;
   document.getElementById("tv").classList.remove("show");
@@ -455,7 +510,7 @@ async function play(game, resume) {
   for (let i = 0; i < 6; i++) comp.present(core.run(0).video);
   const warm = !!(resume || resolved.warmSave);        // resumed a save-state κ → skipped the cold boot
   lastBoot = { ms: +(performance.now() - tBoot).toFixed(0), warm };
-  if (warm) toast(`Resumed instantly · ${lastBoot.ms} ms`);
+  if (warm) toast("Resumed where you left off");
   // paint the boot timing ONCE synchronously (the rAF loop refines the rest) so the felt instant is
   // visible immediately — even before the first animation frame.
   document.getElementById("hud").textContent =
@@ -539,7 +594,7 @@ async function renderSlots() {
     const row = document.createElement("div"); row.className = "sv";
     row.innerHTML = `<img src="${s.thumb || ""}"><div class="info"><div class="l">${s.slot === "auto" ? "Autosave" : "Manual save"}</div><div class="d">${when}</div></div>`;
     const load = document.createElement("button"); load.textContent = "Load";
-    load.onclick = async () => { const st = await trustedState(s); if (st === false) { toast("Save failed integrity check — refused"); return; } if (st) { try { core.unserialize(st); for (let i = 0; i < 4; i++) comp.present(core.run(0).video); toast("Loaded"); panel.classList.remove("show"); } catch (e) { toast("Load failed"); } } };
+    load.onclick = async () => { const st = await trustedState(s); if (st === false) { toast("That save couldn't be verified"); return; } if (st) { try { core.unserialize(st); for (let i = 0; i < 4; i++) comp.present(core.run(0).video); toast("Loaded"); panel.classList.remove("show"); } catch (e) { toast("Load failed"); } } };
     const del = document.createElement("button"); del.textContent = "✕";
     del.onclick = async () => { await idbDel("saves", s.key); renderSlots(); };
     row.appendChild(load); row.appendChild(del); panel.appendChild(row);
@@ -608,7 +663,7 @@ async function openDetail(game, resume) {
   const save = game.kappa ? await latestSave(game.kappa) : null;
   const canRemove = !!game.kappa && !game.url && !game.holo;   // only locally-added games are removable (catalog/.holo rows are not)
   const streamable = !!(game.holo || game.url || game.kappa);  // has bytes to play; metadata rows are browse-only (BYO)
-  const prov = game.provenance === "verified" ? " · ✓ No-Intro" : game.provenance === "free" ? ` · ${game.license || "free"}${game.source ? " · open source" : ""}` : game.provenance === "your dump" ? " · your dump" : game.provenance === "demo" ? " · demo" : game.provenance === "metadata" ? " · bring your own copy" : "";
+  const prov = (game.verified || game.provenance === "verified") ? " · Verified" : "";
   d.innerHTML = `<div class="dcard"><img class="dcover" src="${cover}">
     <div><div class="dtitle">${game.title}</div>
     <div class="dmeta">${SYS[game.system].name}${game.region ? " · " + game.region : ""}${prov}</div>
@@ -645,10 +700,7 @@ function genPoster(game) {
 function card(game, { resume, thumb } = {}) {
   const el = document.createElement("div"); el.className = "card";
   const img = thumb || game.poster || genPoster(game);   // baked .holo screenshot, else placeholder
-  const badge = game.provenance === "verified" ? '<span class="badge ok">✓ No-Intro</span>'
-    : game.provenance === "free" ? `<span class="badge ok">${game.license || "free"}</span>`
-    : game.provenance === "your dump" ? '<span class="badge">your dump</span>'
-    : game.provenance === "demo" ? '<span class="badge">demo</span>' : "";
+  const badge = (game.verified || game.provenance === "verified") ? '<span class="badge ok" title="Verified">✓</span>' : "";
   el.innerHTML = `<img class="poster" src="${img}"><div class="fav ${isFav(game) ? "on" : ""}">${isFav(game) ? "★" : "☆"}</div><div class="meta"><div class="t">${game.title}</div><div class="s">${SYS[game.system].name} ${badge}${resume ? ' · <span class="resume">resume</span>' : ""}</div></div>`;
   if (!thumb && !game.poster && game.noSystem && game.gameName) { const im = el.querySelector(".poster"); im.__game = game; coverObserver.observe(im); }   // lazy real box art (only when not already baked)
   el.querySelector(".fav").onclick = (e) => { e.stopPropagation(); toggleFav(game); renderHome(); };
@@ -752,11 +804,11 @@ async function importHolo(file) {
     if (obj.format !== "holo-game" || !obj.rom || !SYS[obj.system]) { toast("Not a Holo game"); return; }
     const rom = b64dec(obj.rom);
     const k = await subtleHashHex(rom);
-    if (k !== obj.kappa) { toast("κ mismatch — refused (L5)"); return; }   // verify-before-trust
+    if (k !== obj.kappa) { toast("Couldn't verify this game"); return; }   // verify-before-trust
     await idbPut("library", k, { title: obj.title, system: obj.system, rom });
     if (obj.save) {
       const saveBytes = b64dec(obj.save);
-      if (!(await saveVerifies({ state: saveBytes, saveKappa: obj.saveKappa }, subtleHashHex))) { toast("Save integrity check failed — game added without the playthrough"); }   // verify-before-trust
+      if (!(await saveVerifies({ state: saveBytes, saveKappa: obj.saveKappa }, subtleHashHex))) { toast("Added — but the saved progress couldn't be verified"); }   // verify-before-trust
       else await idbPut("saves", `${k}#imported`, { kappa: k, slot: "imported", label: "imported", state: saveBytes, saveKappa: obj.saveKappa || await subtleHashHex(saveBytes), system: obj.system, title: obj.title, ext: obj.ext, url: null, frame: obj.frame || 0, ts: Date.now(), thumb: obj.thumb || null });
     }
     await renderHome();
@@ -772,13 +824,13 @@ async function addRom(file) {
   const kappa = await subtleHashHex(rom);
   const id = datIndex.identify(await sha1Hex(rom));                 // hash → canonical identity
   const system = id ? (NOINTRO_SYS[id.system] || sysForName(file.name)) : sysForName(file.name);
-  if (!system) { toast("Unsupported ROM type"); return; }
+  if (!system) { toast("Unsupported game type"); return; }
   const title = id ? id.title + (id.region ? ` (${id.region})` : "") : file.name.replace(/\.[^.]+$/, "");
   const val = { title, system, rom, region: id ? id.region : null, rev: id ? id.rev : null, provenance: id ? "verified" : "your dump", verified: !!id, noSystem: id ? id.system : null, gameName: id ? id.gameName : null };
   await idbPut("library", kappa, val);
   roamSend({ type: "lib", key: kappa, val });   // roam to other devices
   await renderHome();
-  toast(id ? `Identified: ${id.title}` : "Added (your dump)");
+  toast(id ? `Added ${id.title}` : "Added to your library");
 }
 // stream a remote game by URL: fetch → identify by hash → add as a remote (url-backed) entry,
 // κ-cached for instant replay. The bytes live in the cache, not the library record.
@@ -797,7 +849,7 @@ async function streamAdd(url) {
     await idbPut("library", kappa, { title, system, url, remote: true, provenance: id ? "verified" : "your dump", verified: !!id, region: id ? id.region : null, rev: id ? id.rev : null, noSystem: id ? id.system : null, gameName: id ? id.gameName : null });
     await renderHome();
     toast(`Added: ${title}`);
-  } catch (e) { toast("Stream failed (CORS or bad URL)"); }
+  } catch (e) { toast("Couldn't stream that URL"); }
 }
 async function importDat(file) {
   try { datIndex.addDat(await file.text()); await renderHome(); toast(`Loaded DAT · ${datIndex.systems.size} systems, ${datIndex.stats.roms} games`); }
@@ -890,11 +942,20 @@ document.getElementById("btn-stream").onclick = () => { const u = prompt("Stream
 // so you can hold a direction AND press A/B together. Haptics + press states make it feel physical.
 const pbarEl = document.getElementById("pbar");
 let _barT = 0;
-function showBar() {                                    // float the bar, then fade it for max immersion
-  if (!document.body.classList.contains("touch")) return;
-  pbarEl.classList.remove("hidden");
-  clearTimeout(_barT); _barT = setTimeout(() => pbarEl.classList.add("hidden"), 3200);
+function showBar() {                                    // float the chrome, then fade it for max immersion (all devices)
+  const p = document.getElementById("player");
+  pbarEl.classList.remove("hidden"); p.classList.remove("immersed");
+  clearTimeout(_barT);
+  _barT = setTimeout(() => { if (p.classList.contains("show")) { pbarEl.classList.add("hidden"); p.classList.add("immersed"); } }, 3000);
 }
+// desktop: any mouse movement reveals the chrome, then it fades away again for a pure-game view
+document.getElementById("player").addEventListener("mousemove", () => { if (!document.body.classList.contains("touch")) showBar(); });
+// Esc leaves the game (closing the saves panel first if it's open)
+addEventListener("keydown", (e) => {
+  if (e.key !== "Escape" || !document.getElementById("player").classList.contains("show")) return;
+  const sl = document.getElementById("slots");
+  if (sl.classList.contains("show")) sl.classList.remove("show"); else back();
+});
 function fitOutput() {                                  // super-res target that respects the phone's budget
   if (!comp || !geom) return;
   const dpr = window.devicePixelRatio || 1, touch = document.body.classList.contains("touch");
