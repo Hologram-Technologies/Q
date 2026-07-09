@@ -796,6 +796,11 @@
     var target = world || DOC.getElementById("holo-desk") || DOC.documentElement;
     try { if (W.ResizeObserver) new W.ResizeObserver(reflowSoon).observe(target); } catch (e) {}
     try { (world || DOC.documentElement).addEventListener("transitionend", function (ev) { var p = ev.propertyName; if (p === "left" || p === "right" || p === "width") recenter(); }); } catch (e) {}
+    // IMMERSIVE toggle (data-holo-expanded) flips the usable canvas from rail-inset to full-bleed WITHOUT a
+    // resize or a left/width transition on our target — so recenter never fired and the composition kept the old
+    // (off-centre) inset. Watch the attribute directly and re-centre on it. Self-contained here so it holds
+    // regardless of which shell hosts the widgets.
+    try { if (W.MutationObserver) new W.MutationObserver(reflowSoon).observe(DOC.documentElement, { attributes: true, attributeFilter: ["data-holo-expanded"] }); } catch (e) {}
   }
 
   // ── boot ────────────────────────────────────────────────────────────────────────────────
