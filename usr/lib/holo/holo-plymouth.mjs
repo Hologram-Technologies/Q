@@ -190,11 +190,19 @@ const CSS = `
 #holo-login .hlp.done canvas{animation:none;filter:brightness(1.7);transition:filter .5s ease}
 #holo-login.hl-boot .hl-panel{opacity:0!important;pointer-events:none!important}
 #holo-login .hl-panel{transition:opacity .55s ease}
-/* ── BOOT REVEAL SYNC — during the 3s hero ALL login chrome (identity panel · Manifesto label · Hologram
-   wordmark · the ⋯ door) is hidden; it fades in TOGETHER the instant the emblem settles into its slot
-   (hl-boot removed), instead of each element popping in on its own separate timer. One coordinated reveal. */
-#holo-login.hl-boot .hl-manifesto, #holo-login.hl-boot .hl-brand, #holo-login.hl-boot .hlp-btn{opacity:0!important;animation:none!important;transition:opacity .55s ease}
-#holo-login:not(.hl-boot) .hl-manifesto, #holo-login:not(.hl-boot) .hl-brand, #holo-login:not(.hl-boot) .hlp-btn{opacity:1!important;animation:none!important;transition:opacity .55s ease .08s}
+/* ── BOOT REVEAL SYNC — during the hero ALL login chrome (identity panel · Manifesto label · the ⋯ door)
+   is hidden; it fades in TOGETHER the instant the emblem settles into its slot (hl-boot removed), instead
+   of each element popping in on its own separate timer. One coordinated reveal.
+   The BRAND (.hl-brand — H mark + wordmark) is deliberately NOT gated: it stands from the literal first
+   frame (the app.html baseline paints it with the black) and never blinks across the whole ceremony. */
+#holo-login.hl-boot .hl-manifesto, #holo-login.hl-boot .hlp-btn{opacity:0!important;animation:none!important;transition:opacity .55s ease}
+#holo-login:not(.hl-boot) .hl-manifesto, #holo-login:not(.hl-boot) .hlp-btn{opacity:1!important;animation:none!important;transition:opacity .55s ease .08s}
+#holo-login .hl-brand{opacity:1!important;animation:none!important}
+/* the panel's own reveal: an explicit fresh animation at hl-boot removal — the load-time hl-rise has long
+   finished (fill:both holds opacity 1), and a transition cannot interpolate an animation-supplied value,
+   so without this the panel would SNAP in while the rest fades (.hlp-reveal is added by endBoot). */
+@keyframes hlp-reveal{from{opacity:0;transform:translateY(10px) scale(.99);filter:blur(2px)}to{opacity:1;transform:none;filter:none}}
+#holo-login.hlp-reveal:not(.hl-boot):not(.unfog) .hl-panel{animation:hlp-reveal .6s cubic-bezier(.4,0,.2,1) both}
 /* the ⋯ door — the SAME quiet affordance the home screen wears, top-right: everything about how this
    computer looks and wakes lives behind it. One circle, no words. */
 #holo-login .hlp-btn{position:fixed;right:max(20px,env(safe-area-inset-right));top:max(18px,env(safe-area-inset-top));z-index:4;
@@ -255,13 +263,21 @@ const CSS = `
   border:1px solid var(--glass-border,rgba(255,255,255,.14));border-radius:999px;padding:10px 20px;font:var(--u,16px) "Segoe UI",system-ui,sans-serif;box-shadow:0 10px 30px rgba(0,0,0,.6);
   pointer-events:none;animation:hlp-toast 2.6s ease both}
 @keyframes hlp-toast{0%{opacity:0;transform:translate(-50%,8px)}10%,82%{opacity:1;transform:translate(-50%,0)}100%{opacity:0}}
-@media (prefers-reduced-motion:reduce){#holo-login .hlp,#holo-login .hlp canvas,#holo-login .hlp-btn,#holo-login .hlp-prev .hlp-shim{transition:none;animation:none;opacity:1}}
+@media (prefers-reduced-motion:reduce){#holo-login .hlp,#holo-login .hlp canvas,#holo-login .hlp-btn,#holo-login .hlp-prev .hlp-shim{transition:none;animation:none;opacity:1}
+#holo-login.hlp-reveal:not(.hl-boot):not(.unfog) .hl-panel{animation:none}}
 `;
 function injectCss() {
   try { if (document.getElementById("holo-plymouth-css")) return; const s = document.createElement("style"); s.id = "holo-plymouth-css"; s.textContent = CSS; document.head.appendChild(s); } catch {}
 }
 
 const reducedMotion = () => { try { return matchMedia("(prefers-reduced-motion: reduce)").matches; } catch { return false; } };
+
+// ── CEREMONY BEATS — the boot's own beacons (HOLO-BOOT-CEREMONY-PROMPT B0). performance.mark always;
+// holo-life's strand when present. Fail-open no-ops everywhere — measurement never touches choreography. ──
+const beat = (n) => {
+  try { performance.mark("holo:ceremony:" + n); } catch {}
+  try { const L = window.HoloLife; if (L && L.mark) L.mark("ceremony:" + n); } catch {}
+};
 
 // ── the player: ONE facade, two backends, the same choreography ────────────────────────────────────────
 // Poses are draw-space (crisp at any scale — CSS transforms would blur the canvas):
@@ -277,6 +293,15 @@ const reducedMotion = () => { try { return matchMedia("(prefers-reduced-motion: 
 // the display's own rate. dpr up to 3 for device-pixel sharpness. Probe-BEFORE-transfer (a transferred
 // canvas is consumed); any missing capability falls open to the proven 2D player below, byte-identical
 // behavior. Force a rung: ?emblem=gpu | ?emblem=2d.
+// ── THE φ TABLE — every ceremony constant, one place, one derivation (HOLO-BOOT-CEREMONY-PROMPT B2).
+//   φ = 1.618. Base unit u = clamp(16px, 1.7vmin, 19px) (holo-signin/app.html); g1 = u·φ; g2 = u·φ².
+//   identity line   61.8vh  = 100/φ        (the lower golden line — avatar centre)
+//   emblem centre   38.2vh  = 100/φ²       (the upper golden line — greet pose lands here by anchor math)
+//   hero            centre 50vh (power symmetry: boot and power-off share the screen's axis), cap .95vmin,
+//                   up 1.35 ≈ √φ·1.06 — bounded upscale so a soft render never turns to mush
+//   emblem topGap   6vh ≈ 38.2/φ⁴          greet cap ≤ avatar.bottom − topGap, ≤ 90% width (anchorTarget)
+//   short screens   56vh ≈ 61.8·0.9        (identity lifts one notch when the column would overflow)
+//   beats           hold 5000–5600ms · glide ≈750ms (exp, k=dt·5.5) · reveal 600ms · defog 720ms · flare 620ms
 const POSES = {
   // boot is the HERO: dead-centre of the screen, larger than life. `up` lets the sprite grow past its
   // natural size (bounded, so a soft render never turns to mush) — both players EASE it like cap, so the
@@ -825,6 +850,7 @@ export function attachPlymouth(overlay, host) {
     // beat can lift NOW (the panel rises the moment there is a real emblem to greet you with).
     player = makePlayer(overlay, layer, () => {
       try { layer.classList.add("on"); overlay.classList.add("hlp-anchor"); dropBaseline(); onEmblemLive(); } catch {}
+      beat("emblem-alive");
     });
     player.ink(isInk());
   }
@@ -870,12 +896,18 @@ export function attachPlymouth(overlay, host) {
   // the ⋯ door) reveals in one beat. Runs on every device (the hold is stillness, not motion — under
   // reduced motion the pose SNAPS instead of gliding, so nothing sweeps the screen). Skippable by any
   // tap/key; the hard cap protects a slow network from holding the machine hostage.
-  const BOOT_MIN = 5000, BOOT_MAX = 5600;
+  // LOCK HANDSHAKE (power symmetry, B7): a same-tab return from Lock & Sign Out plays a SHORT hero (~1.2s)
+  // — re-entering mid-sitting must be light; only a true cold boot earns the full five seconds. The power
+  // ritual stamps the flag (sessionStorage = per-tab, exactly the right lifetime); reading it clears it.
+  let shortHero = false;
+  try { shortHero = sessionStorage.getItem("holo.ceremony.short") === "1"; if (shortHero) sessionStorage.removeItem("holo.ceremony.short"); } catch {}
+  const BOOT_MIN = shortHero ? 1200 : 5000, BOOT_MAX = shortHero ? 1600 : 5600;
   const bootT0 = (() => { try { return window.__hlBootT0 || Date.now(); } catch { return Date.now(); } })();
   let bootDone = false, bootTimer = 0;
   const endBoot = () => {
     if (bootDone) return; bootDone = true; clearTimeout(bootTimer);
-    try { overlay.classList.remove("hl-boot"); if (layer) { layer.classList.add("greet"); player.pose("greet"); } dropBaseline(); } catch {}
+    try { overlay.classList.remove("hl-boot"); overlay.classList.add("hlp-reveal"); if (layer) { layer.classList.add("greet"); player.pose("greet"); } dropBaseline(); } catch {}
+    beat("gate-reveal");
   };
   const panelEl = overlay.querySelector("#holo-login-panel");
   const bootable = overlay.classList.contains("hl-boot") || !panelEl || !panelEl.childElementCount;
@@ -918,7 +950,7 @@ export function attachPlymouth(overlay, host) {
     // choreography hooks for the greeter — all fail-open no-ops when the splash is off
     verify() { try { if (layer) { layer.classList.add("verify"); player.pose("verify"); } } catch {} },
     calm() { try { if (layer) { layer.classList.remove("verify"); player.pose("greet"); } } catch {} },
-    complete() { try { endBoot(); if (layer) { layer.classList.remove("verify"); layer.classList.add("done"); } setTimeout(() => api.destroy(), 900); } catch {} },   // overlay is removed right after — stop the loop with it
+    complete() { try { endBoot(); if (layer) { layer.classList.remove("verify"); layer.classList.add("done"); } beat("boot-complete"); setTimeout(() => api.destroy(), 900); } catch {} },   // overlay is removed right after — stop the loop with it
     destroy() { gen++; try { player && player.destroy(); } catch {} },
   };
   try { window.HoloPlymouth = { open: () => btn.click(), set: (n) => api.setTheme(n), themes: CATALOG.map((t) => t.name), state: readState, mode: () => (player ? player.mode() : "none") }; } catch {}

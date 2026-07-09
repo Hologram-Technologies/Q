@@ -43,8 +43,10 @@ const CSS = `
   pointer-events:auto;border:0;background:none;color:var(--ink-dim,rgba(231,237,250,.82));font:500 var(--u,16px)/1 "Segoe UI",system-ui,sans-serif;
   cursor:pointer;padding:8px 4px;letter-spacing:.01em;text-shadow:var(--shadow,none);opacity:0;animation:hlm-in .6s ease 1.2s forwards;transition:color .15s}
 #holo-login .hl-manifesto:hover{color:var(--ink,#fff)}
+/* the brand never arrives — it was always there (HOLO-BOOT-CEREMONY B1): no entrance animation; the host
+   baseline paints it with the first black frame and this rule merely keeps its geometry. */
 #holo-login .hl-brand{position:fixed;left:50%;transform:translateX(-50%);bottom:max(26px,env(safe-area-inset-bottom));z-index:3;
-  pointer-events:none;display:inline-flex;align-items:center;gap:11px;color:var(--ink,#f4f7fc);opacity:0;animation:hlm-in .7s ease 1.35s forwards}
+  pointer-events:none;display:inline-flex;align-items:center;gap:11px;color:var(--ink,#f4f7fc)}
 #holo-login .hl-brand svg{width:26px;height:26px;flex:0 0 auto;filter:drop-shadow(var(--shadow,0 0 0 transparent))}
 #holo-login .hl-brand b{font:700 var(--u,15px)/1 "Segoe UI",system-ui,sans-serif;letter-spacing:.2em;padding-left:.2em;color:var(--ink-dim,rgba(231,237,250,.86));text-shadow:var(--shadow,none)}
 @keyframes hlm-in{to{opacity:1}}
@@ -97,10 +99,14 @@ export function mountManifesto(overlay) {
   const link = document.createElement("button");
   link.type = "button"; link.className = "hl-manifesto"; link.textContent = "Manifesto";
   link.onclick = () => openManifesto(overlay);
-  const brand = document.createElement("div");
-  brand.className = "hl-brand"; brand.setAttribute("aria-label", "Hologram");
-  brand.innerHTML = `${MARK}<b>HOLOGRAM</b>`;
   overlay.appendChild(link);
-  overlay.appendChild(brand);
+  // ADOPT a brand the host baseline already painted (app.html stands it with the very first frame — B1);
+  // only a baseline-less surface (the primitive's own overlay, e.g. the native greeter) mounts it here.
+  if (!overlay.querySelector(".hl-brand")) {
+    const brand = document.createElement("div");
+    brand.className = "hl-brand"; brand.setAttribute("aria-label", "Hologram");
+    brand.innerHTML = `${MARK}<b>HOLOGRAM</b>`;
+    overlay.appendChild(brand);
+  }
 }
 export default mountManifesto;

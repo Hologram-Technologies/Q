@@ -241,18 +241,38 @@ export async function signIn({ root, params, app = "holospace", appName = "Holog
   try { import("./holo-plymouth.mjs").then((m) => { plymouth = m.attachPlymouth(overlay, plymouthHost); }).catch(() => {}); } catch {}
   // MANIFESTO + WORDMARK — the greeter's brand chrome (top-left door + bottom-centre Hologram mark), speaking
   // the OS's own words. Purely additive and fail-open (a hiccup never blocks sign-in).
-  try { import("./holo-manifesto.mjs?v=mark2").then((m) => m.mountManifesto(overlay)).catch(() => {}); } catch {}
+  try { import("./holo-manifesto.mjs?v=mark3").then((m) => m.mountManifesto(overlay)).catch(() => {}); } catch {}
   const panel = document.getElementById("holo-login-panel");
   const statusEl = () => panel.querySelector(".status");
   const setStatus = (t, err) => { if (err) { try { plymouth && plymouth.calm(); } catch {} } const el = statusEl(); if (el) { el.className = "status" + (err ? " err" : ""); el.textContent = t || ""; } };
   const setBusy = (m) => { try { plymouth && plymouth.verify(); } catch {} const el = statusEl(); if (el) { el.className = "status"; el.innerHTML = `<span class="spin"></span><span>${esc(m || "")}</span>`; } };
 
   return new Promise(async (resolve) => {
+    // CEREMONY BEATS (HOLO-BOOT-CEREMONY-PROMPT B0) — fail-open, measurement only.
+    const beat = (n) => { try { performance.mark("holo:ceremony:" + n); } catch {} try { const L = window.HoloLife; if (L && L.mark) L.mark("ceremony:" + n); } catch {} };
+    // THE LAST SEAM (B5): the glass must defog ONTO AN ALREADY-PAINTED home, never onto a blank #root.
+    // Auth resolves IMMEDIATELY (the host's boot awaits it to render the home — holding it would deadlock
+    // into the cap and tax every login); only the VISUAL defog waits for the home's first paint, bounded
+    // (~800ms) so a slow home never holds the operator hostage. Interval, not rAF (hidden tabs freeze rAF).
+    const homeReady = () => { try { return !!document.querySelector(".holo-rail, .holo-wa-root, .cs-main-container"); } catch { return false; } };
     const done = (auth) => {
-      try { plymouth && plymouth.complete(); } catch {}   // the splash flares out with the unfog — boot complete
-      overlay.classList.add("unfog");
-      setTimeout(() => { try { overlay.remove(); } catch {} }, 720);
-      resolve(auth);
+      beat("auth-ok");
+      resolve(auth);                                       // hand the identity to the home NOW — it boots behind the glass
+      const finish = () => {
+        beat("unfog-start");
+        try { plymouth && plymouth.complete(); } catch {}  // the splash flares out with the unfog — boot complete
+        overlay.classList.add("unfog");
+        setTimeout(() => { try { overlay.remove(); } catch {} }, 720);
+      };
+      if (homeReady()) { beat("home-paint"); return finish(); }
+      const t0 = Date.now();
+      const iv = setInterval(() => {
+        const ready = homeReady();
+        if (!ready && Date.now() - t0 < 800) return;
+        clearInterval(iv);
+        if (ready) beat("home-paint");
+        finish();
+      }, 80);
     };
 
     const establish = async (principal, secret, guest) => {
