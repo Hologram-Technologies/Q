@@ -445,6 +445,130 @@ fn main(@builtin(workgroup_id) wg:vec3<u32>, @builtin(local_invocation_id) lid:v
   var c=t; loop{ if(c>=hd){break;} var acc=0.0; for(var jj=0u;jj<=pos;jj++){ acc=acc+sc[jj]*vc[jj*kvdim+kb+c]; } o[qb+c]=acc/dn; c=c+64u; }
 }`;
 
+// ── SPLIT-KV attention (flash-decoding): the single-dispatch ATTN runs ONE workgroup per head
+// (20 wgs on a 2B model) with a serial loop over every KV position — occupancy collapses as the
+// context grows (measured: 1.9 → 19.5 ms/token from pos≈70 to pos≈420). Split the position axis:
+// P1 computes per-TILE partial softmax (tile max, exp-sum, unnormalized V-accum) on a (heads ×
+// tiles) grid; P2 combines the ≤cap/TILE partials with the standard max-rescale. Deterministic
+// (fixed summation order) — within-engine greedy identity holds on every path via layerBody.
+const ATILE = 64;
+// P1 v3: SMALL tiles (64 positions) so the tile grid grows with context (occupancy scales) and the
+// serial V slab loop inside each workgroup stays short (makespan, not throughput, is what a decode
+// attention dispatch pays). THREADS = max(tile, hd): one position per thread in the score phase,
+// one channel per thread in the V phase; V staged through shared memory in 8-row slabs (coalesced).
+const ATTNP1 = (maxTiles, tile, hdL) => { const TH = Math.max(tile, hdL); return `
+@group(0) @binding(0) var<storage,read> q: array<vec4<f32>>;     // [nh*hd/4]
+@group(0) @binding(1) var<storage,read> kc: array<vec4<f32>>;
+@group(0) @binding(2) var<storage,read> vc: array<vec4<f32>>;
+@group(0) @binding(3) var<storage,read_write> pt: array<f32>;    // [nh*${maxTiles}*(hd+2)]
+@group(0) @binding(4) var<uniform> P: vec4<u32>;                 // nh, nkv, hd, pos
+var<workgroup> e: array<f32, ${tile}>;
+var<workgroup> red: array<f32, ${TH}>;
+var<workgroup> vsh: array<f32, ${8 * hdL}>;
+@compute @workgroup_size(${TH})
+fn main(@builtin(workgroup_id) wg:vec3<u32>, @builtin(local_invocation_id) lid:vec3<u32>){
+  let h=wg.x; let t=wg.y; let nh=P.x; let nkv=P.y; let hd=P.z; let pos=P.w;
+  let j0=t*${tile}u;
+  let jn=min(pos+1u-j0, ${tile}u);
+  let group=nh/nkv; let kh=h/group; let kvd4=(nkv*hd)>>2u;
+  let scale=1.0/sqrt(f32(hd)); let qb4=(h*hd)>>2u; let kb4=(kh*hd)>>2u; let tid=lid.x;
+  var sc=-1.0e30;
+  if(tid<jn){
+    var s4=vec4<f32>(0.0);
+    let rb=(j0+tid)*kvd4+kb4;
+    for(var c=0u;c<(hd>>2u);c++){ s4=s4+q[qb4+c]*kc[rb+c]; }
+    sc=(s4.x+s4.y+s4.z+s4.w)*scale;
+  }
+  if(tid<${tile}u){ e[tid]=sc; }
+  red[tid]=sc; workgroupBarrier();
+  var s=${TH / 2}u; loop{ if(s==0u){break;} if(tid<s){ red[tid]=max(red[tid],red[tid+s]); } workgroupBarrier(); s=s/2u; }
+  let mx=red[0]; workgroupBarrier();
+  var ee=0.0; if(tid<jn){ ee=exp(e[tid]-mx); }
+  if(tid<${tile}u){ e[tid]=ee; }
+  red[tid]=ee; workgroupBarrier();
+  s=${TH / 2}u; loop{ if(s==0u){break;} if(tid<s){ red[tid]=red[tid]+red[tid+s]; } workgroupBarrier(); s=s/2u; }
+  let sm=red[0];
+  var acc=0.0;
+  var jc=0u;
+  loop{ if(jc>=jn){break;}
+    let rows=min(8u, jn-jc);
+    workgroupBarrier();
+    var idx=tid; loop{ if(idx>=rows*hd){break;} let r=idx/hd; let c=idx%hd; let v4=vc[(j0+jc+r)*kvd4+kb4+(c>>2u)]; vsh[idx]=v4[c&3u]; idx=idx+${TH}u; }
+    workgroupBarrier();
+    if(tid<hd){ for(var r=0u;r<rows;r++){ acc=acc+e[jc+r]*vsh[r*hd+tid]; } }
+    jc=jc+8u;
+  }
+  let base=(h*${maxTiles}u+t)*(hd+2u);
+  if(tid<hd){ pt[base+tid]=acc; }
+  if(tid==0u){ pt[base+hd]=mx; pt[base+hd+1u]=sm; }
+}`; };
+// int4-KV split variant (the SHIPPED Q brain runs kv4:true): same partial-softmax structure over the
+// packed int4 records ([codes kvd/8 u32][scales kvd/32 u32] per position). Word-wise K unpack.
+const ATTNQP1 = (maxTiles, tile, hdL, kvd) => { const TH = Math.max(tile, hdL); return `
+@group(0) @binding(0) var<storage,read> q: array<f32>;           // [nh*hd]
+@group(0) @binding(1) var<storage,read> kc: array<u32>;
+@group(0) @binding(2) var<storage,read> vc: array<u32>;
+@group(0) @binding(3) var<storage,read_write> pt: array<f32>;    // [nh*${maxTiles}*(hd+2)]
+@group(0) @binding(4) var<uniform> P: vec4<u32>;                 // nh, nkv, hd, pos
+const S: u32 = ${kvd / 8 + kvd / 32}u;
+const CW: u32 = ${kvd / 8}u;
+var<workgroup> e: array<f32, ${tile}>;
+var<workgroup> red: array<f32, ${TH}>;
+var<workgroup> vsh: array<f32, ${8 * hdL}>;
+fn vval(j:u32, c:u32) -> f32 { let w=vc[j*S+(c>>3u)]; return (f32((w>>((c&7u)*4u))&15u)-7.0)*bitcast<f32>(vc[j*S+CW+(c>>5u)]); }
+@compute @workgroup_size(${TH})
+fn main(@builtin(workgroup_id) wg:vec3<u32>, @builtin(local_invocation_id) lid:vec3<u32>){
+  let h=wg.x; let t=wg.y; let nh=P.x; let nkv=P.y; let hd=P.z; let pos=P.w;
+  let j0=t*${tile}u;
+  let jn=min(pos+1u-j0, ${tile}u);
+  let group=nh/nkv; let kh=h/group;
+  let scale=1.0/sqrt(f32(hd)); let qb=h*hd; let kb=kh*hd; let tid=lid.x;
+  var sc=-1.0e30;
+  if(tid<jn){
+    let jr=(j0+tid)*S; var dd=0.0;
+    for(var w=0u;w<(hd>>3u);w++){                                 // word-wise: 8 codes/u32, scale per 32
+      let word=kc[jr+((kb>>3u)+w)]; let sca=bitcast<f32>(kc[jr+CW+((kb>>5u)+(w>>2u))]);
+      var ws=0.0;
+      for(var i=0u;i<8u;i++){ ws=ws+q[qb+(w<<3u)+i]*(f32((word>>(i*4u))&15u)-7.0); }
+      dd=dd+ws*sca;
+    }
+    sc=dd*scale;
+  }
+  if(tid<${tile}u){ e[tid]=sc; }
+  red[tid]=sc; workgroupBarrier();
+  var s=${TH / 2}u; loop{ if(s==0u){break;} if(tid<s){ red[tid]=max(red[tid],red[tid+s]); } workgroupBarrier(); s=s/2u; }
+  let mx=red[0]; workgroupBarrier();
+  var ee=0.0; if(tid<jn){ ee=exp(e[tid]-mx); }
+  if(tid<${tile}u){ e[tid]=ee; }
+  red[tid]=ee; workgroupBarrier();
+  s=${TH / 2}u; loop{ if(s==0u){break;} if(tid<s){ red[tid]=red[tid]+red[tid+s]; } workgroupBarrier(); s=s/2u; }
+  let sm=red[0];
+  var acc=0.0;
+  var jc=0u;
+  loop{ if(jc>=jn){break;}
+    let rows=min(8u, jn-jc);
+    workgroupBarrier();
+    var idx=tid; loop{ if(idx>=rows*hd){break;} let r=idx/hd; let c=idx%hd; vsh[idx]=vval(j0+jc+r, kb+c); idx=idx+${TH}u; }
+    workgroupBarrier();
+    if(tid<hd){ for(var r=0u;r<rows;r++){ acc=acc+e[jc+r]*vsh[r*hd+tid]; } }
+    jc=jc+8u;
+  }
+  let base=(h*${maxTiles}u+t)*(hd+2u);
+  if(tid<hd){ pt[base+tid]=acc; }
+  if(tid==0u){ pt[base+hd]=mx; pt[base+hd+1u]=sm; }
+}`; };
+const ATTNP2 = (maxTiles, tile) => `
+@group(0) @binding(0) var<storage,read> pt: array<f32>;
+@group(0) @binding(1) var<storage,read_write> o: array<f32>;     // [nh*hd]
+@group(0) @binding(2) var<uniform> P: vec4<u32>;                 // nh, nkv, hd, pos
+@compute @workgroup_size(64)
+fn main(@builtin(workgroup_id) wg:vec3<u32>, @builtin(local_invocation_id) lid:vec3<u32>){
+  let h=wg.x; let hd=P.z; let nt=(P.w/${tile}u)+1u; let bh=h*${maxTiles}u*(hd+2u); let tid=lid.x;
+  var M=-1e30; for(var t=0u;t<nt;t++){ M=max(M, pt[bh+t*(hd+2u)+hd]); }
+  var total=0.0; for(var t=0u;t<nt;t++){ total=total+pt[bh+t*(hd+2u)+hd+1u]*exp(pt[bh+t*(hd+2u)+hd]-M); }
+  var c=tid; loop{ if(c>=hd){break;} var acc=0.0; for(var t=0u;t<nt;t++){ acc=acc+pt[bh+t*(hd+2u)+c]*exp(pt[bh+t*(hd+2u)+hd]-M); } o[h*hd+c]=acc/total; c=c+64u; }
+}`;
+
 // ── int4 KV cache (E6, measured: ≈0.1 rel-err @4.5 bits, ~6.4× KV memory/traffic) ──
 // Layers 1+ store K/V as symmetric int4 (codes nib−7 ∈ [−7,7]) with one f32 scale per 32
 // channels; layer 0 stays f32 (measured pathological at low bits). Per-token record in u32s:
@@ -897,6 +1021,33 @@ const APPEND = `
 @group(0) @binding(2) var<uniform> P: vec4<u32>;                 // ringIdx
 @compute @workgroup_size(1)
 fn main(){ ring[P.x]=w[0]; }`;
+
+// f32 KV-cache save as a KERNEL (not copyBufferToBuffer) so the whole token can run inside ONE
+// compute pass (a copy would force a pass break — pass boundaries are the measured dispatch tax).
+// Fused variant reads the packed qkv buffer at compile-time offsets; split variant reads B.k/B.v.
+const KVSAVE_F = (qOff, kvd) => `
+@group(0) @binding(0) var<storage,read> src: array<f32>;         // B.qkv [q|k|v]
+@group(0) @binding(1) var<storage,read_write> kc: array<f32>;
+@group(0) @binding(2) var<storage,read_write> vc: array<f32>;
+@group(0) @binding(3) var<uniform> P: vec4<u32>;                 // .w = pos (the attn uniform)
+@compute @workgroup_size(64)
+fn main(@builtin(global_invocation_id) g:vec3<u32>){
+  let i=g.x; if(i>=${kvd}u){return;}
+  kc[P.w*${kvd}u+i]=src[${qOff}u+i];
+  vc[P.w*${kvd}u+i]=src[${qOff + kvd}u+i];
+}`;
+const KVSAVE_S = (kvd) => `
+@group(0) @binding(0) var<storage,read> k: array<f32>;
+@group(0) @binding(1) var<storage,read> v: array<f32>;
+@group(0) @binding(2) var<storage,read_write> kc: array<f32>;
+@group(0) @binding(3) var<storage,read_write> vc: array<f32>;
+@group(0) @binding(4) var<uniform> P: vec4<u32>;                 // .w = pos
+@compute @workgroup_size(64)
+fn main(@builtin(global_invocation_id) g:vec3<u32>){
+  let i=g.x; if(i>=${kvd}u){return;}
+  kc[P.w*${kvd}u+i]=k[i];
+  vc[P.w*${kvd}u+i]=v[i];
+}`;
 
 
 // ── DIFFUSION KERNELS (Dream-class mask-denoising; bidirectional attention over a resident batch) ──
@@ -1385,6 +1536,16 @@ export async function createQvacGPU(manifest, fetchTensor, cap = 64, eos = 2, st
   let bid = 0;
   const tag = (b) => { if (b._id === undefined) b._id = ++bid; return b; };
   const bgCache = new Map();
+  // ── ONE-PASS dataflow mode: a single open compute pass spans a whole token (or batch of tokens) ──
+  // Kills the per-kernel pass-boundary tax (measured: ~300 passes/token is what holds decode at ~13%
+  // of the device roofline). Opt-out: window.__onepass = false. KV saves become kernels (KVSAVE_*)
+  // because copyBufferToBuffer cannot ride inside a compute pass.
+  let openPass = null, P_kvsF = null, P_kvsS = null;
+  const ONEPASS = () => (typeof window === "undefined" ? true : window.__onepass !== false);
+  // split-KV attention state (f32 + int4 caches): partials buffer + lazily-compiled P1/P2 pipelines
+  const A_TILES = Math.ceil(cap / ATILE);
+  let P_at1 = null, P_atq1 = null, P_at2 = null, attnPT = null;
+  const SPLITATTN = () => (typeof window === "undefined" ? true : window.__splitattn !== false);
   const pass = (enc, pipeline, bufs, groups) => {
     // hot path (~300 passes/token): zero-allocation key build; the entries array (and its
     // resource objects) is constructed ONLY on a bind-group cache miss.
@@ -1399,6 +1560,15 @@ export async function createQvacGPU(manifest, fetchTensor, cap = 64, eos = 2, st
         : { binding: i, resource: { buffer: b } });
       bg = dev.createBindGroup({ layout: pipeline.getBindGroupLayout(0), entries });
       pm.set(key, bg);
+    }
+    // ONE-PASS mode (the dataflow loop): when a compute pass is already open, dispatch into it —
+    // no per-kernel pass begin/end. WebGPU gives each dispatch its own usage scope inside a pass,
+    // so write-then-read ordering between chained kernels is preserved; only the pass-boundary tax goes.
+    if (openPass) {
+      openPass.setPipeline(pipeline);
+      openPass.setBindGroup(0, bg);
+      if (Array.isArray(groups)) openPass.dispatchWorkgroups(groups[0], groups[1]); else openPass.dispatchWorkgroups(groups);
+      return;
     }
     let desc;                                                       // profiling: timestamp this pass (lm_head's 2D grid tagged apart)
     if (PROF && PROF.active && PROF.i + 2 <= 4096) { desc = { timestampWrites: { querySet: PROF.qs, beginningOfPassWriteIndex: PROF.i, endOfPassWriteIndex: PROF.i + 1 } }; PROF.tags.push(pipeline._name + (Array.isArray(groups) ? ":lm" : "")); PROF.i += 2; }
@@ -1457,6 +1627,31 @@ export async function createQvacGPU(manifest, fetchTensor, cap = 64, eos = 2, st
     const _uRopeQ = up ? up.ropeQ : uRopeQ, _uRopeK = up ? up.ropeK : uRopeK, _uAttn = up ? up.attn : uAttn, _pos = up ? up.pos : pos;
     return layerBodyU(enc, l, cur, ws, _uRopeQ, _uRopeK, _uAttn, _pos);
   }
+  // f32-cache attention dispatch: split-KV (flash-decode) once the context outgrows one tile —
+  // occupancy scales with position instead of collapsing; short contexts keep the 1-dispatch kernel.
+  function attnF32(enc, l, qb, uAttn, pos) {
+    if (SPLITATTN() && pos + 1 > ATILE && hd % 4 === 0) {
+      P_at1 = P_at1 || pipe(ATTNP1(A_TILES, ATILE, hd), "attnP1");
+      P_at2 = P_at2 || pipe(ATTNP2(A_TILES, ATILE), "attnP2");
+      attnPT = attnPT || sbuf(n_heads * A_TILES * (hd + 2));
+      pass(enc, P_at1, [qb, kcache[l], vcache[l], attnPT, uAttn], [n_heads, Math.floor(pos / ATILE) + 1]);
+      pass(enc, P_at2, [attnPT, B.attn, uAttn], n_heads);
+    } else {
+      pass(enc, P_attn, [qb, kcache[l], vcache[l], B.attn, uAttn], n_heads);
+    }
+  }
+  // int4-KV attention dispatch (the shipped Q brain path): same split, quantized records.
+  function attnQ4(enc, l, qb, uAttn, pos) {
+    if (SPLITATTN() && pos + 1 > ATILE && hd % 8 === 0) {
+      P_atq1 = P_atq1 || pipe(ATTNQP1(A_TILES, ATILE, hd, kv_dim), "attnQP1");
+      P_at2 = P_at2 || pipe(ATTNP2(A_TILES, ATILE), "attnP2");
+      attnPT = attnPT || sbuf(n_heads * A_TILES * (hd + 2));
+      pass(enc, P_atq1, [qb, kcache[l], vcache[l], attnPT, uAttn], [n_heads, Math.floor(pos / ATILE) + 1]);
+      pass(enc, P_at2, [attnPT, B.attn, uAttn], n_heads);
+    } else {
+      pass(enc, P_attnQ, [qb, kcache[l], vcache[l], B.attn, uAttn], n_heads);
+    }
+  }
   function layerBodyU(enc, l, cur, ws, uRopeQ, uRopeK, uAttn, pos) {
     const F = fusedT2 ? T2F[l] : null;
     if (F) {                                                // fused ternary layer: 10 passes instead of 15
@@ -1466,11 +1661,15 @@ export async function createQvacGPU(manifest, fetchTensor, cap = 64, eos = 2, st
       if (kv4 && l > 0) {
         pass(enc, P_kvq, [kR, kcache[l], uAttn], 1);      // quantize+pack K/V rows (uAttn.w = pos on every path)
         pass(enc, P_kvq, [vR, vcache[l], uAttn], 1);
-        pass(enc, P_attnQ, [qR, kcache[l], vcache[l], B.attn, uAttn], n_heads);
+        attnQ4(enc, l, qR, uAttn, pos);
+      } else if (openPass) {                              // one-pass mode: KV save as a kernel (copies can't ride in a pass)
+        P_kvsF = P_kvsF || pipe(KVSAVE_F(q_dim, kv_dim), "kvsave");
+        pass(enc, P_kvsF, [B.qkv, kcache[l], vcache[l], uAttn], Math.ceil(kv_dim / 64));
+        attnF32(enc, l, qR, uAttn, pos);
       } else {
         enc.copyBufferToBuffer(B.qkv, q_dim * 4, kcache[l], pos * kv_dim * 4, kv_dim * 4);
         enc.copyBufferToBuffer(B.qkv, (q_dim + kv_dim) * 4, vcache[l], pos * kv_dim * 4, kv_dim * 4);
-        pass(enc, P_attn, [qR, kcache[l], vcache[l], B.attn, uAttn], n_heads);
+        attnF32(enc, l, qR, uAttn, pos);
       }
       let attnO = B.attn;
       if (subNorm) { rms(enc, B.attn, `l${l}.attn_sub_norm`, B.attn2, uQd); attnO = B.attn2; }
@@ -1507,11 +1706,15 @@ export async function createQvacGPU(manifest, fetchTensor, cap = 64, eos = 2, st
     if (kv4 && l > 0) {
       pass(enc, P_kvq, [B.k, kcache[l], uAttn], 1);       // quantize+pack K/V rows (uAttn.w = pos on every path)
       pass(enc, P_kvq, [B.v, vcache[l], uAttn], 1);
-      pass(enc, P_attnQ, [B.q, kcache[l], vcache[l], B.attn, uAttn], n_heads);
+      attnQ4(enc, l, B.q, uAttn, pos);
+    } else if (openPass) {                                // one-pass mode: KV save as a kernel (copies can't ride in a pass)
+      P_kvsS = P_kvsS || pipe(KVSAVE_S(kv_dim), "kvsave2");
+      pass(enc, P_kvsS, [B.k, B.v, kcache[l], vcache[l], uAttn], Math.ceil(kv_dim / 64));
+      attnF32(enc, l, B.q, uAttn, pos);
     } else {
       enc.copyBufferToBuffer(B.k, 0, kcache[l], pos * kv_dim * 4, kv_dim * 4);
       enc.copyBufferToBuffer(B.v, 0, vcache[l], pos * kv_dim * 4, kv_dim * 4);
-      pass(enc, P_attn, [B.q, kcache[l], vcache[l], B.attn, uAttn], n_heads);
+      attnF32(enc, l, B.q, uAttn, pos);
     }
     let attnO = B.attn;
     if (subNorm) { rms(enc, B.attn, `l${l}.attn_sub_norm`, B.attn2, uQd); attnO = B.attn2; }   // BitNet: norm BEFORE the o-projection
@@ -1773,9 +1976,12 @@ export async function createQvacGPU(manifest, fetchTensor, cap = 64, eos = 2, st
       dev.queue.submit([encF.finish()]);
     } else {
       const enc = dev.createCommandEncoder();
+      const oneP = ONEPASS() && !(PROF && PROF.active) && !_calib;   // profiling/calibration need per-pass boundaries/copies
+      if (oneP) openPass = enc.beginComputePass();
       for (let l = 0; l < n_layers; l++) cur = layerBody(enc, l, cur, (role) => W[`l${l}.${role}`]);
       rms(enc, cur, "final_norm", B.normed);
       mmW(enc, B.normed, W["lm_head"], B.logits);
+      if (oneP) { openPass.end(); openPass = null; }
       if (!noRead) enc.copyBufferToBuffer(B.logits, 0, staging, 0, vocab * 4);
       dev.queue.submit([enc.finish()]);
     }
@@ -1835,7 +2041,24 @@ export async function createQvacGPU(manifest, fetchTensor, cap = 64, eos = 2, st
     // recomputes logits on-GPU from the ring — skipping this guard kills a QUADRATIC re-prefill
     // in chunked decode loops (measured 151 → ~16 ms/tok).
     if (!forDecode && p === tokens.length && lastLogits === null && tokens.length > 0) { reset(); p = 0; }
-    for (let i = p; i < tokens.length; i++) { lastLogits = await step(tokens[i]); cached.push(tokens[i]); }
+    // PREFILL FAST PATH (resident-dense): ring prefill — GPU-embed, BATCH tokens/submit, no per-token
+    // fence, lm_head only on the last token. Falls back to the per-step loop for streamed/MoE models
+    // and for the dev probes that snapshot per-token state (_capHidden / Hessian calibration).
+    const ringOk = typeof window === "undefined" || window.__ringprefill !== false;   // dev A/B hook
+    if (ringOk && p < tokens.length && denseFast() && !_capHidden && !_calib) {
+      const r = await prefillGPU(tokens.slice(p), p, !forDecode);
+      lastLogits = forDecode ? null : r;
+      return;
+    }
+    // slow path: one step() per token; logits readback only where a caller can read them (the last).
+    for (let i = p; i < tokens.length; i++) {
+      const needRead = !forDecode && i === tokens.length - 1;
+      const r = await step(tokens[i], !needRead);
+      if (needRead) lastLogits = r;
+      cached.push(tokens[i]);
+      if (!needRead && (i & 15) === 15) await dev.queue.onSubmittedWorkDone();
+    }
+    if (forDecode) lastLogits = null;
   }
 
   function argmax(a) { let bi = 0; for (let i = 1; i < a.length; i++) if (a[i] > a[bi]) bi = i; return bi; }
@@ -1867,62 +2090,148 @@ export async function createQvacGPU(manifest, fetchTensor, cap = 64, eos = 2, st
   // Greedy semantics match generate() exactly (same penalty formula over the last-64 unique window
   // — PENALTY2 dedups by first occurrence — and the same first-max argmax tie-break).
   let DEC = null;
-  const BATCH = 6;       // measured optimum: 16 was SLOWER (JS re-encode burst per token beats fence savings)
-  async function decode(prompt, maxNew, repPenalty = 1.3) {
-    if (stream || frameGran || moe || (bits === 3 && !q3f)) return generate(prompt, maxNew, repPenalty);   // GPU-embed variants cover q3f/q4/q8
-    if (!DEC) {
-      const mk = (n) => Array.from({ length: BATCH }, () => ubuf(new Uint32Array(4)));
-      const eqB = dev.createBuffer({ size: embedQ.byteLength, usage: U.STORAGE | U.COPY_DST });
-      dev.queue.writeBuffer(eqB, 0, embedQ.buffer, embedQ.byteOffset, embedQ.byteLength);
-      const esB = dev.createBuffer({ size: embedS.byteLength, usage: U.STORAGE | U.COPY_DST });
-      dev.queue.writeBuffer(esB, 0, embedS.buffer, embedS.byteOffset, embedS.byteLength);
-      DEC = {
-        pen2: pipe(PENALTY2, "pen2"), a1: pipe(ARGMAX1, "amax1"), a2: pipe(ARGMAX2, "amax2"),
-        app: pipe(APPEND, "append"), emb: pipe(EMBED(bits, q3f), "embed"),
-        eqB, esB, ring: dev.createBuffer({ size: Math.max(cap, 1024) * 4, usage: U.STORAGE | U.COPY_DST | U.COPY_SRC }),
-        uA1: ubuf(new Uint32Array([vocab, 0, 0, 0])), tmp: sbuf(512),
-        out: dev.createBuffer({ size: 16, usage: U.STORAGE | U.COPY_SRC }),
-        stg: dev.createBuffer({ size: BATCH * 4, usage: U.MAP_READ | U.COPY_DST }),
-        uP: mk(), uE: mk(), uRQ: mk(), uRK: mk(), uA: mk(),
-      };
+  const BATCH = 6;       // tokens per submit; with the pipelined loop below the fence is off the critical path
+  const denseFast = () => !(stream || frameGran || moe || (bits === 3 && !q3f));
+  function ensureDEC() {
+    if (DEC) return DEC;
+    const mk = () => Array.from({ length: BATCH }, () => ubuf(new Uint32Array(4)));
+    const par2 = (f) => [f(), f()];                                // double-buffered per-parity resources (pipelined batches)
+    const eqB = dev.createBuffer({ size: embedQ.byteLength, usage: U.STORAGE | U.COPY_DST });
+    dev.queue.writeBuffer(eqB, 0, embedQ.buffer, embedQ.byteOffset, embedQ.byteLength);
+    const esB = dev.createBuffer({ size: embedS.byteLength, usage: U.STORAGE | U.COPY_DST });
+    dev.queue.writeBuffer(esB, 0, embedS.buffer, embedS.byteOffset, embedS.byteLength);
+    DEC = {
+      pen2: pipe(PENALTY2, "pen2"), a1: pipe(ARGMAX1, "amax1"), a2: pipe(ARGMAX2, "amax2"),
+      app: pipe(APPEND, "append"), emb: pipe(EMBED(bits, q3f), "embed"),
+      eqB, esB, ring: dev.createBuffer({ size: Math.max(cap, 1024) * 4, usage: U.STORAGE | U.COPY_DST | U.COPY_SRC }),
+      uA1: ubuf(new Uint32Array([vocab, 0, 0, 0])), tmp: sbuf(512),
+      out: dev.createBuffer({ size: 16, usage: U.STORAGE | U.COPY_SRC }),
+      stg: par2(() => dev.createBuffer({ size: BATCH * 4, usage: U.MAP_READ | U.COPY_DST })),
+      uP: par2(mk), uE: par2(mk), uRQ: par2(mk), uRK: par2(mk), uA: par2(mk),
+    };
+    return DEC;
+  }
+  // ── RING PREFILL: prompt tokens are KNOWN, so prefill rides the same GPU-embed ring as decode —
+  // BATCH tokens per submit, one compute pass each, NO per-token fence, and (the big cut) NO lm_head
+  // except for the last token (the old per-step prefill paid the model's largest matmul per prompt
+  // token for logits nobody read). Byte-identical KV to step()-prefill: same kernels, same order.
+  async function prefillGPU(newTokens, base0, needLogits) {
+    ensureDEC();
+    const ONE = ONEPASS();
+    const tJs0 = performance.now(); let drainMs = 0;
+    dev.queue.writeBuffer(DEC.ring, base0 * 4, new Uint32Array(newTokens));
+    let par = 0, subs = 0;
+    for (let off = 0; off < newTokens.length; off += BATCH) {
+      const n = Math.min(BATCH, newTokens.length - off);
+      const base = base0 + off, pos0 = pos + off;
+      const uE = DEC.uE[par], uRQ = DEC.uRQ[par], uRK = DEC.uRK[par], uA = DEC.uA[par];
+      for (let k = 0; k < n; k++) {
+        dev.queue.writeBuffer(uE[k], 0, new Uint32Array([base + k, d, 0, 0]));
+        dev.queue.writeBuffer(uRQ[k], 0, new Uint32Array([n_heads, hd, pos0 + k, n_kv_heads]));
+        dev.queue.writeBuffer(uRK[k], 0, new Uint32Array([n_kv_heads, hd, pos0 + k, 0]));
+        dev.queue.writeBuffer(uA[k], 0, new Uint32Array([n_heads, n_kv_heads, hd, pos0 + k]));
+      }
+      const enc = dev.createCommandEncoder();
+      if (ONE) openPass = enc.beginComputePass();
+      for (let k = 0; k < n; k++) {
+        pass(enc, DEC.emb, [DEC.ring, DEC.eqB, DEC.esB, B.x, uE[k]], Math.ceil(d / 256));
+        let cur = B.x;
+        const up = { ropeQ: uRQ[k], ropeK: uRK[k], attn: uA[k], pos: pos0 + k };
+        for (let l = 0; l < n_layers; l++) cur = layerBody(enc, l, cur, (role) => W[`l${l}.${role}`], up);
+        if (off + k === newTokens.length - 1) {                    // logits only where they can be read (last token)
+          rms(enc, cur, "final_norm", B.normed);
+          mmW(enc, B.normed, W["lm_head"], B.logits);
+        }
+      }
+      if (ONE) { openPass.end(); openPass = null; }
+      if (off + n === newTokens.length && needLogits) enc.copyBufferToBuffer(B.logits, 0, staging, 0, vocab * 4);
+      dev.queue.submit([enc.finish()]);
+      par ^= 1;
+      if ((++subs & 15) === 0) { const t = performance.now(); await dev.queue.onSubmittedWorkDone(); drainMs += performance.now() - t; }   // bounded queue depth
     }
+    const encodeMs = performance.now() - tJs0 - drainMs;
+    pos += newTokens.length;
+    for (const t of newTokens) cached.push(t);
+    let logits = null;
+    const tTail = performance.now();
+    if (needLogits) {
+      await staging.mapAsync(GPUMapMode.READ);
+      logits = new Float32Array(staging.getMappedRange().slice(0)); staging.unmap();
+    } else {
+      await dev.queue.onSubmittedWorkDone();                       // honest cost: prefill "done" = KV resident
+    }
+    if (typeof window !== "undefined") window.__prefStats = { n: newTokens.length, encodeMs: +encodeMs.toFixed(1), drainMs: +drainMs.toFixed(1), tailMs: +(performance.now() - tTail).toFixed(1) };
+    return logits;
+  }
+  async function decode(prompt, maxNew, repPenalty = 1.3, onTok = null) {
+    if (!denseFast()) {                                            // GPU-embed variants cover q3f/q4/q8
+      const seq = await generate(prompt, maxNew, repPenalty);
+      if (onTok && seq.length > prompt.length) onTok(seq.slice(prompt.length), seq.length);
+      return seq;
+    }
+    ensureDEC();
     await sync(prompt, true);
     const seq = prompt.slice();
     dev.queue.writeBuffer(DEC.ring, 0, new Uint32Array(seq));      // ring ← current seq (penalty window + embed source)
-    let done = false;
-    while (!done && seq.length - prompt.length < maxNew && seq.length < cap) {
-      const n = Math.min(BATCH, maxNew - (seq.length - prompt.length), cap - seq.length);
-      const base = seq.length, pos0 = pos;
+    const ONE = ONEPASS();
+    const pos0Start = pos, baseStart = seq.length;
+    // ── PIPELINED DATAFLOW LOOP: keep up to 2 batches in flight — batch N+1 is encoded+submitted
+    // BEFORE batch N's 4-byte fence is read, so the GPU never idles on the JS fence/detok/UI work.
+    // Positions and ring indices are deterministic, so batch N+1 needs nothing from batch N on the
+    // host side (the token ids it consumes live in the GPU ring — data triggers compute, not JS).
+    // The first batch is 1 token when streaming (onTok) so the first word lands at 1-token latency.
+    // On EOS/stop, an already-submitted speculative batch is simply abandoned: pos/seq rewind below;
+    // its ring/KV writes beyond pos are never read (same invariant as the old mid-batch EOS trim).
+    const submitBatch = (n, base, pos0, par) => {
+      const uP = DEC.uP[par], uE = DEC.uE[par], uRQ = DEC.uRQ[par], uRK = DEC.uRK[par], uA = DEC.uA[par];
       for (let k = 0; k < n; k++) {                                // prewritten per-step uniforms (queued writes, no fence)
-        dev.queue.writeBuffer(DEC.uP[k], 0, new Uint32Array([base + k, fbits(repPenalty), 0, 0]));
-        dev.queue.writeBuffer(DEC.uE[k], 0, new Uint32Array([base + k, d, 0, 0]));
-        dev.queue.writeBuffer(DEC.uRQ[k], 0, new Uint32Array([n_heads, hd, pos0 + k, n_kv_heads]));   // .w = nkv (fused ROPE2)
-        dev.queue.writeBuffer(DEC.uRK[k], 0, new Uint32Array([n_kv_heads, hd, pos0 + k, 0]));
-        dev.queue.writeBuffer(DEC.uA[k], 0, new Uint32Array([n_heads, n_kv_heads, hd, pos0 + k]));
+        dev.queue.writeBuffer(uP[k], 0, new Uint32Array([base + k, fbits(repPenalty), 0, 0]));
+        dev.queue.writeBuffer(uE[k], 0, new Uint32Array([base + k, d, 0, 0]));
+        dev.queue.writeBuffer(uRQ[k], 0, new Uint32Array([n_heads, hd, pos0 + k, n_kv_heads]));   // .w = nkv (fused ROPE2)
+        dev.queue.writeBuffer(uRK[k], 0, new Uint32Array([n_kv_heads, hd, pos0 + k, 0]));
+        dev.queue.writeBuffer(uA[k], 0, new Uint32Array([n_heads, n_kv_heads, hd, pos0 + k]));
       }
       const enc = dev.createCommandEncoder();
+      if (ONE) openPass = enc.beginComputePass();
       for (let k = 0; k < n; k++) {
-        pass(enc, DEC.pen2, [B.logits, DEC.ring, DEC.uP[k]], 1);
+        pass(enc, DEC.pen2, [B.logits, DEC.ring, uP[k]], 1);
         pass(enc, DEC.a1, [B.logits, DEC.tmp, DEC.uA1], 256);
         pass(enc, DEC.a2, [DEC.tmp, DEC.out], 1);
-        pass(enc, DEC.app, [DEC.ring, DEC.out, DEC.uE[k]], 1);     // ring[base+k] = winner
-        pass(enc, DEC.emb, [DEC.ring, DEC.eqB, DEC.esB, B.x, DEC.uE[k]], Math.ceil(d / 256));
+        pass(enc, DEC.app, [DEC.ring, DEC.out, uE[k]], 1);         // ring[base+k] = winner
+        pass(enc, DEC.emb, [DEC.ring, DEC.eqB, DEC.esB, B.x, uE[k]], Math.ceil(d / 256));
         let cur = B.x;
-        const up = { ropeQ: DEC.uRQ[k], ropeK: DEC.uRK[k], attn: DEC.uA[k], pos: pos0 + k };
+        const up = { ropeQ: uRQ[k], ropeK: uRK[k], attn: uA[k], pos: pos0 + k };
         for (let l = 0; l < n_layers; l++) cur = layerBody(enc, l, cur, (role) => W[`l${l}.${role}`], up);
         rms(enc, cur, "final_norm", B.normed);
         mmW(enc, B.normed, W["lm_head"], B.logits);
       }
-      enc.copyBufferToBuffer(DEC.ring, base * 4, DEC.stg, 0, n * 4);
+      if (ONE) { openPass.end(); openPass = null; }
+      enc.copyBufferToBuffer(DEC.ring, base * 4, DEC.stg[par], 0, n * 4);
       dev.queue.submit([enc.finish()]);
       pos = pos0 + n;
-      await DEC.stg.mapAsync(GPUMapMode.READ);
-      const win = new Uint32Array(DEC.stg.getMappedRange().slice(0)).subarray(0, n); DEC.stg.unmap();
-      for (let k = 0; k < n; k++) {
-        if (win[k] === eos) { pos = pos0 + k; done = true; break; }   // trim + rewind: stale KV beyond pos is never read
-        seq.push(win[k]); cached.push(win[k]);
+    };
+    let predLen = seq.length, predPos = pos, par = 0, done = false, firstBatch = !!onTok;
+    const inflight = [];
+    while (!done) {
+      while (!done && inflight.length < 2 && predLen - prompt.length < maxNew && predLen < cap) {
+        const n = Math.min(firstBatch ? 1 : BATCH, maxNew - (predLen - prompt.length), cap - predLen);
+        firstBatch = false;
+        submitBatch(n, predLen, predPos, par);
+        inflight.push({ n, par });
+        predLen += n; predPos += n; par ^= 1;
       }
+      const b = inflight.shift();
+      if (!b) break;
+      await DEC.stg[b.par].mapAsync(GPUMapMode.READ);
+      const win = new Uint32Array(DEC.stg[b.par].getMappedRange().slice(0)).subarray(0, b.n); DEC.stg[b.par].unmap();
+      const got = [];
+      for (let k = 0; k < b.n; k++) {
+        if (win[k] === eos) { done = true; break; }
+        seq.push(win[k]); cached.push(win[k]); got.push(win[k]);
+      }
+      if (got.length && onTok && onTok(got, seq.length) === false) done = true;   // caller stop (abort/stop-text)
     }
+    pos = pos0Start + (seq.length - baseStart);                    // rewind past EOS/stop + any abandoned speculative batch
     lastLogits = null;                                             // raw-logits callers re-derive via sync()'s guard
     return seq;
   }
@@ -2268,5 +2577,5 @@ export async function createQvacGPU(manifest, fetchTensor, cap = 64, eos = 2, st
     return seq;
     } finally { DF.busy = false; }
   }
-  return { step, reset, truncateTo, get cachedLen() { return cached.length; }, sync, generate, decode, diffuse, diffStats: () => (DF ? DF.stats : null), _df: () => DF, _dev: () => dev, specDecode, specStats: () => (SP ? SP.stats : null), setDrafter: (fn) => { _drafter = fn || null; }, argmax, captureHidden, collectInputHessians, dumpKV, dims: manifest, streaming: stream, gran: remote ? "remote (served disk)" : (stream === "opfs" ? "opfs (disk)" : (frameGran ? "frame" : (stream ? "layer" : "resident"))), frameBufBytes: streamBuf, loadStats: QLOAD, destroy: () => { try { dev.destroy(); } catch {} }, get gpuBytes() { return gpuBytes; }, get pos() { return pos; }, get timing() { return timing; } };
+  return { step, reset, truncateTo, get cachedLen() { return cached.length; }, sync, generate, decode, decodeStreamed: true, diffuse, diffStats: () => (DF ? DF.stats : null), _df: () => DF, _dev: () => dev, specDecode, specStats: () => (SP ? SP.stats : null), setDrafter: (fn) => { _drafter = fn || null; }, argmax, captureHidden, collectInputHessians, dumpKV, dims: manifest, streaming: stream, gran: remote ? "remote (served disk)" : (stream === "opfs" ? "opfs (disk)" : (frameGran ? "frame" : (stream ? "layer" : "resident"))), frameBufBytes: streamBuf, loadStats: QLOAD, destroy: () => { try { dev.destroy(); } catch {} }, get gpuBytes() { return gpuBytes; }, get pos() { return pos; }, get timing() { return timing; } };
 }

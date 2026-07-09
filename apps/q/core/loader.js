@@ -6,7 +6,7 @@
 // still exposed for the probe + system-monitor panels.)
 
 import init, { kappa, qvac_load_model, qvac_load_gpu, qvac_tokenize, qvac_continue, qvac_gpu_manifest, qvac_gpu_tensor, qvac_gpu_free, qvac_panic_hook } from "../pkg/holospaces_web.js";
-import { createQvacGPU } from "../qvac-gpu.js?v=63";
+import { createQvacGPU } from "../qvac-gpu.js?v=65";
 import { modelAsSource } from "./semantic.js";   // C2: a loaded model carries a W3C @type (schema:SoftwareSourceCode)
 
 // the model κ-object's W3C linked-data view — content-addressed identity (Law L1) + schema.org type.
