@@ -226,6 +226,40 @@ export async function createEngine(modelEntry, loaded) {
     // usePin(): rewind the KV cursor to the pinned prefix right before a turn, so sync() reuses it. Returns reused length.
     usePin: () => { if (_pinLen > 0 && gpu.truncateTo) { try { return gpu.truncateTo(_pinLen); } catch (e) { return 0; } } return 0; },
     pinLen: () => _pinLen,
+    // ── DURABLE KV COMMONS (I1): the persona prefix K/V, prefilled ONCE EVER per device ─────────────
+    // Save: after a pin, dump the resident K/V and persist it κ-verified in OPFS (fire-and-forget).
+    // Load: on boot, restore those bytes instead of prefilling; the engine re-derives the LAST prefix
+    // token through the live step path (deterministic ⇒ byte-identical), so a valid restore is
+    // indistinguishable from a fresh prefill — and any store tamper is refused + purged (Law L5).
+    kvCommonsAvailable: !!(gpu.dumpState && gpu.restoreState && gpu.kvLayoutOf && typeof navigator !== "undefined" && navigator.storage && navigator.storage.getDirectory),
+    kvCommonsSave: async (ids) => {
+      try {
+        if (!gpu.dumpState || !ids || gpu.cachedLen < ids.length || ids.length < 2) return false;
+        const blob = await gpu.dumpState(ids.length);
+        if (!blob) return false;
+        const { commonsKey, save } = await import("./kv-commons.mjs");
+        const key = commonsKey(["kvc1", modelKappa, blob.layout, ids.join(",")]);
+        if (!key) return false;
+        await save(key, blob.bytes, { layout: blob.layout, L: blob.L, nIds: ids.length });
+        return true;
+      } catch (e) { return false; }
+    },
+    kvCommonsLoad: async (ids) => {
+      try {
+        if (!gpu.restoreState || !gpu.kvLayoutOf || !ids || ids.length < 2) return 0;
+        const layout = gpu.kvLayoutOf(ids.length);
+        const { commonsKey, load } = await import("./kv-commons.mjs");
+        const key = commonsKey(["kvc1", modelKappa, layout, ids.join(",")]);
+        if (!key) return 0;
+        const got = await load(key);
+        if (!got || got.meta.layout !== layout) return 0;
+        const resident = await gpu.restoreState(ids.slice(), { layout: got.meta.layout, L: got.meta.L, bytes: got.bytes });
+        if (!resident) return 0;
+        await gpu.sync(ids.slice(), true);           // re-step the last prefix token (validates + resident logits, no readback)
+        _pinLen = gpu.cachedLen;
+        return _pinLen;
+      } catch (e) { try { gpu.reset(); } catch {} _pinLen = 0; return 0; }
+    },
     memoKey, memoGet: (k) => memo.get(k), memoHas: (k) => memo.has(k), memoSet: (k, v) => memo.set(k, v),
     buildReceipt, verify: verifyIntegrity, reDerive,
     stats: () => gpu.timing, reset: () => { try { gpu.reset(); } catch {} }, destroy: () => { try { gpu.destroy(); } catch {} },

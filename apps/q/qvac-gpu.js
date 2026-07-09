@@ -2033,6 +2033,47 @@ export async function createQvacGPU(manifest, fetchTensor, cap = 64, eos = 2, st
     return { k: all.slice(0, n * kv_dim), v: all.slice(n * kv_dim, 2 * n * kv_dim), q: all.slice(2 * n * kv_dim), n, kv_dim, n_heads, n_kv_heads, hd };
   }
 
+  // ── DURABLE KV COMMONS (I1): dump/restore the whole prefix K/V state as ONE byte blob ──
+  // Every cache region is pos-major from offset 0, so positions [0..L) of each side of each layer
+  // are a single contiguous copy. The layout string travels with the bytes AND is folded into the
+  // commons key by the caller — a format/dims change can never mis-restore (it just misses).
+  const kvRegion = (l, rows) => rows * ((kv4 && l > 0) ? kvS : kv_dim) * 4;
+  const kvLayoutOf = (L) => `kvc1|kv4:${kv4 ? 1 : 0}|kvd:${kv_dim}|layers:${n_layers}|L:${L | 0}`;
+  async function dumpState(L) {
+    L = Math.min(L | 0, pos);
+    if (L <= 1) return null;
+    let total = 0; for (let l = 0; l < n_layers; l++) total += 2 * kvRegion(l, L);
+    const stg = dev.createBuffer({ size: total, usage: U.MAP_READ | U.COPY_DST });
+    const e = dev.createCommandEncoder(); let off = 0;
+    for (let l = 0; l < n_layers; l++) {
+      const nb = kvRegion(l, L);
+      e.copyBufferToBuffer(kcache[l], 0, stg, off, nb); off += nb;
+      e.copyBufferToBuffer(vcache[l], 0, stg, off, nb); off += nb;
+    }
+    dev.queue.submit([e.finish()]);
+    await stg.mapAsync(GPUMapMode.READ);
+    const bytes = new Uint8Array(stg.getMappedRange().slice(0)); stg.unmap(); stg.destroy();
+    return { layout: kvLayoutOf(L), L, bytes };
+  }
+  // Restores positions [0..L) then sets the cursor to L-1: the caller's next sync() re-derives the
+  // LAST prefix token through the normal step path — byte-identical by determinism — which both
+  // cross-checks the restore against live compute state and leaves valid resident logits for the
+  // decode head. Returns the resident length (L-1), or 0 (state untouched/reset) on any mismatch.
+  async function restoreState(tokens, blob) {
+    const L = blob && blob.L | 0;
+    if (!L || L < 2 || L > tokens.length || L > cap || blob.layout !== kvLayoutOf(L)) return 0;
+    let total = 0; for (let l = 0; l < n_layers; l++) total += 2 * kvRegion(l, L);
+    if (blob.bytes.byteLength !== total) return 0;
+    let off = 0;
+    for (let l = 0; l < n_layers; l++) {
+      const nb = kvRegion(l, L);
+      dev.queue.writeBuffer(kcache[l], 0, blob.bytes, off, nb); off += nb;
+      dev.queue.writeBuffer(vcache[l], 0, blob.bytes, off, nb); off += nb;
+    }
+    cached = tokens.slice(0, L - 1); pos = L - 1; lastLogits = null;
+    return L - 1;
+  }
+
   async function sync(tokens, forDecode = false) {
     let p = 0;
     while (p < cached.length && p < tokens.length && cached[p] === tokens[p]) p++;
@@ -2577,5 +2618,5 @@ export async function createQvacGPU(manifest, fetchTensor, cap = 64, eos = 2, st
     return seq;
     } finally { DF.busy = false; }
   }
-  return { step, reset, truncateTo, get cachedLen() { return cached.length; }, sync, generate, decode, decodeStreamed: true, diffuse, diffStats: () => (DF ? DF.stats : null), _df: () => DF, _dev: () => dev, specDecode, specStats: () => (SP ? SP.stats : null), setDrafter: (fn) => { _drafter = fn || null; }, argmax, captureHidden, collectInputHessians, dumpKV, dims: manifest, streaming: stream, gran: remote ? "remote (served disk)" : (stream === "opfs" ? "opfs (disk)" : (frameGran ? "frame" : (stream ? "layer" : "resident"))), frameBufBytes: streamBuf, loadStats: QLOAD, destroy: () => { try { dev.destroy(); } catch {} }, get gpuBytes() { return gpuBytes; }, get pos() { return pos; }, get timing() { return timing; } };
+  return { step, reset, truncateTo, get cachedLen() { return cached.length; }, sync, generate, decode, decodeStreamed: true, dumpState, restoreState, kvLayoutOf, diffuse, diffStats: () => (DF ? DF.stats : null), _df: () => DF, _dev: () => dev, specDecode, specStats: () => (SP ? SP.stats : null), setDrafter: (fn) => { _drafter = fn || null; }, argmax, captureHidden, collectInputHessians, dumpKV, dims: manifest, streaming: stream, gran: remote ? "remote (served disk)" : (stream === "opfs" ? "opfs (disk)" : (frameGran ? "frame" : (stream ? "layer" : "resident"))), frameBufBytes: streamBuf, loadStats: QLOAD, destroy: () => { try { dev.destroy(); } catch {} }, get gpuBytes() { return gpuBytes; }, get pos() { return pos; }, get timing() { return timing; } };
 }
