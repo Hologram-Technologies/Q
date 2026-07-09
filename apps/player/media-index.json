@@ -1,0 +1,21 @@
+{
+  "kappa": "sha256:b318b653b3fe4fe3ae1a24f17b0c0494076eb00a818e534a0f52b18e2cff5852",
+  "rows": [
+    {
+      "label": "Films",
+      "n": 4
+    },
+    {
+      "label": "Games",
+      "n": 3
+    },
+    {
+      "label": "Live TV",
+      "n": 12
+    },
+    {
+      "label": "Audiobooks",
+      "n": 4
+    }
+  ]
+}
