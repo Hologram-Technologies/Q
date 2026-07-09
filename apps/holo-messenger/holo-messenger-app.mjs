@@ -2375,8 +2375,8 @@ async function buildQ() {
             import("../q/forge/gpu/holo-files.mjs"),
             import("../q/forge/gguf-forge-tokenizer.mjs"),
           ]);
-          let ort = null; try { const om = await import("../../vendor/onnxruntime-web/ort.webgpu.bundle.min.mjs"); ort = om.default || om; try { ort.env.wasm.wasmPaths = new URL("../../vendor/onnxruntime-web/", import.meta.url).href; ort.env.wasm.numThreads = 1; } catch {} } catch { ort = null; }   // null → seed runner uses its CDN ORT
-          const hdr = new Uint8Array(await (await fetch(new URL("../q/forge/.models/qwen-header.bin", import.meta.url))).arrayBuffer());
+          let ort = null; try { const om = await import("../../vendor/onnxruntime-web/ort.webgpu.bundle.min.mjs"); ort = om.default || om; try { ort.env.wasm.wasmPaths = "/vendor/onnxruntime-web/"; ort.env.wasm.numThreads = 1; } catch {} } catch { ort = null; }   // null → seed runner uses its CDN ORT
+          const hdr = new Uint8Array(await (await fetch("/apps/q/forge/.models/qwen-header.bin")).arrayBuffer());
           const tok = tm.makeTokenizer(hdr);
           _onnx = await fr.loadFirstResponder({ ort, createRunner: sr.createSeedRunner, openFiles: hf.openHoloFiles,
             tokenizer: { encode: (t, o) => tok.encode(t, o || {}), decode: (ids) => tok.decode(ids) } }) || null;

@@ -345,15 +345,27 @@ import("../../usr/lib/holo/holo-names.mjs").then((m) => { classifyName = m.class
 
   // ── the ambient hint dot — hold the modifier → bloom the live legend (projected from the keymap) ──
   const legend = $(".hk-legend", dot), core = $(".hk-core", dot), tag = $(".hk-tag", dot);
-  legend.innerHTML = km.registry.filter((c) => c.hint).map((c) =>
-    `<button class="hk-chip" type="button" tabindex="-1" data-run="${c.id}" title="${esc(c.title)}"><kbd>${esc(km.label(c.spec))}</kbd><span>${esc(c.hint)}</span></button>`).join("");
+  // exactly three chips — Search · Help · Hide. Short, intuitive, fully wired. "Hide" banishes the dot
+  // (persisted); restore it from the cheat sheet footer ("show the hint dot").
+  const CHIPS = [
+    { label: "Search", kbd: km.label("mod+k"), run: () => openSpot() },
+    { label: "Help",   kbd: km.label("?"),     run: () => openCheat() },
+    { label: "Hide",   kbd: "",                run: () => setDotHidden(true) },
+  ];
+  legend.innerHTML = CHIPS.map((c, i) =>
+    `<button class="hk-chip" type="button" tabindex="-1" data-i="${i}" title="${esc(c.label)}">${c.kbd ? `<kbd>${esc(c.kbd)}</kbd>` : ""}<span>${esc(c.label)}</span></button>`).join("");
   core.title = "Shortcuts — hold " + modSymbol;
   tag.innerHTML = `<kbd>${modSymbol}</kbd> for shortcuts`;
 
   const DKEY = "holo.hints.dismissed.v1";
   const dotHidden = () => { try { return localStorage.getItem(DKEY) === "1"; } catch { return false; } };
   const setDotHidden = (on) => { try { localStorage.setItem(DKEY, on ? "1" : "0"); } catch {} syncDot(); };
-  const syncDot = () => dot.classList.toggle("show", !dotHidden());
+  // the toggle belongs to the HOME canvas only — the messenger marks it with data-holo-home="on" on <html>
+  // (removed when home unmounts) and adds holo-chat-open when a conversation is open. So the dot rides the
+  // home and never floats over a chat or another app. (The keyboard shortcuts themselves stay global.)
+  const onHome = () => { try { const de = D.documentElement; return de.getAttribute("data-holo-home") === "on" && !de.classList.contains("holo-chat-open"); } catch { return true; } };
+  const syncDot = () => dot.classList.toggle("show", !dotHidden() && onHome());
+  try { new MutationObserver(syncDot).observe(D.documentElement, { attributes: true, attributeFilter: ["data-holo-home", "class"] }); } catch {}
 
   let bloomed = false;
   const bloom = (on) => { if (on === bloomed) return; bloomed = on; dot.classList.toggle("bloom", on); };
@@ -374,7 +386,7 @@ import("../../usr/lib/holo/holo-names.mjs").then((m) => { classifyName = m.class
   dot.addEventListener("click", (e) => {
     if (didLong) { didLong = false; e.preventDefault(); e.stopPropagation(); return; }
     const chip = e.target.closest(".hk-chip");
-    if (chip) { try { km.run(chip.dataset.run); } catch {} return; }
+    if (chip) { const i = +chip.dataset.i; if (CHIPS[i]) try { CHIPS[i].run(); } catch {} return; }
     openCheat();
   });
   syncDot();
