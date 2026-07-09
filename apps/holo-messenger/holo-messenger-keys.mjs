@@ -14,12 +14,12 @@
 //
 // It never loads inside the native shell (which already owns these keys) or inside an embedded frame.
 
-import { createKeymap } from "../../usr/lib/holo/holo-keys.js";
-import { classifyIntent, fuzzyScore } from "../../usr/lib/holo/holo-intent-classify.mjs";
+import { createKeymap } from "/usr/lib/holo/holo-keys.js";
+import { classifyIntent, fuzzyScore } from "/usr/lib/holo/holo-intent-classify.mjs";
 // holo-names' classify is the ONE naming-universe classifier (κ/did/CID/SRI/ENS/nostr/…); reused, not rebuilt.
 // Loaded lazily + fail-soft so a hiccup degrades the resolve lane to a plain web hand-off, never breaks the bar.
 let classifyName = null;
-import("../../usr/lib/holo/holo-names.mjs").then((m) => { classifyName = m.classify || (m.default && m.default.classify) || null; }).catch(() => {});
+import("/usr/lib/holo/holo-names.mjs").then((m) => { classifyName = m.classify || (m.default && m.default.classify) || null; }).catch(() => {});
 
 (function () {
   "use strict";
@@ -153,9 +153,9 @@ import("../../usr/lib/holo/holo-names.mjs").then((m) => { classifyName = m.class
   // correct whether the bundle is served at the origin root or a subpath (e.g. /Q/).
   const openApp = (dir) => { try { W.open(new URL("../" + dir + "/", location.href).href, "_blank", "noopener"); return true; } catch { return false; } };
   // resolve ANY name through the proven /apps/resolve surface — it classifies + VERIFIES bytes (Law L5) and
-  // renders the shared <holo-card>. We hand off via #hash (the resolve app auto-resolves from location.hash),
-  // so the bar never reimplements verification; it only classifies (µs, local) to preview the lane.
-  const openResolve = (s) => { try { W.open(new URL("../resolve/#" + encodeURIComponent(s), location.href).href, "_blank", "noopener"); return true; } catch { return false; } };
+  // renders the shared <holo-card>. Resolution is UNIFIED at the root now (github.io/Q/#<name>) — the root
+  // door mounts the resolver inline — so a full-view hand-off opens the root, not a sub-app.
+  const openResolve = (s) => { try { W.open(new URL("../../#" + encodeURIComponent(s), location.href).href, "_blank", "noopener"); return true; } catch { return false; } };
   const openWebSearch = (q) => { try { W.open(new URL("../browser/#q=" + encodeURIComponent(q), location.href).href, "_blank", "noopener"); return true; } catch { return false; } };
   // ask Q: summon the drawer, then seed the hero input + send once it has mounted (retry a few frames).
   const askQ = (text) => {
@@ -276,7 +276,7 @@ import("../../usr/lib/holo/holo-names.mjs").then((m) => { classifyName = m.class
   //    full inspector). The card self-resolves against the bundle root, so it is correct on any mount.
   //    Fail-soft: if the card module hiccups, the bar silently keeps the hand-off row it already shows. ───
   let _cardReady = false, _prevQ = "", _prevT = 0;
-  import("../../usr/lib/holo/holo-card.mjs").then(() => { _cardReady = true; if (scrim.classList.contains("open")) updatePreview(sInput.value); }).catch(() => {});
+  import("/usr/lib/holo/holo-card.mjs").then(() => { _cardReady = true; if (scrim.classList.contains("open")) updatePreview(sInput.value); }).catch(() => {});
   function updatePreview(term) {
     const it = classifyIntent(term || "", classifyName), q = it.q;
     const show = _cardReady && it.lane === "resolve" && q.length > 1;

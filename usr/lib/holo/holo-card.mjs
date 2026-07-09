@@ -15,7 +15,7 @@ import { loadAppIndex, findApp } from "./holo-app-index.mjs";
 
 // bundle root from THIS module location (works at the OS root or a /Q/ subpath)
 const BASE = new URL("../../../", import.meta.url);       // /usr/lib/holo/holo-card.mjs -> bundle root
-const INSPECTOR = new URL("apps/resolve/", BASE).href;
+const INSPECTOR = BASE.href;                             // the resolver IS the root now (github.io/Q/#<name>)
 const esc = (s) => String(s == null ? "" : s).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/"/g, "&quot;");
 
 // ── pure core (Node-witnessable): sniff ANY common internet format by magic bytes, build the MODEL ────

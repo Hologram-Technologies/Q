@@ -12,7 +12,7 @@
 // it boots in, and a shared object link carries its κ in the hash).
 
 import { loadAppIndex, findApp } from "./usr/lib/holo/holo-app-index.mjs";
-import { parseIntent, chooseTarget, entryFor, nameplaneEntry } from "./holo-root-resolver.mjs";
+import { parseIntent, chooseTarget, entryFor } from "./holo-root-resolver.mjs";
 
 const here = new URL("./", location.href);
 let frame = false;
@@ -22,18 +22,22 @@ const intent = parseIntent({ search: location.search, hash: location.hash, host:
 const carry = location.search + location.hash;
 const go = (u) => location.replace(new URL(u, here).href);
 
+// A name/κ that is not an app resolves INLINE, right here at the root — no sub-app, no redirect. The
+// universal resolver view mounts in this same document, so github.io/Q/#<name> IS the resolver. Fast +
+// ungated + universal: no login, no shell boot. Fail-soft: if the view can't load, an honest line.
+async function resolveHere(name) {
+  try { const m = await import("./holo-resolve-view.mjs"); m.mount(document.body, name || ""); }
+  catch (e) { document.body.innerHTML = '<main style="max-width:720px;margin:9vh auto;padding:0 20px;color:#e9edef;font:15px system-ui,sans-serif"><h1 style="font-size:20px">Holo Resolve</h1><p style="color:#8696a0">The resolver could not load here. Reload, or check your connection.</p></main>'; }
+}
+
 (async () => {
   try {
     const index = await loadAppIndex({ base: here });          // the SIGNED apps table → one κ per app
     const target = chooseTarget({ index, intent, findApp });
-    if (target.kind === "app") return go(entryFor(target.app, target.variant) + carry);
-    // a name/κ that is not an app → the universal name plane, itself opened BY ITS κ (never a path)
-    const plane = nameplaneEntry(index, findApp, target.name);
-    if (plane) return go(plane);
-    throw new Error("resolve app not in signed index");        // → the bootstrap floor below
+    if (target.kind === "app") return go(entryFor(target.app, target.variant) + carry);   // launch an app BY ITS κ (unchanged)
+    return resolveHere(target.name);                           // any other name → the universal resolver, INLINE at the root
   } catch (e) {
-    // IRREDUCIBLE BOOTSTRAP FLOOR: the signed index (release.json) is the map from κ → path; if it
-    // itself can't load, there is no κ to resolve, so this ONE literal is the only honest fallback.
-    return go("apps/resolve/index.html" + (intent.name ? "?resolve=" + encodeURIComponent(intent.name) : ""));
+    // FLOOR: the signed index couldn't load — still resolve inline (the resolver needs no index for a name).
+    return resolveHere(intent.name || decodeURIComponent((location.hash || "").replace(/^#/, "")));
   }
 })();
