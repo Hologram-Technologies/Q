@@ -27,20 +27,18 @@ import("/usr/lib/holo/holo-names.mjs").then((m) => { classifyName = m.classify |
   const W = window, D = document;
 
   // ── activation gate ───────────────────────────────────────────────────────────────────────────
-  // Desktop only: a wide viewport AND a real pointing device present — a phone/tablet has no keyboard, so
-  // the layer is inert there and the dot stays hidden ("desktop mode only, no mobile"). We test
-  // `any-pointer: fine` (a mouse/trackpad/stylus EXISTS) rather than the PRIMARY pointer, so a touchscreen
-  // laptop — which IS a desktop — still gets it, while a touch-only phone/tablet does not. `hover: hover`
-  // is accepted as an equivalent desktop signal. Skip inside the native shell (it owns the keys) and when
-  // embedded (the host frame owns them). Idempotent.
+  // "Desktop only, no mobile" — gate on the USER-AGENT (is this a phone/tablet?), NOT on viewport width or
+  // pointer media queries. Those are fragile: a docked DevTools narrows innerWidth below any width floor, and
+  // DevTools touch-emulation makes every pointer query (`any-pointer:fine`, `hover:hover`, `pointer:fine`)
+  // report coarse/none — so on a real desktop with DevTools open the width+pointer gate wrongly bailed and the
+  // layer never mounted. A mobile UA is the reliable "no physical keyboard" signal; everything else is a
+  // desktop and gets the command bar. Skip inside the native shell (it owns the keys) and when embedded.
   try {
     if (W.__holoKeysMounted) return;
     if (W.top !== W.self) return;                                              // embedded → host owns keys
     if (W.cefQuery || W.__world || D.documentElement.classList.contains("native-chrome")) return; // native shell
-    const mm = (q) => !!(W.matchMedia && W.matchMedia(q).matches);
-    const wide = mm("(min-width: 760px)");
-    const desktopPointer = mm("(any-pointer: fine)") || mm("(hover: hover)");
-    if (!wide || !desktopPointer) return;
+    const ua = navigator.userAgent || "";
+    if (/Android|iPhone|iPod|Windows Phone|IEMobile|BlackBerry|Opera Mini|Mobile|Silk|Kindle|iPad/i.test(ua)) return; // phones/tablets — no keyboard
     W.__holoKeysMounted = true;
   } catch (e) { return; }
 
@@ -115,7 +113,7 @@ import("/usr/lib/holo/holo-names.mjs").then((m) => { classifyName = m.classify |
   #hk-dot .hk-chip:hover{ color:#e8edf6; }
   #hk-dot .hk-chip kbd{ background:#21262d; border:1px solid #30363d; border-radius:6px; padding:2px 7px; font:600 12px ui-monospace,monospace; color:#e6edf3; white-space:nowrap; }
   @media (prefers-reduced-motion:reduce){ #hk-dot .hk-core{ animation:none; } #hk-dot .hk-legend,#hk-dot .hk-chip{ transition:opacity .16s ease; transform:none; } }
-  @media (max-width:760px){ #hk-dot{ display:none !important; } }
+  @media (max-width:480px){ #hk-dot{ display:none !important; } }   /* only genuinely tiny viewports; the UA gate already excludes mobile */
   `;
   (D.head || D.documentElement).appendChild(style);
 
