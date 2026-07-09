@@ -86,7 +86,9 @@ export function mount(root, initialName) {
   const $ = (id) => host.querySelector("#" + id);
   const BASE = new URL("./", location.href);                   // the bundle root — this view IS the root now
 
-  const R = makeHostResolver({ base: BASE, wasmGlue: new URL("apps/q/pkg/holospaces_web.js", BASE).href });
+  // The upstream runtime arrives BY ITS κ (holo-runtime.json signed pointer → re-derive → init), never
+  // by path: the resolver's own verifier is itself verified content (L4/L5). Fallback ladder unchanged.
+  const R = makeHostResolver({ base: BASE, wasmGlue: () => import("./usr/lib/holo/holo-runtime.mjs").then((m) => m.runtimeModule({ base: BASE })) });
   let APPS = null;
   loadAppIndex({ base: BASE }).then((i) => { APPS = i; renderChips(); }).catch(() => renderChips());
 

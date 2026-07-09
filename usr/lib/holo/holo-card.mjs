@@ -142,7 +142,7 @@ pre{margin-top:11px;background:#0d161c;border:1px solid #1f2c33;border-radius:9p
 @media(prefers-color-scheme:light){:host{color:#0b141a}.card{background:#fff;border-color:#e3e8eb}.kv .k,.go,.msg{color:#667781}pre{background:#f6f8f9;border-color:#e3e8eb;color:#3b4a54}.trust{background:#eafaf3;border-color:#bfe9d8;color:#0a6b4d}}`;
 
 let _R = null, _idxP = null;
-const resolver = () => (_R ||= makeHostResolver({ base: BASE.href, wasmGlue: new URL("apps/q/pkg/holospaces_web.js", BASE).href }));
+const resolver = () => (_R ||= makeHostResolver({ base: BASE.href, wasmGlue: () => import("./holo-runtime.mjs").then((m) => m.runtimeModule({ base: BASE.href })) }));   // runtime BY κ, not path (L4/L5)
 const appIndex = () => (_idxP ||= loadAppIndex({ base: BASE.href }).catch(() => null));
 
 const HoloCardEl = typeof HTMLElement !== "undefined" ? class extends HTMLElement {

@@ -49,7 +49,9 @@ export function makeHostResolver({ base, wasmGlue = null, fetchFn = null, lruSiz
     blake3: async (b) => {
       if (b.length > SMALL && wasmGlue) {
         try {
-          if (!_wasm) { const m = await import(/* @vite-ignore */ wasmGlue); if (m.default) await m.default(); _wasm = m; }
+          // wasmGlue: a URL string (legacy path import) OR an async () => module — the κ-resolved
+          // runtime (holo-runtime.mjs runtimeModule): pointer-signed, every byte re-derived before init.
+          if (!_wasm) _wasm = (typeof wasmGlue === "function") ? await wasmGlue() : await (async () => { const m = await import(/* @vite-ignore */ wasmGlue); if (m.default) await m.default(); return m; })();
           return String(_wasm.kappa(b)).replace(/^blake3:/, "");
         } catch {}
       }
