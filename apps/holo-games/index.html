@@ -241,9 +241,10 @@
 <div id="root">
   <div id="home">
     <div class="home-top">
-      <h1>Holo Games</h1>
+      <button id="btn-holotv" class="backchip" title="Back to Holo TV">‹<span class="lbl"> Holo TV</span></button>
+      <h1>Games</h1>
       <div class="spacer"></div>
-      <button id="btn-tv" title="Cinematic TV mode">📺<span class="lbl"> TV Mode</span></button>
+      <button id="btn-tv" title="Big screen browse">⛶<span class="lbl"> Big screen</span></button>
     </div>
     <input id="search" placeholder="Search your library…">
     <div id="filters"></div>
@@ -934,6 +935,9 @@ addEventListener("keydown", (e) => {
   e.preventDefault();
 });
 document.getElementById("btn-tv").onclick = openTV;
+// Back to Holo TV — the games hub is one section of the Holo TV umbrella. Ask the OS to switch to the
+// Holo TV (player) holospace (instant, already-mounted); fall back to a same-origin nav when standalone.
+document.getElementById("btn-holotv").onclick = () => { try { if (window.parent && window.parent !== window && window.parent.__holoOpenSpace) return window.parent.__holoOpenSpace("tv"); } catch (e) {} location.href = "../player/index.html"; };
 document.getElementById("btn-stream").onclick = () => { const u = prompt("Stream a ROM or .holo from a URL (one you're entitled to):"); if (u) streamAdd(u.trim()); };
 
 // ── Touch controls + immersive chrome (phones/tablets) ─────────────────────────────────────────

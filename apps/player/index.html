@@ -5,10 +5,10 @@
     <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
     <!-- Discord Activity host: route external stream/art hosts through Discord's URL-mapping proxy.
          Classic + first so it patches fetch/XHR/media-src before any app module runs; no-op off Discord. -->
-    <script src="../holo-messenger/holo-discord-proxy.js"></script>
+    <script src="/apps/holo-messenger/holo-discord-proxy.js"></script>
     <title>Holo Player</title>
     <meta name="description" content="Holo Player a content-addressed media library for Hologram OS. Jellyfin-faithful discovery (hero · rails · detail), every title streamed natively through Holo Video and ranked by HoloRank, a transparent on-device recommender. Your media, your way no server, no tracking, rooted in the UOR substrate." />
-    <link rel="stylesheet" href="../../_shared/holo-mobile.css" data-holo-shared="holo-mobile.css" />
+    <link rel="stylesheet" href="/.holo/sha256/b2bfa104b9ee8e3bb631dcd0ec0e6f7017b8898c4304666f5b3dfeeebc926eb9.css" data-holo-shared="holo-mobile.css" />
     <!-- Warm the TLS handshakes to every stream + thumbnail host so Play is instant. -->
     <link rel="preconnect" href="https://test-streams.mux.dev" crossorigin />
     <link rel="preconnect" href="https://dash.akamaized.net" crossorigin />
@@ -102,7 +102,7 @@
       .me svg { display: block; width: 100%; height: 100%; }
       .me:hover { transform: scale(1.06); filter: drop-shadow(0 0 6px color-mix(in srgb, var(--acc) 55%, #c79bff)); }
 
-/* ── Apple-TV LEFT SIDEBAR (desktop ≥900px) — the persistent spine; the immersive stage sits to its
+      /* ── Apple-TV LEFT SIDEBAR (desktop ≥900px) — the persistent spine; the immersive stage sits to its
          right and stays mounted. Below 900px the top pill-nav (mobile) is untouched. Tab icons are line-art
          (tvOS grammar); the active row glows in the accent. ── */
       .ti { width: 1.25rem; height: 1.25rem; fill: none; stroke: currentColor; stroke-width: 1.7; stroke-linecap: round; stroke-linejoin: round; flex: 0 0 auto; }
@@ -134,8 +134,6 @@
       }
 
       main { flex: 1 1 auto; min-height: 0; position: relative; }
-
-            main { flex: 1 1 auto; min-height: 0; position: relative; }
       /* Seamless view changes — crossfade + a subtle rise instead of a hard cut. */
       .view { position: absolute; inset: 0; overflow-y: auto; overflow-x: hidden; opacity: 0; transform: translateY(10px); transition: opacity 0.2s ease, transform 0.2s cubic-bezier(.2,.7,.3,1); }
       .view.on { opacity: 1; transform: none; }
@@ -222,7 +220,7 @@
         .hero .body { left: var(--s3); right: var(--s3); width: auto; bottom: var(--s4); }
         .hero .cta .btn { height: 3rem; padding: 0 var(--s4); }
       }
-/* ── M6 MOBILE (<900px) — the nav becomes an iOS/tvOS BOTTOM TAB BAR (thumb-native), icon over label,
+      /* ── M6 MOBILE (<900px) — the nav becomes an iOS/tvOS BOTTOM TAB BAR (thumb-native), icon over label,
          active tab in the accent. The top bar stays slim (profile · search · settings). Content clears the bar
          + the home-indicator safe area. Above 900px the desktop sidebar owns nav; this never fires there. ── */
       @media (max-width: 899px) {
@@ -328,7 +326,7 @@
       .card .cap .logo { display: block; max-height: 2.6rem; max-width: 78%; object-fit: contain; object-position: left bottom; filter: drop-shadow(0 2px 6px rgba(0,0,0,0.75)); }
       .card .cap .ct { font-weight: 700; font-size: var(--t1); line-height: 1.18; text-shadow: 0 2px 8px rgba(0,0,0,0.85); display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
       img.bgimg { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
-/* M2 — tvOS-tactile focus: the poster lifts + scales + glows in its own accent, with a specular sheen
+      /* M2 — tvOS-tactile focus: the poster lifts + scales + glows in its own accent, with a specular sheen
          sweeping across (the "arrives, never pops" grammar). The PV trailer clip tracks the scaled rect, so it
          stays in register. */
       .card:hover .pic, .card:focus-visible .pic { transform: scale(1.06) translateY(-0.35rem); box-shadow: 0 1.6rem 3.2rem -0.6rem rgba(0,0,0,0.62), 0 0 3.4rem -1rem var(--glow, var(--acc)); }
@@ -802,9 +800,7 @@
         .feed-cap { bottom: calc(var(--s4) + env(safe-area-inset-bottom)); right: calc(4rem + var(--s3)); max-width: 60%; }
       }
     </style>
-  <link rel="icon" href="./icon.svg">
-<script>try{if("serviceWorker" in navigator)navigator.serviceWorker.register(new URL("../../root-sw.js",location.href),{type:"module"}).catch(function(){navigator.serviceWorker.register(new URL("../../root-sw-classic.js",location.href)).catch(function(){})})}catch(e){}</script>
-</head>
+  </head>
   <body>
 
     <header id="top">
@@ -817,10 +813,11 @@
       </button>
       <nav>
         <button class="nav-ic" id="navSearch" type="button" title="Search" aria-label="Search"><svg class="icon" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l5.27 5.27-1.42 1.42-5.27-5.27A6.5 6.5 0 1 1 9.5 3m0 2a4.5 4.5 0 1 0 0 9 4.5 4.5 0 0 0 0-9Z"/></svg></button>
-<button data-tab="home" class="on"><svg class="ti" viewBox="0 0 24 24"><path d="M4 11.5 12 5l8 6.5"/><path d="M6 10.5V19h12v-8.5"/></svg><span>Home</span></button>
+        <button data-tab="home" class="on"><svg class="ti" viewBox="0 0 24 24"><path d="M4 11.5 12 5l8 6.5"/><path d="M6 10.5V19h12v-8.5"/></svg><span>Home</span></button>
         <button data-tab="live"><svg class="ti" viewBox="0 0 24 24"><circle cx="12" cy="12" r="2.2"/><path d="M8.2 8.2a5.4 5.4 0 0 0 0 7.6M15.8 8.2a5.4 5.4 0 0 1 0 7.6M5.6 5.6a9 9 0 0 0 0 12.8M18.4 5.6a9 9 0 0 1 0 12.8"/></svg><span>Live</span></button>
         <button data-tab="movies"><svg class="ti" viewBox="0 0 24 24"><rect x="4" y="5" width="16" height="14" rx="2"/><path d="M8.2 5v14M15.8 5v14M4 9.6h4.2M15.8 9.6H20M4 14.4h4.2M15.8 14.4H20"/></svg><span>Movies</span></button>
         <button data-tab="shows"><svg class="ti" viewBox="0 0 24 24"><rect x="3.5" y="5" width="17" height="12" rx="2"/><path d="M8.5 20.5h7M12 17v3.5"/></svg><span>Shows</span></button>
+        <button data-tab="games"><svg class="ti" viewBox="0 0 24 24"><rect x="2.6" y="7.6" width="18.8" height="9.4" rx="4.7"/><path d="M7 11v3M5.5 12.5h3"/><circle cx="15.4" cy="11.9" r="1.05"/><circle cx="17.9" cy="14" r="1.05"/></svg><span>Games</span></button>
         <button data-tab="apps"><svg class="ti" viewBox="0 0 24 24"><rect x="4" y="4" width="6.6" height="6.6" rx="1.7"/><rect x="13.4" y="4" width="6.6" height="6.6" rx="1.7"/><rect x="4" y="13.4" width="6.6" height="6.6" rx="1.7"/><rect x="13.4" y="13.4" width="6.6" height="6.6" rx="1.7"/></svg><span>Apps</span></button>
       </nav>
       <span class="sp"></span>
@@ -1028,9 +1025,9 @@
       </div>
     </div>
 
-    <script src="../../_shared/holo-jellyfin.js" data-holo-shared="holo-jellyfin.js"></script>
+    <script src="/.holo/sha256/6e0ad52eeab97acfceb43932e5e1f6a3783807fa52e8bf8890908076e88c44dd.js" data-holo-shared="holo-jellyfin.js"></script>
     <script src="holo-rank.js"></script>
-    <script src="../../_shared/teleport.js" data-holo-shared="teleport.js" defer></script>
+    <script src="/.holo/sha256/a0ebbc696bda5154727b76b42c11921231cbc652de3e705dd6b632456e6f34aa.js" data-holo-shared="teleport.js" defer></script>
     <script type="module">
       // Streaming metadata layer: TMDb → the one item shape, κ-cached (auto-populate, fast, offline).
       import * as HoloItem from "./holo-media-item.mjs";
@@ -2094,7 +2091,11 @@
           const c = this.clip; c.style.left = b.left + "px"; c.style.top = b.top + "px"; c.style.width = b.width + "px"; c.style.height = b.height + "px";
           c.style.borderRadius = getComputedStyle(pic).borderRadius;
           const cover = (b.width / b.height > 16 / 9) ? { w: b.width, h: b.width * 9 / 16 } : { w: b.height * 16 / 9, h: b.height };
-          const OVER = 1.15, SS = 2.5; this.fr.style.width = Math.ceil(cover.w * OVER * SS) + "px"; this.fr.style.height = Math.ceil(cover.h * OVER * SS) + "px";
+          // Over-cover: grow past the exact cover so any YouTube letterbox/pillarbox (trailers that aren't a perfect
+          // 16:9 get black bars inside the player) is pushed OUTSIDE the tile and cropped away — the poster fills with
+          // pure video, edge to edge, never a bar. Supersample (SS) keeps it crisp when scaled back down.
+          const OVER = 1.15, SS = 2.5;
+          this.fr.style.width = Math.ceil(cover.w * OVER * SS) + "px"; this.fr.style.height = Math.ceil(cover.h * OVER * SS) + "px";
           this.fr.style.transform = `translate(-50%,-50%) scale(${1 / SS})`;
           return true;
         },
@@ -3543,6 +3544,9 @@
       // ── chrome / nav ───────────────────────────────────────────────────────────
       // Section tabs: Home → home; Movies/Shows/Live → Library filtered by kind; Apps → scroll to "Your apps".
       function navTo(tab, btn) {
+        // Games — a sibling holospace (the Holo Games hub). Ask the OS to switch to it (instant, already-mounted
+        // crossfade); fall back to a same-origin navigation when running standalone (no messenger parent).
+        if (tab === "games") { try { if (window.parent && window.parent !== window && window.parent.__holoOpenSpace) return window.parent.__holoOpenSpace("games"); } catch (e) {} location.href = "../holo-games/index.html"; return; }
         for (const b of document.querySelectorAll("nav [data-tab]")) b.classList.toggle("on", b === btn);
         if (tab === "home") { show("home"); return; }
         if (tab === "apps") { show("home"); const ar = views.home.querySelector(".apps-rail"); if (ar) ar.scrollIntoView({ behavior: "smooth", block: "center" }); return; }
@@ -3949,6 +3953,6 @@
       })();
     </script>
     <script src="holo-watch.js"></script>
-    <script src="../../_shared/holo-theme.js" data-holo-shared="holo-theme.js"></script>
+    <script src="/.holo/sha256/b4dbe84b9234d9b4672a632159fc7cbafb94c0af6da7cec9eedf2c325fe1667b.js" data-holo-shared="holo-theme.js"></script>
   </body>
 </html>
