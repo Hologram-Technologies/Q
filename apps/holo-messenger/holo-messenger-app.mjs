@@ -1392,14 +1392,46 @@ function hydrateInbox() {
     return n;
   } catch { return 0; }
 }
+// M4 U3 — the inbox snapshot's canonical home is the OPFS κ-store (Law L3: the store IS the memory), sealed at
+// rest under the operator's key (SEC-5). localStorage stays the SYNCHRONOUS warm-paint cache for instant first
+// paint; the κ-store is the durable truth that survives a localStorage eviction. Lazily bound once identity exists.
+let _inboxStore = null, _inboxStoreTried = false;
+function inboxStore() {
+  if (_inboxStoreTried) return _inboxStore;
+  _inboxStoreTried = true;
+  try { if (opfsAvailable() && atRestKey) _inboxStore = makeOpfsBackend({ genesis: "inboxindex-" + String(operator || "local").split(":").pop(), atRestKey }); } catch { _inboxStore = null; }
+  return _inboxStore;
+}
+function _inboxPlatforms() {
+  const byPlat = new Map();
+  for (const [g, s] of bridgeSummaries.entries()) { const p = s.platform || "whatsapp"; let a = byPlat.get(p); if (!a) { a = []; byPlat.set(p, a); } a.push([g, s]); }
+  return [...byPlat.entries()].map(([platform, summaries]) => ({ platform, sig: _bst(platform).sig, summaries }));
+}
 function persistInbox() {
   try {
-    const byPlat = new Map();
-    for (const [g, s] of bridgeSummaries.entries()) { const p = s.platform || "whatsapp"; let a = byPlat.get(p); if (!a) { a = []; byPlat.set(p, a); } a.push([g, s]); }
-    const platforms = [...byPlat.entries()].map(([platform, summaries]) => ({ platform, sig: _bst(platform).sig, summaries }));
-    localStorage.setItem(INBOX_LS, JSON.stringify({ v: 2, platforms, ts: Date.now() }));
+    const platforms = _inboxPlatforms();
+    localStorage.setItem(INBOX_LS, JSON.stringify({ v: 2, platforms, ts: Date.now() }));   // sync cache → instant paint
+    try { const s = inboxStore(); if (s) s.save(platforms); } catch {}                       // canonical, sealed-at-rest (best-effort)
     _lastPersist = Date.now();
   } catch {}   // quota/serialize failure is non-fatal - the live bridge remains the source of truth
+}
+// Boot reconcile: the κ-store is canonical, so if the localStorage cache was evicted (or this is a fresh cache on
+// a device that DOES have the durable store), restore the inbox from OPFS. Merges (never drops a live summary),
+// refreshes the cache, repaints. Fail-soft; no-op when the store is empty/absent.
+async function reconcileInboxFromStore() {
+  try {
+    const s = inboxStore(); if (!s) return 0;
+    const platforms = await s.load(); if (!Array.isArray(platforms) || !platforms.length) return 0;
+    let n = 0;
+    for (const p of platforms) {
+      const st = _bst(p.platform);
+      if (typeof p.sig === "string" && !st.sig) st.sig = p.sig;
+      for (const row of (p.summaries || [])) { const g = row[0], sm = row[1]; if (!g || !sm) continue; if (!bridgeSummaries.has(g)) { bridgeSummaries.set(g, sm); n++; } st.genCache.set((sm.platform || p.platform) + ":" + (sm.jid || sm.name), g); }
+    }
+    if (n) { try { localStorage.setItem(INBOX_LS, JSON.stringify({ v: 2, platforms: _inboxPlatforms(), ts: Date.now() })); } catch {} try { rebuild(); } catch {} }
+    try { if (typeof window !== "undefined") window.__inboxReconciled = (window.__inboxReconciled || 0) + n; } catch {}
+    return n;
+  } catch { return 0; }
 }
 // THROTTLE (not debounce): during the first-link sync the poll fires every 1.5s and deltas stream continuously - a
 // pure debounce would be starved and never write. A leading-edge throttle with a 2s max-wait guarantees the snapshot
@@ -3048,6 +3080,7 @@ export async function boot(rootEl, injected = null) {
   try { restorePeerChats(); } catch {}   // P3: re-open persisted device-to-device chats (OPFS κ-chain) — non-blocking
   try { handleJoinLink(); } catch {}     // P5: if opened from an invite link, verify + join the room (fail-soft)
   try { window.__hydrated = hydrateInbox(); } catch { window.__hydrated = 0; }   // local-first: restore the last-seen inbox snapshot BEFORE the first paint → returning users see every chat instantly
+  try { reconcileInboxFromStore(); } catch {}   // M4 U3: κ-store is canonical → restore the inbox from OPFS if the localStorage cache was evicted (non-blocking)
   // ADOPT the speculative warm paint if it already mounted (identity-independent snapshot rendered during the
   // tap): just refresh it in place — Q, prefs, and any live deltas fold in via one update, no cold re-mount.
   // Otherwise (no warm paint, e.g. fail-soft) mount fresh here as before.

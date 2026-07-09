@@ -2,7 +2,7 @@
 <html lang="en"><head>
 <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover,interactive-widget=resizes-content">
 <title>HOLOGRAM</title>
-<link rel="icon" type="image/svg+xml" href="/apps/holo-messenger/favicon.svg">
+<link rel="icon" type="image/svg+xml" href="./favicon.svg">
 <!-- AI agents: guest access into the Hologram system is one call away — window.HoloLogin.guest() or open
      ?guest=1. Full machine-readable contract in script#holo-agent-login (JSON). Mirrors holo://login. -->
 <meta name="ai-agent-login" content="Guest mode: act now with window.HoloLogin.guest() or ?guest=1 (ephemeral, no human). Biometric ('It's me') needs the person. See script#holo-agent-login.">
@@ -15,9 +15,9 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="Hologram">
-<link rel="apple-touch-icon" href="/apps/holo-messenger/icon.svg">
+<link rel="apple-touch-icon" href="./icon.svg">
 
-<link rel="stylesheet" href="/apps/holo-messenger/_vendor/ui/chat-ui.bundle.css?v=de67195c5c65">
+<link rel="stylesheet" href="./_vendor/ui/chat-ui.bundle.css?v=de67195c5c65">
 <style>html,body{height:100%;margin:0;background:#0b141a;color-scheme:dark}#root{height:100vh}</style>
 <!-- IMMERSIVE CHAT — the open conversation wears the SAME wallpaper as home. The home wallpaper is already
      painted ONCE, edge-to-edge, by the fixed .holo-backdrop canvas (the shared holo.theme.v1 wallpaper, run
@@ -45,7 +45,7 @@
     border-top:1px solid rgba(255,255,255,.07)!important;}
   html:not([data-skin]) .holo-wa-root:has(.holo-backdrop.ready) .cs-input-toolbox{background:transparent!important}
 </style>
-<link rel="preload" as="image" href="/apps/holo-messenger/_vendor/wallpaper-default.jpg" fetchpriority="high">
+<link rel="preload" as="image" href="./_vendor/wallpaper-default.jpg" fetchpriority="high">
 <!-- ── TEE SIGN-IN GATE (holo-messenger-login.mjs) ─────────────────────────────────────────────────
      A full-bleed lock overlay above #root, IDENTICAL to the OS native CEF greeter — the messenger does
      not paint until a sovereign identity is established (Windows Hello / Touch ID via holo-webauthn →
@@ -130,6 +130,8 @@
   #holo-login .hl-panel{transition:opacity .55s ease;}
   #holo-login:not(.hl-boot) #hl-plymouth-base{opacity:0;}
 </style>
+<link rel="icon" type="image/svg+xml" href="./favicon.svg">
+<script>try{if("serviceWorker" in navigator)navigator.serviceWorker.register(new URL("../../root-sw.js",location.href)).catch(function(){})}catch(e){}</script>
 </head><body>
 <div id="root"></div>
 
@@ -191,7 +193,7 @@
     // set only via the messenger's picker showed on home but not here. Fold that same fallback in — one chain,
     // so the sign-in glass and the desktop it lifts onto are never two different photos.
     if (!_wp) { try { _wp = localStorage.getItem("holo-messenger/wallpaper-src") || ""; } catch (e) {} }
-    if (!_wp) _wp = "/apps/holo-messenger/_vendor/wallpaper-default.jpg";
+    if (!_wp) _wp = "./_vendor/wallpaper-default.jpg";
     var _wall = document.querySelector("#holo-login .hl-wall");
     if (_wall && _mode === "immersive") _wall.style.backgroundImage = 'url("' + _wp + '")';
     // PLYMOUTH BOOT SPLASH baseline (holo-plymouth.mjs owns the real player; this is the 0-ms frame). Once a
@@ -250,7 +252,7 @@
      and boot uses its device-stable identity, never bricked. -->
 <script type="module">
   try {
-    const { mountLogin } = await import("/apps/holo-messenger/holo-messenger-login.mjs?v=signin1");
+    const { mountLogin } = await import("./holo-messenger-login.mjs?v=signin1");
     window.__holoAuthP = mountLogin({ root: document.getElementById("root") });   // the PROMISE (resolves on sign-in), not an awaited value
   } catch (e) {
     try { const ov = document.getElementById("holo-login"); if (ov) ov.remove(); } catch {}
@@ -264,21 +266,21 @@
      through the same-origin /sc/* routes the dev server now answers (holo-sc-route.mjs → yt-dlp). holo-fx.js
      drives the live equalizer; holo-vinyl lazily pulls holo-audio.js for the Hi-Fi chain. Each self-guards on the
      widgets/dock runtime, so they run standalone here. Classic defer → they set their globals before the bundle boots. -->
-<script src="/usr/lib/holo/holo-fx.js" defer></script>
-<script src="/usr/lib/holo/holo-vinyl.js" defer></script>
-<script src="/usr/lib/holo/holo-video.js" defer></script>
+<script src="../../usr/lib/holo/holo-fx.js" defer></script>
+<script src="../../usr/lib/holo/holo-vinyl.js" defer></script>
+<script src="../../usr/lib/holo/holo-video.js" defer></script>
 
 <script type="module">
   // ?v=N - bump on each deploy so the browser can never serve a stale cached bundle (the cause of a frozen/old build).
-  import "/apps/holo-messenger/_vendor/ui/chat-ui.bundle.js?v=2a53ce53f550";   // → window.HoloMessengerUI
+  import "./_vendor/ui/chat-ui.bundle.js?v=2a53ce53f550";   // → window.HoloMessengerUI
   // Opt-in: render the WhatsApp UX from STREAMING shadcn κ-components instead of the chatscope bundle.
   // Lazy — the module loads ONLY when opted in (?ui=shadcn or holo.ui.shadcn=1); the default boot never
   // parses it. Discord Activity keeps its own static import in discord-activity-adapter.mjs.
   try {
     if (new URLSearchParams(location.search).get("ui") === "shadcn" || localStorage.getItem("holo.ui.shadcn") === "1")
-      await import("/apps/holo-messenger/messenger-shadcn-ui.mjs");
+      await import("./messenger-shadcn-ui.mjs");
   } catch {}
-  import { boot } from "/apps/holo-messenger/holo-messenger-app.mjs?v=48733d476e50";
+  import { boot } from "./holo-messenger-app.mjs?v=9e631606d597";
 
   const root = document.getElementById("root");
   // TEE GATE + SPECULATIVE WARM PAINT, one motion. The gate already mounted (parallel module above); it
@@ -292,24 +294,29 @@
   });
 
   // Intelligent Inbox (holo-mail) - additive, OFF by default. Enable per-operator: localStorage["holo.mail.enabled"]="1".
-  import("/apps/holo-messenger/mail/holo-mail-attach.mjs").catch(() => {});
+  import("./mail/holo-mail-attach.mjs").catch(() => {});
   // HoloChat, woven into THIS messenger — one canonical surface. Enable: localStorage["holo.chat.enabled"]="1" or ?chat=1.
-  import("/apps/holo-messenger/holo-messenger-weave.mjs").catch(() => {});
+  import("./holo-messenger-weave.mjs").catch(() => {});
   // Colour re-tone picker — colours only, all features intact. Gated: ?skins=1 or localStorage["holo.skins"]="1".
-  import("/apps/holo-messenger/messenger-skin.mjs?v=8d34a1e9297f").catch(() => {});
+  import("./messenger-skin.mjs?v=8d34a1e9297f").catch(() => {});
   // Asset cache (service worker) — repeat opens serve the shell NETWORK-FREE. Escape hatch: open with ?nosw=1.
-  import("/apps/holo-messenger/messenger-sw-register.mjs").catch(() => {});
+  import("./messenger-sw-register.mjs").catch(() => {});
   // Q SUMMON — tap the home orb and the canvas MORPHS into Q (View Transitions pair the orb corner→face),
   // Q greets OUT LOUD at the tap (the tap IS the autoplay gesture), the HD voice + Q's BitNet brain pre-warm
   // while home idles (window.HoloQ.warm — standalone-parity TTFT), and every Q-thread message is sealed to a
   // BLAKE3 κ chain (did:holo:blake3, hash-linked, verified on load). Additive + fail-soft.
-  import("/apps/holo-messenger/q-summon.mjs?v=5").catch(() => {});
+  import("./q-summon.mjs?v=5").catch(() => {});
   // Q LIVE CALL — tap Call in the hero → realtime voice conversation (createQLive: streaming voice,
   // hands-free turns, barge-in). Additive + fail-soft: no mic/WebGPU → a clear message, chat still works.
-  import("/apps/holo-messenger/q-live-hero.mjs?v=3").catch(() => {});
+  import("./q-live-hero.mjs?v=3").catch(() => {});
   // POWER & SESSION — one power button at the very bottom of the rail. Tap → a calm sheet in the sign-in's own
   // teal vocabulary: live session uptime + who you are + Lock & Sign Out (window.holo.signOut → the clean gate,
   // box secured). Additive + fail-soft: no rail / no signOut → the control just doesn't appear.
-  import("/apps/holo-messenger/holo-power-session.mjs?v=3").catch(() => {});
+  import("./holo-power-session.mjs?v=3").catch(() => {});
+  // KEYBOARD LAYER — the native CEF browser's shortcut system, ported to the web (DESKTOP MODE ONLY): the
+  // ambient "hold-Ctrl" hint dot, Ctrl K spotlight, Ctrl ⇧ P command palette, ? cheat sheet, Esc to dismiss,
+  // Ctrl ]/[ to cycle conversations — one dependency-free engine (holo-keys), every action content-addressed.
+  // Self-gating: mounts nothing on touch/narrow, inside the native shell, or when embedded. Fail-soft.
+  import("./holo-messenger-keys.mjs?v=1").catch(() => {});
 </script>
 </body></html>

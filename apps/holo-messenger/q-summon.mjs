@@ -83,8 +83,38 @@ html.q-drawer #q-drawer-title{opacity:1}
 #q-hero-chips button:hover{border-color:rgba(139,123,255,.55);transform:translateY(-1px);background:rgba(255,255,255,.09)}
 #q-hero-chips button:active{transform:scale(.96)}
 @media (prefers-reduced-motion:reduce){#q-hero-chips{transition:opacity .2s ease}}
+
+/* ── MOBILE: a phone is a first-class Q device — the drawer goes FULL-BLEED (100vw/100dvh), not a 94vw panel
+   with a dead sliver. No canvas squeeze (the sheet OWNS the screen, native-chat style); safe-area insets for
+   the notch/home-bar; and the composer floats above the soft keyboard via --q-kb (visualViewport, set below). */
+@media (max-width: 640px){
+  :root{ --q-drawer-w: 100vw; }
+  /* the sheet fills the screen — drop the desktop panel chrome (left border + side shadow) */
+  html.q-drawer .holo-hero{ width:100vw!important; border-left:none!important; box-shadow:none!important; padding-top:env(safe-area-inset-top,0px)!important; }
+  /* don't squeeze/collapse home to 0 — the full-bleed sheet simply covers it (no big slide, no reflow) */
+  html.q-docked .holo-wa-root{ width:100vw!important; }
+  html.q-docked .holo-home-space,html.q-docked .holo-home-wall,html.q-docked .holo-home-scrim,
+  html.q-docked .holo-wa-root .cs-main-container,html.q-docked .holo-home-orb,html.q-docked .holo-global-orb{ right:0!important; }
+  /* header + title clear the notch */
+  html.q-drawer .holo-hero-orb{ top:calc(15px + env(safe-area-inset-top,0px))!important; }
+  html.q-drawer .holo-hero-status{ top:calc(26px + env(safe-area-inset-top,0px))!important; }
+  html.q-drawer .holo-hero-x{ top:calc(13px + env(safe-area-inset-top,0px))!important; width:40px;height:40px; }   /* ≥40px touch target */
+  #q-drawer-title{ top:calc(16px + env(safe-area-inset-top,0px)); left:70px; }
+  /* full-width composer + chips, floated ABOVE the soft keyboard (--q-kb) so the input is never covered */
+  html.q-drawer .holo-hero-compose{ left:50vw!important; width:calc(100vw - 24px)!important; bottom:calc(16px + env(safe-area-inset-bottom,0px) + var(--q-kb,0px))!important; }
+  #q-hero-chips{ bottom:calc(74px + env(safe-area-inset-bottom,0px) + var(--q-kb,0px)); }
+}
 `;
 DOC.head.appendChild(css);
+// keyboard-aware composer (mobile): track the VISUAL viewport so the composer/chips float above the soft
+// keyboard instead of hiding behind it. --q-kb = how much the keyboard eats from the bottom; 0 when closed.
+try {
+  const vv = window.visualViewport;
+  if (vv) {
+    const onVV = () => { const kb = Math.max(0, Math.round(window.innerHeight - vv.height - vv.offsetTop)); HTML.style.setProperty("--q-kb", kb + "px"); };
+    vv.addEventListener("resize", onVV, { passive: true }); vv.addEventListener("scroll", onVV, { passive: true }); onVV();
+  }
+} catch {}
 
 // ── Q's summon voice (canonical core voice; HD warms once, floor voice means never mute) ──────────────────
 const voice = createVoice({ onLevel: (level) => { try { window.dispatchEvent(new CustomEvent("holo-q-state", { detail: { mode: "speaking", level } })); } catch {} } });
