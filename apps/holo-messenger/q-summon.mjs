@@ -103,6 +103,24 @@ html.q-drawer #q-drawer-title{opacity:1}
   /* full-width composer + chips, floated ABOVE the soft keyboard (--q-kb) so the input is never covered */
   html.q-drawer .holo-hero-compose{ left:50vw!important; width:calc(100vw - 24px)!important; bottom:calc(16px + env(safe-area-inset-bottom,0px) + var(--q-kb,0px))!important; }
   #q-hero-chips{ bottom:calc(74px + env(safe-area-inset-bottom,0px) + var(--q-kb,0px)); }
+
+  /* ── M3 TOUCH ERGONOMICS ─────────────────────────────────────────────────────────────────────────────
+     thumb-first: contained momentum scroll (the thread scrolls, the page/canvas behind it never drags or
+     rubber-bands), bigger tap targets, and thread padding that clears the composer + the keyboard. */
+  html.q-drawer .holo-hero-thread{
+    overscroll-behavior:contain!important; -webkit-overflow-scrolling:touch!important;   /* momentum, no scroll-chaining */
+    padding-bottom:calc(104px + env(safe-area-inset-bottom,0px) + var(--q-kb,0px))!important;   /* last bubble never hides under composer/keyboard */
+  }
+  /* the full-bleed sheet must not let the page behind bounce/scroll (iOS rubber-band, pull-to-refresh) */
+  html.q-drawer, html.q-drawer body{ overscroll-behavior:none!important; -webkit-text-size-adjust:100%!important; }
+  /* chips = real touch targets (≥40px), easy to tap one-thumb */
+  #q-hero-chips{ gap:9px; padding:0 16px; }
+  #q-hero-chips button{ min-height:40px; padding:11px 16px!important; font-size:14px!important; }
+  /* the composer input + send are comfortable to tap */
+  html.q-drawer .holo-hero-input{ font-size:16px!important; }   /* ≥16px → iOS won't zoom the page on focus */
+  html.q-drawer .holo-hero-send{ min-width:42px!important; min-height:42px!important; }
+  /* the close affordance is a generous hit area */
+  html.q-drawer .holo-hero-x{ display:flex!important; align-items:center!important; justify-content:center!important; }
 }
 `;
 DOC.head.appendChild(css);
