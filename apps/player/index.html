@@ -1548,6 +1548,17 @@
       }
       const gamesRail = () => holoGameItems.length ? rail("Games", holoGameItems, { shape: "landscape", sub: "play instantly" }) : null;
       loadHoloGames();
+      // Live TV ON the Home — reuses the player's own live machinery (featuredChannels + liveRail + liveCard →
+      // LiveStage warm-zap). Lazy-mounted by the Home rail observer; re-rendered once channels finish loading (idle).
+      function liveHomeRail() {
+        try {
+          const chans = (typeof featuredChannels === "function") ? featuredChannels() : [];
+          if (!chans || !chans.length) return null;
+          const sec = liveRail("Live TV", chans.slice(0, 18));
+          if (sec) ensureRailObserver().observe(sec);
+          return sec;
+        } catch (e) { return null; }
+      }
       function renderHome() {
         const ranked = window.HoloRank ? HoloRank.rank(pool(), { resume: getResume, salt: SALT }) : pool();
         // The billboard's signature is the living background trailer — so bias the featured set toward titles
@@ -1567,6 +1578,7 @@
         if (myAdds.length) add(rail("Yours", myAdds, { shape: "landscape", sub: "added by you" }));
         add(rail(taste.cold ? "Recommended for you" : "Top picks for you", ranked.slice(1, 13)));
         add(gamesRail());   // Games ON the Holo TV Home — one surface (tiles launch into the games space)
+        add(liveHomeRail());   // Live TV ON the Home — tune in instantly (reuses LiveStage warm-zap)
         // Top 10 today — most acclaimed, numbered (Netflix signature).
         const top10 = [...pool()].filter((it) => (it.source === "tmdb" || it.source === "open") && hasPosterArt(it)).sort((a, b) => (b.rating || (b.quality || 0) * 10) - (a.rating || (a.quality || 0) * 10)).slice(0, 10);
         add(rankRail("Top 10 today", top10));
@@ -2195,7 +2207,7 @@
       // Pre-warm the player shortly after first paint so even the FIRST hover is instant.
       setTimeout(() => { try { const seed = (window.HoloRank ? HoloRank.rank(pool(), { salt: SALT }) : pool()).find((it) => it.imdbId || it.trailerKey); if (seed) PV.prewarm(seed); } catch {} }, 1600);
       // Warm Live on idle so omni-search includes channels immediately — never a cold "0 live" (idempotent; guarded).
-      { const ric = window.requestIdleCallback || ((f) => setTimeout(f, 3500)); ric(() => { try { if (!liveLoaded) loadLiveChannels(); } catch {} }); }
+      { const ric = window.requestIdleCallback || ((f) => setTimeout(f, 3500)); ric(async () => { try { await loadLiveChannels(); if (views.home && !views.home.hidden) renderHome(); } catch {} }); }
 
       // ── Holo Feed — full-screen vertical video feed (the immersive mobile experience). Reuses the trailer
       // resolver + Holo Video/YouTube surfaces + the audio-focus rule (exactly ONE item audible). Only a window of
