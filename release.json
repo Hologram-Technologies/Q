@@ -20,12 +20,12 @@
   "prov:Entity",
   "holstr:Entry"
  ],
- "holstr:seq": 14,
- "holstr:prev": "did:holo:sha256:af9079fa5a7015e4e0b29703938a0fbcd2692815306c68800238e49a8a607eb2",
+ "holstr:seq": 15,
+ "holstr:prev": "did:holo:sha256:4ba44bc0fc872832722a9ee89233a7588ef5d5e77eced8f15957b787ffc3feac",
  "holstr:kind": "release",
  "holstr:payload": {
-  "shell": "5ad1a48a9695b61c8da3415d1457eb69ac8688fc8c99014d24b108c592bfa791",
-  "manifest": "f399ae897b7b6d737a3cde213615dab375b6cc6be2e43bc112434c492c8825b2",
+  "shell": "3dceced77144deaa1cd9b4e505a019417a881ba12a17bd56ec5e21924f02e981",
+  "manifest": "a5a9a0ad948707869410d8939c1a6e22cec44afd06d7a63114e9183cd3136615",
   "runtime": {
    "apps/q/pkg/holospaces_web.js": "b9f8a887de588c5193dc65ca9ce206a70c6df53595b848e0ce0299c2d88a5753",
    "apps/q/pkg/holospaces_web_bg.wasm": "9d90b4ea8bccee8c239073c7ec7dd5158c6d11f1f668487570d17475d79e661e",
@@ -37,13 +37,13 @@
   },
   "apps": {
    "browser": "e181aa25b70fdd99a76ed1155dec98bf0d4ff8833df782583990b64f76a011fa",
-   "files": "ea1f14380a68d07475d4e6be7e8d71959131cdf7804c3515662c5945e410d6d2",
+   "files": "c27d75807d96902b7900451439124286c9800eb5a8b9c76b7942deca2e92b94d",
    "holo-games": "3b78f97fdc74fdb6be36980ee63e8b685f661965526de5cd3fa997624d0a54d5",
-   "holo-messenger": "8e01c504c755f7279daec442381475621edca70dc56d6497501a6c1297690b29",
+   "holo-messenger": "eb64e45fbe4d73632d69600e7db3cb1c70522a8a39d663c92417ca21cb6ca156",
    "holo-money": "f00cac91e066181842873164c824f90e3c61b8160051c2012414eb7f44d36394",
    "hub": "f3626a5a2eeef441d8439bb4b379592f4d682155c4e074249912bd2ade94dc20",
    "music": "42a2436a5457992c0388af4c5ee062e9d5340ab0b15f12b2c78e8c93a4818ac7",
-   "player": "21344806730114aa27b6f3a3ab9ca3d44e8aff6cac159b9c4fe6091f00e7acd5",
+   "player": "04e981669febda526ac70e0e6a68dfa782b5af1508b477b1067425c4e725c84b",
    "q": "bb01430040bb991fb00979ddf88e90bb0e15b114a4c31f1ef6f215d4de17813d",
    "resolve": "23aec66382775f5773693615338f37c37a5f58257ec95aece33a664baa6fe0db",
    "self": "0511772584510f0888d97dd5a72bf986ad6791bd8e305063ddd8a82c39888a70",
@@ -51,10 +51,10 @@
    "ui": "f2af676d9804685f773120551021b72848b06c9c510ee0238b95b8f0fac66925"
   }
  },
- "prov:generatedAtTime": "2026-07-09T14:05:34.667Z",
+ "prov:generatedAtTime": "2026-07-09T14:51:21.822Z",
  "holstr:op": "did:holo:sha256:87599792c7b13fad9d6c57d3b89d2cef35e4715869f5cde597ab60ca92699f0b",
- "id": "did:holo:sha256:4ba44bc0fc872832722a9ee89233a7588ef5d5e77eced8f15957b787ffc3feac",
- "holstr:sig": "G5dmKklIdbga9oKmZlgBSU+husP5uwIctsVAM+92zZo3ywjuc3fMbU3icmL1Ygr5ppuoumhS1w953rWFOlm3Bw==",
+ "id": "did:holo:sha256:9f72d22b42b22be9942129bbc8f34b85c13d7bedd3ec1255885245da2e8a4aab",
+ "holstr:sig": "M1MSD9mrtkksFHvOI0yt4aY9yzcAA1ynMF3560qrzZBkyuft3/Nmfyu05rKXnVAKHMhCzVdvqshAEXMMBEaWAg==",
  "holstr:alg": "Ed25519",
  "holstr:pub": "snYY6y35gdZ1ngOE5E+G1BGFjlTo2MfpfP8h6yc7r+M="
 }
