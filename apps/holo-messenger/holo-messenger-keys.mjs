@@ -66,8 +66,10 @@ import("../../usr/lib/holo/holo-names.mjs").then((m) => { classifyName = m.class
     font-size:18px; padding:14px 16px; font-family:inherit; }
   #hk-scrim .hk-results{ max-height:52vh; overflow:auto; border-top:1px solid #21262d; }
   #hk-scrim .hk-row{ display:flex; align-items:center; gap:12px; padding:10px 16px; cursor:pointer; color:#c9d1d9; font-size:15px; }
-  #hk-scrim .hk-row .hk-ic{ width:22px; text-align:center; opacity:.9; flex:0 0 auto; }
+  #hk-scrim .hk-row .hk-ic{ width:26px; height:26px; display:inline-flex; align-items:center; justify-content:center; text-align:center; opacity:.9; flex:0 0 auto; font-size:16px; }
+  #hk-scrim .hk-ic-img{ width:26px; height:26px; border-radius:7px; object-fit:cover; opacity:1; }
   #hk-scrim .hk-row .hk-lbl{ overflow:hidden; text-overflow:ellipsis; white-space:nowrap; min-width:0; }
+  #hk-scrim .hk-grp.hk-words{ font-family:ui-monospace,monospace; color:#6e7681; letter-spacing:0; }
   #hk-scrim .hk-row .hk-grp{ margin-left:auto; color:#6e7681; font-size:12px; flex:0 0 auto; padding-left:8px; }
   #hk-scrim .hk-lane{ padding:9px 16px 4px; font-size:11px; letter-spacing:.05em; text-transform:uppercase; color:#565f6b; }
   #hk-scrim .hk-lane:first-child{ padding-top:6px; }
@@ -178,13 +180,33 @@ import("../../usr/lib/holo/holo-names.mjs").then((m) => { classifyName = m.class
   km.bind("mod+[", () => cycleChat(-1), { id: "chat-prev", title: "Previous conversation", group: "Chats" });
   km.bind(["mod+shift+m", "g c"], () => newChat(), { id: "new-chat", title: "New chat", group: "Chats" });
   km.bind(["mod+shift+q", "g q"], () => summonQ(), { id: "ask-q", title: "Ask Q", group: "Q", hint: "Ask Q" });
-  // open Hologram apps — command-only (no raw chord), so they surface in the spotlight + palette + legend of ?.
-  const APPS = [
-    ["Holo Q", "q", "◍"], ["Holo Browser", "browser", "🌐"], ["Holo Tube", "video", "▶"],
-    ["Holo Music", "music", "♪"], ["Holo Hub", "hub", "⬡"], ["Holo Games", "holo-games", "🎮"],
-    ["Holo Wallet", "holo-money", "💳"], ["Holo Spaces", "spaces", "▦"],
+  // ── the app catalog — the SAME apps the native "Open an app…" spotlight lists, each with its icon and
+  //    3-word κ name (holo:words). Loaded from apps/index.jsonld (the signed catalog; launch = resolve), so
+  //    the web launcher mirrors the native one exactly. A small static list is the fail-soft fallback. ──
+  const staticApps = [
+    { name: "Holo Q", dir: "q", ic: "◍" }, { name: "Holo Browser", dir: "browser", ic: "🌐" },
+    { name: "Holo Tube", dir: "video", ic: "▶" }, { name: "Holo Music", dir: "music", ic: "♪" },
+    { name: "Holo Hub", dir: "hub", ic: "⬡" }, { name: "Holo Games", dir: "holo-games", ic: "🎮" },
+    { name: "Holo Wallet", dir: "holo-money", ic: "💳" }, { name: "Holo Spaces", dir: "spaces", ic: "▦" },
   ];
-  for (const [name, dir, ic] of APPS) km.bind([], () => openApp(dir), { id: "app:" + dir, title: "Open " + name, group: "Open", icon: ic });
+  let catalog = staticApps.slice();                                          // replaced by the real catalog once loaded
+  (async () => {
+    try {
+      const root = new URL("../../", location.href);                          // /apps/holo-messenger/app.html → bundle root
+      const j = await (await fetch(new URL("../index.jsonld", location.href), { cache: "no-store" })).json();
+      const ds = j["dcat:dataset"] || j["@graph"] || [];
+      const apps = ds.map((d) => {
+        const entry = String(d["dcat:landingPage"] || ""), dir = entry.split("/")[1] || "";
+        const img = d["schema:image"] ? new URL(String(d["schema:image"]), root).href : "";
+        return { name: String(d["schema:name"] || dir), dir, words: String(d["holo:words"] || d["schema:alternateName"] || ""), img,
+          url: entry ? new URL(entry, root).href : (dir ? new URL("../" + dir + "/", location.href).href : "") };
+      }).filter((a) => a.dir && a.name).sort((a, b) => a.name.localeCompare(b.name));
+      if (apps.length) { catalog = apps; try { if (scrim.classList.contains("open")) render(sInput.value); } catch {} }
+    } catch {}
+  })();
+  const openAppRow = (a) => { try { W.open(a.url || new URL("../" + a.dir + "/", location.href).href, "_blank", "noopener"); return true; } catch { return false; } };
+  // also expose each app as a command (palette + cheat legend), like the native shell
+  for (const a of staticApps) km.bind([], () => openApp(a.dir), { id: "app:" + a.dir, title: "Open " + a.name, group: "Open", icon: a.ic });
   km.bind([], () => signOut(), { id: "sign-out", title: "Lock & sign out", group: "Session" });
 
   km.attach(W);
@@ -216,9 +238,11 @@ import("../../usr/lib/holo/holo-names.mjs").then((m) => { classifyName = m.class
     .map((c) => ({ sc: fuzzyScore(q, c.title + " " + c.group), c }))
     .filter((x) => x.sc > 0).sort((a, b) => b.sc - a.sc).slice(0, q ? 6 : 7)
     .map((x) => ({ ic: x.c.icon || "›", label: x.c.title, kbd: (km.label(x.c.spec) && !/^app:/.test(x.c.id)) ? km.label(x.c.spec) : "", group: "Commands", run: () => { try { x.c.run(); } catch {} } }));
-  const appRows = (q) => APPS.map(([name, dir, ic]) => ({ sc: fuzzyScore(q, name), name, dir, ic }))
-    .filter((x) => x.sc > 0).sort((a, b) => b.sc - a.sc).slice(0, q ? 5 : 4)
-    .map((x) => ({ ic: x.ic, label: x.name, sub: "App", group: "Apps", run: () => openApp(x.dir) }));
+  // apps — icon + name + the 3-word κ name on the right, exactly like the native "Open an app…" spotlight.
+  const appRow = (a) => ({ img: a.img || "", ic: a.ic || "▦", label: a.name, sub: a.words || "", group: "Apps", run: () => openAppRow(a) });
+  const appRows = (q, cap) => catalog.map((a) => ({ sc: Math.max(fuzzyScore(q, a.name), fuzzyScore(q, a.words || "") * 0.9), a }))
+    .filter((x) => x.sc > 0).sort((a, b) => b.sc - a.sc).slice(0, cap || (q ? 6 : catalog.length))
+    .map((x) => appRow(x.a));
   const chatRows = (q, cap) => {
     const seen = new Set(), out = [];
     for (const r of convRows()) {
@@ -228,7 +252,7 @@ import("../../usr/lib/holo/holo-names.mjs").then((m) => { classifyName = m.class
     }
     return out.sort((a, b) => b.sc - a.sc).slice(0, cap).map((x) => ({ ic: "💬", label: x.name, sub: "Chat", group: q ? "Chats" : "Recent chats", run: () => { try { x.r.click(); } catch {} } }));
   };
-  const appHit = (s) => { const a = APPS.find(([, dir]) => dir === s.toLowerCase()); return a ? { ic: a[2], label: a[0], sub: "App", group: "Apps", run: () => openApp(a[1]) } : null; };
+  const appHit = (s) => { const t = s.toLowerCase(); const a = catalog.find((x) => x.dir === t || (x.words || "").toLowerCase() === t || x.name.toLowerCase() === t); return a ? appRow(a) : null; };
 
   function buildList(term) {
     const it = classifyIntent(term, classifyName), q = it.q;
@@ -240,7 +264,7 @@ import("../../usr/lib/holo/holo-names.mjs").then((m) => { classifyName = m.class
       const a = appHit(q); if (a) rows.push(a);
       return rows;
     }
-    if (it.lane === "empty") return [...chatRows("", 4), ...appRows("")];
+    if (it.lane === "empty") return [...appRows(""), ...chatRows("", 3)];   // lead with the app catalog, like native "Open an app…"
     // term: search everything, then a web fall-through so the bar is never a dead end
     const rows = [...chatRows(q, 5), ...appRows(q), ...cmdRows(q)];
     rows.push({ ic: "🌐", label: `Search the web for “${q}”`, sub: "Web", group: "Web", run: () => openWebSearch(q) });
@@ -251,8 +275,9 @@ import("../../usr/lib/holo/holo-names.mjs").then((m) => { classifyName = m.class
     let html = "", lastG = null;
     list.forEach((it, i) => {
       if (it.group !== lastG) { html += `<div class="hk-lane">${esc(it.group)}</div>`; lastG = it.group; }
-      html += `<div class="hk-row${i === sel ? " sel" : ""}" data-i="${i}"><span class="hk-ic">${it.ic || "›"}</span><span class="hk-lbl">${esc(it.label)}</span>`
-        + (it.kbd ? `<kbd class="hk-grp">${esc(it.kbd)}</kbd>` : it.sub ? `<span class="hk-grp">${esc(it.sub)}</span>` : "") + `</div>`;
+      const icon = it.img ? `<img class="hk-ic hk-ic-img" src="${esc(it.img)}" alt="" onerror="this.replaceWith(Object.assign(document.createElement('span'),{className:'hk-ic',textContent:'▦'}))">` : `<span class="hk-ic">${it.ic || "›"}</span>`;
+      const right = it.kbd ? `<kbd class="hk-grp">${esc(it.kbd)}</kbd>` : it.sub ? `<span class="hk-grp${it.words || it.group === "Apps" ? " hk-words" : ""}">${esc(it.sub)}</span>` : "";
+      html += `<div class="hk-row${i === sel ? " sel" : ""}" data-i="${i}">${icon}<span class="hk-lbl">${esc(it.label)}</span>${right}</div>`;
     });
     sResults.innerHTML = html || `<div class="hk-empty">${mode === "pal" ? "No commands" : "Type to search — Enter to search the web"}</div>`;
     [...sResults.querySelectorAll(".hk-row[data-i]")].forEach((r) => {
@@ -268,8 +293,8 @@ import("../../usr/lib/holo/holo-names.mjs").then((m) => { classifyName = m.class
   }
   function openOverlay(m) {
     mode = m; scrim.classList.add("open");
-    sTitle.textContent = m === "pal" ? "Command palette" : "Search everything";
-    sInput.value = ""; sInput.placeholder = m === "pal" ? "Run a command…" : "Search chats · run a command (>) · ask Q · paste a κ / link · open an app";
+    sTitle.textContent = m === "pal" ? "Command palette" : "Open an app…";
+    sInput.value = ""; sInput.placeholder = m === "pal" ? "Run a command…" : "Open an app · search chats · ask Q · run a command (>) · paste a κ / link";
     render(""); sInput.focus();
   }
   const openSpot = () => openOverlay("spot");
