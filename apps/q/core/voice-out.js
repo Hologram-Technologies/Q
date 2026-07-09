@@ -118,10 +118,10 @@ export function createVoice(opts = {}) {
       } catch (e) {}
       // Plan B — original kokoro-js (needs @huggingface/transformers import map; works in apps/q)
       try {
-        const [tf, ko] = await Promise.all([import(/* @vite-ignore */ "@huggingface/transformers"), import(/* @vite-ignore */ "/_shared/voice/vendor/kokoro/kokoro.js")]);
+        const [tf, ko] = await Promise.all([import(/* @vite-ignore */ "../../../_shared/voice/vendor/kokoro/transformers/transformers.js"), import(/* @vite-ignore */ "/_shared/voice/vendor/kokoro/kokoro.js")]);
         const env = tf.env, KokoroTTS = ko.KokoroTTS;
         env.allowRemoteModels = true; env.allowLocalModels = false;
-        try { const wasm = new URL("/_shared/voice/vendor/kokoro/transformers/", import.meta.url).href; if (env.backends && env.backends.onnx && env.backends.onnx.wasm) { env.backends.onnx.wasm.wasmPaths = wasm; env.backends.onnx.wasm.proxy = true; } } catch (e) {}
+        try { const wasm = new URL("../../../_shared/voice/vendor/kokoro/transformers/", import.meta.url).href; if (env.backends && env.backends.onnx && env.backends.onnx.wasm) { env.backends.onnx.wasm.wasmPaths = wasm; env.backends.onnx.wasm.proxy = true; } } catch (e) {}
         const tts = await KokoroTTS.from_pretrained("onnx-community/Kokoro-82M-v1.0-ONNX", { dtype: "q8", device: "wasm", progress_callback: o.onProgress });
         hd = { synth: (text) => tts.generate(String(text), { voice: "af_heart" }) };
         return true;
