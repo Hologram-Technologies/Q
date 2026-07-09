@@ -1379,8 +1379,8 @@
         if (land && it.logoUrl) { const lg = pic.querySelector(".cap .logo"); if (lg) paintImgEl(lg, it.logoUrl); }
         // Prefetch-on-hover: warm the detail backdrop κ so opening the title is instant (very-fast).
         el.addEventListener("pointerenter", () => { const b = it.backdrop || it.posterUrl; if (b && window.HoloArtCache) { try { HoloArtCache.url(artSrc(b, 780)); } catch {} } try { resolveTrailer(it); } catch {} }, { once: true });   // warm art + the trailer id so hover-play is instant
-        el.addEventListener("click", () => (it.live ? LiveStage.reveal(it) : openDetail(it)));   // live channel → tune in instantly (warm = no black screen)
-        el.addEventListener("keydown", (e) => { if (e.key === "Enter") (it.live ? LiveStage.reveal(it) : openDetail(it)); });
+        el.addEventListener("click", () => (it.__game ? launchGame(it.gameRef, it.gameResume) : it.live ? LiveStage.reveal(it) : openDetail(it)));   // game → launch in the games space; live → tune in; else detail
+        el.addEventListener("keydown", (e) => { if (e.key === "Enter") (it.__game ? launchGame(it.gameRef, it.gameResume) : it.live ? LiveStage.reveal(it) : openDetail(it)); });
         if (it.live) {
           // Live: hovering PRE-BUFFERS the channel (instant zap), no in-card trailer.
           el.addEventListener("pointerenter", () => LiveStage.warm(it));
@@ -1523,6 +1523,31 @@
         return sec;
       }
 
+      // ── Games on the Holo TV Home — a row that launches into the Holo Games space (one surface) ──────────
+      // Both apps are same-origin under /Q/, so we hand the game to the (kept-alive) games holospace: a durable
+      // localStorage intent (read on the games app's boot, cold-open safe) + the live launch channel (instant when
+      // already mounted), then switch spaces via the OS bridge. The game warm-boots there in the same rail chrome.
+      let holoGameItems = [];
+      function launchGame(ref, resume) {
+        try {
+          localStorage.setItem("holo-games-pending-launch", JSON.stringify({ ref, resume: !!resume, ts: Date.now() }));
+          try { new BroadcastChannel("holo-games-launch").postMessage({ launch: ref, resume: !!resume }); } catch (e) {}
+        } catch (e) {}
+        try { if (window.parent && window.parent !== window && window.parent.__holoOpenSpace) return window.parent.__holoOpenSpace("games"); } catch (e) {}
+        location.href = "../holo-games/index.html";
+      }
+      async function loadHoloGames() {
+        try {
+          const j = await (await fetch("../holo-games/holos/catalog.json")).json();
+          holoGameItems = (j.games || []).filter((g) => g && g.title && (g.kappa || g.holo)).map((g) => ({
+            id: "game:" + (g.kappa || g.title), name: g.title, __game: true, gameRef: g.kappa || g.title,
+            gameResume: false, posterUrl: g.poster || "", src: "#game",
+          }));
+          if (holoGameItems.length && views.home && !views.home.hidden) renderHome();
+        } catch (e) {}
+      }
+      const gamesRail = () => holoGameItems.length ? rail("Games", holoGameItems, { shape: "landscape", sub: "play instantly" }) : null;
+      loadHoloGames();
       function renderHome() {
         const ranked = window.HoloRank ? HoloRank.rank(pool(), { resume: getResume, salt: SALT }) : pool();
         // The billboard's signature is the living background trailer — so bias the featured set toward titles
@@ -1541,6 +1566,7 @@
         add(appsRow());   // "Your apps" — circular streaming-platform tiles (Google-TV style)
         if (myAdds.length) add(rail("Yours", myAdds, { shape: "landscape", sub: "added by you" }));
         add(rail(taste.cold ? "Recommended for you" : "Top picks for you", ranked.slice(1, 13)));
+        add(gamesRail());   // Games ON the Holo TV Home — one surface (tiles launch into the games space)
         // Top 10 today — most acclaimed, numbered (Netflix signature).
         const top10 = [...pool()].filter((it) => (it.source === "tmdb" || it.source === "open") && hasPosterArt(it)).sort((a, b) => (b.rating || (b.quality || 0) * 10) - (a.rating || (a.quality || 0) * 10)).slice(0, 10);
         add(rankRail("Top 10 today", top10));

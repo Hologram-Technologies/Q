@@ -433,19 +433,21 @@ window.__roamSend = roamSend; window.__roamMerge = roamMerge;   // test hooks
 // game id/κ; the HOST catches it and plays NATIVELY on the cores (never nested). The
 // channel here is BroadcastChannel; swap for the qemu-wasm 9p/virtfs file-poll (the guest
 // writes /.wasmenv/launch, the host reads it via Module.FS) when the guest is live.
-async function holoLaunch(ref) {
+async function holoLaunch(ref, resume = false) {
   if (!ref) return false;
   const r = String(ref).toLowerCase().trim();
   const games = await library();
   const g = games.find((x) => [x.kappa, x.url, x.gameName, x.title].some((v) => v && String(v).toLowerCase() === r))
         || games.find((x) => x.title && x.title.toLowerCase().includes(r));   // fuzzy fallback
   if (!g) { toast("Launch: not found — " + ref); return false; }
-  await play(g, false);
+  await play(g, !!resume);
   return true;
 }
 window.HoloLaunch = holoLaunch;
+// Deep-link launch from Holo TV (or any surface): the live channel plays instantly when the games space is
+// already mounted; a durable localStorage intent (read on boot below) covers the cold-open case.
 let launchCh = null;
-try { launchCh = new BroadcastChannel("holo-games-launch"); launchCh.onmessage = (e) => e.data && e.data.launch && holoLaunch(e.data.launch); } catch (e) {}
+try { launchCh = new BroadcastChannel("holo-games-launch"); launchCh.onmessage = (e) => e.data && e.data.launch && holoLaunch(e.data.launch, e.data.resume); } catch (e) {}
 
 // ── player state ──
 const factoryCache = {};
@@ -1007,4 +1009,9 @@ addEventListener("resize", () => { if (!core) return; clearTimeout(_fitT); _fitT
 })();
 
 await renderHome();   // open to the library
+// Cold-open deep-link: honor a fresh pending launch handed off by Holo TV (durable, same-origin), then clear it.
+try {
+  const raw = localStorage.getItem("holo-games-pending-launch");
+  if (raw) { localStorage.removeItem("holo-games-pending-launch"); const j = JSON.parse(raw); if (j && j.ref && (!j.ts || Date.now() - j.ts < 20000)) holoLaunch(j.ref, !!j.resume); }
+} catch (e) {}
 </script>
