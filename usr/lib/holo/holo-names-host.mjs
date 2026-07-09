@@ -106,6 +106,17 @@ export function makeHostResolver({ base, wasmGlue = null, fetchFn = null, lruSiz
           return { ok: false, kind: "nostr", why: r.why };
         } catch (e) { return { ok: false, kind: "nostr", why: String(e && e.message || e).slice(0, 60) }; }
       }
+      // IPNS (V2 self-auth): the name IS an ed25519 key; the record is signed by it → CID → Mode A.
+      if (rec && rec.kind === "ipns") {
+        try {
+          const { resolveIPNS } = await import("./holo-pointers.mjs");
+          const p = await resolveIPNS(name, { fetchFn: rawFetch });
+          if (!p.ok) return { ok: false, kind: "ipns", why: p.why };
+          let content = null; try { content = await resolve(p.pointsTo); } catch {}
+          if (content && content.ok) return { ok: true, kind: "ipns", kappa: content.kappa, bytes: content.bytes, source: "ipns→" + content.source, pointsTo: p.pointsTo, via: p.via, trust: p.trust };
+          return { ok: true, kind: "ipns", pointsTo: p.pointsTo, cid: p.cid, via: p.via, trust: p.trust };
+        } catch (err) { return { ok: false, kind: "ipns", why: String(err && err.message || err).slice(0, 60) }; }
+      }
       // ENS (V3): namehash local → contenthash via an untrusted RPC → a CID the content verifies against.
       if (rec && rec.kind === "ens") {
         try {

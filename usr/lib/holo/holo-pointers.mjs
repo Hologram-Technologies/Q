@@ -133,4 +133,73 @@ export async function resolveENS(name, { fetchFn, rpcs } = {}) {
     trust: "name → content resolved via an UNTRUSTED Ethereum RPC (" + host + "); the content then verifies by its " + dec.proto.toUpperCase() + " address — nothing about the bytes is trusted" };
 }
 
-export default { decodeNostr, nostrEventId, verifyNostrEvent, fetchNostrEvent, resolveNostr, DEFAULT_RELAYS, namehash, decodeContenthash, resolveENS };
+// ── IPNS (V2 · SELF-authenticating pointer) — an IPNS name IS an ed25519 public key; the record is
+//    signed by it. So `ipns://…` proves itself by signature (zero trust), then chains into Mode A. ─────
+function base36(str) {                                               // multibase 'k'
+  const A = "0123456789abcdefghijklmnopqrstuvwxyz"; const bytes = [];
+  for (const ch of str.toLowerCase()) { let carry = A.indexOf(ch); if (carry < 0) throw new Error("bad base36"); for (let j = 0; j < bytes.length; j++) { carry += bytes[j] * 36; bytes[j] = carry & 0xff; carry >>= 8; } while (carry > 0) { bytes.push(carry & 0xff); carry >>= 8; } }
+  return Uint8Array.from(bytes.reverse());
+}
+function base32(str) {                                               // multibase 'b'
+  let bits = 0, val = 0; const out = [];
+  for (const c of str.toLowerCase()) { const i = B32L.indexOf(c); if (i < 0) throw new Error("bad base32"); val = (val << 5) | i; bits += 5; if (bits >= 8) { out.push((val >> (bits - 8)) & 0xff); bits -= 8; } }
+  return Uint8Array.from(out);
+}
+// an ed25519 IPNS name → its 32-byte public key. CIDv1 libp2p-key: 01 72 <mh 00 <len> <PublicKey pb>>,
+// PublicKey = 08 01 (Ed25519) 12 20 <32-byte key>. Only ed25519 (the common k51… form) is supported.
+export function decodeIPNSName(name) {
+  const s = String(name).replace(/^ipns:\/\//i, "").replace(/^\/ipns\//i, "").split(/[/?#]/)[0];
+  const bytes = s[0] === "k" ? base36(s.slice(1)) : s[0] === "b" ? base32(s.slice(1)) : (() => { throw new Error("unknown multibase"); })();
+  if (bytes[0] !== 0x01 || bytes[1] !== 0x72) throw new Error("not a libp2p-key CID");
+  if (bytes[2] !== 0x00) throw new Error("non-identity multihash (unsupported key type)");
+  const digest = bytes.slice(4);                                     // skip 00 <len>
+  if (digest.length < 32) throw new Error("short key"); return digest.slice(digest.length - 32);
+}
+function pbScan(bytes) {                                             // minimal protobuf: pull the length-delimited fields we need
+  const out = {}; let i = 0;
+  const varint = () => { let x = 0, s = 0; for (; ;) { const c = bytes[i++]; x += (c & 0x7f) * Math.pow(2, s); if (!(c & 0x80)) break; s += 7; } return x; };
+  while (i < bytes.length) { const tag = varint(), field = tag >> 3, wire = tag & 7;
+    if (wire === 2) { const len = varint(); const v = bytes.slice(i, i + len); i += len; if (field === 1) out.value = v; else if (field === 8) out.sig = v; else if (field === 9) out.data = v; else if (field === 7) out.pubkey = v; }
+    else if (wire === 0) { varint(); } else if (wire === 5) { i += 4; } else if (wire === 1) { i += 8; } else break; }
+  return out;
+}
+export async function verifyIPNS(rec, pubkey) {
+  if (!rec.sig || !rec.data) return { ok: false, why: "record missing signatureV2 or data" };
+  const prefix = new TextEncoder().encode("ipns-signature:");
+  const msg = new Uint8Array(prefix.length + rec.data.length); msg.set(prefix); msg.set(rec.data, prefix.length);
+  try { const key = await crypto.subtle.importKey("raw", pubkey, { name: "Ed25519" }, false, ["verify"]); return (await crypto.subtle.verify("Ed25519", key, rec.sig, msg)) ? { ok: true } : { ok: false, why: "ed25519-verify-failed" }; }
+  catch (e) { return { ok: false, why: "ed25519:" + String(e && e.message || e).slice(0, 24) }; }
+}
+// DNSLink (domain-style IPNS) → CID via DoH. dns.google exposes CORS (cloudflare-dns preflight-blocks in
+// the browser), so it leads. B-via: the DoH resolver is trusted for name→CID; the content then re-verifies.
+async function resolveDNSLink(domain, fetchFn) {
+  const scan = (j) => { for (const a of (j && j.Answer || [])) { const m = /dnslink=(\/ip[fn]s\/[^"\\]+)/.exec(a.data || ""); if (m) return m[1]; } return null; };
+  try { const r = await fetchFn("https://dns.google/resolve?name=_dnslink." + domain + "&type=TXT", { headers: { accept: "application/dns-json" } }); if (r && r.ok) { const l = scan(await r.json()); if (l) return { link: l, via: "dns.google" }; } } catch {}
+  try { const r = await fetchFn("https://cloudflare-dns.com/dns-query?name=_dnslink." + domain + "&type=TXT", { headers: { accept: "application/dns-json" } }); if (r && r.ok) { const l = scan(await r.json()); if (l) return { link: l, via: "cloudflare-dns" }; } } catch {}
+  return null;
+}
+export async function resolveIPNS(name, { fetchFn, gateways } = {}) {
+  const clean = String(name).replace(/^ipns:\/\//i, "").replace(/^\/ipns\//i, "").split(/[/?#]/)[0];
+  let pubkey = null; try { pubkey = decodeIPNSName(clean); } catch {}
+  if (pubkey) {                                                      // key-based IPNS — self-authenticating (ed25519)
+    const GW = gateways || ["https://trustless-gateway.link", "https://dweb.link", "https://ipfs.io"];
+    let rec = null;
+    for (const g of GW) { try { const r = await fetchFn(g + "/ipns/" + clean + "?format=ipns-record", { headers: { accept: "application/vnd.ipfs.ipns-record" } }); if (r && r.ok) { const p = pbScan(new Uint8Array(await r.arrayBuffer())); if (p.sig && p.data && p.value) { rec = p; break; } } } catch {} }
+    if (!rec) return { ok: false, why: "no gateway served the signed IPNS record (public gateways block the record fetch by CORS today)" };
+    const v = await verifyIPNS(rec, pubkey);
+    if (!v.ok) return { ok: false, why: "the IPNS record's signature did not verify (" + v.why + ") — refused" };
+    const val = new TextDecoder().decode(rec.value); const m = /\/ipfs\/([A-Za-z0-9]+)/.exec(val);
+    if (!m) return { ok: false, why: "the signed IPNS record carries no /ipfs/ value" };
+    return { ok: true, cid: m[1], pointsTo: "ipfs://" + m[1], via: "ipns record (ed25519)", trust: "self-verifying — the IPNS record is signed by the ed25519 key the name IS; no gateway was trusted" };
+  }
+  if (/\./.test(clean)) {                                            // domain-style IPNS → DNSLink via DoH (B-via)
+    const d = await resolveDNSLink(clean, fetchFn);
+    if (!d) return { ok: false, why: "no DNSLink TXT record found for " + clean };
+    const m = /^\/ipfs\/([A-Za-z0-9]+)/.exec(d.link);
+    if (m) return { ok: true, cid: m[1], pointsTo: "ipfs://" + m[1], via: "DNSLink via DoH (" + d.via + ")", trust: "name → CID resolved via an untrusted DoH resolver (" + d.via + "); the content then verifies by its IPFS address" };
+    return { ok: true, pointsTo: "ipns://" + d.link.replace(/^\/ipns\//, ""), via: "DNSLink via DoH (" + d.via + ")", trust: "DNSLink points at another IPNS name (" + d.via + ")" };
+  }
+  return { ok: false, why: "unsupported IPNS name (not an ed25519 key or a DNSLink domain)" };
+}
+
+export default { decodeNostr, nostrEventId, verifyNostrEvent, fetchNostrEvent, resolveNostr, DEFAULT_RELAYS, namehash, decodeContenthash, resolveENS, decodeIPNSName, verifyIPNS, resolveIPNS };
