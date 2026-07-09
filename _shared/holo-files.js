@@ -19,6 +19,7 @@
 
 import { profileFor } from "./holo-platform.js";
 import { blake3hex } from "./holo-blake3.mjs";
+import { homeIndex, kappaFromIndex, homeSeal } from "./holo-home-ingest.mjs";
 
 const W = typeof window !== "undefined" ? window : globalThis;
 const enc = new TextEncoder();
@@ -125,10 +126,18 @@ const isHiddenHome = (name) => name.startsWith(".") || HIDDEN_HOME.has(name);
 async function listHome(path) {
   const dir = await opfsResolve(homeParts(path));
   const out = [];
+  // the κ-index (holo-home-ingest): a Home file EARNS its did chip only while the recorded seal is
+  // still fresh (size+mtime match) — an out-of-door edit drops the chip rather than wearing a stale κ.
+  let kidx = null; try { kidx = await homeIndex(); } catch {}
   for await (const [name, h] of dir.entries()) {
     if (isHiddenHome(name)) continue;
     if (h.kind === "directory") out.push(node({ name, path: path.replace(/\/$/, "") + "/" + name, kind: "dir", source: "opfs", writable: true, role: "folder" }));
-    else { let bytes = null, did = ""; try { const f = await h.getFile(); bytes = f.size; } catch {} out.push(node({ name, path: path.replace(/\/$/, "") + "/" + name, kind: "file", source: "opfs", bytes, did, mime: mimeOf(name), writable: true })); }
+    else {
+      const p = path.replace(/\/$/, "") + "/" + name;
+      let bytes = null, did = "";
+      try { const f = await h.getFile(); bytes = f.size; if (kidx) did = kappaFromIndex(kidx, p, f.size, f.lastModified); } catch {}
+      out.push(node({ name, path: p, kind: "file", source: "opfs", bytes, did, mime: mimeOf(name), writable: true }));
+    }
   }
   return sortNodes(out);
 }
@@ -137,10 +146,13 @@ export async function mkdir(parentPath, name) { const dir = await opfsResolve(ho
 export async function createFile(parentPath, name, contents = "") {
   const dir = await opfsResolve(homeParts(parentPath)); const fh = await dir.getFileHandle(name, { create: true });
   const w = await fh.createWritable(); await w.write(typeof contents === "string" ? contents : new Blob([contents])); await w.close();
+  // seal-on-write (fire-and-forget): the role Home has always claimed — content sealed on write.
+  try { fh.getFile().then((f) => homeSeal(parentPath.replace(/\/$/, "") + "/" + name, f)).catch(() => {}); } catch {}
 }
 export async function writeFile(path, contents) {
   const parts = homeParts(path); const name = parts.pop(); const dir = await opfsResolve(parts);
   const fh = await dir.getFileHandle(name, { create: true }); const w = await fh.createWritable(); await w.write(contents); await w.close();
+  try { fh.getFile().then((f) => homeSeal(path, f)).catch(() => {}); } catch {}
 }
 export async function remove(parentPath, name) { const dir = await opfsResolve(homeParts(parentPath)); await dir.removeEntry(name, { recursive: true }); }
 export async function rename(parentPath, oldName, newName) {

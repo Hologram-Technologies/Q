@@ -17,7 +17,7 @@
 <meta name="apple-mobile-web-app-title" content="Hologram">
 <link rel="apple-touch-icon" href="./icon.svg">
 
-<link rel="stylesheet" href="./_vendor/ui/chat-ui.bundle.css?v=de67195c5c65">
+<link rel="stylesheet" href="./_vendor/ui/chat-ui.bundle.css?v=1bf21c666e95">
 <style>html,body{height:100%;margin:0;background:#0b141a;color-scheme:dark}#root{height:100vh}</style>
 <!-- IMMERSIVE CHAT — the open conversation wears the SAME wallpaper as home. The home wallpaper is already
      painted ONCE, edge-to-edge, by the fixed .holo-backdrop canvas (the shared holo.theme.v1 wallpaper, run
@@ -272,7 +272,7 @@
 
 <script type="module">
   // ?v=N - bump on each deploy so the browser can never serve a stale cached bundle (the cause of a frozen/old build).
-  import "./_vendor/ui/chat-ui.bundle.js?v=b045e01da3bf";   // → window.HoloMessengerUI
+  import "./_vendor/ui/chat-ui.bundle.js?v=f4bed815edfc";   // → window.HoloMessengerUI
   // Opt-in: render the WhatsApp UX from STREAMING shadcn κ-components instead of the chatscope bundle.
   // Lazy — the module loads ONLY when opted in (?ui=shadcn or holo.ui.shadcn=1); the default boot never
   // parses it. Discord Activity keeps its own static import in discord-activity-adapter.mjs.

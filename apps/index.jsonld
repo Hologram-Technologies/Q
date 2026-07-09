@@ -55,7 +55,8 @@
         "holo-theme.js",
         "holo-ux.js",
         "teleport.js"
-      ]
+      ],
+      "holo:entry": "sha256:e181aa25b70fdd99a76ed1155dec98bf0d4ff8833df782583990b64f76a011fa"
     },
     {
       "@id": "did:holo:sha256:e6963eac1912fe72dc5ae876038f38d86d6c1b6f2802211393a1a083e1a6109f",
@@ -119,7 +120,8 @@
         "uor"
       ],
       "dcat:landingPage": "apps/holo-messenger/app.html",
-      "schema:image": "apps/holo-messenger/icon.svg"
+      "schema:image": "apps/holo-messenger/icon.svg",
+      "holo:entry": "sha256:7acaf803e9ad2413cc294e7aea99ba5fd778f746ed2307c05c62ba62791ee36b"
     },
     {
       "@id": "did:holo:sha256:9dfcc20bb7076c07ca21bc88c1e307ef07aafc9c8762f19d95eae72f05039cdf",
@@ -151,7 +153,8 @@
         "holo-theme.css",
         "holo-mobile.css",
         "holo-wallet-bridge.js"
-      ]
+      ],
+      "holo:entry": "sha256:f00cac91e066181842873164c824f90e3c61b8160051c2012414eb7f44d36394"
     },
     {
       "@id": "did:holo:sha256:3fc79c195002faa226b2a66154a1528e7a873499f3cec3d4ac03c5d17d352544",
@@ -191,7 +194,8 @@
         "holo-stations.js",
         "holo-theme.js",
         "teleport.js"
-      ]
+      ],
+      "holo:entry": "sha256:42a2436a5457992c0388af4c5ee062e9d5340ab0b15f12b2c78e8c93a4818ac7"
     },
     {
       "@id": "did:holo:sha256:7d953e7dd69946145fa724cae5f37c72f3ed0cf554b50effe7dfc67a833a3016",
@@ -227,7 +231,8 @@
         "holo-mobile.css",
         "holo-theme.js",
         "teleport.js"
-      ]
+      ],
+      "holo:entry": "sha256:a0a3f7b9fc483cf870087cb238379c8d596f69331e4eaf800ecb29a42adcfcfb"
     },
     {
       "@id": "did:holo:sha256:c614f527b4b21e000ff2e1cde6d3d1324381881437e3ae4b4c80ee9a34ceca69",
@@ -274,7 +279,8 @@
         "holo-mobile.css",
         "holo-conscience.js",
         "holo-store.js"
-      ]
+      ],
+      "holo:entry": "sha256:bb01430040bb991fb00979ddf88e90bb0e15b114a4c31f1ef6f215d4de17813d"
     },
     {
       "@id": "did:holo:sha256:963c75803506398b51d58e6e7ea8851c75cb72ebb6b72ae55978503a6639f368",
@@ -308,7 +314,8 @@
         "uor"
       ],
       "dcat:landingPage": "apps/self/index.html",
-      "schema:image": "apps/self/icon.svg"
+      "schema:image": "apps/self/icon.svg",
+      "holo:entry": "sha256:0511772584510f0888d97dd5a72bf986ad6791bd8e305063ddd8a82c39888a70"
     },
     {
       "@id": "did:holo:sha256:10e335d22cdf44081e7f974d29bac06be207b859f7d583b70e756927ccefe0e2",
@@ -344,7 +351,8 @@
         "holo-mobile.css",
         "holo-phi.css",
         "holo-play-gpu.js"
-      ]
+      ],
+      "holo:entry": "sha256:d8aebefb67e7fc7802e757b9a7d95bb881e6d75b4a9bc4bd4227634541757e51"
     },
     {
       "@id": "did:holo:sha256:5f85dcea4d071f266c03781390cdc4bdecc02a0cb4616ba3bf534cba72176b2f",
@@ -385,7 +393,8 @@
         "holo-phi.css",
         "holo-theme.js",
         "holo-ui-kernel.js"
-      ]
+      ],
+      "holo:entry": "sha256:f2af676d9804685f773120551021b72848b06c9c510ee0238b95b8f0fac66925"
     },
     {
       "@id": "did:holo:sha256:d0895d1cf629885c5037d7b894edf5e147ab697043530fee3b8c3cc8cb7c04fa",
@@ -449,7 +458,8 @@
         "stream"
       ],
       "dcat:landingPage": "apps/hub/index.html",
-      "schema:image": "apps/hub/hologram.svg"
+      "schema:image": "apps/hub/hologram.svg",
+      "holo:entry": "sha256:f3626a5a2eeef441d8439bb4b379592f4d682155c4e074249912bd2ade94dc20"
     },
     {
       "@id": "did:holo:sha256:ba6924d144a0267e1edb4f61cf4e3b1b9031d547f14c38adb75ef550026b87e1",
@@ -500,7 +510,8 @@
         "holo-federate.js",
         "holo-answer.js",
         "holo-ask.js"
-      ]
+      ],
+      "holo:entry": "sha256:ea1f14380a68d07475d4e6be7e8d71959131cdf7804c3515662c5945e410d6d2"
     }
   ]
 }

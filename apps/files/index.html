@@ -789,11 +789,13 @@ async function renderHome(){
   try{ window.HoloFacade && window.HoloFacade.cards(); }catch{}   // render the quick-access tiles as the canonical Tile shell object (κ)
 }
 
-/* ── file open → launch holospaces via the shell; preview others ────────────────────── */
+/* ── file open → apps launch as holospaces; FILES open in Holo Quick Look (F3: open = resolve —
+   the κ-projection preview IS the open surface; mediaURL re-derives sealed bytes before paint) ── */
 function openFile(n){
   if(typeof pickMode!=="undefined" && pickMode && n.kind==="file"){ choosePick(n); return; }   // picker: double-click a file → choose it
   if(n.source==="trash"){ HoloFiles.restoreTrash(n).then(()=>{ listCache.clear(); render(); toast("Restored "+n.name); }); return; }
   if(n.kind==="app" || n._appId){ launchHolospace(n._appId || n.role); return; }
+  if(n.kind==="file"){ select(n); openProperties(n); return; }   // ONE PLANE (F3): open = resolve
   select(n); toast("Selected · use Verify to re-derive its κ");
 }
 function launchHolospace(id){ if(!id) return; try{ parent.postMessage({ type:"holo-open", id }, "*"); }catch{} toast("Opening "+id+" …"); }
@@ -1128,7 +1130,11 @@ async function mediaURL(n){
   if(previewURLCache.has(key)) return previewURLCache.get(key);
   const rp=HoloFiles.realPath(n);
   if(rp){ previewURLCache.set(key,rp); return rp; }
-  try{ const {bytes,mime}=await HoloFiles.read(n,256*1024*1024); const u=URL.createObjectURL(new Blob([bytes],{type:mime||"application/octet-stream"})); previewURLCache.set(key,u); return u; }catch{ return ""; }
+  try{ const {bytes,mime}=await HoloFiles.read(n,256*1024*1024);
+    // F3 verify-before-render: a Home file wearing a κ must RE-DERIVE before it paints (Law L5) —
+    // drifted bytes refuse (honest empty + toast) instead of rendering under their old identity.
+    if(n.did && n.source==="opfs"){ const got=await sha256hexLocal(bytes); if(got!==String(n.did).split(":").pop()){ toast("Refused — bytes no longer match this file's κ"); return ""; } }
+    const u=URL.createObjectURL(new Blob([bytes],{type:mime||"application/octet-stream"})); previewURLCache.set(key,u); return u; }catch{ return ""; }
 }
 // route any type → a viewable projection
 async function previewFor(n){
@@ -1243,11 +1249,19 @@ async function openShareSheet(n){
   const link="holo://"+hex;
   let qrSvg=""; try{ const QR=await import("../../_shared/holo-qr.js"); qrSvg=QR.toSVG(link,{margin:2,scale:8,dark:"#0b0f17",light:"#ffffff",rounded:.16}); }catch(e){}
   const inCloud=n.source==="cloud";
+  // HONEST REACH (F4): the ADDRESS is universal, the BYTES may not be. Probe where this κ resolves
+  // right now (the origin κ-route, /.holo/sha256/<hex>) and say which it is — never imply global
+  // reach for a device-only file. Publishing (Holo Cloud) is the explicit act that widens reach.
+  let world=false; try{ const pr=await fetch(new URL("/.holo/sha256/"+hex, location.href), {method:"HEAD"}); world=!!pr.ok; }catch{}
+  const httpsLink = world ? new URL("/.holo/sha256/"+hex, location.href).href : "";
   body.innerHTML=`
     <div class="shqr">${qrSvg||'<div class="shspin">QR unavailable</div>'}</div>
     <div class="shname">${esc(n.name)}</div>
     <div class="shlink"><span class="shk">${esc(link)}</span><button id="shcopy" class="shbtn">Copy</button></div>
-    <div class="shnote">Scan or share this address — anyone can re-derive the exact bytes and verify them. The address <b>is</b> the content.</div>
+    ${httpsLink?`<div class="shlink"><span class="shk">${esc(httpsLink)}</span><button id="shcopy2" class="shbtn">Copy</button></div>`:""}
+    <div class="shnote">${world
+      ? "Anyone with this address can fetch the exact bytes and verify them — the address <b>is</b> the content."
+      : "This address resolves <b>on this device</b> today — the bytes live in your home. Save to Holo Cloud to let your other devices (and shared links) resolve it."}</div>
     <div class="shrow">
       ${navigator.share?`<button id="shnative" class="shbtn">Share…</button>`:""}
       ${(n.kind==="file"&&!inCloud)?`<button id="shpub" class="shbtn primary">${I.cloudup}Save to Holo Cloud</button>`:""}
@@ -1256,6 +1270,7 @@ async function openShareSheet(n){
     <div id="shpubout" class="shnote"></div>`;
   $("#shclose").onclick=closeShare;
   $("#shcopy").onclick=()=>{ (navigator.clipboard?navigator.clipboard.writeText(link):Promise.reject()).then(()=>toast("Copied "+link),()=>toast(link)); };
+  const c2=$("#shcopy2"); if(c2) c2.onclick=()=>{ (navigator.clipboard?navigator.clipboard.writeText(httpsLink):Promise.reject()).then(()=>toast("Copied link"),()=>toast(httpsLink)); };
   const nb=$("#shnative"); if(nb) nb.onclick=()=>{ try{ navigator.share({title:n.name, text:"A self-verifying Hologram object", url:link}); }catch(e){} };
   const pb=$("#shpub"); if(pb) pb.onclick=async ()=>{ pb.disabled=true; pb.innerHTML="Saving…"; const out=$("#shpubout");
     try{ const r=await HoloFiles.sendToCloud(n); out.innerHTML=`✓ In your Holo Cloud · synced across your devices · <span class="shk">${esc(kshort(r.did))}</span> · <a href="#" id="shopencloud">open ↗</a>`;
