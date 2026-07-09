@@ -102,9 +102,17 @@ export function makeHostResolver({ base, wasmGlue = null, fetchFn = null, lruSiz
         try {
           const { resolveNostr } = await import("./holo-pointers.mjs");
           const r = await resolveNostr(name, { sha256hex: hashers.sha256, WebSocket: (typeof WebSocket !== "undefined" ? WebSocket : null) });
-          if (r.ok) { bump(r.kappa, { kind: "nostr", kappa: r.kappa, bytes: r.bytes }); return { ok: true, kind: "nostr", kappa: r.kappa, bytes: r.bytes, source: r.via, trust: r.trust, author: r.author, event: r.event }; }
+          if (r.ok) { bump(r.kappa, { kind: "nostr", kappa: r.kappa, bytes: r.bytes }); return { ok: true, kind: "nostr", kappa: r.kappa, bytes: r.bytes, source: r.via, trust: r.trust, trustLevel: r.trustLevel, author: r.author, event: r.event }; }
           return { ok: false, kind: "nostr", why: r.why };
         } catch (e) { return { ok: false, kind: "nostr", why: String(e && e.message || e).slice(0, 60) }; }
+      }
+      // Bluesky / atproto (V2): at://<did|handle>/… → DID doc → the account's own PDS → the record (B-via).
+      if (rec && rec.kind === "atproto") {
+        try {
+          const { resolveBluesky } = await import("./holo-pointers.mjs");
+          const b = await resolveBluesky(name, { fetchFn: rawFetch });
+          return b.ok ? { ok: true, kind: "atproto", bytes: b.bytes, source: b.via, author: b.author, trust: b.trust, trustLevel: b.trustLevel, cid: b.cid } : { ok: false, kind: "atproto", why: b.why };
+        } catch (err) { return { ok: false, kind: "atproto", why: String(err && err.message || err).slice(0, 60) }; }
       }
       // IPNS (V2 self-auth): the name IS an ed25519 key; the record is signed by it → CID → Mode A.
       if (rec && rec.kind === "ipns") {
@@ -113,8 +121,8 @@ export function makeHostResolver({ base, wasmGlue = null, fetchFn = null, lruSiz
           const p = await resolveIPNS(name, { fetchFn: rawFetch });
           if (!p.ok) return { ok: false, kind: "ipns", why: p.why };
           let content = null; try { content = await resolve(p.pointsTo); } catch {}
-          if (content && content.ok) return { ok: true, kind: "ipns", kappa: content.kappa, bytes: content.bytes, source: "ipns→" + content.source, pointsTo: p.pointsTo, via: p.via, trust: p.trust };
-          return { ok: true, kind: "ipns", pointsTo: p.pointsTo, cid: p.cid, via: p.via, trust: p.trust };
+          if (content && content.ok) return { ok: true, kind: "ipns", kappa: content.kappa, bytes: content.bytes, source: "ipns→" + content.source, pointsTo: p.pointsTo, via: p.via, trust: p.trust, trustLevel: p.trustLevel };
+          return { ok: true, kind: "ipns", pointsTo: p.pointsTo, cid: p.cid, via: p.via, trust: p.trust, trustLevel: p.trustLevel };
         } catch (err) { return { ok: false, kind: "ipns", why: String(err && err.message || err).slice(0, 60) }; }
       }
       // ENS (V3): namehash local → contenthash via an untrusted RPC → a CID the content verifies against.
@@ -124,8 +132,8 @@ export function makeHostResolver({ base, wasmGlue = null, fetchFn = null, lruSiz
           const e = await resolveENS(name, { fetchFn: rawFetch });
           if (!e.ok) return { ok: false, kind: "ens", why: e.why };
           let content = null; try { content = await resolve(e.pointsTo); } catch {}   // chain the CID into Mode A
-          if (content && content.ok) return { ok: true, kind: "ens", kappa: content.kappa, bytes: content.bytes, source: "ens→" + content.source, pointsTo: e.pointsTo, via: e.via, trust: e.trust };
-          return { ok: true, kind: "ens", pointsTo: e.pointsTo, cid: e.cid, via: e.via, trust: e.trust };   // a directory (dag-pb) → point at it, honestly
+          if (content && content.ok) return { ok: true, kind: "ens", kappa: content.kappa, bytes: content.bytes, source: "ens→" + content.source, pointsTo: e.pointsTo, via: e.via, trust: e.trust, trustLevel: e.trustLevel };
+          return { ok: true, kind: "ens", pointsTo: e.pointsTo, cid: e.cid, via: e.via, trust: e.trust, trustLevel: e.trustLevel };   // a directory (dag-pb) → point at it, honestly
         } catch (err) { return { ok: false, kind: "ens", why: String(err && err.message || err).slice(0, 60) }; }
       }
       // data: URI — inline, self-verifying, zero network. Decode → the κ is the hash of its own bytes (L5).
