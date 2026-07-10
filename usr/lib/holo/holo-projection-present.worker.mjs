@@ -43,14 +43,55 @@ function onLane(m) {
     return;
   }
   if (m.op === "bytes") return admit(m);
-  if (m.op === "fail") { waits.delete(m.id); self.postMessage({ op: "error", id: m.id, why: m.why }); }
+  if (m.op === "sbegin") { sessions.set(m.id, { kappa: m.kappa, manifest: m.manifest, segs: [], parts: [], t0: performance.now(), q: Promise.resolve() }); return; }
+  // sseg/send handlers are ASYNC (GPU awaits) — the port delivers in order but handlers would interleave;
+  // a per-session promise CHAIN serializes them (send must observe every verified segment).
+  if (m.op === "sseg") { const S = sessions.get(m.id); if (S) S.q = S.q.then(() => onSegment(m)); return; }
+  if (m.op === "send") { const S = sessions.get(m.id); if (S) S.q = S.q.then(() => onStreamEnd(m)); return; }
+  if (m.op === "fail") { waits.delete(m.id); sessions.delete(m.id); self.postMessage({ op: "error", id: m.id, why: m.why }); }
+}
+
+// ── G1: the STREAMED road — each segment verifies ON THE GPU as it arrives (refuse-early), the final
+// fold of segment CVs must re-derive the object κ (a forged manifest cannot survive it — L5 authority).
+const sessions = new Map();   // id → { kappa, manifest, segs:[{chunks,cv}], parts:[Uint8Array], t0 }
+async function onSegment(m) {
+  const S = sessions.get(m.id); if (!S) return;
+  try {
+    const { segmentsFor } = await import("./holo-projection-verify.mjs");
+    const layout = segmentsFor(S.manifest.size)[m.i];
+    const bytes = new Uint8Array(m.buf);
+    const g = await verifier();
+    let cv;
+    if (g) cv = await g.segmentCV(bytes, layout.chunkOff);
+    else { sessions.delete(m.id); return self.postMessage({ op: "error", id: m.id, why: "streamed verify needs WebGPU here — JS floor falls back to whole-object (retry expected)" }); }
+    const hexOf = (w) => Array.from(w, (x) => [x & 255, (x >>> 8) & 255, (x >>> 16) & 255, (x >>> 24) & 255].map((b) => b.toString(16).padStart(2, "0")).join("")).join("");
+    if (hexOf(cv) !== S.manifest.cvs[m.i]) {
+      sessions.delete(m.id);
+      return self.postMessage({ op: "error", id: m.id, why: `REFUSED at segment ${m.i + 1}/${S.manifest.cvs.length} — re-derived ${hexOf(cv).slice(0, 12)}… ≠ manifest ${S.manifest.cvs[m.i].slice(0, 12)}… (L5, mid-stream)` });
+    }
+    S.segs[m.i] = { chunks: layout.chunks, cv };
+    S.parts[m.i] = bytes;
+  } catch (e) { sessions.delete(m.id); self.postMessage({ op: "error", id: m.id, why: String(e.message || e) }); }
+}
+async function onStreamEnd(m) {
+  const S = sessions.get(m.id); if (!S) return;
+  sessions.delete(m.id);
+  try {
+    const { foldSegmentCVs } = await import("./holo-projection-verify.mjs");
+    const root = foldSegmentCVs(S.segs);
+    if (root !== S.kappa) return self.postMessage({ op: "error", id: m.id, why: `REFUSED: segment fold ${root.slice(0, 12)}… ≠ ${S.kappa.slice(0, 12)}… (L5 root)` });
+    const whole = new Uint8Array(S.manifest.size);
+    let off = 0; for (const p of S.parts) { whole.set(p, off); off += p.length; }
+    admit({ id: m.id, kappa: S.kappa, buf: whole.buffer, verify: "gpu-stream", verify_ms: +(performance.now() - S.t0).toFixed(1), segments: S.manifest.cvs.length });
+  } catch (e) { self.postMessage({ op: "error", id: m.id, why: String(e.message || e) }); }
 }
 
 async function admit(m) {
   waits.delete(m.id);
   const bytes = new Uint8Array(m.buf);
   // E1: the GPU road — a tagged object verifies HERE, before any byte reaches the cache or a surface.
-  if (m.verify === "gpu-pending") {
+  if (m.verify === "gpu-stream") { /* already verified per-segment + root-folded */ }
+  else if (m.verify === "gpu-pending") {
     const t0 = performance.now();
     const g = await verifier();
     let got;
@@ -63,7 +104,7 @@ async function admit(m) {
   let surface = null;
   try { surface = await createImageBitmap(new Blob([bytes])); } catch (e) { surface = { raw: bytes }; }   // non-image κ: held raw (F4 routes by kind)
   lru(m.kappa, surface);
-  presentNow(m.id, m.kappa, surface, { resident: false, fetched: true, bytes: bytes.length, verify: m.verify, fetch_ms: m.fetch_ms, verify_ms: m.verify_ms });
+  presentNow(m.id, m.kappa, surface, { resident: false, fetched: true, bytes: bytes.length, verify: m.verify, segments: m.segments, fetch_ms: m.fetch_ms, verify_ms: m.verify_ms });
 }
 
 function presentNow(id, kappa, surface, extra) {
@@ -82,6 +123,6 @@ function presentNow(id, kappa, surface, extra) {
     } catch (e) {}
   }
   self.postMessage({ op: "stats", id, stats: { kappa, painted, resident: !!extra.resident, fetched: !!extra.fetched,
-    bytes: extra.bytes ?? (surface && surface.raw ? surface.raw.length : undefined), verify: extra.verify,
+    bytes: extra.bytes ?? (surface && surface.raw ? surface.raw.length : undefined), verify: extra.verify, segments: extra.segments,
     fetch_ms: extra.fetch_ms, verify_ms: extra.verify_ms, present_ms: +(performance.now() - t0).toFixed(2), cache_size: cache.size } });
 }

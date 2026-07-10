@@ -53,6 +53,7 @@ fn chunkCVs(@builtin(global_invocation_id) gid: vec3<u32>) {
   let c = gid.x;
   if (c >= P.count) { return; }
   let chunkLen = min(P.len - c * 1024u, 1024u);
+  let counter = P.srcOff + c;                       // ABSOLUTE chunk index — segments verify mid-object
   var cv: array<u32,8>;
   for (var i=0u;i<8u;i++){ cv[i]=IV[i]; }
   var off:u32 = 0u;
@@ -64,7 +65,7 @@ fn chunkCVs(@builtin(global_invocation_id) gid: vec3<u32>) {
     if (off == 0u) { flags |= CHUNK_START; }
     let last = off + 64u >= chunkLen;
     if (last) { flags |= CHUNK_END; }
-    compress(&cv, c, bl, flags);
+    compress(&cv, counter, bl, flags);
     if (last) { break; }
     off += 64u;
   }
@@ -115,6 +116,30 @@ const PARENT = 4, ROOT = 8;
 const _blk = new Uint32Array(16);
 const parentCV = (l, r, root) => { _blk.set(l, 0); _blk.set(r, 8); return jsCompress(IV, _blk, 0, 64, PARENT | (root ? ROOT : 0)); };
 const hexOf = (u32s) => Array.from(u32s, (w) => [w & 255, (w >>> 8) & 255, (w >>> 16) & 255, (w >>> 24) & 255].map((b) => b.toString(16).padStart(2, "0")).join("")).join("");
+
+/** Segment layout for stream manifests: 256-chunk aligned groups (exact BLAKE3 subtree nodes) + the
+ *  tail's binary components. Shared by the mint tool, the resolver (byte slicing) and the verifier. */
+export function segmentsFor(size) {
+  const n = Math.max(1, Math.ceil(size / 1024)), G = 256, segs = [];
+  const full = Math.floor(n / G);
+  for (let i = 0; i < full; i++) segs.push({ chunkOff: i * G, chunks: G });
+  let rem = n - full * G, off = full * G;
+  for (let bit = 8; bit >= 0 && rem; bit--) { const sz = 1 << bit; if (rem & sz) { segs.push({ chunkOff: off, chunks: sz }); off += sz; rem -= sz; } }
+  return segs;
+}
+/** Fold verified SEGMENT CVs (spans in chunks) to the root — canonical incremental shape, ROOT last. */
+export function foldSegmentCVs(segs) {
+  if (segs.length === 1) return hexOf(segs[0].cv);
+  const st = [];
+  for (let i = 0; i < segs.length - 1; i++) {
+    let cv = segs[i].cv, span = segs[i].chunks;
+    while (st.length && st[st.length - 1][1] === span) { const [l, ls] = st.pop(); cv = parentCV(l, cv, false); span += ls; }
+    st.push([cv, span]);
+  }
+  let cur = segs[segs.length - 1].cv;
+  while (st.length) { const l = st.pop()[0]; cur = parentCV(l, cur, st.length === 0); }
+  return hexOf(cur);
+}
 
 /** makeGpuKappa() → { hash(bytes) → hex, device } | null (no WebGPU → callers keep the JS ladder). */
 export async function makeGpuKappa({ device: given = null } = {}) {
@@ -215,6 +240,35 @@ export async function makeGpuKappa({ device: given = null } = {}) {
       for (let i = cvsArr.length - 2; i >= 0; i--) cur = parentCV(cvsArr[i], cur, i === 0);
       return hexOf(cur);
     }
-    return { hash, device };
+    // segmentCV: hash one ALIGNED pow2 segment (subtree node) — chunk counters are ABSOLUTE (chunkBase)
+    async function segmentCV(bytes, chunkBase) {
+      const n = Math.max(1, Math.ceil(bytes.length / 1024));
+      const inBuf = device.createBuffer({ size: Math.ceil(bytes.length / 4) * 4, usage: GPUBufferUsage.STORAGE | GPUBufferUsage.COPY_DST });
+      if (bytes.length % 4) { const pad = new Uint8Array(Math.ceil(bytes.length / 4) * 4); pad.set(bytes); device.queue.writeBuffer(inBuf, 0, pad); }
+      else device.queue.writeBuffer(inBuf, 0, bytes);
+      const half = Math.ceil(n / 2) + 1;
+      const R1 = n, R2 = n + half;
+      const cvBuf = device.createBuffer({ size: (n + 2 * half) * 32, usage: GPUBufferUsage.STORAGE | GPUBufferUsage.COPY_SRC });
+      const pBuf = device.createBuffer({ size: 16, usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST });
+      const bind = (pipe) => device.createBindGroup({ layout: pipe.getBindGroupLayout(0), entries: (pipe === cvPipe
+        ? [{ binding: 0, resource: { buffer: inBuf } }, { binding: 1, resource: { buffer: pBuf } }, { binding: 2, resource: { buffer: cvBuf } }]
+        : [{ binding: 1, resource: { buffer: pBuf } }, { binding: 2, resource: { buffer: cvBuf } }]) });
+      const dispatch = (pipe, params, count) => {
+        device.queue.writeBuffer(pBuf, 0, new Uint32Array(params));
+        const enc = device.createCommandEncoder(); const pass = enc.beginComputePass();
+        pass.setPipeline(pipe); pass.setBindGroup(0, bind(pipe)); pass.dispatchWorkgroups(Math.ceil(count / 64)); pass.end();
+        device.queue.submit([enc.finish()]);
+      };
+      dispatch(cvPipe, [bytes.length, n, chunkBase, 0], n);
+      let srcOff = 0, cnt = n, level = 0;
+      while (cnt > 1) { const dst = (level % 2 === 0) ? R1 : R2; dispatch(rdPipe, [0, cnt >> 1, srcOff, dst], cnt >> 1); srcOff = dst; cnt >>= 1; level++; }
+      const rd = device.createBuffer({ size: 32, usage: GPUBufferUsage.COPY_DST | GPUBufferUsage.MAP_READ });
+      const enc = device.createCommandEncoder(); enc.copyBufferToBuffer(cvBuf, srcOff * 32, rd, 0, 32); device.queue.submit([enc.finish()]);
+      await rd.mapAsync(GPUMapMode.READ);
+      const cv = new Uint32Array(rd.getMappedRange().slice(0)); rd.unmap();
+      inBuf.destroy(); cvBuf.destroy(); pBuf.destroy(); rd.destroy();
+      return cv;
+    }
+    return { hash, segmentCV, device };
   } catch (e) { return null; }
 }
