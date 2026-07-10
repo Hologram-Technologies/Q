@@ -37,6 +37,12 @@ const STYLE = `
   .rv #bench { margin-top:26px }
   .rv .benchbtn { width:100%; background:var(--chip); border:1px solid var(--line); color:var(--dim); border-radius:12px; padding:12px; font-size:13.5px; cursor:pointer }
   .rv .benchbtn:hover { color:var(--ink) }
+  .rv .projp { margin-top:14px; background:var(--panel); border:1px solid var(--line); border-radius:14px; padding:14px 16px }
+  .rv .projp canvas { width:100%; max-width:560px; border-radius:10px; background:#06090f; display:block }
+  .rv .projp .ro { margin-top:9px; font:12px ui-monospace,monospace; color:#8696a0 }
+  .rv .projp .ro b { color:#e9edef }
+  .rv .projp .pchips { margin-top:9px; display:flex; gap:8px; flex-wrap:wrap }
+  .rv .projp .pchips button { background:none; border:1px solid var(--line); border-radius:999px; color:inherit; padding:5px 12px; font-size:12px; cursor:pointer }
   .rv .scorecard { margin-top:14px; background:var(--panel); border:1px solid var(--line); border-radius:14px; padding:16px 18px }
   .rv .sc-head { font-weight:650; font-size:15px }
   .rv .sc-sub { color:var(--dim); font-size:12.5px; margin-top:3px }
@@ -114,7 +120,33 @@ export function mount(root, initialName) {
     const d = document.createElement("div"); d.className = "detail";
     d.textContent = res.ok ? `resolved in ${ms} ms · via ${res.source}${res.source === "store" ? " (warm)" : ""}` : `checked in ${ms} ms`;
     out.appendChild(d);
+    if (res.ok && /^blake3:[0-9a-f]{64}$/i.test(s)) projPanel(out, s.toLowerCase());   // the fabric speaks blake3 κs (name plane widens at G4b)
   }
+  // ── THE PROJECTION FABRIC PANEL (HOLO-SHOWCASE G4) — the three moments, live ────────────────────────
+  // PROJECT: the resolved κ paints as a GPU-VERIFIED projection (workers own every byte — the main
+  // thread composites). THE BIND: "project again" re-projects the RESIDENT κ — watch 0 bytes, ~0 ms.
+  // REFUSE: the forgery chip asks for real bytes under the wrong κ — refused, both κs named, pre-paint.
+  let _fabric = null;
+  const fabric = async () => (_fabric ||= (await import(new URL("usr/lib/holo/holo-projection.mjs", BASE).href)).mountProjection({ base: BASE.href }));
+  async function projPanel(out, kappaName) {
+    const p = document.createElement("div"); p.className = "projp";
+    p.innerHTML = '<canvas width="560" height="315"></canvas><div class="ro">projecting…</div><div class="pchips"></div>';
+    out.appendChild(p);
+    const ro = p.querySelector(".ro"), chipsEl = p.querySelector(".pchips");
+    const show = (st, note) => { ro.innerHTML = st ? `<b>${st.resident ? "RESIDENT — 0 bytes moved" : (st.bytes || 0).toLocaleString() + " bytes"}</b>${st.resident ? "" : ` · verified on <b>${st.verify || "js"}</b>${st.verify_ms ? " in <b>" + st.verify_ms + " ms</b>" : ""}`} · present ${st.present_ms} ms${st.painted ? " · <b>painted</b>" : ""}${note ? " · " + note : ""}` : note; };
+    try {
+      const f = await fabric();
+      let h = await f.project(kappaName, p.querySelector("canvas"));
+      show(h.stats(), "");
+      const mk = (label, fn) => { const b = document.createElement("button"); b.textContent = label; b.onclick = fn; chipsEl.appendChild(b); };
+      mk("⟳ project again — the bind", async () => { try { await h.again(); show(h.stats(), "the same κ costs nothing"); } catch (e) { show(null, String(e.message)); } });
+      mk("⚠ forgery — must refuse", async () => {
+        try { await (await fabric()).project("blake3:00566dbbfe60f4291416c9823f7bae58f700f5f352f3aedfdaed680663954f0f", null); show(null, "PAINTED A FORGERY (BAD)"); }
+        catch (e) { show(null, `<b>refused:</b> ${String(e.message)}`); }
+      });
+    } catch (e) { show(null, "the fabric could not load here — " + String(e.message)); }
+  }
+
   $("go").addEventListener("click", go);
   $("name").addEventListener("keydown", (e) => { if (e.key === "Enter") go(); });
 
@@ -122,6 +154,13 @@ export function mount(root, initialName) {
     const chips = [];
     if (APPS) for (const a of APPS.apps.filter((x) => ["q", "browser", "holo-money", "player"].includes(x.dir))) chips.push([a.title + " · by κ", a.kappa]);
     try {
+      // the SHOWCASE chip: an EVICTED wallpaper — its bytes left this origin for the κ-mirror; the
+      // fabric streams them back through the SW rescue, GPU-verifies, and PAINTS. The whole thesis, one tap.
+      try {
+        const wp = await (await fetch(new URL("usr/share/wallpapers/holo-evicted.json", BASE), { cache: "no-store" })).json();
+        const gx = wp.files && (wp.files["galaxy.jpg"] || Object.entries(wp.files).find(([k]) => /\.jpe?g$/.test(k))?.[1]);
+        if (gx) chips.push(["🖼 project an evicted wallpaper — streamed from the mirror, GPU-verified", "blake3:" + gx]);
+      } catch (e) {}
       const mf = await (await fetch(new URL("apps/holo-messenger/shell-manifest.json", BASE), { cache: "no-store" })).json();
       const img = (mf.assets || []).find((x) => /\.(jpe?g|png|webp|svg)$/i.test(x.path));
       if (img) chips.push(["a verified image, by κ", "sha256:" + img.kappa]);
