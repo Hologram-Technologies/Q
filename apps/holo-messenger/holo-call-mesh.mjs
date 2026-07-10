@@ -6,7 +6,11 @@
 
 import * as Together from "./holo-together.mjs";
 
-const ICE = [{ urls: "stun:stun.l.google.com:19302" }, { urls: "stun:stun1.l.google.com:19302" }];
+const ICE = [
+  { urls: "stun:stun.l.google.com:19302" },
+  { urls: "stun:stun1.l.google.com:19302" },
+  { urls: ["turn:openrelay.metered.ca:80", "turn:openrelay.metered.ca:443", "turns:openrelay.metered.ca:443"], username: "openrelayproject", credential: "openrelayproject" },
+];
 const _rid = () => "m" + Math.random().toString(36).slice(2, 10);
 
 // ── link layer (kind:"meet") ──

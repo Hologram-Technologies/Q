@@ -7,7 +7,15 @@
 
 import * as Together from "./holo-together.mjs";
 
-const ICE = [{ urls: "stun:stun.l.google.com:19302" }, { urls: "stun:stun1.l.google.com:19302" }];
+// STUN discovers reflexive candidates; a free TURN (Open Relay) RELAYS media when a peer is behind a symmetric NAT
+// (mobile carriers, strict firewalls) — STUN alone can't, and a large fraction of real device pairs need it. The
+// turns:443 leg survives TCP-only / port-restricted networks. Content stays E2E DTLS-SRTP; the relay only forwards
+// encrypted packets, never plaintext media.
+const ICE = [
+  { urls: "stun:stun.l.google.com:19302" },
+  { urls: "stun:stun1.l.google.com:19302" },
+  { urls: ["turn:openrelay.metered.ca:80", "turn:openrelay.metered.ca:443", "turns:openrelay.metered.ca:443"], username: "openrelayproject", credential: "openrelayproject" },
+];
 const _rid = () => "c" + Math.random().toString(36).slice(2, 10);
 
 // ── link layer (kind:"call") ──────────────────────────────────────────────────────────────────────────────────────
@@ -28,11 +36,41 @@ export function callLinkInText(text) {
 }
 
 // ── symmetric perfect-negotiation peer ────────────────────────────────────────────────────────────────────────────
-function _connect(base, room, peer, onMsg) {
+// The signaling channel for (room, peer). On a real ORIGIN (desktop / dev server) it rides the together-signal relay
+// (SSE + POST /signal). On a STATIC hosted origin (github.io) that relay 404s, so — exactly like 1:1 chat
+// (holo-chat-context) — it rides the content-blind Nostr rendezvous instead: sealed {from,…} blobs at a coordinate
+// DERIVED from the room κ, over public relays. No server we run; the relay sees only ciphertext. Returns {post, close}.
+async function _connect(base, room, peer, onMsg) {
+  const hosted = typeof location !== "undefined" && !!location.hostname && !/^(127\.0\.0\.1|localhost|\[::1\])$/.test(location.hostname);
+  if (hosted && typeof WebSocket !== "undefined") {
+    try { return await _connectNostr(room, peer, onMsg); } catch {}   // fail-soft → fall through to the origin relay
+  }
   const es = new EventSource(`${base}/signal?room=${encodeURIComponent(room)}&peer=${encodeURIComponent(peer)}`);
   es.onmessage = (e) => { let d; try { d = JSON.parse(e.data); } catch { return; } onMsg(d); };
   const post = (obj) => { try { fetch(`${base}/signal`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ room, from: peer, ...obj }) }); } catch {} };
   return { post, close: () => { try { es.close(); } catch {} } };
+}
+// Nostr backend for _connect. Presence is SYNTHESIZED (a dumb pub/sub has no server to announce joins): each side
+// re-announces "peer-join" a few times so the callee — who joins on ACCEPT, seconds after the ring — always discovers
+// the caller within the mailbox TTL. Own echoes (relays fan a put back to the sender) are dropped by `from === peer`.
+async function _connectNostr(room, peer, onMsg) {
+  const rdv = await import("/usr/lib/holo/holo-rendezvous.mjs");
+  const { roomKey, sealWire, openWire } = await import("./holo-chat-context.mjs");
+  const coord = rdv.coordinate(room);
+  const key = await roomKey(room);                         // both peers hold `room` (from the call link) → same key + coord
+  const mbox = await rdv.makeNostrMailbox();
+  if (mbox.relayCount && mbox.relayCount() === 0) { try { mbox.close(); } catch {} throw new Error("no relays"); }
+  const seen = new Set();
+  const sub = mbox.liveGet(coord, Math.floor(Date.now() / 1000) - 120, async (blob) => {
+    if (seen.has(blob)) return; seen.add(blob);            // de-dupe the same event fanned from several relays
+    let wire; try { wire = JSON.parse(blob); } catch { return; }
+    const msg = await openWire(key, wire);
+    if (!msg || msg.from === peer) return;                 // drop junk + my own echoed put
+    onMsg(msg);
+  });
+  const post = async (obj) => { try { const wire = await sealWire(key, { from: peer, ...obj }); mbox.put(coord, JSON.stringify(wire)); } catch {} };
+  let n = 0, t = null; const beat = () => { post({ kind: "peer-join" }); if (++n < 5) t = setTimeout(beat, 2500); }; beat();
+  return { post, close: () => { try { clearTimeout(t); sub && sub.close && sub.close(); mbox.close && mbox.close(); } catch {} } };
 }
 
 function _makePeer(post, other, polite, localStream, onRemoteStream, onState) {
@@ -63,7 +101,7 @@ export async function joinCall(intent, { media = null, onState = () => {}, onRem
   const base = intent.signal || (typeof location !== "undefined" ? location.origin : "");
   const room = intent.room, me = _rid();
   let peer = null, otherId = null, ended = false;
-  const sig = _connect(base, room, me, async (d) => {
+  const sig = await _connect(base, room, me, async (d) => {
     if (ended) return;
     if (d.kind === "ready") { for (const p of (d.peers || [])) ensurePeer(p); }
     else if (d.kind === "peer-join") ensurePeer(d.from);
