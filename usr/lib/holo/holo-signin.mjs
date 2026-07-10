@@ -98,7 +98,7 @@ function prewarm(warmPaint) {
 // #holo-login (the messenger's app.html) owns its own look and this is a no-op — never overrides it.
 const HL_CSS = `#holo-login{position:fixed;inset:0;z-index:2147483000;color:var(--ink);font-family:"Segoe UI",system-ui,-apple-system,sans-serif;
   --u:clamp(16px,1.7vmin,19px);--g1:calc(var(--u)*1.618);--g2:calc(var(--u)*2.618);--avatar:clamp(96px,calc(var(--u)*6.854),128px);--field:min(86vw,calc(var(--avatar)*2.618));--accent:#7defc9;--accent-2:#34d3a6;
-  --ink:#f4f7fc;--ink-dim:rgba(231,237,250,.82);--status:#c4f3e2;--shadow:0 2px 18px rgba(0,0,0,.45);--wall:#05070c;
+  --ink:#f4f7fc;--ink-dim:rgba(231,237,250,.82);--status:#c4f3e2;--shadow:0 2px 18px rgba(0,0,0,.45);--wall:#1f1f1e;
   --glass:rgba(10,14,20,.42);--glass-border:rgba(255,255,255,.14);--glass-ink:rgba(231,237,250,.8);
   --sheet:rgba(8,12,18,.94);--muted:#8b949e;--link:#58a6ff;--field-bg:rgba(255,255,255,.09);--field-border:rgba(255,255,255,.22)}
 #holo-login[data-appearance="dark"]{--shadow:none}
@@ -256,9 +256,10 @@ export async function signIn({ root, params, app = "holospace", appName = "Holog
     // (~800ms) so a slow home never holds the operator hostage. Interval, not rAF (hidden tabs freeze rAF).
     // ARRIVAL (A3): a returning operator with a pending Deep Resume must land IN the resumed context — the
     // host consumes `holo.resume.pending` (reads + removes) as it applies scroll/drafts, so "key gone" is the
-    // applied signal. Sessions without a resume are untouched; the 800ms cap still rules either way.
-    const resumeSettled = () => { try { return !sessionStorage.getItem("holo.resume.pending"); } catch { return true; } };
-    const homeReady = () => { try { return !!document.querySelector(".holo-rail, .holo-wa-root, .cs-main-container") && resumeSettled(); } catch { return false; } };
+    // applied signal. GUEST law: a guest session never applies a resume, so a stale pending key must never
+    // hold a guest's defog to the cap (the film witness caught exactly that). The 800ms cap rules either way.
+    const resumeSettled = (auth) => { try { return !!(auth && auth.guest) || !sessionStorage.getItem("holo.resume.pending"); } catch { return true; } };
+    const homeReady = (auth) => { try { return !!document.querySelector(".holo-rail, .holo-wa-root, .cs-main-container") && resumeSettled(auth); } catch { return false; } };
     const done = (auth) => {
       beat("auth-ok");
       resolve(auth);                                       // hand the identity to the home NOW — it boots behind the glass
@@ -268,10 +269,10 @@ export async function signIn({ root, params, app = "holospace", appName = "Holog
         overlay.classList.add("unfog");
         setTimeout(() => { try { overlay.remove(); } catch {} }, 720);
       };
-      if (homeReady()) { beat("home-paint"); return finish(); }
+      if (homeReady(auth)) { beat("home-paint"); return finish(); }
       const t0 = Date.now();
       const iv = setInterval(() => {
-        const ready = homeReady();
+        const ready = homeReady(auth);
         if (!ready && Date.now() - t0 < 800) return;
         clearInterval(iv);
         if (ready) beat("home-paint");
