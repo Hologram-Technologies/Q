@@ -121,7 +121,7 @@
       ],
       "dcat:landingPage": "apps/holo-messenger/app.html",
       "schema:image": "apps/holo-messenger/icon.svg",
-      "holo:entry": "sha256:b35f1dbcefdf715d77d654ab55f4770fbedd92ab41c96166720ee5702a6f01bd"
+      "holo:entry": "sha256:dff779f310fb96b6eaf4986942e33d7c05da8b8f76e545c0b017a1ab960394eb"
     },
     {
       "@id": "did:holo:sha256:9dfcc20bb7076c07ca21bc88c1e307ef07aafc9c8762f19d95eae72f05039cdf",
