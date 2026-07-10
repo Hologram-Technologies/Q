@@ -213,11 +213,12 @@ window.addEventListener("keydown", bargeIn, { capture: true, passive: true });
 const heroOpen = () => !!$(".holo-hero");
 let titleEl = null;
 function ensureTitle() { if (!titleEl) { titleEl = DOC.createElement("div"); titleEl.id = "q-drawer-title"; titleEl.textContent = "Q"; DOC.body.appendChild(titleEl); } }
-// ── OVERLAY: the canvas stays put, so there is NO lane to reserve and NO widget to re-centre. We never set
-//    --holo-aside-w (holo-widgets keeps its full-width layout, every widget exactly where it was) and never pulse
-//    resize — Q simply floats over the right lane. releaseAside still clears any stale value defensively. ──
-function reserveAside() { /* overlay — canvas is untouched, nothing to reserve */ }
-function releaseAside() { try { HTML.style.removeProperty("--holo-aside-w"); } catch {} }
+// ── SQUEEZE via the ONE shared contract (HoloAside, defined in the messenger bundle): opening Q squeezes the
+//    home canvas from the right by the drawer's own width and glides the body-level widgets to stay centred in
+//    it — identical to Wallet + Inbox. Never dims. Fail-soft: if HoloAside isn't up yet, fall back to clearing
+//    any stale --holo-aside-w directly (overlay), so Q always opens. ──
+function reserveAside() { try { if (window.HoloAside) window.HoloAside.open("q"); } catch (e) {} }
+function releaseAside() { try { if (window.HoloAside) window.HoloAside.close("q"); else HTML.style.removeProperty("--holo-aside-w"); } catch (e) {} }
 function openClasses() { HTML.classList.add("q-drawer", "q-docked"); ensureTitle(); requestAnimationFrame(reserveAside); }
 function closeClasses() { HTML.classList.remove("q-drawer", "q-docked"); releaseAside(); }
 function onOrbDown(e) {
@@ -338,6 +339,64 @@ function renderStats() {
   statsEl.classList.add("on");
 }
 setInterval(renderStats, 1000);
+
+// ══ Q SEES — the WhatsApp composer's real icons (emoji · attach · camera) + on-device VISION ═════════════════
+// 😊 inserts an emoji; 📎 attaches a photo; 📷 opens the camera. A picked image becomes a WhatsApp photo bubble
+// (κ-sealed) and Q SEES it: a small vision model (transformers.js image-to-text, streamed from PUBLIC HF, reusing
+// the already-shipped Kokoro transformers vendor) captions it ON-DEVICE (0 egress — the photo never leaves you),
+// then Q reasons about it in its own voice via the normal reply path. Honest: no fake buttons; fail-soft if vision
+// can't load. React owns the composer, so we (re)inject our icons on a light poll.
+(function qSees() { try {
+  const S = DOC.createElement("style"); S.id = "q-sees-css"; S.textContent = `
+    html.q-drawer .holo-hero-compose .q-cico{flex:0 0 auto;width:32px;height:32px;border:0;background:transparent;color:#8696a0;cursor:pointer;display:grid;place-items:center;padding:0;border-radius:50%;transition:color .15s,background .15s}
+    html.q-drawer .holo-hero-compose .q-cico:hover{color:#d1d7db;background:rgba(255,255,255,.07)}
+    html.q-drawer .holo-hero-compose .q-cico svg{width:21px;height:21px}
+    #q-emoji{position:fixed;z-index:341;background:#233138;border:1px solid rgba(255,255,255,.1);border-radius:14px;padding:7px;display:none;grid-template-columns:repeat(7,32px);gap:1px;box-shadow:0 10px 34px rgba(0,0,0,.55)}
+    #q-emoji.on{display:grid}
+    #q-emoji button{font-size:20px;background:transparent;border:0;cursor:pointer;padding:4px;border-radius:8px;line-height:1}
+    #q-emoji button:hover{background:rgba(255,255,255,.09)}
+    html.q-drawer .holo-hero-bubble.me.q-img{padding:3px 3px 4px!important}
+    html.q-drawer .holo-hero-bubble.me.q-img img{display:block;border-radius:7px;max-width:min(220px,60vw);width:100%;height:auto}
+  `; DOC.head.appendChild(S);
+  const EMO = ["😊","😂","❤️","👍","🙏","🔥","🎉","😍","🤔","😅","👏","💡","✅","😎","🥳","😢","😮","🙌","💪","✨","👌","🤝","🫶","🌟","🍕","☕","😴","💯"];
+  const IC = {
+    emoji:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"><circle cx="12" cy="12" r="9"/><path d="M8 14s1.4 2 4 2 4-2 4-2"/><line x1="9" y1="9.2" x2="9.01" y2="9.2"/><line x1="15" y1="9.2" x2="15.01" y2="9.2"/></svg>',
+    attach:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M21.4 11l-9.2 9.2a6 6 0 0 1-8.5-8.5l9.2-9.2a4 4 0 0 1 5.7 5.7l-9.2 9.2a2 2 0 0 1-2.9-2.9l8.5-8.5"/></svg>',
+    camera:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg>',
+  };
+  const heroInput = () => DOC.querySelector("#holo-hero-input");
+  function insertText(t) { const inp = heroInput(); if (!inp) return; const setter = Object.getOwnPropertyDescriptor(window.HTMLInputElement.prototype, "value").set; setter.call(inp, (inp.value || "") + t); inp.dispatchEvent(new Event("input", { bubbles: true })); try { inp.focus(); } catch {} }
+  let emojiEl = null;
+  function emojiPanel() { if (emojiEl) return emojiEl; emojiEl = DOC.createElement("div"); emojiEl.id = "q-emoji"; for (const e of EMO) { const b = DOC.createElement("button"); b.textContent = e; b.onmousedown = (ev) => ev.preventDefault(); b.onclick = () => insertText(e); emojiEl.appendChild(b); } DOC.body.appendChild(emojiEl); DOC.addEventListener("pointerdown", (ev) => { if (emojiEl.classList.contains("on") && !emojiEl.contains(ev.target) && !(ev.target.closest && ev.target.closest(".q-emoji"))) emojiEl.classList.remove("on"); }, true); return emojiEl; }
+  function toggleEmoji(btn) { const p = emojiPanel(); const r = btn.getBoundingClientRect(); p.classList.toggle("on"); if (p.classList.contains("on")) { const h = p.getBoundingClientRect().height || 220; p.style.left = Math.max(8, Math.min(r.left, innerWidth - 236)) + "px"; p.style.top = Math.max(8, r.top - h - 8) + "px"; } }
+  function pickFile(capture) { const inp = DOC.createElement("input"); inp.type = "file"; inp.accept = "image/*"; if (capture) inp.setAttribute("capture", "environment"); inp.style.display = "none"; inp.onchange = () => { const f = inp.files && inp.files[0]; if (f) onImage(f); setTimeout(() => inp.remove(), 0); }; DOC.body.appendChild(inp); inp.click(); }
+  function addImageBubble(url) { const thread = DOC.querySelector(".holo-hero-thread") || DOC.querySelector(".holo-hero-stage"); if (!thread) return null; const b = DOC.createElement("div"); b.className = "holo-hero-bubble me q-img"; const img = DOC.createElement("img"); img.src = url; img.alt = "photo"; b.appendChild(img); try { stamp(b, "me"); } catch {} thread.appendChild(b); try { b.scrollIntoView({ block: "end" }); } catch {} return b; }
+  function looking(on) { const thread = DOC.querySelector(".holo-hero-thread") || DOC.querySelector(".holo-hero-stage"); if (!thread) return; let t = thread.querySelector(".q-look"); if (on) { if (!t) { t = DOC.createElement("div"); t.className = "holo-hero-bubble q typing q-look"; injectDots(t); thread.appendChild(t); try { t.scrollIntoView({ block: "end" }); } catch {} } } else if (t) { t.remove(); } }
+  let _vlmP = null;
+  function vlm() { if (_vlmP) return _vlmP; _vlmP = (async () => { const tf = await import("../../_shared/voice/vendor/kokoro/transformers/transformers.js"); try { const w = new URL("../../_shared/voice/vendor/kokoro/transformers/", import.meta.url).href; if (tf.env && tf.env.backends && tf.env.backends.onnx && tf.env.backends.onnx.wasm) { tf.env.backends.onnx.wasm.wasmPaths = w; } tf.env.allowRemoteModels = true; tf.env.allowLocalModels = false; } catch {} const dev = (typeof navigator !== "undefined" && navigator.gpu) ? "webgpu" : "wasm"; return tf.pipeline("image-to-text", "Xenova/vit-gpt2-image-captioning", { device: dev, dtype: "q8" }); })().catch((e) => { _vlmP = null; throw e; }); return _vlmP; }
+  async function caption(file) { const pipe = await vlm(); const url = URL.createObjectURL(file); try { const out = await pipe(url); return String((out && out[0] && (out[0].generated_text || out[0].text)) || "").trim(); } finally { try { URL.revokeObjectURL(url); } catch {} } }
+  async function onImage(file) {
+    const url = URL.createObjectURL(file);
+    addImageBubble(url); try { seal("me", "[photo]"); } catch {} try { hideChips(); } catch {}
+    looking(true);
+    let cap = ""; try { cap = await caption(file); } catch (e) { try { console.debug("[q-sees]", e && e.message); } catch {} }
+    looking(false);
+    const q = heroInput() && heroInput().value ? heroInput().value.trim() : "";
+    if (cap) driveSend((q ? q + " " : "") + "(About the photo I just shared — it shows: " + cap + ". Talk to me about it naturally, in your own words.)");
+    else driveSend(q || "I just shared a photo — I couldn't get my eyes going to read it just now, but I'm here with you.");
+  }
+  function ensureIcons() {
+    if (!heroOpen()) return;
+    const cmp = DOC.querySelector(".holo-hero-compose"); if (!cmp || cmp.querySelector(".q-cico")) return;
+    const send = cmp.querySelector(".holo-hero-send");
+    const mk = (n, fn) => { const b = DOC.createElement("button"); b.type = "button"; b.className = "q-cico q-" + n; b.setAttribute("aria-label", n); b.innerHTML = IC[n]; b.onmousedown = (e) => e.preventDefault(); b.onclick = (e) => { e.preventDefault(); fn(b); }; return b; };
+    cmp.insertBefore(mk("emoji", (b) => toggleEmoji(b)), cmp.firstChild);
+    const att = mk("attach", () => pickFile(false)), cam = mk("camera", () => pickFile(true));
+    if (send) { cmp.insertBefore(att, send); cmp.insertBefore(cam, send); } else { cmp.appendChild(att); cmp.appendChild(cam); }
+  }
+  setInterval(ensureIcons, 500);   // React owns the composer → (re)inject our icons if it re-renders
+  window.QSees = { icons: ensureIcons, image: onImage, caption, version: 1 };
+} catch (e) { try { window.__qSeesErr = String((e && (e.stack || e.message)) || e); console.warn("[q-sees] init failed:", e); } catch {} } })();   // Q Sees must NEVER break the drawer
 
 // ── debug/verification surface ────────────────────────────────────────────────────────────────────────────
 window.QSummon = {
