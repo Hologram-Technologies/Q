@@ -970,12 +970,28 @@
     render: function (host) {
       var c = host.config;
       var hi = DOC.createElement("div");
-      hi.style.cssText = "text-align:center;font-weight:300;letter-spacing:-.012em;font-size:clamp(26px,calc(var(--hw-w,560px)*.092),64px);line-height:1.1;opacity:.97";
+      hi.style.cssText = "text-align:center;font-weight:300;letter-spacing:-.012em;font-size:clamp(26px,calc(var(--hw-w,560px)*.092),64px);line-height:1.14;opacity:.97";
+      // The greeting, then the operator's name (name = HoloIdentity, or "Explorer" for a guest). On a phone the
+      // name drops to its OWN centred line ("Good morning," / "Explorer.", a touch heavier); on desktop the pair
+      // stays on ONE row ("Good morning, Explorer."). matchMedia keeps it live across a resize.
+      var l1 = DOC.createElement("span"), sep = DOC.createTextNode(" "), l2 = DOC.createElement("span");
+      hi.appendChild(l1); hi.appendChild(sep); hi.appendChild(l2);
       host.body.appendChild(hi);
+      var mq = W.matchMedia("(max-width: 640px)");
+      function applyStack() {
+        var stacked = mq.matches;                                             // mobile → break; desktop → one row
+        l2.style.display = stacked ? "block" : "inline";
+        l2.style.fontWeight = stacked ? "400" : "inherit";
+        sep.textContent = stacked ? "" : " ";
+      }
+      applyStack();
+      try { mq.addEventListener ? mq.addEventListener("change", applyStack) : mq.addListener(applyStack); } catch (e) {}
+      host.cleanup(function () { try { mq.removeEventListener ? mq.removeEventListener("change", applyStack) : mq.removeListener(applyStack); } catch (e) {} });
       host.subscribe("time", function (d) {
         d = d || new Date();
         var nm = (c.name || whoAmI() || "Explorer").trim();
-        hi.textContent = greetWord(d.getHours()) + ", " + nm + ".";
+        l1.textContent = greetWord(d.getHours()) + ",";
+        l2.textContent = nm + ".";
       });
     },
   });
@@ -1421,10 +1437,12 @@
         greetW = Math.round(clamp(Math.min(W_, H_) * 0.62, 340, 640));
       }
       var gap = Math.round(ringW * 0.3);                                       // a tighter gap → greeting sits a little higher
-      // greeting height for CENTERING: the name line can wrap to two lines on a phone, so estimate ~1.5 lines of
-      // its width-derived type (font ≈ greetW*0.092, line-height 1.1). Under-counting here let the pair drift low.
-      var total = ringW + gap + Math.round(greetW * 0.15);                     // ring (≈square) + gap + greeting block
-      var lift = Math.round((H_ - top) * 0.06);                                // nudge the pair slightly above true centre
+      // greeting height for CENTERING must match the line count the widget actually renders: on a phone
+      // (viewport ≤ 640, matching the greeting's own matchMedia) the name drops to a SECOND line, so count two
+      // lines (≈ greetW*0.21) and lift a touch more; on desktop it's one row (≈ greetW*0.15), the original placement.
+      var stacked = W_ <= 640;
+      var total = ringW + gap + Math.round(greetW * (stacked ? 0.21 : 0.15));  // ring (≈square) + gap + greeting block
+      var lift = Math.round((H_ - top) * (stacked ? 0.10 : 0.06));             // phone: a little higher; desktop: original
       var startY = Math.round(top + Math.max(m, ((H_ - top) - total) / 2 - lift)); // centre the pair, lifted a touch higher
       return [
         { type: "dayring",  config: {}, w: ringW,  x: CX(W_, ringW),  y: startY },
