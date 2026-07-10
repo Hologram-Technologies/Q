@@ -45,10 +45,10 @@ export function callLinkInText(text) {
 // (holo-chat-context) — it rides the content-blind Nostr rendezvous instead: sealed {from,…} blobs at a coordinate
 // DERIVED from the room κ, over public relays. No server we run; the relay sees only ciphertext. Returns {post, close}.
 export async function openSignal(base, room, peer, onMsg) { return _connect(base, room, peer, onMsg); }
-async function _connect(base, room, peer, onMsg) {
+async function _connect(base, room, peer, onMsg, { announce = true } = {}) {
   const hosted = typeof location !== "undefined" && !!location.hostname && !/^(127\.0\.0\.1|localhost|\[::1\])$/.test(location.hostname);
   if (hosted && typeof WebSocket !== "undefined") {
-    try { return await _connectNostr(room, peer, onMsg); } catch {}   // fail-soft → fall through to the origin relay
+    try { return await _connectNostr(room, peer, onMsg, { announce }); } catch {}   // fail-soft → fall through to the origin relay
   }
   const es = new EventSource(`${base}/signal?room=${encodeURIComponent(room)}&peer=${encodeURIComponent(peer)}`);
   es.onmessage = (e) => { let d; try { d = JSON.parse(e.data); } catch { return; } onMsg(d); };
@@ -58,7 +58,7 @@ async function _connect(base, room, peer, onMsg) {
 // Nostr backend for _connect. Presence is SYNTHESIZED (a dumb pub/sub has no server to announce joins): each side
 // re-announces "peer-join" a few times so the callee — who joins on ACCEPT, seconds after the ring — always discovers
 // the caller within the mailbox TTL. Own echoes (relays fan a put back to the sender) are dropped by `from === peer`.
-async function _connectNostr(room, peer, onMsg) {
+async function _connectNostr(room, peer, onMsg, { announce = true } = {}) {
   const rdv = await import("/usr/lib/holo/holo-rendezvous.mjs");
   const { roomKey, sealWire, openWire } = await import("./holo-chat-context.mjs");
   const coord = rdv.coordinate(room);
@@ -74,7 +74,8 @@ async function _connectNostr(room, peer, onMsg) {
     onMsg(msg);
   });
   const post = async (obj) => { try { const wire = await sealWire(key, { from: peer, ...obj }); mbox.put(coord, JSON.stringify(wire)); } catch {} };
-  let n = 0, t = null; const beat = () => { post({ kind: "peer-join" }); if (++n < 5) t = setTimeout(beat, 2500); }; beat();
+  // announce:false = a control-only channel (declineCall) — it must never present as a joinable media peer
+  let n = 0, t = null; const beat = () => { post({ kind: "peer-join" }); if (++n < 5) t = setTimeout(beat, 2500); }; if (announce) beat();
   return { post, close: () => { try { clearTimeout(t); sub && sub.close && sub.close(); mbox.close && mbox.close(); } catch {} } };
 }
 
@@ -100,28 +101,46 @@ function _makePeer(post, other, polite, localStream, onRemoteStream, onState) {
   return { pc, onSignal, close: () => { try { pc.close(); } catch {} } };
 }
 
+// DECLINE without joining — the callee's red button. Opens the signal door just long enough to tell the caller
+// "declined" (their UI flips instantly instead of ringing into the no-answer timeout), then tears down. The delay
+// before close lets the sealed put actually reach the relays on the Nostr path (fire-and-forget over a fresh WS).
+export async function declineCall(intent) {
+  try {
+    const base = intent.signal || (typeof location !== "undefined" ? location.origin : "");
+    const sig = await _connect(base, intent.room, _rid(), () => {}, { announce: false });
+    sig.post({ kind: "bye", reason: "declined" });
+    setTimeout(() => { try { sig.close(); } catch {} }, 2500);
+    return { ok: true };
+  } catch { return { ok: false }; }
+}
+
 // Join a call room with your local `media` (a MediaStream from getUserMedia or synthetic). Symmetric: caller and callee
 // both call this - the caller after minting+sending the link, the callee on ACCEPT. Returns controls.
 export async function joinCall(intent, { media = null, onState = () => {}, onRemoteStream = () => {}, onPeer = () => {} } = {}) {
   const base = intent.signal || (typeof location !== "undefined" ? location.origin : "");
   const room = intent.room, me = _rid();
-  let peer = null, otherId = null, ended = false;
+  let peer = null, otherId = null, ended = false, noAnswerT = null;
   const sig = await _connect(base, room, me, async (d) => {
     if (ended) return;
     if (d.kind === "ready") { for (const p of (d.peers || [])) ensurePeer(p); }
     else if (d.kind === "peer-join") ensurePeer(d.from);
     else if (d.kind === "peer-leave" && d.from === otherId) end("ended");
-    else if (d.kind === "bye" && d.from === otherId) end("ended");
+    // a DECLINE arrives from a channel that never joined as a media peer (otherId still null) — the reason field,
+    // not the sender id, is authoritative (the room is capability-scoped by the link + signaling is sealed).
+    else if (d.kind === "bye" && (d.from === otherId || d.reason === "declined")) end(d.reason === "declined" ? "declined" : "ended");
     else if (d.kind === "sdp" && d.from === otherId && peer) peer.onSignal({ sdp: d.data });
     else if (d.kind === "ice" && d.from === otherId && peer) peer.onSignal({ ice: d.data });
   });
   function ensurePeer(other) {
     if (peer || ended) return;
-    otherId = other;
+    otherId = other; clearTimeout(noAnswerT);   // someone picked up → the ring window is over
     peer = _makePeer((msg) => sig.post(msg), other, me < other /* polite */, media, onRemoteStream, (cs) => onState({ phase: cs }));
     onPeer(other);
   }
-  function end(reason) { if (ended) return; ended = true; try { peer && peer.close(); } catch {} try { sig.close(); } catch {} onState({ phase: reason || "ended" }); }
+  function end(reason) { if (ended) return; ended = true; clearTimeout(noAnswerT); try { peer && peer.close(); } catch {} try { sig.close(); } catch {} onState({ phase: reason || "ended" }); }
+  // WhatsApp semantics: an unanswered call doesn't ring forever — no peer within the ring window ⇒ "no-answer"
+  // (the callee's own ring card auto-misses on the same clock, app-side).
+  noAnswerT = setTimeout(() => { if (!peer && !ended) { try { sig.post({ kind: "bye", reason: "no-answer" }); } catch {} end("no-answer"); } }, 45000);
   onState({ phase: "connecting" });
   return {
     me,

@@ -108,7 +108,9 @@ export function openCallUI({ mode = "outgoing", name = "Someone", video = false,
       if (phase === "connecting") statusEl.textContent = "Connecting…";
       else if (phase === "connected") startTimer();
       else if (phase === "ended" || phase === "failed" || phase === "disconnected") { statusEl.textContent = phase === "failed" ? "Call failed" : "Call ended"; setTimeout(close, 900); }
-      else if (phase === "declined") { statusEl.textContent = "Declined"; setTimeout(close, 900); }
+      else if (phase === "declined") { stopRing(); statusEl.textContent = "Declined"; setTimeout(close, 900); }
+      else if (phase === "no-answer") { stopRing(); statusEl.textContent = "No answer"; setTimeout(close, 1200); }
+      else if (phase === "missed") { stopRing(); statusEl.textContent = "Missed call"; setTimeout(close, 1200); }
     },
     attachRemote(stream) { try { remoteAudio.srcObject = stream; remoteAudio.play && remoteAudio.play().catch(() => {}); if (video) { remoteVideo.srcObject = stream; remoteVideo.play && remoteVideo.play().catch(() => {}); } } catch {} },
     attachLocal(stream) { try { localVideo.srcObject = stream; } catch {} },

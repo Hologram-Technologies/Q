@@ -5,7 +5,7 @@
 // P2P (DTLS-SRTP); the relay only shuttles SDP/ICE. Mesh is fine to ~6 peers; beyond that an SFU forwards (MEET-E seam).
 
 import * as Together from "./holo-together.mjs";
-import { openSignal } from "./holo-call.mjs?v=e0e47cadd4d7";   // THE ONE SIGNAL DOOR — origin /signal on desktop, sealed Nostr rendezvous on hosted static; ?v matches app.mjs's pin so the SW serves ONE fresh copy, never a stale bare-URL cache hit
+import { openSignal } from "./holo-call.mjs?v=abb2e1df086e";   // THE ONE SIGNAL DOOR — origin /signal on desktop, sealed Nostr rendezvous on hosted static; ?v matches app.mjs's pin so the SW serves ONE fresh copy, never a stale bare-URL cache hit
 
 const ICE = [
   { urls: "stun:stun.l.google.com:19302" },
