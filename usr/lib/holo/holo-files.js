@@ -136,9 +136,9 @@ async function listHome(path) {
   for await (const [name, h] of dir.entries()) { if (isHiddenHome(name)) continue; (h.kind === "directory" ? dirs : files).push([name, h]); }
   const out = dirs.map(([name]) => node({ name, path: base + "/" + name, kind: "dir", source: "opfs", writable: true, role: "folder" }));
   const stat = await Promise.all(files.map(async ([name, h]) => {
-    const p = base + "/" + name; let bytes = null, did = "";
-    try { const f = await h.getFile(); bytes = f.size; if (kidx) did = kappaFromIndex(kidx, p, f.size, f.lastModified); } catch {}
-    return node({ name, path: p, kind: "file", source: "opfs", bytes, did, mime: mimeOf(name), writable: true });
+    const p = base + "/" + name; let bytes = null, did = "", mtime = 0;
+    try { const f = await h.getFile(); bytes = f.size; mtime = Math.floor(f.lastModified / 1000); if (kidx) did = kappaFromIndex(kidx, p, f.size, f.lastModified); } catch {}
+    return node({ name, path: p, kind: "file", source: "opfs", bytes, mtime, did, mime: mimeOf(name), writable: true });
   }));
   return sortNodes(out.concat(stat));
 }

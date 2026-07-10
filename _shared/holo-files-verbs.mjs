@@ -15,7 +15,15 @@
 const parentOf = (p) => String(p).replace(/\/+$/, "").split("/").slice(0, -1).join("/") || "/home/user";
 const nameOf = (p) => String(p).replace(/\/+$/, "").split("/").pop();
 const isHome = (p) => String(p || "").startsWith("/home/user/");
-export const VERBS = ["move", "rename", "newFolder", "zip", "trash", "keepOne"];
+export const VERBS = ["move", "rename", "newFolder", "zip", "trash", "keepOne", "tidyMonths"];
+
+// tidyMonths helper: group file paths by their month label ("July 2026") from an mtimes map.
+const monthLabel = (ms) => { const d = new Date(ms || 0); return d.toLocaleString("en", { month: "long" }) + " " + d.getFullYear(); };
+export function monthGroups(targets, mtimes) {
+  const by = new Map();
+  for (const t of targets) { const l = monthLabel((mtimes && mtimes[t]) || 0); if (!by.has(l)) by.set(l, []); by.get(l).push(t); }
+  return by;
+}
 
 // validate targets exist (via F.list of each parent) — a plan referencing a missing file REFUSES early.
 async function stat(F, p) {
@@ -52,6 +60,14 @@ export async function preview(F, plan) {
         if (names.length < 2) return { ok: false, why: "Only one copy — nothing to tidy." };
         return { ok: true, title: `Keep “${names[0]}”`, lines: [`the other ${names.length - 1} identical ${names.length - 1 === 1 ? "copy goes" : "copies go"} to the Recycle Bin`], count: names.length - 1 };
       }
+      case "tidyMonths": {
+        // group into "July 2026"-style folders by each file's own date (deterministic — mtimes come
+        // from the listing, never guessed). dest = the folder being tidied.
+        if (!isHome(p.dest || "")) return { ok: false, why: "Needs a folder to tidy." };
+        const groups = monthGroups(targets, p.mtimes || {});
+        return { ok: true, title: `Tidy ${names.length} files into ${groups.size} month folder${groups.size === 1 ? "" : "s"}`,
+          lines: [...groups.keys()].slice(0, 4).map((l) => `${l} · ${groups.get(l).length}`), count: names.length };
+      }
     }
     return { ok: false, why: "I don't know how to do that here." };
   } catch (e) { return { ok: false, why: "Couldn't check that: " + (e.message || e) }; }
@@ -76,6 +92,15 @@ export async function apply(F, plan) {
       case "trash": case "keepOne": {
         const doomed = p.verb === "keepOne" ? targets.slice(1) : targets;
         for (const t of doomed) { const node = await stat(F, t); if (node) { await F.recycle(node); j.push({ undo: "restoreBin", name: nameOf(t) }); } }
+        break;
+      }
+      case "tidyMonths": {
+        const groups = monthGroups(targets, p.mtimes || {});
+        for (const [label, paths] of groups) {
+          try { await F.mkdir(p.dest, label); j.push({ undo: "note", text: label }); } catch {}
+          const destPath = p.dest.replace(/\/$/, "") + "/" + label;
+          for (const t of paths) { await F.moveHome(t, destPath); j.push({ undo: "move", from: destPath + "/" + nameOf(t), to: parentOf(t) }); }
+        }
         break;
       }
     }
