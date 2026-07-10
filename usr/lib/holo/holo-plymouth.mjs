@@ -418,7 +418,7 @@ function make2dPlayer(overlay, layer, canvas, onLive) {
     const o = emblemStill() ? { x: 0, y: 0 } : posOffset();   // a static poster holds perfectly still (it must settle to park)
     return { cx: (px.cx + o.x) / cw, cy: (px.cy + o.y) / ch, cap: px.cap / vmin };
   }
-  function draw(idx) {
+  function draw(idx, nxt, phase) {
     const img = images[idx]; if (!img) return;
     const iw = img.naturalWidth || img.width, ih = img.naturalHeight || img.height;
     const cw = canvas.width / dpr, ch = canvas.height / dpr;
@@ -439,7 +439,17 @@ function make2dPlayer(overlay, layer, canvas, onLive) {
       ctx.clearRect(x0, y0, Math.max(r.x + r.w, lastRect.x + lastRect.w) - x0, Math.max(r.y + r.h, lastRect.y + lastRect.h) - y0);
     } else ctx.clearRect(0, 0, cw, ch);
     lastRect = r;
-    ctx.drawImage(img, cx - w / 2, cy - h / 2, w, h);
+    // TEMPORAL BLEND to the display's own rate (the GPU worker's trick, now on the 2D floor too): the 25 fps
+    // sprite pair is crossfaded by fractional phase, so a 60/120 Hz phone presents NEW pixels every vsync —
+    // motion reads continuous, never stepped. Costs one extra drawImage inside the same dirty rect.
+    const nimg = (phase > 0 && nxt != null && nxt !== idx) ? images[nxt] : null;
+    if (nimg) {
+      ctx.globalAlpha = 1 - phase;
+      ctx.drawImage(img, cx - w / 2, cy - h / 2, w, h);
+      ctx.globalAlpha = phase;
+      ctx.drawImage(nimg, cx - w / 2, cy - h / 2, w, h);
+      ctx.globalAlpha = 1;
+    } else ctx.drawImage(img, cx - w / 2, cy - h / 2, w, h);
   }
   function loop(now) {
     if (!alive) return;
@@ -459,8 +469,10 @@ function make2dPlayer(overlay, layer, canvas, onLive) {
     // Once the pose has settled the loop parks entirely; pose()/resize un-park it. Reduced-motion is NOT
     // this gate (it keeps the contained in-place cycle — see the "static emblem on mobile" bug note above).
     const still = emblemStill();
-    const idx = still ? 0 : Math.floor((now - t0) / (1000 / FPS)) % Math.max(prefix, 1);
-    draw(idx);
+    const tt = (now - t0) / (1000 / FPS);
+    const idx = still ? 0 : Math.floor(tt) % Math.max(prefix, 1);
+    const nxt = (still || prefix < 2) ? idx : (idx + 1) % prefix;
+    draw(idx, nxt, still ? 0 : tt - Math.floor(tt));
     if (still) {
       const eps = 0.0006;
       if (Math.abs(tgt.cx - pose.cx) < eps && Math.abs(tgt.cy - pose.cy) < eps && Math.abs(tgt.cap - pose.cap) < eps * 8) {
@@ -481,17 +493,30 @@ function make2dPlayer(overlay, layer, canvas, onLive) {
       raf = requestAnimationFrame(loop);
     }
   }
+  // KEYING BUDGET: chroma-keying (getImageData) is main-thread work. A warm boot delivers all ~156 frames
+  // near-instantly from the κ-store — keying them in one burst hitches the hero float. Queue decoded images
+  // and key ≤2 per animation frame instead: the playable prefix still grows far faster than the 25 fps
+  // playhead consumes it, and the hero never drops a beat. Frame 0 keys synchronously on arrival (first
+  // paint keeps its zero-delay path).
+  const keyQ = [];
+  let pumping = false;
+  function pump() {
+    if (!alive) { keyQ.length = 0; pumping = false; return; }
+    for (let n = 0; n < 2 && keyQ.length; n++) { const j = keyQ.shift(); images[j.i] = keyBlack(j.img, inkOn); }
+    wake();
+    if (keyQ.length) requestAnimationFrame(pump); else pumping = false;
+  }
   return {
     mode: "2d",
     frame(i, bytes) {
       const img = new Image();
-      img.onload = () => { try { URL.revokeObjectURL(img.src); } catch {} if (!alive) return; images[i] = keyBlack(img, inkOn); wake(); };
+      img.onload = () => { try { URL.revokeObjectURL(img.src); } catch {} if (!alive) return; keyQ.push({ i, img }); if (!pumping) { pumping = true; pump(); } };
       img.onerror = () => { try { URL.revokeObjectURL(img.src); } catch {} };
       img.src = URL.createObjectURL(new Blob([bytes], { type: "image/png" }));
     },
     pose(name) { target = POSES[name] || POSES.greet; unpark(); if (reducedMotion()) { const t = liveTarget(); pose.cx = t.cx; pose.cy = t.cy; pose.cap = t.cap; pose.up = t.up || 1; if (images[0]) draw(0); } },
     ink(on) { const flip = inkOn !== !!on; inkOn = !!on; return flip && started; },   // true → frames need a re-key (caller replays)
-    reset() { images.length = 0; prefix = 0; t0 = 0; started = false; },
+    reset() { images.length = 0; keyQ.length = 0; prefix = 0; t0 = 0; started = false; },
     destroy() { alive = false; cancelAnimationFrame(raf); removeEventListener("resize", size); },
   };
 }
