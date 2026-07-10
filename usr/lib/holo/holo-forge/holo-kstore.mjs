@@ -27,6 +27,7 @@ async function withStore(mode, fn) { const d = await db(); const t = d.transacti
 export async function kput(kappa, bytes) { const u = bytes instanceof Uint8Array ? bytes : new Uint8Array(bytes); await withStore("readwrite", (s) => reqP(s.put(u, hexOf(kappa)))); return kappa; }
 export async function kget(kappa) { return withStore("readonly", (s) => reqP(s.get(hexOf(kappa)))); }   // Uint8Array | undefined
 export async function khas(kappa) { const k = await withStore("readonly", (s) => reqP(s.getKey(hexOf(kappa)))); return k !== undefined; }
+export async function kdel(kappa) { await withStore("readwrite", (s) => reqP(s.delete(hexOf(kappa)))); }   // O2: tamper purge — the store never STAYS poisoned
 export async function kcount() { return withStore("readonly", (s) => reqP(s.count())); }
 
 // §1.2: the canonical content hash is BLAKE3. κ MINT goes through blake3hex (sync).

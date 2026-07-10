@@ -72,10 +72,21 @@ export function makeHostResolver({ base, wasmGlue = null, fetchFn = null, lruSiz
     { name: "ipfs-dweb", url: ipfsGw("https://dweb.link/ipfs/") },    //   raced with a second, no single point
   ];
   const store = { name: "store", url: ({ axis, hex }) => "cache://" + axis + "/" + hex };
-  const storeFetch = async (url) => {   // TIER 0: CacheStorage only; a miss is silence, never a request
+  // O2 (HOLO-SOVEREIGN-OFFLINE): the persistent device κ-store joins TIER 0 beside CacheStorage —
+  // a pinned object resolves with ZERO network forever, not just while the SW cache lives. The rung
+  // re-derives before returning (and the pure verb re-derives again — belt and braces, both cheap);
+  // a poisoned entry is purged by the rung and misses here, then TIER 1's write-back OVERWRITES it
+  // with verified bytes — the store self-heals. Rung trouble → exactly the pre-O2 TIER 0 (fail-soft).
+  let _rung = null, _rungP = null;
+  const rungOf = () => (_rung !== null ? Promise.resolve(_rung) : (_rungP ||= import("./holo-store-rung.mjs")
+    .then((m) => (_rung = m.makeStoreRung())).catch(() => (_rung = false))));
+  const storeFetch = async (url) => {   // TIER 0: CacheStorage + device store; a miss is silence, never a request
     const m = /^cache:\/\/([^/]+)\/([0-9a-f]+)$/.exec(String(url));
-    if (!m || typeof caches === "undefined") return { ok: false };
-    try { for (const s of spellings(m[1], m[2])) { const hit = await caches.match(s, { ignoreSearch: true }); if (hit && hit.ok) return hit; } } catch {}
+    if (!m) return { ok: false };
+    if (typeof caches !== "undefined") {
+      try { for (const s of spellings(m[1], m[2])) { const hit = await caches.match(s, { ignoreSearch: true }); if (hit && hit.ok) return hit; } } catch {}
+    }
+    try { const R = await rungOf(); if (R) { const u8 = await R.get(m[1], m[2]); if (u8) return new Response(u8); } } catch {}
     return { ok: false };
   };
 
@@ -154,8 +165,16 @@ export function makeHostResolver({ base, wasmGlue = null, fetchFn = null, lruSiz
       }
     }
     let r = await R0.resolve(name, caps);                  // TIER 0: local store (SW/OPFS), 0-egress
-    if (!(r.ok || r.needsIngest || r.kind === "refused" || r.kind === "host-owned" || r.why === "kind-not-admitted")) r = await R1.resolve(name, caps);   // TIER 1: the raced rungs
+    let fromNet = false;
+    if (!(r.ok || r.needsIngest || r.kind === "refused" || r.kind === "host-owned" || r.why === "kind-not-admitted")) { r = await R1.resolve(name, caps); fromNet = true; }   // TIER 1: the raced rungs
     if (r.ok && r.kappa && !caps) bump(r.kappa, { kind: r.kind, kappa: r.kappa, bytes: r.bytes });
+    // O2 write-back: a verified TIER 1 win enters the device store (fire-and-forget, never on the
+    // return path) — the next resolve of this κ is TIER 0, zero egress, radio-independent.
+    if (fromNet && r.ok && r.kappa && r.bytes) {
+      const parts = String(r.kappa).split(":");
+      const hex = parts.pop(), axis = parts.pop() || "sha256";
+      rungOf().then((R) => R && R.put(axis, hex, r.bytes)).catch(() => {});
+    }
     return r;
   }
 
