@@ -44,6 +44,7 @@ import("../../usr/lib/holo/holo-names.mjs").then((m) => { classifyName = m.class
 
   const apple = (() => { try { return /mac|iphone|ipad|ipod/i.test(navigator.platform || "") || /mac os/i.test(navigator.userAgent || ""); } catch { return false; } })();
   const modSymbol = apple ? "⌘" : "Ctrl";
+  const altSym = apple ? "⌥" : "Alt";   // the reveal + the chips' modifier (Alt+S/C/H)
   const $ = (s, r) => (r || D).querySelector(s);
   const esc = (s) => String(s == null ? "" : s).replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
 
@@ -456,8 +457,8 @@ import("../../usr/lib/holo/holo-names.mjs").then((m) => { classifyName = m.class
   ];
   legend.innerHTML = CHIPS.map((c, i) =>
     `<button class="hk-chip" type="button" tabindex="-1" data-i="${i}" title="${esc(c.label)}">${c.kbd ? `<kbd>${esc(c.kbd)}</kbd>` : ""}<span>${esc(c.label)}</span></button>`).join("");
-  core.title = "Shortcuts — hold " + modSymbol;
-  tag.innerHTML = `<kbd>${modSymbol}</kbd> for shortcuts`;
+  core.title = "Shortcuts — hold " + altSym;
+  tag.innerHTML = `<kbd>${altSym}</kbd> for shortcuts`;
 
   const DKEY = "holo.hints.dismissed.v1";
   const dotHidden = () => { try { return localStorage.getItem(DKEY) === "1"; } catch { return false; } };
@@ -486,8 +487,8 @@ import("../../usr/lib/holo/holo-names.mjs").then((m) => { classifyName = m.class
 
   let bloomed = false;
   const bloom = (on) => { if (on === bloomed) return; bloomed = on; dot.classList.toggle("bloom", on); };
-  const isMod = (e) => (apple ? e.key === "Meta" : e.key === "Control");
-  addEventListener("keydown", (e) => { if (!e.repeat && isMod(e) && dot.classList.contains("show") && !scrim.classList.contains("open") && !cheat.classList.contains("open")) bloom(true); }, true);
+  const isMod = (e) => e.key === "Alt";   // hold Alt (⌥ on Mac) → bloom the Alt+S / Alt+C / Alt+H legend
+  addEventListener("keydown", (e) => { if (!e.repeat && isMod(e) && dot.classList.contains("show") && !scrim.classList.contains("open") && !cheat.classList.contains("open")) { bloom(true); try { e.preventDefault(); } catch {} } }, true);
   addEventListener("keyup", (e) => { if (isMod(e)) bloom(false); }, true);
   addEventListener("blur", () => bloom(false));
   D.addEventListener("visibilitychange", () => { if (D.hidden) bloom(false); });
