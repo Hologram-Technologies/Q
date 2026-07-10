@@ -11,8 +11,11 @@
 //
 // ES module (shares holo-push-route). The SHELL list mirrors SHELL_MANIFEST in holo-m1-boot.mjs (witness gates drift).
 import { notificationFor, routeFor } from "./holo-push-route.mjs";
+// THE evicted rescue — ONE shared module (also used by root-sw): bytes that left Q for the κ-mirror
+// still resolve byte-identical, verified fail-closed (L5). Lazy + memoized = restart-safe.
+import { makeEvictRescue } from "../../usr/lib/holo/holo-evict-rescue.mjs";
 
-const CACHE = "holo-msgr-shell-9a47f751fc43";                     // bump → old (unverified) caches are purged on activate
+const CACHE = "holo-msgr-shell-7574a379e215";                     // bump → old (unverified) caches are purged on activate
 // BASE-RELOCATABLE: the worker may be served under ANY prefix (OS root, a GitHub Pages /<repo>/ subpath, a
 // static mirror). Every location below derives from where THIS script actually lives; at the OS root BASE is ""
 // and behavior is byte-identical. Manifest paths stay CANONICAL ("/apps/holo-messenger/…" — they are identity,
@@ -20,6 +23,7 @@ const CACHE = "holo-msgr-shell-9a47f751fc43";                     // bump → ol
 const BASE = self.location.pathname.replace(/\/apps\/holo-messenger\/holo-sw\.js$/, "");
 const canon = (p) => (BASE && p.startsWith(BASE)) ? p.slice(BASE.length) : p;
 const SCOPE = BASE + "/apps/holo-messenger/";
+const RESCUER = makeEvictRescue({ base: BASE });
 const MANIFEST_URL = BASE + "/apps/holo-messenger/shell-manifest.json";
 // content-addressed κ-store sources: an asset's exact bytes live at <base> + <sha256>. Tried in order — the
 // same-origin mirror first (fast, but dies with the app origin), then the CROSS-ORIGIN HF κ-mirror, which gives
@@ -104,7 +108,7 @@ self.addEventListener("activate", (e) => e.waitUntil((async () => {
 self.addEventListener("message", (e) => { const d = e.data || {}; if (d.type === "holo-shell-manifest") setManifest(d.assets, d.runtime); });
 
 const CACHEABLE = /\.(jpg|jpeg|png|gif|svg|webp|avif|ico|css|js|mjs|wasm|woff2?|ttf|otf)$/i;
-const STATIC_DIRS = [SCOPE, BASE + "/apps/ui/", BASE + "/_shared/", BASE + "/usr/share/", BASE + "/usr/lib/holo/", BASE + "/apps/q/pkg/", BASE + "/apps/workspace/pkg/", BASE + "/usr/lib/pkg/"];
+const STATIC_DIRS = [SCOPE, BASE + "/_shared/", BASE + "/usr/share/", BASE + "/usr/lib/holo/", BASE + "/apps/q/pkg/", BASE + "/apps/workspace/pkg/", BASE + "/usr/lib/pkg/"];
 
 // cache-first, with κ-verified refill. A cached hit was verified when stored → served directly (0 net). A miss on a
 // MANIFESTED shell asset must pass verification (origin → κ-store) or is REFUSED (502). Non-manifested statics keep
@@ -141,7 +145,22 @@ self.addEventListener("fetch", (e) => {
   if (url.origin !== self.location.origin) return;    // own-origin only
   if (self.location.port === "8472" || self.location.port === "8474") return;   // DEV-ITERATE PORTS: never cache/verify — always serve live (edits appear instantly; no stale shell, no integrity brick)
   const p = url.pathname;
-  if (p === MANIFEST_URL || p.startsWith(BASE + "/b/")) return;     // the integrity index + same-origin κ-store: never intercept (avoid loops)
+  if (p === MANIFEST_URL || p.startsWith(BASE + "/b/")) return;
+  // EVICTED rescue (U2): a messenger-page request under an evicted app/tree is served from the κ-mirror,
+  // verified fail-closed, then CACHED — the offline/warm contract holds for evicted closures (ui, q).
+  {
+    const pp = (BASE && !p.startsWith(BASE + "/")) ? BASE + p : p;
+    const cand = RESCUER.matchSync(pp);
+    if (cand) {
+      e.respondWith((async () => {
+        const hit = await caches.match(req); if (hit) return hit;
+        const res = await RESCUER.rescue(req, cand);
+        if (res.ok && res.headers.get("x-holo-kappa")) { try { const cc = await caches.open(CACHE); await cc.put(req, res.clone()); } catch (x) {} }
+        return res;
+      })());
+      return;
+    }
+  }     // the integrity index + same-origin κ-store: never intercept (avoid loops)
   // NAVIGATION (app.html) — κ-verified, cache-first, so the 2nd open needs 0 network to paint.
   if (req.mode === "navigate" && p.startsWith(SCOPE)) { e.respondWith(cacheFirst(req, p)); return; }
   // ROOT-RESCUE (mounted hosts only): runtime code addresses the OS by CANONICAL absolute paths ("/usr/…",
