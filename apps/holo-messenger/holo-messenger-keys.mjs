@@ -125,6 +125,84 @@ import("../../usr/lib/holo/holo-names.mjs").then((m) => { classifyName = m.class
   const dot = mk(`<div id="hk-dot"><button class="hk-core" type="button" aria-label="Keyboard shortcuts" title="Shortcuts"></button><span class="hk-tag"></span><div class="hk-legend"></div></div>`);
   D.body.appendChild(scrim); D.body.appendChild(cheat); D.body.appendChild(dot);
   const sTitle = $(".hk-title", scrim), sInput = $("input", scrim), sResults = $(".hk-results", scrim), sPreview = $(".hk-preview", scrim);
+
+  // ── the holospace stage — Enter STREAMS the selected app into its OWN isolated canvas frame, behind a
+  //    sharp boot splash that is IDENTICAL for every app. A same-origin iframe = the app runs exactly as it
+  //    does standalone; the splash makes the load feel instant and the frame fades in the moment it paints.
+  //    Esc exits · Ctrl+K jumps straight back to the launcher (app-switch), even from inside a running app. ──
+  const stageStyle = D.createElement("style");
+  stageStyle.textContent = `
+  #hk-stage{ position:fixed; inset:0; z-index:2147482400; display:none; background:#080b10; }
+  #hk-stage.open{ display:block; animation:hk-stage-in .2s cubic-bezier(.4,0,.2,1); }
+  @keyframes hk-stage-in{ from{ opacity:0; } to{ opacity:1; } }
+  #hk-stage .hk-frame{ position:absolute; inset:0; width:100%; height:100%; border:0; background:transparent; opacity:0; transition:opacity .4s ease; }
+  #hk-stage.ready .hk-frame{ opacity:1; }
+  #hk-stage .hk-boot{ position:absolute; inset:0; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:15px; text-align:center;
+    background:radial-gradient(130% 120% at 50% 40%, #10171f 0%, #080b10 68%); transition:opacity .45s ease; }
+  #hk-stage.ready .hk-boot{ opacity:0; pointer-events:none; }
+  #hk-stage .hk-boot-ic{ width:78px; height:78px; border-radius:19px; object-fit:cover; box-shadow:0 14px 44px rgba(0,0,0,.5),0 0 0 1px rgba(255,255,255,.06); animation:hk-bpulse 1.8s ease-in-out infinite; }
+  @keyframes hk-bpulse{ 0%,100%{ transform:scale(1); filter:brightness(1); } 50%{ transform:scale(1.05); filter:brightness(1.08); } }
+  #hk-stage .hk-boot-nm{ font:600 21px "Segoe UI",system-ui,sans-serif; color:#eef2f8; letter-spacing:-.01em; }
+  #hk-stage .hk-boot-wd{ font:12px ui-monospace,monospace; color:#6e7681; margin-top:-6px; }
+  #hk-stage .hk-boot-bar{ width:190px; height:2px; border-radius:2px; overflow:hidden; background:rgba(255,255,255,.08); margin-top:6px; position:relative; }
+  #hk-stage .hk-boot-bar::before{ content:""; position:absolute; top:0; bottom:0; width:38%; border-radius:2px; background:linear-gradient(90deg,transparent,var(--hk-accent),transparent); animation:hk-bslide 1.05s ease-in-out infinite; }
+  @keyframes hk-bslide{ 0%{ transform:translateX(-130%); } 100%{ transform:translateX(360%); } }
+  #hk-stage.gone .hk-boot-bar{ display:none; }
+  #hk-stage .hk-boot-msg{ opacity:0; margin-top:2px; font:13px "Segoe UI",system-ui,sans-serif; color:#8b949e; transition:opacity .3s ease; }
+  #hk-stage .hk-boot-msg.show{ opacity:1; }
+  #hk-stage .hk-stage-close{ position:absolute; top:14px; right:16px; z-index:2; display:inline-flex; align-items:center; gap:7px; background:rgba(13,17,23,.62);
+    -webkit-backdrop-filter:blur(10px); backdrop-filter:blur(10px); border:1px solid rgba(255,255,255,.1); color:#c9d1d9; border-radius:9px; padding:6px 10px;
+    font:600 12px "Segoe UI",system-ui,sans-serif; cursor:pointer; opacity:0; transition:opacity .3s ease .15s; }
+  #hk-stage.ready .hk-stage-close,#hk-stage.gone .hk-stage-close{ opacity:.85; }
+  #hk-stage .hk-stage-close:hover{ opacity:1; color:#fff; }
+  #hk-stage .hk-stage-close kbd{ background:#21262d; border:1px solid #30363d; border-radius:5px; padding:1px 5px; font:600 11px ui-monospace,monospace; }
+  @media (prefers-reduced-motion:reduce){ #hk-stage .hk-boot-ic{ animation:none; } #hk-stage .hk-boot-bar::before{ animation:none; width:100%; } }
+  `;
+  (D.head || D.documentElement).appendChild(stageStyle);
+  const stage = mk(`<div id="hk-stage"><div class="hk-boot"><img class="hk-boot-ic" alt=""/><div class="hk-boot-nm"></div><div class="hk-boot-wd"></div><div class="hk-boot-bar"></div><div class="hk-boot-msg"></div></div><button class="hk-stage-close" type="button">Close <kbd>Esc</kbd></button></div>`);
+  D.body.appendChild(stage);
+  const stBootIc = $(".hk-boot-ic", stage), stBootNm = $(".hk-boot-nm", stage), stBootWd = $(".hk-boot-wd", stage), stMsg = $(".hk-boot-msg", stage);
+  $(".hk-stage-close", stage).addEventListener("click", () => closeStage());
+
+  // deploy-status of each app (probed lazily so the launcher lists only what actually streams) + prefetch cache
+  const appStatus = new Map();
+  const appUrl = (app) => app.url || (app.dir ? new URL("../" + app.dir + "/", location.href).href : "");
+  function prefetchApp(app) {   // warm the app's bytes AND learn if it's deployed — so Enter is instant + honest
+    const url = appUrl(app); if (!url || appStatus.has(url)) return;
+    appStatus.set(url, "probing");
+    fetch(url, { method: "GET", cache: "force-cache" }).then((r) => appStatus.set(url, r && r.ok ? "ok" : "gone")).catch(() => appStatus.set(url, "gone"));
+  }
+
+  let stFrame = null, stageOpen = false;
+  function openStage(app) {
+    if (!app) return; const url = appUrl(app);
+    stageOpen = true;
+    stBootIc.src = app.img || ""; stBootIc.style.display = app.img ? "" : "none";
+    stBootNm.textContent = app.name || "Holo"; stBootWd.textContent = app.words || "";
+    stMsg.textContent = ""; stMsg.classList.remove("show");
+    stage.classList.remove("ready", "gone"); stage.classList.add("open");
+    if (stFrame) { try { stFrame.remove(); } catch {} stFrame = null; }
+    if (appStatus.get(url) === "gone") { stage.classList.add("gone"); stMsg.textContent = "Not deployed to this space yet"; stMsg.classList.add("show"); return; }
+    const f = D.createElement("iframe"); f.className = "hk-frame"; f.setAttribute("title", app.name || "Holo app");
+    f.setAttribute("allow", "accelerometer; autoplay; camera; clipboard-read; clipboard-write; encrypted-media; fullscreen; gamepad; geolocation; gyroscope; microphone; midi; payment; usb; xr-spatial-tracking");
+    let done = false; const reveal = () => { if (done) return; done = true; clearTimeout(to); stage.classList.add("ready"); bindFrameKeys(f); };
+    const to = setTimeout(reveal, 5000); f.addEventListener("load", reveal);
+    f.src = url; stage.appendChild(f); stFrame = f;
+    setTimeout(() => { try { f.focus(); } catch {} }, 60);
+  }
+  function closeStage() {
+    if (!stageOpen) return; stageOpen = false;
+    stage.classList.remove("open", "ready", "gone");
+    if (stFrame) { try { stFrame.remove(); } catch {} stFrame = null; }
+  }
+  // Esc / Ctrl+K reach us even while a same-origin app has focus — so switching apps stays one keystroke.
+  function bindFrameKeys(f) {
+    try { f.contentWindow.addEventListener("keydown", (e) => {
+      if (e.key === "Escape") { e.preventDefault(); closeStage(); }
+      else if ((e.ctrlKey || e.metaKey) && (e.key === "k" || e.key === "K")) { e.preventDefault(); closeStage(); setTimeout(() => openSpot(), 0); }
+    }, true); } catch {}
+  }
+  addEventListener("keydown", (e) => { if (e.key === "Escape" && stageOpen) { e.preventDefault(); closeStage(); } }, true);
   // click the backdrop to dismiss
   [scrim, cheat].forEach((s) => s.addEventListener("click", (e) => { if (e.target === s) closeAll(); }));
 
@@ -242,8 +320,12 @@ import("../../usr/lib/holo/holo-names.mjs").then((m) => { classifyName = m.class
     .filter((x) => x.sc > 0).sort((a, b) => b.sc - a.sc).slice(0, q ? 6 : 7)
     .map((x) => ({ ic: x.c.icon || "›", label: x.c.title, kbd: (km.label(x.c.spec) && !/^app:/.test(x.c.id)) ? km.label(x.c.spec) : "", group: "Commands", run: () => { try { x.c.run(); } catch {} } }));
   // apps — icon + name + the 3-word κ name on the right, exactly like the native "Open an app…" spotlight.
-  const appRow = (a) => ({ img: a.img || "", ic: a.ic || "▦", label: a.name, sub: a.words || "", group: "Apps", run: () => openAppRow(a) });
-  const appRows = (q, cap) => catalog.map((a) => ({ sc: Math.max(fuzzyScore(q, a.name), fuzzyScore(q, a.words || "") * 0.9), a }))
+  // Enter STREAMS the app into the holospace stage (openStage). `_app` lets nav prefetch/probe the highlight.
+  const appRow = (a) => ({ img: a.img || "", ic: a.ic || "▦", label: a.name, sub: a.words || "", group: "Apps", _app: a, run: () => openStage(a) });
+  // only list apps that actually stream — an app probed "gone" (not deployed to this space) is dropped so
+  // every Enter lands. Un-probed apps show optimistically; once probed they filter on the next render.
+  const appRows = (q, cap) => catalog.filter((a) => appStatus.get(appUrl(a)) !== "gone")
+    .map((a) => ({ sc: Math.max(fuzzyScore(q, a.name), fuzzyScore(q, a.words || "") * 0.9), a }))
     .filter((x) => x.sc > 0).sort((a, b) => b.sc - a.sc).slice(0, cap || (q ? 6 : catalog.length))
     .map((x) => appRow(x.a));
   const chatRows = (q, cap) => {
@@ -306,24 +388,40 @@ import("../../usr/lib/holo/holo-names.mjs").then((m) => { classifyName = m.class
       r.onclick = () => runSel(+r.dataset.i);
     });
   }
-  const mark = () => [...sResults.querySelectorAll(".hk-row[data-i]")].forEach((r, i) => r.classList.toggle("sel", i === sel));
+  const mark = () => {
+    [...sResults.querySelectorAll(".hk-row[data-i]")].forEach((r, i) => r.classList.toggle("sel", i === sel));
+    try { sResults.querySelector(".hk-row.sel")?.scrollIntoView({ block: "nearest" }); } catch {}
+    const it = list[sel]; if (it && it._app) prefetchApp(it._app);   // warm + probe the highlight → Enter streams instantly
+  };
+  const moveSel = (d) => { if (!list.length) return; sel = Math.max(0, Math.min(sel + d, list.length - 1)); mark(); };
   function runSel(i) {
     const it = list[i != null ? i : sel];
     if (!it && mode !== "pal") { const q = (sInput.value || "").trim(); closeAll(); if (q) openWebSearch(q); return; }  // Enter on empty → web
     closeAll(); if (it) try { it.run(); } catch {}
   }
+  // probe every catalog app ONCE (on first launcher open) so undeployed apps drop out of the list
+  let _probed = false;
+  const probeCatalog = () => { if (_probed) return; _probed = true; try { Promise.all(catalog.map((a) => { const u = appUrl(a); if (appStatus.has(u)) return null; appStatus.set(u, "probing"); return fetch(u, { method: "HEAD" }).then((r) => appStatus.set(u, r && r.ok ? "ok" : "gone")).catch(() => appStatus.set(u, "gone")); })).then(() => { if (scrim.classList.contains("open")) render(sInput.value); }); } catch {} };
   function openOverlay(m) {
     mode = m; scrim.classList.add("open");
     sTitle.textContent = m === "pal" ? "Command palette" : "Open an app…";
     sInput.value = ""; sInput.placeholder = m === "pal" ? "Run a command…" : "Open an app · search chats · ask Q · run a command (>) · paste a κ / link";
+    if (m !== "pal") probeCatalog();
     render(""); sInput.focus();
   }
   const openSpot = () => openOverlay("spot");
   const openPalette = () => openOverlay("pal");
   sInput.addEventListener("input", () => render(sInput.value));
+  // fast keyboard nav — arrows repeat, Tab/⇧Tab step, Home/End jump, PageUp/Down leap; the selection always
+  // scrolls into view (mark) and the highlighted app prefetches so Enter streams with no wait.
   sInput.addEventListener("keydown", (e) => {
-    if (e.key === "ArrowDown") { e.preventDefault(); sel = Math.min(sel + 1, list.length - 1); mark(); }
-    else if (e.key === "ArrowUp") { e.preventDefault(); sel = Math.max(sel - 1, 0); mark(); }
+    if (e.key === "ArrowDown") { e.preventDefault(); moveSel(1); }
+    else if (e.key === "ArrowUp") { e.preventDefault(); moveSel(-1); }
+    else if (e.key === "Tab") { e.preventDefault(); moveSel(e.shiftKey ? -1 : 1); }
+    else if (e.key === "Home") { e.preventDefault(); sel = 0; mark(); }
+    else if (e.key === "End") { e.preventDefault(); sel = Math.max(0, list.length - 1); mark(); }
+    else if (e.key === "PageDown") { e.preventDefault(); moveSel(6); }
+    else if (e.key === "PageUp") { e.preventDefault(); moveSel(-6); }
     else if (e.key === "Enter") { e.preventDefault(); runSel(); }
     else if (e.key === "Escape") { e.preventDefault(); closeAll(); }
   });
@@ -399,8 +497,8 @@ import("../../usr/lib/holo/holo-names.mjs").then((m) => { classifyName = m.class
   syncDot();
 
   // ── test surface (a headless witness / the console can drive the layer) ──────────────────────────
-  W.HoloKeys = { km, openSpot, openPalette, openCheat, closeAll, get keymapDid() { return keymapDid; },
-    classify: (s) => classifyIntent(s, classifyName), get list() { return list; }, render, _build: buildList,
-    actions: { focusSearch, newChat, summonQ, cycleChat, openApp, openResolve, openWebSearch, askQ, signOut } };
+  W.HoloKeys = { km, openSpot, openPalette, openCheat, closeAll, openStage, closeStage, get keymapDid() { return keymapDid; },
+    classify: (s) => classifyIntent(s, classifyName), get list() { return list; }, get catalog() { return catalog; }, get appStatus() { return appStatus; }, render, _build: buildList,
+    actions: { focusSearch, newChat, summonQ, cycleChat, openApp, openStage, openResolve, openWebSearch, askQ, signOut } };
   try { console.info("[holo-keys] command bar live ·", km.registry.filter((c) => c.title).length, "commands · " + modSymbol + " K = search everything (chats · commands · apps · Q · resolve · web) · ? shortcuts"); } catch {}
 })();
