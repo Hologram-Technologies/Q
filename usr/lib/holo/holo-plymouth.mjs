@@ -141,7 +141,10 @@ function sealFirstFrame(theme, bytes) {
         if (!keyed || !keyed.toDataURL) return;
         const url = keyed.toDataURL("image/png");
         if (url.length > 120000) return;
-        const s = readState(); if (s.theme === theme) { s.firstFrame = url; writeState(s); }
+        // ffKeyed stamps the seal as CHROMA-KEYED — the baseline paints ONLY stamped (or embedded-default)
+        // frames, so a legacy unkeyed seal can never put a baked-black square over the boot ground again
+        // (the ground and the login wall are ONE token, --boot-ground; this keeps the image honest too).
+        const s = readState(); if (s.theme === theme) { s.firstFrame = url; s.ffKeyed = true; writeState(s); }
       } catch {}
     };
     img.onerror = () => { try { URL.revokeObjectURL(u); } catch {} };
@@ -901,7 +904,7 @@ export function attachPlymouth(overlay, host) {
   const state = readState();
   // First-ever run: persist the default WITH the embedded frame-0, so the NEXT boot's 0-ms baseline paints
   // the emblem instantly (no cold CDN) — and this run feeds the same bytes below for an instant live paint.
-  try { if (!localStorage.getItem(KEY)) { if (state.theme === DEFAULT_THEME && !state.firstFrame) state.firstFrame = DEFAULT_FF; writeState(state); } } catch {}
+  try { if (!localStorage.getItem(KEY)) { if (state.theme === DEFAULT_THEME && !state.firstFrame) { state.firstFrame = DEFAULT_FF; state.ffKeyed = true; } writeState(state); } } catch {}
   try { if (!overlay.getAttribute("data-appearance")) overlay.setAttribute("data-appearance", themeMode()); } catch {}   // primitive overlays get the mode too
   let layer = null, player = null, gen = 0;
   let onEmblemLive = () => {};   // set by the boot-beat setup; fired the instant the emblem paints its first frame

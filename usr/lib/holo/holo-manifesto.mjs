@@ -78,8 +78,8 @@ const CSS = `
 /* the brand never arrives — it was always there (HOLO-BOOT-CEREMONY B1): no entrance animation; the host
    baseline paints it with the first black frame and this rule merely keeps its geometry. */
 #holo-login .hl-brand{position:fixed;left:50%;transform:translateX(-50%);bottom:max(26px,env(safe-area-inset-bottom));z-index:3;
-  pointer-events:none;display:inline-flex;align-items:center;gap:11px;color:var(--ink,#f4f7fc)}
-#holo-login .hl-brand svg{width:32px;height:32px;flex:0 0 auto;filter:drop-shadow(var(--shadow,0 0 0 transparent))}
+  pointer-events:none;display:inline-flex;align-items:center;gap:13px;color:var(--ink,#f4f7fc)}
+#holo-login .hl-brand svg{width:40px;height:40px;flex:0 0 auto;filter:drop-shadow(var(--shadow,0 0 0 transparent))}
 #holo-login .hl-brand b{font:700 calc(var(--u,15px)*1.06)/1 "Segoe UI",system-ui,sans-serif;letter-spacing:.2em;padding-left:.2em;color:var(--ink-dim,rgba(231,237,250,.86));text-shadow:var(--shadow,none)}
 @keyframes hlm-in{to{opacity:1}}
 /* reduced motion: kill entrances only. NEVER transform:none the brand — its CENTERING is a transform
