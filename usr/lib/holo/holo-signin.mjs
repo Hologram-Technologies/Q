@@ -98,7 +98,7 @@ function prewarm(warmPaint) {
 // #holo-login (the messenger's app.html) owns its own look and this is a no-op — never overrides it.
 const HL_CSS = `#holo-login{position:fixed;inset:0;z-index:2147483000;color:var(--ink);font-family:"Segoe UI",system-ui,-apple-system,sans-serif;
   --u:clamp(16px,1.7vmin,19px);--g1:calc(var(--u)*1.618);--g2:calc(var(--u)*2.618);--avatar:clamp(96px,calc(var(--u)*6.854),128px);--field:min(86vw,calc(var(--avatar)*2.618));--accent:#7defc9;--accent-2:#34d3a6;
-  --ink:#f4f7fc;--ink-dim:rgba(231,237,250,.82);--status:#c4f3e2;--shadow:0 2px 18px rgba(0,0,0,.45);--wall:#1f1f1e;
+  --ink:#f4f7fc;--ink-dim:rgba(231,237,250,.82);--status:#c4f3e2;--shadow:0 2px 18px rgba(0,0,0,.45);--wall:var(--boot-ground,#1f1f1e);
   --glass:rgba(10,14,20,.42);--glass-border:rgba(255,255,255,.14);--glass-ink:rgba(231,237,250,.8);
   --sheet:rgba(8,12,18,.94);--muted:#8b949e;--link:#58a6ff;--field-bg:rgba(255,255,255,.09);--field-border:rgba(255,255,255,.22)}
 #holo-login[data-appearance="dark"]{--shadow:none}

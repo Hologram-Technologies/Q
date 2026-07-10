@@ -191,7 +191,7 @@ async function loadFrames(theme, onFrame, cancelled) {
 
 // ── styles — self-contained, px-based (immune to host font resets), injected once ─────────────────────
 const CSS = `
-#holo-login .hlp{position:fixed;inset:0;z-index:0;pointer-events:none;background:#1f1f1e;opacity:0;transition:opacity .5s ease,background-color 1.1s ease}
+#holo-login .hlp{position:fixed;inset:0;z-index:0;pointer-events:none;background:var(--boot-ground,#1f1f1e);opacity:0;transition:opacity .5s ease,background-color 1.1s ease}
 #holo-login .hlp.on{opacity:1}
 #holo-login .hlp canvas{position:absolute;inset:0;width:100%;height:100%}
 /* greet: the black dissolves — your wallpaper IS the login; the splash lives on as your identity emblem */
@@ -285,6 +285,22 @@ function injectCss() {
 }
 
 const reducedMotion = () => { try { return matchMedia("(prefers-reduced-motion: reduce)").matches; } catch { return false; } };
+
+// ── DEVICE TIER — the ONE adaptive-quality authority (holo-device-tier.mjs), wired into the emblem. ────
+// The player renders at the DEVICE'S ceiling, not blindly at 3×: dprCap comes from the tier profile
+// (lite=1 · balanced=1.5 · high=2 · ultra=3), and a `lite`/Save-Data device wears the sealed frame-0 as a
+// STATIC POSTER (the device-tier doctrine: a still that feels chosen, not a dropped-frame animation).
+// Fail-open: no module → the previous behavior exactly (cap 3, always animate). The sync guess lands
+// before first paint; probe() refines async and the loop picks the new cap up on its next size check.
+let _tier = null;
+try {
+  import("./holo-device-tier.mjs").then((m) => {
+    try { _tier = m.get(); } catch {}
+    try { m.probe().then((p) => { if (p) _tier = p; }).catch(() => {}); } catch {}
+  }).catch(() => {});
+} catch {}
+const emblemDpr = () => Math.min(window.devicePixelRatio || 1, (_tier && _tier.dprCap) || 3);
+const emblemStill = () => !!(_tier && (_tier.renderPath === "static" || (_tier.compute && _tier.compute.saveData)));
 
 // ── CEREMONY BEATS — the boot's own beacons (HOLO-BOOT-CEREMONY-PROMPT B0). performance.mark always;
 // holo-life's strand when present. Fail-open no-ops everywhere — measurement never touches choreography. ──
@@ -398,16 +414,19 @@ function make2dPlayer(overlay, layer, canvas, onLive) {
   let raf = 0, t0 = 0, alive = true, last = 0, started = false, inkOn = false;
   const pose = { ...POSES.boot };          // current, eased toward target every frame
   let target = POSES.boot;
-  const dpr = Math.min(window.devicePixelRatio || 1, 3);
-  function size() { canvas.width = Math.round(innerWidth * dpr); canvas.height = Math.round(innerHeight * dpr); }
+  let dpr = emblemDpr();        // tier-capped (lite=1 … ultra=3) — the loop picks up an async tier refine
+  let lastRect = null;          // last painted rect (CSS px) — the DIRTY RECT: clear only where the emblem was/is
+  let parked = false, settleN = 0;   // static-tier poster: once the pose settles, the loop PARKS (zero steady cost)
+  function size() { dpr = emblemDpr(); canvas.width = Math.round(innerWidth * dpr); canvas.height = Math.round(innerHeight * dpr); lastRect = null; unpark(); }
   size(); addEventListener("resize", size);
+  function unpark() { if (parked && alive) { parked = false; settleN = 0; raf = requestAnimationFrame(loop); } }
   // anchored poses resolve to the avatar slot's live rect (panel rise/resize tracked every frame)
   function liveTarget() {
     if (!target.anchor) return target;
     const cw = canvas.width / dpr, ch = canvas.height / dpr, vmin = Math.min(cw, ch);
     const px = anchorTarget(overlay, target, null);
     if (!px) return target;
-    const o = posOffset();
+    const o = emblemStill() ? { x: 0, y: 0 } : posOffset();   // a static poster holds perfectly still (it must settle to park)
     return { cx: (px.cx + o.x) / cw, cy: (px.cy + o.y) / ch, cap: px.cap / vmin };
   }
   function draw(idx) {
@@ -421,7 +440,16 @@ function make2dPlayer(overlay, layer, canvas, onLive) {
     const w = iw * s, h = ih * s;
     const cx = cw * pose.cx, cy = ch * pose.cy;
     ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-    ctx.clearRect(0, 0, cw, ch);
+    // DIRTY RECT: the wallpaper behind the emblem is static — clear only the union of the previous and the
+    // new sprite rect (a small box), never the whole viewport backing store. On a dpr-3 phone this is the
+    // difference between repainting ~9 Mpx and ~0.7 Mpx every frame — the measured mobile jank, gone.
+    const pad = 4;
+    const r = { x: cx - w / 2 - pad, y: cy - h / 2 - pad, w: w + pad * 2, h: h + pad * 2 };
+    if (lastRect) {
+      const x0 = Math.min(r.x, lastRect.x), y0 = Math.min(r.y, lastRect.y);
+      ctx.clearRect(x0, y0, Math.max(r.x + r.w, lastRect.x + lastRect.w) - x0, Math.max(r.y + r.h, lastRect.y + lastRect.h) - y0);
+    } else ctx.clearRect(0, 0, cw, ch);
+    lastRect = r;
     ctx.drawImage(img, cx - w / 2, cy - h / 2, w, h);
   }
   function loop(now) {
@@ -430,6 +458,7 @@ function make2dPlayer(overlay, layer, canvas, onLive) {
     if (document.hidden || prefix === 0) { last = now; return; }
     if (!t0) t0 = now;
     const dt = Math.min((now - last) / 1000, 0.1); last = now;
+    if (dpr !== emblemDpr()) size();                       // async tier refine landed → re-cap the backing store
     // glide the pose toward its target (exp ease ≈ 750ms settle); reduced motion snaps
     const tgt = liveTarget();
     const k = reducedMotion() ? 1 : Math.min(1, dt * 5.5);
@@ -437,8 +466,18 @@ function make2dPlayer(overlay, layer, canvas, onLive) {
     pose.cy += (tgt.cy - pose.cy) * k;
     pose.cap += (tgt.cap - pose.cap) * k;
     pose.up = (pose.up || 1) + ((tgt.up || 1) - (pose.up || 1)) * k;
-    const idx = Math.floor((now - t0) / (1000 / FPS)) % Math.max(prefix, 1);
+    // STATIC POSTER (tier `lite` / Save-Data): the sealed frame-0 stands as the emblem — no sprite cycle.
+    // Once the pose has settled the loop parks entirely; pose()/resize un-park it. Reduced-motion is NOT
+    // this gate (it keeps the contained in-place cycle — see the "static emblem on mobile" bug note above).
+    const still = emblemStill();
+    const idx = still ? 0 : Math.floor((now - t0) / (1000 / FPS)) % Math.max(prefix, 1);
     draw(idx);
+    if (still) {
+      const eps = 0.0006;
+      if (Math.abs(tgt.cx - pose.cx) < eps && Math.abs(tgt.cy - pose.cy) < eps && Math.abs(tgt.cap - pose.cap) < eps * 8) {
+        if (++settleN > 12) { parked = true; cancelAnimationFrame(raf); }
+      } else settleN = 0;
+    }
   }
   function wake() {
     while (images[prefix]) prefix++;
@@ -461,7 +500,7 @@ function make2dPlayer(overlay, layer, canvas, onLive) {
       img.onerror = () => { try { URL.revokeObjectURL(img.src); } catch {} };
       img.src = URL.createObjectURL(new Blob([bytes], { type: "image/png" }));
     },
-    pose(name) { target = POSES[name] || POSES.greet; if (reducedMotion()) { const t = liveTarget(); pose.cx = t.cx; pose.cy = t.cy; pose.cap = t.cap; pose.up = t.up || 1; if (images[0]) draw(0); } },
+    pose(name) { target = POSES[name] || POSES.greet; unpark(); if (reducedMotion()) { const t = liveTarget(); pose.cx = t.cx; pose.cy = t.cy; pose.cap = t.cap; pose.up = t.up || 1; if (images[0]) draw(0); } },
     ink(on) { const flip = inkOn !== !!on; inkOn = !!on; return flip && started; },   // true → frames need a re-key (caller replays)
     reset() { images.length = 0; prefix = 0; t0 = 0; started = false; },
     destroy() { alive = false; cancelAnimationFrame(raf); removeEventListener("resize", size); },
@@ -584,7 +623,7 @@ async function makeGpuPlayer(overlay, layer, canvas, onLive) {
   try { URL.revokeObjectURL(url); } catch {}
   if (!ok) { try { worker.terminate(); } catch {} return null; }
   const off = canvas.transferControlToOffscreen();       // point of no return — the worker owns the pixels
-  const dpr = () => Math.min(window.devicePixelRatio || 1, 3);
+  const dpr = () => emblemDpr();                          // tier-capped (holo-device-tier): high=2, ultra=3
   worker.postMessage({ t: "init", canvas: off, w: innerWidth, h: innerHeight, dpr: dpr(), reduced: reducedMotion() }, [off]);
   worker.addEventListener("message", (e) => { if (e.data && e.data.t === "first") { try { onLive(); } catch {} } });
   let target = POSES.boot, watch = 0, last = null;
