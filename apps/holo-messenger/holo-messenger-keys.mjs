@@ -453,7 +453,7 @@ import("../../usr/lib/holo/holo-names.mjs").then((m) => { classifyName = m.class
   const CHIPS = [
     { label: "Search",   kbd: "Alt+S", run: () => openSpot() },
     { label: "Commands", kbd: "Alt+C", run: () => openPalette() },
-    { label: "Hide",     kbd: "Alt+H", run: () => setDotHidden(true) },
+    { label: "Hide",     kbd: "Alt+H", run: () => setDotHidden(!dotHidden()) },   // Alt+H toggles — same key brings it back
   ];
   legend.innerHTML = CHIPS.map((c, i) =>
     `<button class="hk-chip" type="button" tabindex="-1" data-i="${i}" title="${esc(c.label)}">${c.kbd ? `<kbd>${esc(c.kbd)}</kbd>` : ""}<span>${esc(c.label)}</span></button>`).join("");
@@ -480,10 +480,10 @@ import("../../usr/lib/holo/holo-names.mjs").then((m) => { classifyName = m.class
     if (!e.altKey || e.ctrlKey || e.metaKey || e.shiftKey) return;
     if (e.code === "KeyS") { e.preventDefault(); openSpot(); }
     else if (e.code === "KeyC") { e.preventDefault(); openPalette(); }
-    else if (e.code === "KeyH") { e.preventDefault(); setDotHidden(true); }
+    else if (e.code === "KeyH") { e.preventDefault(); setDotHidden(!dotHidden()); }   // Alt+H TOGGLES: hides, and the same key un-hides (the listener is global, so it fires even while the dot is hidden)
   }, true);
   // keep a keyboard route to the shortcuts reference + a hide alias in the ? cheat sheet (chords, not chips)
-  km.bind("mod+shift+h", () => setDotHidden(true), { id: "hide-hints", title: "Hide the shortcuts dot", group: "Help" });
+  km.bind("mod+shift+h", () => setDotHidden(!dotHidden()), { id: "hide-hints", title: "Show / hide the shortcuts dot", group: "Help" });
 
   let bloomed = false;
   const bloom = (on) => { if (on === bloomed) return; bloomed = on; dot.classList.toggle("bloom", on); };
