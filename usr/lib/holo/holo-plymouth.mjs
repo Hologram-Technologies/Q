@@ -328,7 +328,8 @@ const beat = (n) => {
 //   identity line   61.8vh  = 100/φ        (the lower golden line — avatar centre)
 //   emblem centre   38.2vh  = 100/φ²       (the upper golden line — greet pose lands here by anchor math)
 //   hero            centre 50vh (power symmetry: boot and power-off share the screen's axis), cap .95vmin,
-//                   up 1.35 ≈ √φ·1.06 — bounded upscale so a soft render never turns to mush
+//                   up 1.5 — bounded upscale (a touch past √φ for a more confident hero; a soft render
+//                   still never turns to mush). MUST agree with app.html's baseline min(800px,95vmin).
 //   emblem topGap   6vh ≈ 38.2/φ⁴          greet cap ≤ avatar.bottom − topGap, ≤ 90% width (anchorTarget)
 //   short screens   56vh ≈ 61.8·0.9        (identity lifts one notch when the column would overflow)
 //   beats           hold 5000–5600ms · glide ≈750ms (exp, k=dt·5.5) · reveal 600ms · defog 720ms · flare 620ms
@@ -336,7 +337,7 @@ const POSES = {
   // boot is the HERO: dead-centre of the screen, larger than life. `up` lets the sprite grow past its
   // natural size (bounded, so a soft render never turns to mush) — both players EASE it like cap, so the
   // hand-off to greet is ONE continuous shrink-and-glide, never a snap.
-  boot:   { cx: 0.5, cy: 0.5, cap: 0.95, up: 1.35 },
+  boot:   { cx: 0.5, cy: 0.5, cap: 0.95, up: 1.5 },
   greet:  { cx: 0.5, cy: 0.36, cap: 0.50, anchor: true, mult: 8 },
   verify: { cx: 0.5, cy: 0.36, cap: 0.54, anchor: true, mult: 8 },
 };
@@ -380,28 +381,16 @@ function keyBlack(img, ink) {
     return c;
   } catch { return img; }
 }
-// ── LIVING MOTION — the emblem is a hologram suspended in space: it breathes with a slow autonomous float
-// and, on a device with a pointer, leans with your cursor (parallax). Both are tiny px offsets folded into
-// the pose TARGET, so the player's existing ease smooths them for free — no worker or shader surgery. Under
-// reduced motion it holds perfectly still. Works on both backends (GPU worker via send(), 2D via liveTarget). ─
-let _paraX = 0, _paraY = 0, _paraArmed = false;
-function armParallax() {
-  if (_paraArmed) return; _paraArmed = true;
-  if (reducedMotion()) return;
-  try {
-    addEventListener("pointermove", (e) => {
-      if (e.pointerType === "touch") return;                 // desktop hover only — touch has no idle hover
-      _paraX = -((((e.clientX / innerWidth) || 0.5) - 0.5)) * 26;   // ±13px, opposite the cursor → it floats in front of the glass
-      _paraY = -((((e.clientY / innerHeight) || 0.5) - 0.5)) * 20;  // ±10px
-    }, { passive: true });
-    addEventListener("blur", () => { _paraX = 0; _paraY = 0; }, { passive: true });
-  } catch {}
-}
+// ── LIVING MOTION — the emblem is a hologram suspended in space: it breathes with a slow AUTONOMOUS float,
+// a tiny px offset folded into the pose TARGET, so the player's existing ease smooths it for free. Under
+// reduced motion it holds perfectly still. Works on both backends (GPU worker via send(), 2D via liveTarget).
+// (Pointer parallax was REMOVED by request 2026-07-10: the emblem must never move in relation to the mouse —
+// its life is its own breath, not a reaction to the operator's hand.) ─
 function posOffset() {                                        // px offset added to an ANCHORED pose's centre
   if (reducedMotion()) return { x: 0, y: 0 };
   let fx = 0, fy = 0;
   try { const t = performance.now() / 1000; fx = Math.sin(t * 0.55) * 6; fy = Math.cos(t * 0.42) * 7.5; } catch {}
-  return { x: fx + _paraX, y: fy + _paraY };
+  return { x: fx, y: fy };
 }
 
 // ── the 2D floor: the proven player, unchanged physics (25 fps stepped, CPU key) — dpr up to 3 + high-quality
@@ -669,7 +658,6 @@ function isMobileLike() {
 // GPU backend that hasn't drawn a first frame within ~2s onto a FRESH-canvas 2D player, replaying the
 // early frames — so the emblem always ends up moving, on any device, even if WebGPU lies about working.
 function makePlayer(overlay, layer, onLive) {
-  armParallax();                                           // living motion: pointer-lean (desktop) + autonomous float
   let backend = null, queue = [], lastPose = null, lastInk = null, dead = false;
   let firstFired = false, watchdog = 0, early = [];        // early frame copies, for a fallback replay
   let forced = null; try { forced = new URLSearchParams(location.search).get("emblem"); } catch {}
