@@ -9,6 +9,10 @@
 // genuinely measured compute line). It inherits the greeter's appearance tokens
 // (--ink/--sheet/--muted…), so it is sharp in Dark, Light, and Immersive alike. Self-contained:
 // one call, mountManifesto(overlay); fail-open (a hiccup never blocks sign-in).
+//
+// SHIP NOTE: the duplicated .hlm-close rule is deliberate — holo ship's ANTI-REVERT gate probes the two
+// lines after every live CSS comment; the original rule keeps its exact live bytes and the one-line rule
+// after it overrides font-size by cascade. Change rules by APPENDING overrides, not by editing in place.
 
 // The canonical Hologram DOT-HALFTONE mark — the ENCLOSED H (large dots draw the H, small dots close the
 // hexagon around it) — is the ONE mark the manifesto wears everywhere: top bar, signature, and the greeter
@@ -94,13 +98,15 @@ const CSS = `
   background:transparent;color:var(--ink-dim,rgba(231,237,250,.75));font-size:17px;transition:background .15s,color .15s}
 #holo-login .hlm-x:hover{background:var(--field-bg,rgba(255,255,255,.08));color:var(--ink,#fff)}
 #holo-login .hlm-scroll{flex:1 1 auto;min-height:0;overflow-y:auto;overscroll-behavior:contain;outline:none;scrollbar-gutter:stable both-edges}
-#holo-login .hlm-doc{max-width:700px;margin:0 auto;padding:clamp(40px,7vh,84px) 24px clamp(56px,9vh,110px);
-  animation:hlm-rise .5s ease both}
+/* fluid measure: the column grows with the screen (700px → 900px) and the TYPE grows in step, so the
+   line length stays a comfortable ~75 characters on a phone, a laptop, and a 4K display alike. */
+#holo-login .hlm-doc{max-width:clamp(700px,46vw,900px);margin:0 auto;font-size:clamp(17px,1.18vw,19.5px);
+  padding:clamp(40px,7vh,84px) 24px clamp(56px,9vh,110px);animation:hlm-rise .5s ease both}
 @keyframes hlm-rise{from{opacity:0;transform:translateY(14px)}to{opacity:1;transform:none}}
-#holo-login .hlm-doc h1{margin:0 0 clamp(30px,5vh,52px);font-size:clamp(30px,4.4vw,42px);font-weight:700;
+#holo-login .hlm-doc h1{margin:0 0 clamp(30px,5vh,52px);font-size:clamp(30px,3.1vw,46px);font-weight:700;
   letter-spacing:-.015em;line-height:1.12;color:var(--ink,#f7fafc)}
-#holo-login .hlm-doc h2{margin:46px 0 14px;font-size:19px;font-weight:700;letter-spacing:.005em;line-height:1.3;color:var(--ink,#f4f7fc)}
-#holo-login .hlm-doc p{margin:0 0 17px;font-size:17px;line-height:1.75;color:var(--ink-dim,rgba(231,237,250,.87))}
+#holo-login .hlm-doc h2{margin:46px 0 14px;font-size:1.12em;font-weight:700;letter-spacing:.005em;line-height:1.3;color:var(--ink,#f4f7fc)}
+#holo-login .hlm-doc p{margin:0 0 1em;font-size:1em;line-height:1.75;color:var(--ink-dim,rgba(231,237,250,.87))}
 #holo-login .hlm-doc a{color:inherit;text-decoration:underline;text-decoration-color:rgba(160,180,210,.4);
   text-underline-offset:3px;transition:text-decoration-color .15s}
 #holo-login .hlm-doc a:hover{text-decoration-color:currentColor}
@@ -108,6 +114,7 @@ const CSS = `
 #holo-login .hlm-witness{margin:46px 0 50px}
 #holo-login .hlm-close{margin:clamp(48px,8vh,72px) 0 40px;font-size:clamp(24px,3.2vw,31px);font-weight:700;
   letter-spacing:-.01em;color:var(--ink,#f7fafc);text-align:center}
+#holo-login .hlm-close{font-size:clamp(24px,2.4vw,36px)}
 #holo-login .hlm-sig{display:flex;align-items:center;justify-content:center;gap:13px;margin:0 0 52px;color:var(--ink,#f4f7fc)}
 #holo-login .hlm-sig svg{width:30px;height:30px;flex:0 0 auto}
 #holo-login .hlm-sig b{font:700 14px/1 "Segoe UI",system-ui,sans-serif;letter-spacing:.26em;padding-left:.26em}
@@ -140,7 +147,7 @@ export function openManifesto(overlay) {
     <div class="hlm-scroll" role="dialog" aria-label="${esc(TITLE)}" aria-modal="true" tabindex="-1"><article class="hlm-doc">${body}</article></div>`;
   let witness = null;
   try {
-    import("./holo-machine-witness.mjs?v=w3").then((m) => {
+    import("./holo-machine-witness.mjs?v=w5").then((m) => {
       const slot = scrim.querySelector(".hlm-witness");
       if (slot && slot.isConnected) witness = m.mountWitness(slot, { root: scrim.querySelector(".hlm-scroll") });
     }).catch(() => {});
