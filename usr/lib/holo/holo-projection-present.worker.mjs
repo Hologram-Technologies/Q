@@ -9,6 +9,14 @@
 // resolver worker; the GPU takes it at F2) — nothing unverified ever reaches a surface.
 
 let lane = null;
+let _gpu = null;      // null=untried · false=unavailable · {hash} — the E1 verifier (lazy)
+async function verifier() {
+  if (_gpu === null) {
+    try { const { makeGpuKappa } = await import("./holo-projection-verify.mjs"); _gpu = (await makeGpuKappa()) || false; }
+    catch (e) { _gpu = false; }
+  }
+  return _gpu;
+}
 const mounts = new Map();     // id → { canvas, ctx, dpr }
 const waits = new Map();      // id → { kappa, t0 }
 const cache = new Map();      // κ → ImageBitmap | { raw:Uint8Array }  (LRU, capped)
@@ -41,10 +49,21 @@ function onLane(m) {
 async function admit(m) {
   waits.delete(m.id);
   const bytes = new Uint8Array(m.buf);
+  // E1: the GPU road — a tagged object verifies HERE, before any byte reaches the cache or a surface.
+  if (m.verify === "gpu-pending") {
+    const t0 = performance.now();
+    const g = await verifier();
+    let got;
+    if (g) got = await g.hash(bytes);
+    else { const { blake3hex } = await import("./holo-blake3.mjs"); got = await blake3hex(bytes); }   // no-WebGPU floor
+    if (got !== m.kappa) { self.postMessage({ op: "error", id: m.id, why: "REFUSED: re-derived " + got.slice(0, 12) + "… ≠ " + m.kappa.slice(0, 12) + "… (L5, " + (g ? "gpu" : "js") + ")" }); return; }
+    m.verify = g ? "gpu" : "js-floor";
+    m.verify_ms = +(performance.now() - t0).toFixed(1);
+  }
   let surface = null;
   try { surface = await createImageBitmap(new Blob([bytes])); } catch (e) { surface = { raw: bytes }; }   // non-image κ: held raw (F4 routes by kind)
   lru(m.kappa, surface);
-  presentNow(m.id, m.kappa, surface, { resident: false, fetched: true, bytes: bytes.length, fetch_ms: m.fetch_ms, verify_ms: m.verify_ms });
+  presentNow(m.id, m.kappa, surface, { resident: false, fetched: true, bytes: bytes.length, verify: m.verify, fetch_ms: m.fetch_ms, verify_ms: m.verify_ms });
 }
 
 function presentNow(id, kappa, surface, extra) {
@@ -63,6 +82,6 @@ function presentNow(id, kappa, surface, extra) {
     } catch (e) {}
   }
   self.postMessage({ op: "stats", id, stats: { kappa, painted, resident: !!extra.resident, fetched: !!extra.fetched,
-    bytes: extra.bytes ?? (surface && surface.raw ? surface.raw.length : undefined),
+    bytes: extra.bytes ?? (surface && surface.raw ? surface.raw.length : undefined), verify: extra.verify,
     fetch_ms: extra.fetch_ms, verify_ms: extra.verify_ms, present_ms: +(performance.now() - t0).toFixed(2), cache_size: cache.size } });
 }

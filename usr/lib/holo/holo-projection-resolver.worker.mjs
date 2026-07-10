@@ -51,10 +51,18 @@ async function produce(id, hex) {
     if (!r.ok) throw new Error("no rung produced the object (http " + r.status + ")");
     const bytes = new Uint8Array(await r.arrayBuffer());
     const tFetch = performance.now();
+    // E1: the GPU road. Objects past the measured crossover (~64 KB: GPU dispatch+readback ≈ JS hash
+    // time) cross the lane UNVERIFIED-BUT-TAGGED — the present worker verifies on the GPU BEFORE any
+    // byte is cached or painted (L5 holds, 18×+ faster). Small objects keep the instant JS check here.
+    if (bytes.length > 65536) {
+      lane.postMessage({ op: "bytes", id, kappa: hex, buf: bytes.buffer, verify: "gpu-pending",
+        fetch_ms: +(tFetch - t0).toFixed(1) }, [bytes.buffer]);
+      return;
+    }
     const got = await blake3hex(bytes);                                   // L5 — off-main, before the lane
     if (got !== hex) throw new Error("REFUSED: re-derived " + got.slice(0, 12) + "… ≠ " + hex.slice(0, 12) + "… (L5)");
     const tVerify = performance.now();
-    lane.postMessage({ op: "bytes", id, kappa: hex, buf: bytes.buffer,
+    lane.postMessage({ op: "bytes", id, kappa: hex, buf: bytes.buffer, verify: "js",
       fetch_ms: +(tFetch - t0).toFixed(1), verify_ms: +(tVerify - tFetch).toFixed(1) }, [bytes.buffer]);
   } catch (err) {
     lane.postMessage({ op: "fail", id, why: String(err.message || err) });

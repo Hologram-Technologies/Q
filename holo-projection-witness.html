@@ -63,6 +63,20 @@ try { new PerformanceObserver((l) => longTasks.push(...l.getEntries().map(x => M
 
     R.ok = [R.w1, R.w2, R.w3, R.w4, R.w5].every(w => w && w.ok);
     log(R.ok ? "\nF1 ALL GREEN" : "\nF1 RED");
+
+    // ── E1: the GPU road through the FABRIC ────────────────────────────────────────────────────────
+    const E = (window.__f1e1 = { gpu: null, refusal: null, ok: false });
+    const fabric2 = await (await import("/usr/lib/holo/holo-projection.mjs")).mountProjection({ base: location.origin + "/" });
+    const g1 = await fabric2.project(K1, null);                 // 358KB, 351 chunks -> GPU-verified pre-paint
+    const sg = g1.stats();
+    E.gpu = { verify: sg.verify, verify_ms: sg.verify_ms, bytes: sg.bytes, ok: (sg.verify === "gpu" || sg.verify === "js-floor") && sg.bytes > 65536 };
+    log("E1 gpu road: " + JSON.stringify(E.gpu));
+    const KBAD = "blake3:00566dbbfe60f4291416c9823f7bae58f700f5f352f3aedfdaed680663954f0f";
+    let ref = null; try { await fabric2.project(KBAD, null); ref = "PAINTED (BAD)"; } catch (e) { ref = String(e.message); }
+    E.refusal = { ref: ref.slice(0, 80), ok: /REFUSED/.test(ref) };
+    log("E1 refusal: " + JSON.stringify(E.refusal));
+    E.ok = E.gpu.ok && E.refusal.ok;
+    log(E.ok ? "E1 GREEN" : "E1 RED");
   } catch (e) { R.error = String(e.message || e); log("ERROR: " + R.error); }
 })();
 </script>
