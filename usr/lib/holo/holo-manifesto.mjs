@@ -94,7 +94,7 @@ const CSS = `
   background:transparent;color:var(--ink-dim,rgba(231,237,250,.75));font-size:17px;transition:background .15s,color .15s}
 #holo-login .hlm-x:hover{background:var(--field-bg,rgba(255,255,255,.08));color:var(--ink,#fff)}
 #holo-login .hlm-scroll{flex:1 1 auto;min-height:0;overflow-y:auto;overscroll-behavior:contain;outline:none;scrollbar-gutter:stable both-edges}
-#holo-login .hlm-doc{max-width:660px;margin:0 auto;padding:clamp(40px,7vh,84px) 24px clamp(56px,9vh,110px);
+#holo-login .hlm-doc{max-width:700px;margin:0 auto;padding:clamp(40px,7vh,84px) 24px clamp(56px,9vh,110px);
   animation:hlm-rise .5s ease both}
 @keyframes hlm-rise{from{opacity:0;transform:translateY(14px)}to{opacity:1;transform:none}}
 #holo-login .hlm-doc h1{margin:0 0 clamp(30px,5vh,52px);font-size:clamp(30px,4.4vw,42px);font-weight:700;
@@ -104,7 +104,8 @@ const CSS = `
 #holo-login .hlm-doc a{color:inherit;text-decoration:underline;text-decoration-color:rgba(160,180,210,.4);
   text-underline-offset:3px;transition:text-decoration-color .15s}
 #holo-login .hlm-doc a:hover{text-decoration-color:currentColor}
-#holo-login .hlm-witness{width:min(92vw,960px);margin:46px calc((100% - min(92vw,960px))/2) 50px}
+/* the witness shares the column's exact width — one edge line down the whole page (no breakout) */
+#holo-login .hlm-witness{margin:46px 0 50px}
 #holo-login .hlm-close{margin:clamp(48px,8vh,72px) 0 40px;font-size:clamp(24px,3.2vw,31px);font-weight:700;
   letter-spacing:-.01em;color:var(--ink,#f7fafc);text-align:center}
 #holo-login .hlm-sig{display:flex;align-items:center;justify-content:center;gap:13px;margin:0 0 52px;color:var(--ink,#f4f7fc)}
