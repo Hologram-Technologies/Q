@@ -446,12 +446,13 @@ import("../../usr/lib/holo/holo-names.mjs").then((m) => { classifyName = m.class
 
   // ── the ambient hint dot — hold the modifier → bloom the live legend (projected from the keymap) ──
   const legend = $(".hk-legend", dot), core = $(".hk-core", dot), tag = $(".hk-tag", dot);
-  // exactly three chips — Search · Help · Hide. Short, intuitive, fully wired. "Hide" banishes the dot
-  // (persisted); restore it from the cheat sheet footer ("show the hint dot").
+  // exactly three chips — Search · Commands · Hide. Their keys are Alt+S / Alt+C / Alt+H (bound below): Alt+
+  // <letter> is NOT a native browser command (unlike Ctrl+S=Save, Ctrl+C=Copy, Ctrl+H=History), so nothing
+  // overlaps and preventDefault sticks in every browser. "Hide" banishes the dot (restore from the ? sheet).
   const CHIPS = [
-    { label: "Search", kbd: km.label("mod+k"),       run: () => openSpot() },
-    { label: "Help",   kbd: km.label("mod+/"),       run: () => openCheat() },
-    { label: "Hide",   kbd: km.label("mod+shift+h"), run: () => setDotHidden(true) },
+    { label: "Search",   kbd: "Alt+S", run: () => openSpot() },
+    { label: "Commands", kbd: "Alt+C", run: () => openPalette() },
+    { label: "Hide",     kbd: "Alt+H", run: () => setDotHidden(true) },
   ];
   legend.innerHTML = CHIPS.map((c, i) =>
     `<button class="hk-chip" type="button" tabindex="-1" data-i="${i}" title="${esc(c.label)}">${c.kbd ? `<kbd>${esc(c.kbd)}</kbd>` : ""}<span>${esc(c.label)}</span></button>`).join("");
@@ -469,7 +470,18 @@ import("../../usr/lib/holo/holo-names.mjs").then((m) => { classifyName = m.class
   const onHome = () => { try { return D.documentElement.getAttribute("data-holo-home") === "on"; } catch { return true; } };
   const syncDot = () => dot.classList.toggle("show", !dotHidden() && onHome());
   try { new MutationObserver(syncDot).observe(D.documentElement, { attributes: true, attributeFilter: ["data-holo-home", "class"] }); } catch {}
-  // Hide the dot from the keyboard — Ctrl+Shift+H (H = Hide). Bound after setDotHidden exists; registers live.
+  // ── the three quick keys — Alt+S Search · Alt+C Commands · Alt+H Hide. Bound HERE (not via km) on the
+  //    PHYSICAL key (e.code), so they fire identically in every browser AND on macOS, where Option+<letter>
+  //    would otherwise emit a special character (ß/ç/…) and defeat a key-name match. Alt+<letter> is not a
+  //    native browser accelerator, so there is no overlap with Copy/Save/History and preventDefault holds.
+  //    Global (work from anywhere); we ignore the combo when Ctrl/Meta/Shift are also down. ──────────────
+  addEventListener("keydown", (e) => {
+    if (!e.altKey || e.ctrlKey || e.metaKey || e.shiftKey) return;
+    if (e.code === "KeyS") { e.preventDefault(); openSpot(); }
+    else if (e.code === "KeyC") { e.preventDefault(); openPalette(); }
+    else if (e.code === "KeyH") { e.preventDefault(); setDotHidden(true); }
+  }, true);
+  // keep a keyboard route to the shortcuts reference + a hide alias in the ? cheat sheet (chords, not chips)
   km.bind("mod+shift+h", () => setDotHidden(true), { id: "hide-hints", title: "Hide the shortcuts dot", group: "Help" });
 
   let bloomed = false;
@@ -500,5 +512,5 @@ import("../../usr/lib/holo/holo-names.mjs").then((m) => { classifyName = m.class
   W.HoloKeys = { km, openSpot, openPalette, openCheat, closeAll, openStage, closeStage, get keymapDid() { return keymapDid; },
     classify: (s) => classifyIntent(s, classifyName), get list() { return list; }, get catalog() { return catalog; }, get appStatus() { return appStatus; }, render, _build: buildList,
     actions: { focusSearch, newChat, summonQ, cycleChat, openApp, openStage, openResolve, openWebSearch, askQ, signOut } };
-  try { console.info("[holo-keys] command bar live ·", km.registry.filter((c) => c.title).length, "commands · " + modSymbol + " K = search everything (chats · commands · apps · Q · resolve · web) · ? shortcuts"); } catch {}
+  try { console.info("[holo-keys] command bar live ·", km.registry.filter((c) => c.title).length, "commands · Alt+S search · Alt+C commands · Alt+H hide · " + modSymbol + "K launcher · ? shortcuts"); } catch {}
 })();
