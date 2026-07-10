@@ -254,7 +254,11 @@ export async function signIn({ root, params, app = "holospace", appName = "Holog
     // Auth resolves IMMEDIATELY (the host's boot awaits it to render the home — holding it would deadlock
     // into the cap and tax every login); only the VISUAL defog waits for the home's first paint, bounded
     // (~800ms) so a slow home never holds the operator hostage. Interval, not rAF (hidden tabs freeze rAF).
-    const homeReady = () => { try { return !!document.querySelector(".holo-rail, .holo-wa-root, .cs-main-container"); } catch { return false; } };
+    // ARRIVAL (A3): a returning operator with a pending Deep Resume must land IN the resumed context — the
+    // host consumes `holo.resume.pending` (reads + removes) as it applies scroll/drafts, so "key gone" is the
+    // applied signal. Sessions without a resume are untouched; the 800ms cap still rules either way.
+    const resumeSettled = () => { try { return !sessionStorage.getItem("holo.resume.pending"); } catch { return true; } };
+    const homeReady = () => { try { return !!document.querySelector(".holo-rail, .holo-wa-root, .cs-main-container") && resumeSettled(); } catch { return false; } };
     const done = (auth) => {
       beat("auth-ok");
       resolve(auth);                                       // hand the identity to the home NOW — it boots behind the glass
