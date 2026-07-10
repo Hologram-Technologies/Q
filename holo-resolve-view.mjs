@@ -8,10 +8,12 @@
 //
 //   import { mount } from "./holo-resolve-view.mjs"; mount(document.body, "<name-or-empty>");
 
-import names, { classify } from "/usr/lib/holo/holo-names.mjs";
-import { makeHostResolver } from "/usr/lib/holo/holo-names-host.mjs";
-import { loadAppIndex } from "/usr/lib/holo/holo-app-index.mjs";
-import "/usr/lib/holo/holo-card.mjs";                          // registers <holo-card> (idempotent)
+// file-relative — this module lives at the MOUNT ROOT (next to root-door.mjs), so "./usr/…" is exact on
+// every mount (domain root or /<repo>/ subpath); absolute "/usr/…" is first-visit poison on a subpath (G6).
+import names, { classify } from "./usr/lib/holo/holo-names.mjs";
+import { makeHostResolver } from "./usr/lib/holo/holo-names-host.mjs";
+import { loadAppIndex } from "./usr/lib/holo/holo-app-index.mjs";
+import "./usr/lib/holo/holo-card.mjs";                         // registers <holo-card> (idempotent)
 
 const STYLE = `
   :root { --bg:#0b141a; --panel:#111b21; --line:#1f2c33; --ink:#e9edef; --dim:#8696a0; --ok:#00a884; --bad:#f15c6d; --chip:#182229; }

@@ -13,6 +13,9 @@ const BASE = new URL("./", self.location.href).pathname.replace(/\/$/, "");
 const RESCUE = ["/apps/", "/usr/", "/_shared/", "/vendor/", "/sbin/", "/ui/"];
 // boot-sequence directories served CACHE-FIRST from the versioned boot cache (see the fetch tier below)
 const BOOT_DIRS = ["/usr/lib/holo/", "/usr/share/plymouth/", "/apps/holo-messenger/", "/_shared/"];
+// the DOOR's own closure at the root scope — sealed by app.html into holo-boot-<stamp>; without these the
+// offline root navigation paints a door that 404s its own module graph and dead-ends at the floor line.
+const BOOT_FILES = { "/root-door.mjs": 1, "/holo-root-resolver.mjs": 1, "/holo-resolve-view.mjs": 1, "/apps/index.jsonld": 1, "/apps-blake3.json": 1 };
 const ROOT_FILES = { "/holo-resolver.mjs": 1, "/holo-fabric.mjs": 1, "/manifest.webmanifest": 1 };
 const MIME = { js: "text/javascript", mjs: "text/javascript", css: "text/css", json: "application/json", svg: "image/svg+xml", wasm: "application/wasm", html: "text/html" };
 
@@ -67,7 +70,15 @@ self.addEventListener("fetch", (e) => {
   // included (ignoreSearch lets ?guest=1 land on the sealed page). A miss falls through to the network
   // untouched, so before the first seal this tier is invisible. Freshness is the PAGE's job: a new signed
   // release pointer mints a new cache name and purges the old — the worker never guesses.
-  if (req.mode === "navigate" || BOOT_DIRS.some((d) => p.startsWith(BASE + d))) {
+  // release.json is the UPDATE FEED — network-FIRST so a new signed head is never masked by a stale
+  // cache; only when the network is actually gone does the sealed copy answer (the door then still
+  // resolves the messenger by its signed κ with the radio dead).
+  if (p === BASE + "/release.json") {
+    e.respondWith(fetch(req).catch(async () => (await caches.match(req, { ignoreSearch: true })) || Response.error()));
+    return;
+  }
+
+  if (req.mode === "navigate" || BOOT_FILES[p.slice(BASE.length)] || BOOT_DIRS.some((d) => p.startsWith(BASE + d))) {
     e.respondWith((async () => {
       try {
         const hit = await caches.match(req, { ignoreSearch: req.mode === "navigate" });
