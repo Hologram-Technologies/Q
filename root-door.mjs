@@ -31,6 +31,9 @@ async function resolveHere(name) {
 }
 
 (async () => {
+  // A CARRY LINK at the root (#recv=1.<sha256>.<payload>.<name>): the bytes are IN THE LINK — the
+  // resolver is also the RECEIVER. Render the receive door inline; no app boot, no host, no index.
+  if ((location.hash || "").startsWith("#recv=1.")) return resolveHere("");
   try {
     const index = await loadAppIndex({ base: here });          // the SIGNED apps table → one κ per app
     const target = chooseTarget({ index, intent, findApp });

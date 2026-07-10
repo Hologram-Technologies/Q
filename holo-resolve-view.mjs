@@ -178,6 +178,44 @@ export function mount(root, initialName) {
   }
   $("chips").addEventListener("click", (e) => { const c = e.target.closest(".chip"); if (!c) return; $("name").value = c.dataset.v; $("name").dispatchEvent(new Event("input")); go(); });
 
+  // ── SEAL — the universal lossless encoder on the front door (HOLO-SHOWCASE-COMPLETE H2) ────────────
+  // Drop ANY file → it becomes a κ: blake3-named, deflated into a link that CARRIES the bytes (the
+  // carry codec: sha256 re-derived on open = L5 on the wire), held on this device (OPFS, per-origin,
+  // said honestly). unseal(seal(x)) === x — byte-exact, zero hosts; the self-test chip proves it live.
+  async function sealFiles(files) {
+    const { seal } = await import(new URL("usr/lib/holo/holo-seal.mjs", BASE).href);
+    const out = $("out"); out.className = "show"; out.innerHTML = "";
+    for (const f of files) {
+      const r = await seal(f, { name: f.name, base: BASE.href, hold: true });
+      const d = document.createElement("div"); d.className = "projp";
+      const badge = r.link ? (r.link.tier === "qr" ? "the link carries the file — scan = receive" : "the link carries the file — no host, anywhere")
+                          : "too big to carry in a link (" + (r.payloadChars || 0).toLocaleString() + " chars) — held on this device only";
+      d.innerHTML = `<div class="ro"><b>${f.name}</b> · ${r.bytes.toLocaleString()} bytes sealed<br>` +
+        `κ <b style="font-family:ui-monospace,monospace;font-size:11px">${r.kappa.slice(0, 46)}…</b><br>` +
+        `${badge}${r.held ? " · held on this device, this site" : ""}</div><div class="pchips"></div>`;
+      const chips = d.querySelector(".pchips");
+      if (r.link) {
+        const b = document.createElement("button"); b.textContent = "copy the link (" + r.link.chars.toLocaleString() + " chars, " + r.link.tier + ")";
+        b.onclick = async () => { try { await navigator.clipboard.writeText(r.link.url); b.textContent = "copied — it opens anywhere, no host"; } catch (e) {} };
+        chips.appendChild(b);
+      }
+      const t = document.createElement("button"); t.textContent = "prove it: unseal(seal(x)) === x";
+      t.onclick = async () => {
+        const { unseal } = await import(new URL("usr/lib/holo/holo-seal.mjs", BASE).href);
+        if (!r.link) { t.textContent = "no link at this size — identity proven via the hold"; return; }
+        const u = await unseal(r.link.url);
+        const bytes = new Uint8Array(await f.arrayBuffer());
+        const same = !u.error && u.bytes.length === bytes.length && u.bytes.every((v, i) => v === bytes[i]) && u.kappa === r.kappa;
+        t.textContent = same ? "byte-exact ✓ · κ re-derived ✓ · zero hosts" : "IDENTITY FAILED (report this)";
+      };
+      chips.appendChild(t);
+      out.appendChild(d);
+    }
+  }
+  host.addEventListener("dragover", (e) => { e.preventDefault(); });
+  host.addEventListener("drop", (e) => { e.preventDefault(); if (e.dataTransfer?.files?.length) sealFiles([...e.dataTransfer.files]); });
+
+
   $("benchgo").addEventListener("click", async () => {
     const btn = $("benchgo"); btn.textContent = "measuring in your browser…"; btn.disabled = true;
     let κ = null;
@@ -221,10 +259,26 @@ export function mount(root, initialName) {
   });
 
   // deep link at the ROOT: /Q/#<name> resolves on load; hashchange re-resolves (shareable, the seal's target).
-  function fromHash() { const h = decodeURIComponent((location.hash || "").replace(/^#/, "")).trim(); if (h && h !== $("name").value.trim()) { $("name").value = h; $("name").dispatchEvent(new Event("input")); go(); } }
+  async function recvDoor() {
+    // a carry link opened AT THE ROOT: unseal, re-derive, offer the bytes (the resolver is a receive door)
+    const { unseal } = await import(new URL("usr/lib/holo/holo-seal.mjs", BASE).href);
+    const u = await unseal(location.hash);
+    const out = $("out"); out.className = "show"; out.innerHTML = "";
+    const d = document.createElement("div"); d.className = "projp";
+    if (u.error) { d.innerHTML = `<div class="ro"><b>refused:</b> this carry link does not verify (${u.error}) — nothing was delivered (L5)</div>`; }
+    else {
+      d.innerHTML = `<div class="ro"><b>${u.name}</b> · ${u.bytes.length.toLocaleString()} bytes arrived IN THE LINK — no host served this<br>κ <b style="font-family:ui-monospace,monospace;font-size:11px">${u.kappa.slice(0, 46)}…</b> · sha256 re-derived ✓</div><div class="pchips"></div>`;
+      const b = document.createElement("button"); b.textContent = "save " + u.name;
+      b.onclick = () => { const a = document.createElement("a"); a.href = URL.createObjectURL(new Blob([u.bytes])); a.download = u.name; a.click(); };
+      d.querySelector(".pchips").appendChild(b);
+    }
+    out.appendChild(d);
+  }
+  function fromHash() { const h = decodeURIComponent((location.hash || "").replace(/^#/, "")).trim(); if ((location.hash || "").startsWith("#recv=1.")) { recvDoor(); return; } if (h && h !== $("name").value.trim()) { $("name").value = h; $("name").dispatchEvent(new Event("input")); go(); } }
   window.addEventListener("hashchange", fromHash);
   const seed = (initialName || "").trim() || decodeURIComponent((location.hash || "").replace(/^#/, "")).trim();
-  if (seed) { $("name").value = seed; $("name").dispatchEvent(new Event("input")); go(); } else { $("name").focus(); }
+  if ((location.hash || "").startsWith("#recv=1.") || seed.startsWith("recv=1.")) { recvDoor(); }   // a carried FILE, not a name
+  else if (seed) { $("name").value = seed; $("name").dispatchEvent(new Event("input")); go(); } else { $("name").focus(); }
 }
 
 export default { mount };
