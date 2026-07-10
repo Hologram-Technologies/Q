@@ -240,7 +240,7 @@ export function mountWitness(host, opts = {}) {
     if (captioned && (!crossed || captionCrossed)) return;
     let text;
     if (crossed) {
-      text = "You just watched this device pass the fastest computer on Earth in 1997. That is no longer our claim. It is your measurement.";
+      text = "This device just passed the fastest computer on Earth in 1997. Not our claim. Your measurement.";
       captionCrossed = true;
     } else if (mode === "gpu") {
       text = "You just watched this device do " + fmtWords(v) + " calculations per second, measured live. Not our claim. Your measurement.";
@@ -269,12 +269,12 @@ export function mountWitness(host, opts = {}) {
     const Y = (v) => pad + h - Math.max(0, Math.min(1, v / top)) * h;
     if (showRecord) { // the 1997 world record, drawn where it truly sits on this scale
       const ry = Y(RECORD);
-      ctx.save(); ctx.setLineDash([4, 5]); ctx.strokeStyle = "rgba(231,237,250,.28)"; ctx.lineWidth = 1;
+      ctx.save(); ctx.setLineDash([6, 5]); ctx.strokeStyle = "rgba(231,237,250,.5)"; ctx.lineWidth = 1.5;
       ctx.beginPath(); ctx.moveTo(0, ry); ctx.lineTo(W, ry); ctx.stroke(); ctx.restore();
-      ctx.font = '10.5px "Segoe UI", system-ui, sans-serif'; ctx.textAlign = "right";
+      ctx.font = '600 12.5px "Segoe UI", system-ui, sans-serif'; ctx.textAlign = "right";
       const lbl = "ASCI Red · 1997 world record", tw = ctx.measureText(lbl).width;
-      ctx.fillStyle = "rgba(13,16,20,.78)"; ctx.fillRect(W - 10 - tw - 5, ry - 16, tw + 10, 14);
-      ctx.fillStyle = "rgba(231,237,250,.55)"; ctx.fillText(lbl, W - 10, ry - 5);
+      ctx.fillStyle = "rgba(13,16,20,.82)"; ctx.fillRect(W - 12 - tw - 7, ry - 21, tw + 14, 18);
+      ctx.fillStyle = "rgba(231,237,250,.85)"; ctx.fillText(lbl, W - 12, ry - 7);
     }
     ctx.beginPath(); ctx.moveTo(0, H);
     for (let i = 0; i < N; i++) ctx.lineTo(X(i), Y(disp[i]));

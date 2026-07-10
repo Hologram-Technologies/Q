@@ -241,7 +241,7 @@ export async function signIn({ root, params, app = "holospace", appName = "Holog
   try { import("./holo-plymouth.mjs").then((m) => { plymouth = m.attachPlymouth(overlay, plymouthHost); }).catch(() => {}); } catch {}
   // MANIFESTO + WORDMARK — the greeter's brand chrome (top-left door + bottom-centre Hologram mark), speaking
   // the OS's own words. Purely additive and fail-open (a hiccup never blocks sign-in).
-  try { import("./holo-manifesto.mjs?v=mark7").then((m) => m.mountManifesto(overlay)).catch(() => {}); } catch {}
+  try { import("./holo-manifesto.mjs?v=mark8").then((m) => m.mountManifesto(overlay)).catch(() => {}); } catch {}
   const panel = document.getElementById("holo-login-panel");
   const statusEl = () => panel.querySelector(".status");
   const setStatus = (t, err) => { if (err) { try { plymouth && plymouth.calm(); } catch {} } const el = statusEl(); if (el) { el.className = "status" + (err ? " err" : ""); el.textContent = t || ""; } };

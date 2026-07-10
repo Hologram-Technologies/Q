@@ -140,7 +140,7 @@ export function openManifesto(overlay) {
     <div class="hlm-scroll" role="dialog" aria-label="${esc(TITLE)}" aria-modal="true" tabindex="-1"><article class="hlm-doc">${body}</article></div>`;
   let witness = null;
   try {
-    import("./holo-machine-witness.mjs?v=w2").then((m) => {
+    import("./holo-machine-witness.mjs?v=w3").then((m) => {
       const slot = scrim.querySelector(".hlm-witness");
       if (slot && slot.isConnected) witness = m.mountWitness(slot, { root: scrim.querySelector(".hlm-scroll") });
     }).catch(() => {});
