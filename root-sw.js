@@ -35,7 +35,12 @@ self.addEventListener("fetch", (e) => {
   if (kap) {
     e.respondWith((async () => {
       const axis = kap[1].toLowerCase(), hex = kap[2].toLowerCase();
-      const r = await fetch(BASE + "/b/" + hex);
+      // origin b/ first; PRUNED objects fall to the kappa-mirror (U5) — same fail-closed verify below,
+      // so the store can shrink while every kappa keeps resolving (the mirror is untrusted capacity).
+      let r = await fetch(BASE + "/b/" + hex);
+      // mirror rung is blake3-only: that axis re-derives through the verifier below; sha256 has no
+      // streaming verify here, and an UNVERIFIED untrusted-mirror byte must never ship (L5/SEC-1).
+      if (!r.ok && axis === "blake3") r = await fetch("https://huggingface.co/HOLOGRAMTECH/holo-messenger-shell/resolve/main/b/" + hex);
       if (!r.ok) return r;
       const headers = { "content-type": MIME[(kap[3] || "").toLowerCase()] || r.headers.get("content-type") || "application/octet-stream" };
       let body = r.body;
