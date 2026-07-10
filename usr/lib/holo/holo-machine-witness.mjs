@@ -228,14 +228,20 @@ export function mountWitness(host, opts = {}) {
     maybeCaption();
   }
 
-  // the words respond — one sentence, manifesto voice, only what was measured.
+  // the words respond — one sentence, manifesto voice, only what was measured. The sentence is written
+  // once, and may STRENGTHEN once: the burst self-tunes upward for a few seconds, so a machine that
+  // crosses the 1997 record just after the first sentence gets the sentence it earned.
+  let captionCrossed = false;
   function maybeCaption() {
-    if (captioned || !startedAt || performance.now() - startedAt < 3200) return;
+    if (!startedAt || performance.now() - startedAt < 3200) return;
     const v = mode === "gpu" ? gpuOps : cpuOps;
     if (!(v > 0)) return;
+    const crossed = mode === "gpu" && crossedRuns >= 4;
+    if (captioned && (!crossed || captionCrossed)) return;
     let text;
-    if (mode === "gpu" && crossedRuns >= 4) {
+    if (crossed) {
       text = "You just watched this device pass the fastest computer on Earth in 1997. That is no longer our claim. It is your measurement.";
+      captionCrossed = true;
     } else if (mode === "gpu") {
       text = "You just watched this device do " + fmtWords(v) + " calculations per second, measured live. Not our claim. Your measurement.";
     } else {
