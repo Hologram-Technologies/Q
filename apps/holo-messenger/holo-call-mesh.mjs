@@ -5,6 +5,7 @@
 // P2P (DTLS-SRTP); the relay only shuttles SDP/ICE. Mesh is fine to ~6 peers; beyond that an SFU forwards (MEET-E seam).
 
 import * as Together from "./holo-together.mjs";
+import { openSignal } from "./holo-call.mjs?v=e0e47cadd4d7";   // THE ONE SIGNAL DOOR — origin /signal on desktop, sealed Nostr rendezvous on hosted static; ?v matches app.mjs's pin so the SW serves ONE fresh copy, never a stale bare-URL cache hit
 
 const ICE = [
   { urls: "stun:stun.l.google.com:19302" },
@@ -21,12 +22,8 @@ export function buildMeetLink(intent, opts = {}) { return Together.buildLink(int
 export function parseMeet(input) { return Together.parseSession(input); }
 export function describeMeet(intent) { return { video: intent.content === "video", host: intent.hostName || "Someone", headline: (intent.hostName || "Someone") + "'s room" }; }
 
-function _connect(base, room, peer, onMsg) {
-  const es = new EventSource(`${base}/signal?room=${encodeURIComponent(room)}&peer=${encodeURIComponent(peer)}`);
-  es.onmessage = (e) => { let d; try { d = JSON.parse(e.data); } catch { return; } onMsg(d); };
-  const post = (obj) => { try { fetch(`${base}/signal`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ room, from: peer, ...obj }) }); } catch {} };
-  return { post, close: () => { try { es.close(); } catch {} } };
-}
+// (the per-module EventSource _connect was deleted — the mesh now signals through holo-call's shared openSignal,
+//  so 1:1 calls and group meets ride ONE transport: /signal on an origin, the sealed Nostr rendezvous on hosted static)
 
 // Join the meeting mesh with your local `media`. Returns controls + emits per-participant streams.
 export async function joinMesh(intent, { media = null, displayName = "", onParticipant = () => {}, onParticipantLeave = () => {}, onState = () => {}, onActiveSpeaker = () => {} } = {}) {
@@ -35,7 +32,7 @@ export async function joinMesh(intent, { media = null, displayName = "", onParti
   const peers = new Map();   // other → { pc, makingOffer, ignoreOffer, polite, stream }
   let left = false;
 
-  const sig = _connect(base, room, me, async (d) => {
+  const sig = await openSignal(base, room, me, async (d) => {
     if (left) return;
     if (d.kind === "ready") { for (const p of (d.peers || [])) ensure(p); }
     else if (d.kind === "peer-join") ensure(d.from);

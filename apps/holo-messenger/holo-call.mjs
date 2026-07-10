@@ -27,7 +27,10 @@ export function buildCallLink(intent, opts = {}) { return Together.buildLink(int
 export function parseCall(input) { return Together.parseSession(input); }
 export function describeCall(intent) { return { video: intent.content === "video", caller: intent.hostName || "Someone", headline: (intent.hostName || "Someone") + " is calling", verb: intent.content === "video" ? "Video call" : "Voice call" }; }
 // SYNC detector for an incoming-call link in a message body → { intent, url } | null (ring on a FRESH one).
-const _CALL_RE = /(\S*call-view\.html#([A-Za-z0-9_-]+))|(holo:\/\/together\/\S*#([A-Za-z0-9_-]+))/;
+// Matches BOTH view pages — buildCallLink emits …/together-view.html#… (the buildLink default), the older
+// call-view.html form stays recognized — plus the in-shell holo:// form. The decoded payload's kind==="call"
+// check below is the real gate, so a watch/doc together link matching here never rings.
+const _CALL_RE = /(\S*(?:call|together)-view\.html#([A-Za-z0-9_-]+))|(holo:\/\/together\/\S*#([A-Za-z0-9_-]+))/;
 export function callLinkInText(text) {
   const m = String(text || "").match(_CALL_RE); if (!m) return null;
   const payload = m[2] || m[4], url = m[0];
@@ -36,10 +39,12 @@ export function callLinkInText(text) {
 }
 
 // ── symmetric perfect-negotiation peer ────────────────────────────────────────────────────────────────────────────
-// The signaling channel for (room, peer). On a real ORIGIN (desktop / dev server) it rides the together-signal relay
+// THE ONE SIGNAL DOOR for every realtime surface (1:1 calls here, the group mesh in holo-call-mesh.mjs): the
+// signaling channel for (room, peer). On a real ORIGIN (desktop / dev server) it rides the together-signal relay
 // (SSE + POST /signal). On a STATIC hosted origin (github.io) that relay 404s, so — exactly like 1:1 chat
 // (holo-chat-context) — it rides the content-blind Nostr rendezvous instead: sealed {from,…} blobs at a coordinate
 // DERIVED from the room κ, over public relays. No server we run; the relay sees only ciphertext. Returns {post, close}.
+export async function openSignal(base, room, peer, onMsg) { return _connect(base, room, peer, onMsg); }
 async function _connect(base, room, peer, onMsg) {
   const hosted = typeof location !== "undefined" && !!location.hostname && !/^(127\.0\.0\.1|localhost|\[::1\])$/.test(location.hostname);
   if (hosted && typeof WebSocket !== "undefined") {
