@@ -11,6 +11,8 @@
 //     root-sw-classic.js where module workers are unsupported (no boot regression).
 const BASE = new URL("./", self.location.href).pathname.replace(/\/$/, "");
 const RESCUE = ["/apps/", "/usr/", "/_shared/", "/vendor/", "/sbin/", "/ui/"];
+// boot-sequence directories served CACHE-FIRST from the versioned boot cache (see the fetch tier below)
+const BOOT_DIRS = ["/usr/lib/holo/", "/usr/share/plymouth/", "/apps/holo-messenger/", "/_shared/"];
 const ROOT_FILES = { "/holo-resolver.mjs": 1, "/holo-fabric.mjs": 1, "/manifest.webmanifest": 1 };
 const MIME = { js: "text/javascript", mjs: "text/javascript", css: "text/css", json: "application/json", svg: "image/svg+xml", wasm: "application/wasm", html: "text/html" };
 
@@ -54,6 +56,30 @@ self.addEventListener("fetch", (e) => {
   {
     const cand = RESCUER.matchSync(p);
     if (cand) { e.respondWith(RESCUER.rescue(req, cand)); return; }
+  }
+
+  // ── INSTANT RETURN + OFFLINE BOOT — the root-scope shell cache (M1's contract at "/") ──────────────
+  // The login document at the mount root is controlled by THIS worker (holo-sw's scope cannot reach it).
+  // app.html seals the whole boot sequence — the document itself, the login-chain modules, frames.pack,
+  // the wallpaper — into a versioned "holo-boot-<release-stamp>" cache after first paint; here every
+  // navigation and every request under the boot directories is answered CACHE-FIRST from Cache Storage.
+  // A returning operator boots with ZERO network; fully offline, the same sealed bytes answer — document
+  // included (ignoreSearch lets ?guest=1 land on the sealed page). A miss falls through to the network
+  // untouched, so before the first seal this tier is invisible. Freshness is the PAGE's job: a new signed
+  // release pointer mints a new cache name and purges the old — the worker never guesses.
+  if (req.mode === "navigate" || BOOT_DIRS.some((d) => p.startsWith(BASE + d))) {
+    e.respondWith((async () => {
+      try {
+        const hit = await caches.match(req, { ignoreSearch: req.mode === "navigate" });
+        if (hit) return hit;
+        // a module cache-buster (?v=markN) must never miss the sealed set: match SEARCH-BLIND inside the
+        // release-stamped boot cache only — its consistency is governed by the release pointer, not the query.
+        const bn = (await caches.keys()).find((k) => k.indexOf("holo-boot-") === 0);
+        if (bn) { const h2 = await (await caches.open(bn)).match(req, { ignoreSearch: true }); if (h2) return h2; }
+      } catch {}
+      return fetch(req);
+    })());
+    return;
   }
 
   if (!BASE || p.startsWith(BASE + "/")) return;   // at a root mount, or already on the base — untouched
