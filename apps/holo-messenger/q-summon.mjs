@@ -213,12 +213,11 @@ window.addEventListener("keydown", bargeIn, { capture: true, passive: true });
 const heroOpen = () => !!$(".holo-hero");
 let titleEl = null;
 function ensureTitle() { if (!titleEl) { titleEl = DOC.createElement("div"); titleEl.id = "q-drawer-title"; titleEl.textContent = "Q"; DOC.body.appendChild(titleEl); } }
-// ── SQUEEZE via the ONE shared contract (HoloAside, defined in the messenger bundle): opening Q squeezes the
-//    home canvas from the right by the drawer's own width and glides the body-level widgets to stay centred in
-//    it — identical to Wallet + Inbox. Never dims. Fail-soft: if HoloAside isn't up yet, fall back to clearing
-//    any stale --holo-aside-w directly (overlay), so Q always opens. ──
-function reserveAside() { try { if (window.HoloAside) window.HoloAside.open("q"); } catch (e) {} }
-function releaseAside() { try { if (window.HoloAside) window.HoloAside.close("q"); else HTML.style.removeProperty("--holo-aside-w"); } catch (e) {} }
+// ── OVERLAY: the canvas stays put, so there is NO lane to reserve and NO widget to re-centre. We never set
+//    --holo-aside-w (holo-widgets keeps its full-width layout, every widget exactly where it was) and never pulse
+//    resize — Q simply floats over the right lane. releaseAside still clears any stale value defensively. ──
+function reserveAside() { /* overlay — canvas is untouched, nothing to reserve */ }
+function releaseAside() { try { HTML.style.removeProperty("--holo-aside-w"); } catch {} }
 function openClasses() { HTML.classList.add("q-drawer", "q-docked"); ensureTitle(); requestAnimationFrame(reserveAside); }
 function closeClasses() { HTML.classList.remove("q-drawer", "q-docked"); releaseAside(); }
 function onOrbDown(e) {
