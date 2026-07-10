@@ -121,7 +121,7 @@
       ],
       "dcat:landingPage": "apps/holo-messenger/app.html",
       "schema:image": "apps/holo-messenger/icon.svg",
-      "holo:entry": "sha256:3171c1cee7e138e0abe137a7c6873d908551b165fe2da1b0196ee877c4f6ad1b"
+      "holo:entry": "sha256:47b55019742bcf139f60a97077a93a5982a0a0f23268cbbc3c461c1a47877895"
     },
     {
       "@id": "did:holo:sha256:9dfcc20bb7076c07ca21bc88c1e307ef07aafc9c8762f19d95eae72f05039cdf",
@@ -511,7 +511,7 @@
         "holo-answer.js",
         "holo-ask.js"
       ],
-      "holo:entry": "sha256:c27d75807d96902b7900451439124286c9800eb5a8b9c76b7942deca2e92b94d"
+      "holo:entry": "sha256:b06f2d1b9e5736a765646f84e030314580c90b84439a7a3352e5fc9b526b0f52"
     }
   ]
 }

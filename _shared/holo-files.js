@@ -143,6 +143,30 @@ async function listHome(path) {
   return sortNodes(out.concat(stat));
 }
 async function readHome(pathParts, name) { const dir = await opfsResolve(pathParts); const fh = await dir.getFileHandle(name, { create: false }); return (await fh.getFile()); }
+// ── SOVEREIGN VIEWS (Q-Soul): everything that ARRIVED — chat media, email attachments, received
+// files — is already a sealed home file whose index row remembers where it came from (`from`).
+// A smart location is a VIEW over that fact: no new storage, no sync — the cloud IS the home.
+const SMART = [
+  { name: "Messages", path: "smart:messages", from: ["messenger", "messenger-bridge", "chat"], glyph: "chat" },
+  { name: "Email", path: "smart:email", from: ["email"], glyph: "mail" },
+  { name: "Received", path: "smart:received", from: ["carry", "device"], glyph: "downloads" },
+];
+export const smartLocations = () => SMART.map((s) => node({ name: s.name, path: s.path, kind: "location", source: "smart", glyph: s.glyph, role: "", _from: s.from }));
+async function listSmart(fromKinds) {
+  let idx = {}; try { idx = await homeIndex(); } catch {}
+  const out = [];
+  for (const [p, e] of Object.entries(idx)) {
+    if (out.length >= 500) break;
+    if (!fromKinds.includes(String((e && e.from) || ""))) continue;
+    try {
+      const parts = homeParts(p); const nm = parts.pop();
+      const f = await readHome(parts, nm);   // stat: gone files drop out silently
+      out.push(node({ name: nm, path: p, kind: "file", source: "opfs", bytes: f.size, mtime: Math.floor(f.lastModified / 1000),
+        did: kappaFromIndex(idx, p, f.size, f.lastModified), mime: mimeOf(nm), writable: true }));
+    } catch {}
+  }
+  return out.sort((a, b) => (b.mtime || 0) - (a.mtime || 0));   // an inbox: newest arrivals first
+}
 export async function mkdir(parentPath, name) { const dir = await opfsResolve(homeParts(parentPath)); await dir.getDirectoryHandle(name, { create: true }); }
 export async function createFile(parentPath, name, contents = "") {
   const dir = await opfsResolve(homeParts(parentPath)); const fh = await dir.getFileHandle(name, { create: true });
@@ -480,6 +504,7 @@ export async function list(n) {
     case "device": return listDevice();
     case "device-dir": return listDeviceDir(n._absPath);
     case "mount-dir": return listMountDir(n.path);
+    case "smart": return listSmart(n._from || []);
     case "closure-dir": return treeFromClosure(await loadClosureFor(n._scheme), n._scheme, n._prefix);
     case "cloud": return listCloud(n._cloudPath || "/");
     default: return [];
@@ -731,6 +756,6 @@ export const HoloFiles = { ROOTS, knownFolders, ensureKappa, deviceOp, deviceMkd
   sendToCloud, cloudShareLink, searchAll, resolveInput, materialize, webSearch, freeSpace, extractZip, compressToZip,
   deskMkdir, deskRename, deskRemove, deskMove, deskCopy, deskUndo, deskRedo, onDesktopChange,
   recycle, restoreTrash, removeTrash, emptyTrash, trashCount,
-  deviceMounts, mountMkdir, mountCreateFile, mountRemove, mountRename };
+  deviceMounts, mountMkdir, mountCreateFile, mountRemove, mountRename, smartLocations };
 if (typeof window !== "undefined") window.HoloFiles = HoloFiles;
 export default HoloFiles;
