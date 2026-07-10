@@ -32,6 +32,7 @@ self.onmessage = (e) => {
     return;
   }
   if (m.op === "mount") mounts.set(m.id, { canvas: m.canvas, ctx: null, dpr: m.dpr || 1 });
+  if (m.op === "warm") verifier();                       // pre-init device+pipelines (H3 INSTANT)
 };
 
 function onLane(m) {

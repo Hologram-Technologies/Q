@@ -212,6 +212,20 @@ export function mount(root, initialName) {
       out.appendChild(d);
     }
   }
+  // H3 INSTANT: (1) warm the GPU verifier from idle — the first paste never pays device init;
+  // (2) hovering a κ-chip PRE-PROJECTS it (no canvas) into the present worker's κ-cache, so the
+  // click lands RESIDENT: 0 bytes, ~0 ms. Runahead is capability-scoped to the hovered name only.
+  const idle = globalThis.requestIdleCallback || ((f) => setTimeout(f, 900));
+  idle(() => { fabric().then((f) => f.warm && f.warm()).catch(() => {}); });
+  const prewarmed = new Set();
+  $("chips").addEventListener("mouseover", (e) => {
+    const chip = e.target.closest(".chip"); if (!chip) return;
+    const v = chip.dataset.v || "";
+    if (!/^blake3:[0-9a-f]{64}$/i.test(v) || prewarmed.has(v)) return;
+    prewarmed.add(v);
+    fabric().then((f) => f.project(v.toLowerCase(), null)).catch(() => {});
+  });
+
   host.addEventListener("dragover", (e) => { e.preventDefault(); });
   host.addEventListener("drop", (e) => { e.preventDefault(); if (e.dataTransfer?.files?.length) sealFiles([...e.dataTransfer.files]); });
 

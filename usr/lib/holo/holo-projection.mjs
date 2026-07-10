@@ -39,6 +39,9 @@ export async function mountProjection({ base } = {}) {
   resolver.onmessage = (e) => { const m = e.data || {}; if (m.op === "refused") settle(m); };
 
   return {
+    /** pre-initialize the GPU verifier (device + pipelines, ~1.7-3.6s once) OFF the critical path —
+     *  call from idle after mount so the user's first paste never pays it (INSTANT, H3). */
+    warm() { try { present.postMessage({ op: "warm" }); } catch (e) {} },
     async project(name, canvas, { grant = [name] } = {}) {
       const id = nextId++;
       const cap = new MessageChannel();                                  // the capability (SEC-2)
