@@ -63,7 +63,8 @@ import("../../usr/lib/holo/holo-names.mjs").then((m) => { classifyName = m.class
   #hk-scrim .hk-title{ padding:9px 16px 0; font-size:12px; letter-spacing:.04em; text-transform:uppercase; color:#6e7681; }
   #hk-scrim input{ width:100%; box-sizing:border-box; background:transparent; border:0; outline:0; color:#e6edf3;
     font-size:18px; padding:14px 16px; font-family:inherit; }
-  #hk-scrim .hk-results{ max-height:52vh; overflow:auto; border-top:1px solid #21262d; }
+  #hk-scrim .hk-results{ max-height:52vh; overflow:auto; overflow-x:hidden; border-top:1px solid #21262d;
+    contain:content; overscroll-behavior:contain; }   /* contain = isolate list layout/paint from the page → cheap scroll + repaint */
   #hk-scrim .hk-row{ display:flex; align-items:center; gap:12px; padding:10px 16px; cursor:pointer; color:#c9d1d9; font-size:15px; }
   #hk-scrim .hk-row .hk-ic{ width:26px; height:26px; display:inline-flex; align-items:center; justify-content:center; text-align:center; opacity:.9; flex:0 0 auto; font-size:16px; }
   #hk-scrim .hk-ic-img{ width:26px; height:26px; border-radius:7px; object-fit:cover; opacity:1; }
@@ -375,31 +376,45 @@ import("../../usr/lib/holo/holo-names.mjs").then((m) => { classifyName = m.class
       try { const c = D.createElement("holo-card"); c.setAttribute("name", q); sPreview.appendChild(c); } catch {}
     }, 240);
   }
+  // ── low-latency render + nav. paint() builds the list in ONE innerHTML write and caches the row nodes;
+  //    it does NOT wire per-row listeners (delegation does that once). Moving the selection touches only the
+  //    two affected rows — no DOM re-query, no re-render — so every keystroke lands the same frame. ────────
+  let rowEls = [], selEl = null, _pfT = 0;
   function paint() {
     let html = "", lastG = null;
-    list.forEach((it, i) => {
+    for (let i = 0; i < list.length; i++) {
+      const it = list[i];
       if (it.group !== lastG) { html += `<div class="hk-lane">${esc(it.group)}</div>`; lastG = it.group; }
-      const icon = it.img ? `<img class="hk-ic hk-ic-img" src="${esc(it.img)}" alt="" onerror="this.replaceWith(Object.assign(document.createElement('span'),{className:'hk-ic',textContent:'▦'}))">` : `<span class="hk-ic">${it.ic || "›"}</span>`;
+      const icon = it.img ? `<img class="hk-ic hk-ic-img" src="${esc(it.img)}" alt="" loading="lazy" decoding="async" onerror="this.replaceWith(Object.assign(document.createElement('span'),{className:'hk-ic',textContent:'▦'}))">` : `<span class="hk-ic">${it.ic || "›"}</span>`;
       const right = it.kbd ? `<kbd class="hk-grp">${esc(it.kbd)}</kbd>` : it.sub ? `<span class="hk-grp${it.words || it.group === "Apps" ? " hk-words" : ""}">${esc(it.sub)}</span>` : "";
       html += `<div class="hk-row${i === sel ? " sel" : ""}" data-i="${i}">${icon}<span class="hk-lbl">${esc(it.label)}</span>${right}</div>`;
-    });
+    }
     sResults.innerHTML = html || `<div class="hk-empty">${mode === "pal" ? "No commands" : "Type to search — Enter to search the web"}</div>`;
-    [...sResults.querySelectorAll(".hk-row[data-i]")].forEach((r) => {
-      r.onmouseenter = () => { sel = +r.dataset.i; mark(); };
-      r.onclick = () => runSel(+r.dataset.i);
-    });
+    rowEls = sResults.querySelectorAll(".hk-row[data-i]");   // cache once per paint; nav reads this, never the DOM
+    selEl = rowEls[sel] || null; if (selEl) selEl.scrollIntoView({ block: "nearest" }); schedulePrefetch();
   }
-  const mark = () => {
-    [...sResults.querySelectorAll(".hk-row[data-i]")].forEach((r, i) => r.classList.toggle("sel", i === sel));
-    try { sResults.querySelector(".hk-row.sel")?.scrollIntoView({ block: "nearest" }); } catch {}
-    const it = list[sel]; if (it && it._app) prefetchApp(it._app);   // warm + probe the highlight → Enter streams instantly
-  };
-  const moveSel = (d) => { if (!list.length) return; sel = Math.max(0, Math.min(sel + d, list.length - 1)); mark(); };
+  function setSel(i, scroll) {
+    const n = rowEls.length; if (!n) return;
+    i = i < 0 ? 0 : (i >= n ? n - 1 : i);
+    if (i === sel) { if (scroll && selEl) selEl.scrollIntoView({ block: "nearest" }); return; }
+    if (selEl) selEl.classList.remove("sel");
+    sel = i; selEl = rowEls[i];
+    if (selEl) { selEl.classList.add("sel"); if (scroll) selEl.scrollIntoView({ block: "nearest" }); }
+    schedulePrefetch();
+  }
+  const moveSel = (d) => setSel(sel + d, true);
+  // prefetch the highlight, but only once you PAUSE on it (not for every row you fly past) — keeps nav free
+  // of network churn while still making Enter instant.
+  function schedulePrefetch() { clearTimeout(_pfT); const it = list[sel]; if (it && it._app) _pfT = setTimeout(() => prefetchApp(it._app), 110); }
   function runSel(i) {
     const it = list[i != null ? i : sel];
     if (!it && mode !== "pal") { const q = (sInput.value || "").trim(); closeAll(); if (q) openWebSearch(q); return; }  // Enter on empty → web
     closeAll(); if (it) try { it.run(); } catch {}
   }
+  // ONE delegated listener each (attached once) — replaces the per-row handlers paint() used to re-wire every
+  // keystroke. mouseover only fires when the pointer crosses into a new row; setSel no-ops if it's the same.
+  sResults.addEventListener("click", (e) => { const r = e.target.closest(".hk-row[data-i]"); if (r) runSel(+r.dataset.i); });
+  sResults.addEventListener("mouseover", (e) => { const r = e.target.closest(".hk-row[data-i]"); if (r) setSel(+r.dataset.i, false); });
   // probe every catalog app ONCE (on first launcher open) so undeployed apps drop out of the list
   let _probed = false;
   const probeCatalog = () => { if (_probed) return; _probed = true; try { Promise.all(catalog.map((a) => { const u = appUrl(a); if (appStatus.has(u)) return null; appStatus.set(u, "probing"); return fetch(u, { method: "HEAD" }).then((r) => appStatus.set(u, r && r.ok ? "ok" : "gone")).catch(() => appStatus.set(u, "gone")); })).then(() => { if (scrim.classList.contains("open")) render(sInput.value); }); } catch {} };
@@ -419,8 +434,8 @@ import("../../usr/lib/holo/holo-names.mjs").then((m) => { classifyName = m.class
     if (e.key === "ArrowDown") { e.preventDefault(); moveSel(1); }
     else if (e.key === "ArrowUp") { e.preventDefault(); moveSel(-1); }
     else if (e.key === "Tab") { e.preventDefault(); moveSel(e.shiftKey ? -1 : 1); }
-    else if (e.key === "Home") { e.preventDefault(); sel = 0; mark(); }
-    else if (e.key === "End") { e.preventDefault(); sel = Math.max(0, list.length - 1); mark(); }
+    else if (e.key === "Home") { e.preventDefault(); setSel(0, true); }
+    else if (e.key === "End") { e.preventDefault(); setSel(rowEls.length - 1, true); }
     else if (e.key === "PageDown") { e.preventDefault(); moveSel(6); }
     else if (e.key === "PageUp") { e.preventDefault(); moveSel(-6); }
     else if (e.key === "Enter") { e.preventDefault(); runSel(); }
