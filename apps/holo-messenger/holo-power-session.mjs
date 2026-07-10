@@ -111,7 +111,12 @@ html.holo-powering #holo-pwr-veil .beam{animation:holo-pwr-off .52s cubic-bezier
   #holo-pwr-sheet,#holo-pwr-sheet .ps{transition:opacity .18s ease}
   #holo-pwr-sheet .ps-ring{animation:none}
   html.holo-powering #holo-pwr-veil .beam{animation:none;opacity:0}
-}`;
+}
+
+/* ── BOOT GROUND (2026-07-10): the boot/login darkness moved to the Claude-desktop chrome #1f1f1e
+   (plymouth layer + app.html baseline). B7 still holds — the veil wears the SAME ground, appended
+   here so the original block above stays intact (anti-revert append discipline). ── */
+#holo-pwr-veil{background:#1f1f1e}`;
 DOC.head.appendChild(css);
 
 // ── the sheet ────────────────────────────────────────────────────────────────────────────────────────────
