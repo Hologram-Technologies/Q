@@ -174,7 +174,10 @@ import("../../usr/lib/holo/holo-names.mjs").then((m) => { classifyName = m.class
   km.bind("mod+k", () => openSpot(), { id: "spotlight", title: "Search & open…", group: "Go", hint: "Search" });
   km.bind("mod+shift+p", () => openPalette(), { id: "palette", title: "Command palette", group: "Go" });
   km.bind("mod+f", () => focusSearch(), { id: "find", title: "Search messages", group: "Go", hint: "Find" });
-  km.bind("?", () => openCheat(), { id: "help", title: "Keyboard shortcuts", group: "Help", hint: "Shortcuts" });
+  // Help: Ctrl+/ is the universal "keyboard shortcuts" key (Slack/Linear) and — being Ctrl-based — fires even
+  // when a text field is focused, unlike a bare "?". Keep "?" and Ctrl+? (mod+shift+?) as aliases so every
+  // instinct opens it.
+  km.bind(["mod+/", "?", "mod+shift+?"], () => openCheat(), { id: "help", title: "Keyboard shortcuts", group: "Help", hint: "Shortcuts" });
   km.bind("esc", () => closeAll(), { id: "escape", title: "Close / dismiss", group: "Help", global: true });
   km.bind("mod+]", () => cycleChat(1), { id: "chat-next", title: "Next conversation", group: "Chats", hint: "Chats" });
   km.bind("mod+[", () => cycleChat(-1), { id: "chat-prev", title: "Previous conversation", group: "Chats" });
@@ -348,9 +351,9 @@ import("../../usr/lib/holo/holo-names.mjs").then((m) => { classifyName = m.class
   // exactly three chips — Search · Help · Hide. Short, intuitive, fully wired. "Hide" banishes the dot
   // (persisted); restore it from the cheat sheet footer ("show the hint dot").
   const CHIPS = [
-    { label: "Search", kbd: km.label("mod+k"), run: () => openSpot() },
-    { label: "Help",   kbd: km.label("?"),     run: () => openCheat() },
-    { label: "Hide",   kbd: "",                run: () => setDotHidden(true) },
+    { label: "Search", kbd: km.label("mod+k"),       run: () => openSpot() },
+    { label: "Help",   kbd: km.label("mod+/"),       run: () => openCheat() },
+    { label: "Hide",   kbd: km.label("mod+shift+h"), run: () => setDotHidden(true) },
   ];
   legend.innerHTML = CHIPS.map((c, i) =>
     `<button class="hk-chip" type="button" tabindex="-1" data-i="${i}" title="${esc(c.label)}">${c.kbd ? `<kbd>${esc(c.kbd)}</kbd>` : ""}<span>${esc(c.label)}</span></button>`).join("");
@@ -368,6 +371,8 @@ import("../../usr/lib/holo/holo-names.mjs").then((m) => { classifyName = m.class
   const onHome = () => { try { return D.documentElement.getAttribute("data-holo-home") === "on"; } catch { return true; } };
   const syncDot = () => dot.classList.toggle("show", !dotHidden() && onHome());
   try { new MutationObserver(syncDot).observe(D.documentElement, { attributes: true, attributeFilter: ["data-holo-home", "class"] }); } catch {}
+  // Hide the dot from the keyboard — Ctrl+Shift+H (H = Hide). Bound after setDotHidden exists; registers live.
+  km.bind("mod+shift+h", () => setDotHidden(true), { id: "hide-hints", title: "Hide the shortcuts dot", group: "Help" });
 
   let bloomed = false;
   const bloom = (on) => { if (on === bloomed) return; bloomed = on; dot.classList.toggle("bloom", on); };
