@@ -82,7 +82,10 @@ const CSS = `
 #holo-login .hl-brand svg{width:32px;height:32px;flex:0 0 auto;filter:drop-shadow(var(--shadow,0 0 0 transparent))}
 #holo-login .hl-brand b{font:700 calc(var(--u,15px)*1.06)/1 "Segoe UI",system-ui,sans-serif;letter-spacing:.2em;padding-left:.2em;color:var(--ink-dim,rgba(231,237,250,.86));text-shadow:var(--shadow,none)}
 @keyframes hlm-in{to{opacity:1}}
-@media (prefers-reduced-motion:reduce){#holo-login .hl-manifesto,#holo-login .hl-brand,#holo-login .hlm-doc{animation:none;opacity:1;transform:none}}
+/* reduced motion: kill entrances only. NEVER transform:none the brand — its CENTERING is a transform
+   (left:50% + translateX(-50%)); flattening it parks the wordmark half a width to the right. */
+@media (prefers-reduced-motion:reduce){#holo-login .hl-manifesto,#holo-login .hl-brand{animation:none;opacity:1}
+#holo-login .hlm-doc{animation:none;opacity:1;transform:none}}
 
 /* ——— the reader: the manifesto owns the WHOLE screen — one hairline top bar, one calm column ——— */
 #holo-login .hlm-scrim{position:fixed;inset:0;z-index:8;pointer-events:auto;display:flex;flex-direction:column;
