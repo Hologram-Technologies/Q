@@ -360,10 +360,12 @@ import("../../usr/lib/holo/holo-names.mjs").then((m) => { classifyName = m.class
   const DKEY = "holo.hints.dismissed.v1";
   const dotHidden = () => { try { return localStorage.getItem(DKEY) === "1"; } catch { return false; } };
   const setDotHidden = (on) => { try { localStorage.setItem(DKEY, on ? "1" : "0"); } catch {} syncDot(); };
-  // the toggle belongs to the HOME canvas only — the messenger marks it with data-holo-home="on" on <html>
-  // (removed when home unmounts) and adds holo-chat-open when a conversation is open. So the dot rides the
-  // home and never floats over a chat or another app. (The keyboard shortcuts themselves stay global.)
-  const onHome = () => { try { const de = D.documentElement; return de.getAttribute("data-holo-home") === "on" && !de.classList.contains("holo-chat-open"); } catch { return true; } };
+  // the toggle belongs to the HOME canvas only. The messenger's home widget-runtime sets data-holo-home="on"
+  // on <html> while the home VIEW is mounted and removes it when you navigate into a chat/other view — so it
+  // tracks the visible surface exactly. (Do NOT also gate on holo-chat-open: that reflects a REMEMBERED active
+  // conversation and is true even while the home is showing — it made the dot vanish right after boot.)
+  // The keyboard shortcuts themselves stay global; only the visible dot is home-scoped.
+  const onHome = () => { try { return D.documentElement.getAttribute("data-holo-home") === "on"; } catch { return true; } };
   const syncDot = () => dot.classList.toggle("show", !dotHidden() && onHome());
   try { new MutationObserver(syncDot).observe(D.documentElement, { attributes: true, attributeFilter: ["data-holo-home", "class"] }); } catch {}
 
