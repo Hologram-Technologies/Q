@@ -20,12 +20,12 @@
   "prov:Entity",
   "holstr:Entry"
  ],
- "holstr:seq": 31,
- "holstr:prev": "did:holo:sha256:e183cd6d0867436e85c64fc6e43f659a804677e04df96ff03cf042e136ab4050",
+ "holstr:seq": 32,
+ "holstr:prev": "did:holo:sha256:86e7ec8fb047f1e34d5509c98ab47c21d46e9119a4a7fade69286f9b33e9ecbd",
  "holstr:kind": "release",
  "holstr:payload": {
-  "shell": "c866442d08431ad0d957ff2cb0a0470c7886f03420ccc58d1c6b6a2f603cbb74",
-  "manifest": "05181fb92ea1b88686a62bc3237c2ac2cb175cdb27f59461858abff94336862e",
+  "shell": "f18ea52a1828117dc42949e79a579a45706ff3f07428e2742a2cbb65eac5980d",
+  "manifest": "636e7f1cd473ec47dc1e92105b57cacd528a2b0226bb6f9ac697aa4334a4dabc",
   "runtime": {
    "apps/q/pkg/holospaces_web.js": "b9f8a887de588c5193dc65ca9ce206a70c6df53595b848e0ce0299c2d88a5753",
    "apps/q/pkg/holospaces_web_bg.wasm": "9d90b4ea8bccee8c239073c7ec7dd5158c6d11f1f668487570d17475d79e661e",
@@ -42,14 +42,13 @@
    "q": "bb01430040bb991fb00979ddf88e90bb0e15b114a4c31f1ef6f215d4de17813d",
    "resolve": "23aec66382775f5773693615338f37c37a5f58257ec95aece33a664baa6fe0db",
    "self": "0511772584510f0888d97dd5a72bf986ad6791bd8e305063ddd8a82c39888a70",
-   "spaces": "d8aebefb67e7fc7802e757b9a7d95bb881e6d75b4a9bc4bd4227634541757e51",
-   "ui": "f2af676d9804685f773120551021b72848b06c9c510ee0238b95b8f0fac66925"
+   "spaces": "d8aebefb67e7fc7802e757b9a7d95bb881e6d75b4a9bc4bd4227634541757e51"
   }
  },
- "prov:generatedAtTime": "2026-07-10T08:58:16.620Z",
+ "prov:generatedAtTime": "2026-07-10T09:16:03.337Z",
  "holstr:op": "did:holo:sha256:87599792c7b13fad9d6c57d3b89d2cef35e4715869f5cde597ab60ca92699f0b",
- "id": "did:holo:sha256:86e7ec8fb047f1e34d5509c98ab47c21d46e9119a4a7fade69286f9b33e9ecbd",
- "holstr:sig": "ZiCSjaC6p05MrPK7Cu/sj0GWkeB72nJgZ5KWJxUd/yUk1PX0Q+MJeZbYhZi4ZihjO3gQIXwVm9BLuZ7Wv+NTCA==",
+ "id": "did:holo:sha256:dca0eae088536834e749c379816bb60778d2842d6f70c9e74946000136e313c9",
+ "holstr:sig": "K40LZKW9tBuy8TegV2ulpVNRlLMqFveb61sJ48JPoJiXFIkgMvUZaFSBuD4hM8qQkB5kT1kOjI6kJtkUDgvFCQ==",
  "holstr:alg": "Ed25519",
  "holstr:pub": "snYY6y35gdZ1ngOE5E+G1BGFjlTo2MfpfP8h6yc7r+M="
 }
