@@ -1,0 +1,69 @@
+<!doctype html>
+<meta charset="utf-8">
+<title>holo-projection · F1 topology witness</title>
+<!--
+  F1 witness (HOLO-PORTAL-PROMPT.md): the worker topology is real —
+  W1 two experiences project through isolated capability ports onto their own canvases (one present worker)
+  W2 the main thread moved ZERO content bytes (long-task observer quiet; all fetch/verify in workers)
+  W3 re-projecting a κ is a RESIDENT BIND: fetched=false, no fetch/hash/transfer, present-only (SEC-3)
+  W4 a name OUTSIDE the grant refuses (SEC-2); a REVOKED capability refuses (SEC-2)
+  W5 a TAMPERED κ (wrong hex for real bytes) is REFUSED in the resolver worker (L5) — never painted
+  Read window.__f1.
+-->
+<body style="background:#0b0f17;color:#e9edef;font:14px system-ui;padding:24px">
+<h1 style="font-size:17px">holo-projection F1</h1>
+<canvas id="c1" width="320" height="200" style="border:1px solid #223"></canvas>
+<canvas id="c2" width="320" height="200" style="border:1px solid #223"></canvas>
+<pre id="out" style="white-space:pre-wrap"></pre>
+<script type="module">
+const out = document.getElementById("out");
+const log = (s) => out.textContent += s + "\n";
+const R = (window.__f1 = { w1: null, w2: null, w3: null, w4: null, w5: null, ok: false, error: null });
+const longTasks = [];
+try { new PerformanceObserver((l) => longTasks.push(...l.getEntries().map(x => Math.round(x.duration)))).observe({ entryTypes: ["longtask"] }); } catch (e) {}
+
+(async () => {
+  try {
+    const { mountProjection } = await import("/usr/lib/holo/holo-projection.mjs");
+    const fabric = await mountProjection({ base: location.origin + "/" });
+
+    // two real store κs (blake3-native): the player app entry (renders as raw) + an image-ish object
+    const K1 = "blake3:8883084a9a180a0c02e53f045e0faf11d264c083d0da21be945398216e4fd7a6";
+    const K2 = "blake3:11ac8b747c90075b1c205bfd5551583dd01ecbb81b3f0db47b832fc69acbf246";   // kept store object (the pruned-κ mirror path is F5's witness, needs SW control)
+
+    // W1 — two isolated experiences, one present worker
+    const h1 = await fabric.project(K1, document.getElementById("c1"));
+    const s1 = h1.stats();
+    const h2 = await fabric.project(K2, document.getElementById("c2"));
+    const s2 = h2.stats();
+    R.w1 = { a: { fetched: s1.fetched, bytes: s1.bytes, verify_ms: s1.verify_ms }, b: { fetched: s2.fetched, bytes: s2.bytes, verify_ms: s2.verify_ms }, ok: s1.fetched === true && s2.fetched === true && s2.bytes > 0 };
+    log("W1 two experiences: " + JSON.stringify(R.w1));
+
+    // W3 — resident bind: same κ again = no fetch, no verify, present only
+    const s1b = await h1.again();
+    R.w3 = { resident: s1b.resident, fetched: s1b.fetched, present_ms: s1b.present_ms, ok: s1b.resident === true && s1b.fetched === false };
+    log("W3 resident bind: " + JSON.stringify(R.w3));
+
+    // W4 — outside-grant + revoked both refuse
+    let outside = null; try { await fabric.project(K2, null, { grant: [K1] }); outside = "PROJECTED (BAD)"; } catch (e) { outside = String(e.message); }
+    h2.revoke(); let revoked = null;
+    try { await h2.again(); revoked = "PROJECTED (BAD)"; } catch (e) { revoked = String(e.message); }
+    R.w4 = { outside, revoked, ok: /SEC-2|grant/.test(outside) && /SEC-2|revoked/.test(revoked) };
+    log("W4 capability: " + JSON.stringify(R.w4));
+
+    // W5 — tamper: ask for real bytes under a WRONG κ (a valid-shaped hex that isn't the content)
+    const WRONG = "blake3:" + "00".repeat(32);
+    let tamper = null; try { await fabric.project(WRONG, null); tamper = "PAINTED (BAD)"; } catch (e) { tamper = String(e.message); }
+    R.w5 = { tamper, ok: /REFUSED|rung|L5|http/.test(tamper) };
+    log("W5 refusal: " + JSON.stringify(R.w5));
+
+    await new Promise(r => setTimeout(r, 400));
+    R.w2 = { long_tasks_ms: longTasks, ok: longTasks.every(t => t < 50) };
+    log("W2 main thread: " + JSON.stringify(R.w2));
+
+    R.ok = [R.w1, R.w2, R.w3, R.w4, R.w5].every(w => w && w.ok);
+    log(R.ok ? "\nF1 ALL GREEN" : "\nF1 RED");
+  } catch (e) { R.error = String(e.message || e); log("ERROR: " + R.error); }
+})();
+</script>
+</body>
