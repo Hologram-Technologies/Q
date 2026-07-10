@@ -3,15 +3,16 @@
 //
 // The words are the canonical Hologram OS Manifesto (holo-os/MANIFESTO.md) — imported here verbatim so the
 // login screen speaks with the SAME voice as the OS itself. The reader takes the WHOLE screen: one calm
-// reading column under a hairline top bar (H glyph + HOLOGRAM wordmark), sourced claims as live links,
-// the closing line set large, the mark as the signature. It inherits the greeter's appearance tokens
+// reading column under a hairline top bar (the enclosed halftone H + HOLOGRAM wordmark), sourced claims as
+// live links, the closing line set large, the mark as the signature — and the LIVING PROOF: right after
+// section 1's claim, holo-machine-witness.mjs measures the reader's own machine (real specs + a live,
+// genuinely measured compute line). It inherits the greeter's appearance tokens
 // (--ink/--sheet/--muted…), so it is sharp in Dark, Light, and Immersive alike. Self-contained:
 // one call, mountManifesto(overlay); fail-open (a hiccup never blocks sign-in).
 
-// the canonical H-in-cube line mark (usr/share/icons/holo-glyph.svg) — currentColor, crisp at any size.
-const GLYPH = `<svg viewBox="0 0 128 128" fill="none" stroke="currentColor" stroke-width="8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M64 18 L104 41 V87 L64 110 L24 87 V41 Z"/><path d="M50 46 V82 M78 46 V82 M50 64 H78"/></svg>`;
-
-// The canonical Hologram DOT-HALFTONE mark (usr/share/icons/hologram-dark.svg), inlined with fill:currentColor
+// The canonical Hologram DOT-HALFTONE mark — the ENCLOSED H (large dots draw the H, small dots close the
+// hexagon around it) — is the ONE mark the manifesto wears everywhere: top bar, signature, and the greeter
+// wordmark. (The line H-in-cube glyph was retired from this surface by request.) (usr/share/icons/hologram-dark.svg), inlined with fill:currentColor
 // so it themes itself — light dots on a dark ground, ink dots on paper — for correct contrast in every mode.
 // Pure vector (transparent, resolution-independent, razor-sharp on any display density).
 const MARK = `<svg viewBox="-104 -104 208 208" fill="currentColor" role="img" aria-label="Hologram"><g><circle cx="0.20" cy="-97.39" r="2.61"/><circle cx="-22.86" cy="-86.55" r="2.71"/><circle cx="22.54" cy="-86.32" r="2.81"/><circle cx="-0.03" cy="-76.01" r="2.71"/><circle cx="45.26" cy="-75.92" r="7.80"/><circle cx="-45.82" cy="-75.86" r="2.61"/><circle cx="68.34" cy="-65.13" r="7.70"/><circle cx="-68.83" cy="-65.00" r="2.61"/><circle cx="-22.91" cy="-64.90" r="2.61"/><circle cx="22.71" cy="-64.88" r="2.51"/><circle cx="91.24" cy="-54.34" r="2.61"/><circle cx="-45.94" cy="-54.25" r="7.83"/><circle cx="-91.17" cy="-54.19" r="2.71"/><circle cx="-0.03" cy="-54.19" r="2.71"/><circle cx="45.35" cy="-54.19" r="7.80"/><circle cx="-22.86" cy="-43.64" r="2.71"/><circle cx="22.71" cy="-43.49" r="2.51"/><circle cx="68.29" cy="-43.47" r="7.73"/><circle cx="-68.60" cy="-43.37" r="7.73"/><circle cx="-45.85" cy="-32.63" r="7.77"/><circle cx="45.36" cy="-32.60" r="7.80"/><circle cx="-91.26" cy="-32.55" r="2.71"/><circle cx="0.10" cy="-32.51" r="2.61"/><circle cx="91.24" cy="-32.51" r="2.61"/><circle cx="68.22" cy="-21.95" r="7.83"/><circle cx="22.67" cy="-21.84" r="7.87"/><circle cx="-22.86" cy="-21.82" r="2.71"/><circle cx="-68.57" cy="-21.80" r="7.80"/><circle cx="45.45" cy="-11.06" r="7.73"/><circle cx="-0.19" cy="-11.04" r="7.87"/><circle cx="91.35" cy="-11.01" r="2.81"/><circle cx="-91.54" cy="-10.97" r="2.51"/><circle cx="-45.87" cy="-10.87" r="7.73"/><circle cx="22.71" cy="-0.27" r="8.06"/><circle cx="-22.89" cy="-0.21" r="7.90"/><circle cx="68.28" cy="-0.15" r="7.87"/><circle cx="-68.62" cy="-0.11" r="8.00"/><circle cx="-0.06" cy="10.98" r="7.87"/><circle cx="45.54" cy="11.00" r="7.83"/><circle cx="-45.85" cy="11.02" r="7.77"/><circle cx="-91.26" cy="11.10" r="2.71"/><circle cx="91.24" cy="11.13" r="2.61"/><circle cx="22.71" cy="21.64" r="2.71"/><circle cx="-68.74" cy="21.66" r="7.87"/><circle cx="-22.86" cy="21.67" r="7.87"/><circle cx="68.28" cy="21.67" r="7.87"/><circle cx="-91.54" cy="32.46" r="2.61"/><circle cx="0.15" cy="32.46" r="2.71"/><circle cx="-45.72" cy="32.50" r="7.73"/><circle cx="45.54" cy="32.59" r="7.83"/><circle cx="91.35" cy="32.63" r="2.81"/><circle cx="-23.01" cy="43.23" r="2.61"/><circle cx="68.25" cy="43.31" r="7.83"/><circle cx="-68.71" cy="43.34" r="7.83"/><circle cx="22.71" cy="43.37" r="2.90"/><circle cx="91.39" cy="53.92" r="2.71"/><circle cx="45.48" cy="53.95" r="7.87"/><circle cx="-45.86" cy="53.97" r="7.80"/><circle cx="-91.34" cy="53.99" r="2.61"/><circle cx="0.20" cy="54.09" r="2.61"/><circle cx="-68.57" cy="64.90" r="7.80"/><circle cx="-22.86" cy="64.92" r="2.71"/><circle cx="68.28" cy="64.92" r="2.71"/><circle cx="22.54" cy="65.15" r="2.81"/><circle cx="-45.88" cy="75.56" r="7.80"/><circle cx="0.10" cy="75.62" r="2.61"/><circle cx="45.32" cy="75.62" r="2.61"/><circle cx="22.53" cy="86.47" r="2.71"/><circle cx="-22.86" cy="86.75" r="2.71"/><circle cx="-0.03" cy="97.29" r="2.71"/></g></svg>`;
@@ -103,6 +104,7 @@ const CSS = `
 #holo-login .hlm-doc a{color:inherit;text-decoration:underline;text-decoration-color:rgba(160,180,210,.4);
   text-underline-offset:3px;transition:text-decoration-color .15s}
 #holo-login .hlm-doc a:hover{text-decoration-color:currentColor}
+#holo-login .hlm-witness{width:min(92vw,960px);margin:46px calc((100% - min(92vw,960px))/2) 50px}
 #holo-login .hlm-close{margin:clamp(48px,8vh,72px) 0 40px;font-size:clamp(24px,3.2vw,31px);font-weight:700;
   letter-spacing:-.01em;color:var(--ink,#f7fafc);text-align:center}
 #holo-login .hlm-sig{display:flex;align-items:center;justify-content:center;gap:13px;margin:0 0 52px;color:var(--ink,#f4f7fc)}
@@ -123,14 +125,26 @@ export function openManifesto(overlay) {
   injectCss();
   const scrim = document.createElement("div"); scrim.className = "hlm-scrim";
   let body = `<h1>${esc(TITLE)}</h1>`;
-  for (const [h, ps] of SECTIONS) { body += `<h2>${esc(h)}</h2>`; for (const p of ps) body += `<p>${md(p)}</p>`; }
+  SECTIONS.forEach(([h, ps], i) => {
+    body += `<h2>${esc(h)}</h2>`; for (const p of ps) body += `<p>${md(p)}</p>`;
+    // the LIVING PROOF: right where section 1 claims "you are holding a supercomputer", the page measures
+    // the reader's own machine (holo-machine-witness) — proof at the point of claim, dormant until scrolled to.
+    if (i === 0) body += `<div class="hlm-witness"></div>`;
+  });
   body += `<div class="hlm-close">${esc(CLOSE_LINE)}</div>
-    <div class="hlm-sig">${GLYPH}<b>HOLOGRAM</b></div>
+    <div class="hlm-sig">${MARK}<b>HOLOGRAM</b></div>
     <div class="hlm-note">${esc(FOOTNOTE)}</div>`;
-  scrim.innerHTML = `<div class="hlm-top" role="banner"><span class="g">${GLYPH}</span><span class="w">HOLOGRAM</span>
+  scrim.innerHTML = `<div class="hlm-top" role="banner"><span class="g">${MARK}</span><span class="w">HOLOGRAM</span>
       <button class="hlm-x" aria-label="Close">✕</button></div>
     <div class="hlm-scroll" role="dialog" aria-label="${esc(TITLE)}" aria-modal="true" tabindex="-1"><article class="hlm-doc">${body}</article></div>`;
-  const close = () => { scrim.remove(); document.removeEventListener("keydown", onKey, true); };
+  let witness = null;
+  try {
+    import("./holo-machine-witness.mjs?v=w1").then((m) => {
+      const slot = scrim.querySelector(".hlm-witness");
+      if (slot && slot.isConnected) witness = m.mountWitness(slot, { root: scrim.querySelector(".hlm-scroll") });
+    }).catch(() => {});
+  } catch {}
+  const close = () => { try { witness && witness.stop(); } catch {} scrim.remove(); document.removeEventListener("keydown", onKey, true); };
   const onKey = (e) => { if (e.key === "Escape") { e.preventDefault(); e.stopPropagation(); close(); } };
   document.addEventListener("keydown", onKey, true);
   scrim.querySelector(".hlm-x").onclick = close;
