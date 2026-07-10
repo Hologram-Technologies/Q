@@ -10,5 +10,15 @@
   "hub",
   "ui",
   "q"
+ ],
+ "trees": [
+  {
+   "prefix": "_shared/voice/vendor/",
+   "closure": "_shared/voice/vendor/holo-evicted.json"
+  },
+  {
+   "prefix": "usr/share/wallpapers/",
+   "closure": "usr/share/wallpapers/holo-evicted.json"
+  }
  ]
 }
