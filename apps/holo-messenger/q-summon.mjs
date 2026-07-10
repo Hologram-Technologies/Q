@@ -382,6 +382,7 @@ setInterval(renderStats, 1000);
     let cap = ""; try { cap = await caption(file); } catch (e) { try { console.debug("[q-sees]", e && e.message); } catch {} }
     looking(false);
     const q = heroInput() && heroInput().value ? heroInput().value.trim() : "";
+    if (cap) { try { window.HoloCorpus && window.HoloCorpus.publish({ source: "photo", text: cap }); } catch {} }   // U2: what Q SAW joins the one context plane
     if (cap) driveSend((q ? q + " " : "") + "(About the photo I just shared — it shows: " + cap + ". Talk to me about it naturally, in your own words.)");
     else driveSend(q || "I just shared a photo — I couldn't get my eyes going to read it just now, but I'm here with you.");
   }
