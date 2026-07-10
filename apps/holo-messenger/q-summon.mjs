@@ -33,13 +33,14 @@ css.textContent = `
    This matches the wallet's overlay behaviour — ONE rule for every right slide-out: the canvas never moves. The old
    q-docked squeeze rules are gone (they shifted the composition and, via --holo-aside-w below, re-flowed the widgets). */
 
-/* THE DRAWER — the hero re-framed as the wallet's panel: wallet width, #0d1117 == the nav rail (rail + Q are ONE
-   continuous chrome, NO seam / border / shadow — immersive, exactly like the wallet), same .26s entrance curve. */
+/* THE DRAWER — the hero re-framed as the wallet's panel: EXACT wallet parity (user directive) — wallet width,
+   wallet chrome (--holo-chrome #1f1f1e, the same flat panel the wallet uses), the wallet's soft left shadow so
+   the slide box lifts off the canvas identically, same .26s entrance curve. ONE right slide-out, one look. */
 html.q-drawer .holo-hero{
   inset:0 0 0 auto!important; width:var(--q-drawer-w)!important; overflow:hidden!important;
-  background:#0d1117!important;
+  background:var(--holo-chrome,#1f1f1e)!important;
   padding-top:0!important; align-items:stretch!important; justify-content:flex-start!important;
-  border-left:0!important; box-shadow:none!important;
+  border-left:0!important; box-shadow:-26px 0 64px -22px rgba(0,0,0,.62)!important;
   animation:q-drawer-in .26s var(--holo-ease,ease) both!important; touch-action:auto!important;
 }
 /* opacity-only (NO transform on .holo-hero): a transform would make its position:fixed composer hero-relative.
@@ -64,7 +65,7 @@ html.q-drawer .holo-hero-input::placeholder{ color:rgba(233,237,239,.5)!importan
 /* ── WHATSAPP CHAT — Q (incoming) grey bubble on the LEFT with a tail; you (outgoing) green bubble on the RIGHT
    with a tail; a small dim time (+ read tick) inside each bubble; a 3-dot "typing…" bubble. No wallpaper — just
    the chrome ground, exactly like the ask. Familiar, human, real-time. ── */
-html.q-drawer .holo-hero,html.q-drawer .holo-hero-thread{ background:#0d1117!important; background-image:none!important; }
+html.q-drawer .holo-hero,html.q-drawer .holo-hero-thread{ background:var(--holo-chrome,#1f1f1e)!important; background-image:none!important; }
 html.q-drawer .holo-hero-bubble{ position:relative!important; font-size:14.6px!important; line-height:20px!important;
   padding:6px 9px 7px 10px!important; box-shadow:0 1px .6px rgba(0,0,0,.2)!important; margin:1px 0 3px!important; max-width:80%!important; }
 /* Q — incoming grey, left, square top-left corner + a little tail */
@@ -465,6 +466,31 @@ setInterval(renderStats, 1000);
   window.QReach = { evaluate, deliver, reason, within, state: load, badge: setBadge,
     force: async () => { const st = load(); st.pending = { text: await compose("gap"), at: Date.now(), reason: "gap" }; save(st); setBadge(true); return st.pending.text; }, version: 1 };
 } catch (e) { try { console.warn("[q-reach] init failed:", e); } catch {} } })();
+
+// ==  EVERY HOLOSPACE PROJECTS INTO THE PLANE (U2b of Q-ONE). The shell already materializes the OPEN
+// holospace's live context as window.__holoSpaceCtx = {appId, name, url, title, summary} (the __holoCtx shim
+// each app carries). This one watcher distills that into HoloCorpus facts - so opening a file, watching a
+// show, reading a page ALL become things Q simply knows, with ZERO per-app adapters. Dedup by app+title
+// (publish once per thing, not per tick); the corpus adds its own rate/length caps. Fail-soft, never breaks.
+(function qProject() { try {
+  const seen = new Set(); let lastKey = "";
+  function tick() {
+    try {
+      const c = window.__holoSpaceCtx;
+      if (!c || !c.appId) { lastKey = ""; return; }
+      const title = String(c.title || "").trim(), summary = String(c.summary || "").trim();
+      if (!title && !summary) return;
+      const key = c.appId + "|" + title;
+      if (key === lastKey || seen.has(key)) return;
+      lastKey = key; seen.add(key); if (seen.size > 200) seen.clear();
+      const C = window.HoloCorpus; if (!C || !C.publish) return;
+      const name = String(c.name || c.appId).trim();
+      C.publish({ source: String(c.appId).slice(0, 24), text: (name ? name + ": " : "") + (title || "") + (summary ? " - " + summary.slice(0, 180) : ""), meta: { url: c.url || "" } });
+    } catch (e) {}
+  }
+  setInterval(tick, 5000); setTimeout(tick, 2500);
+  window.QProject = { tick, version: 1 };
+} catch (e) { try { console.warn("[q-project] init failed:", e); } catch {} } })();
 
 // ── debug/verification surface ────────────────────────────────────────────────────────────────────────────
 window.QSummon = {
