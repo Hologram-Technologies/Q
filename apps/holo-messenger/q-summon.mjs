@@ -398,6 +398,73 @@ setInterval(renderStats, 1000);
   window.QSees = { icons: ensureIcons, image: onImage, caption, version: 1 };
 } catch (e) { try { window.__qSeesErr = String((e && (e.stack || e.message)) || e); console.warn("[q-sees] init failed:", e); } catch {} } })();   // Q Sees must NEVER break the drawer
 
+// ══ Q REACHES OUT — proactive, personalized, RESTRAINED. Q messages you FIRST when there's genuinely something
+// worth saying (a new day after you've been away, a long gap), grounded in your memory. A soft green badge pulses
+// on the home Q orb; when you open, the message is already there — spoken, by name. ≤1 unsolicited reach-out/day +
+// quiet hours + never on a first-ever visit → a thoughtful friend, not a nagging app. Wrapped: never breaks the drawer.
+(function qReach() { try {
+  const s = DOC.createElement("style"); s.id = "q-reach-css"; s.textContent = `
+    #q-reach-badge{position:fixed;z-index:341;width:12px;height:12px;border-radius:50%;background:#25d366;border:2px solid #0b141a;opacity:0;transform:scale(.5);transition:opacity .35s ease,transform .35s cubic-bezier(.2,.9,.3,1.2);pointer-events:none}
+    #q-reach-badge.on{opacity:1;transform:scale(1);animation:qreachpulse 2.2s infinite}
+    @keyframes qreachpulse{0%{box-shadow:0 0 0 0 rgba(37,211,102,.5)}70%{box-shadow:0 0 0 9px rgba(37,211,102,0)}100%{box-shadow:0 0 0 0 rgba(37,211,102,0)}}
+    html.q-drawer .holo-hero-bubble.q.q-reach{border-left:2px solid rgba(37,211,102,.5)!important}
+  `; DOC.head.appendChild(s);
+  const RK = "holo.q.reach.v1", LIMIT = 1;
+  const load = () => { try { return JSON.parse(localStorage.getItem(RK) || "{}"); } catch { return {}; } };
+  const save = (o) => { try { localStorage.setItem(RK, JSON.stringify(o)); } catch {} };
+  const today = () => new Date().toISOString().slice(0, 10);
+  const quiet = () => { const h = new Date().getHours(); return h < 7 || h >= 22; };
+  // record THIS visit (for the "long gap" trigger), capturing the previous visit first
+  let stt = load(); const prevVisit = stt.lastVisit || 0; const now = Date.now();
+  const daysSince = prevVisit ? (now - prevVisit) / 86400000 : 0;
+  stt.lastVisit = now; save(stt);
+
+  function badgeEl() { let b = DOC.getElementById("q-reach-badge"); if (!b) { b = DOC.createElement("div"); b.id = "q-reach-badge"; DOC.body.appendChild(b); } return b; }
+  function positionBadge() { const orb = $(".holo-home-orb"); const b = DOC.getElementById("q-reach-badge"); if (!orb || !b) return; const r = orb.getBoundingClientRect(); b.style.left = (r.right - 13) + "px"; b.style.top = (r.top + 2) + "px"; }
+  function setBadge(on) { const b = badgeEl(); b.classList.toggle("on", !!on); if (on) positionBadge(); }
+  addEventListener("resize", () => { const b = DOC.getElementById("q-reach-badge"); if (b && b.classList.contains("on")) positionBadge(); }, { passive: true });
+
+  const trimFact = (f) => { f = String(f || "").replace(/\s+/g, " ").trim(); return f.length > 64 ? f.slice(0, 62) + "…" : f; };
+  async function compose(reason) {
+    const name = firstName(), who = name || "there", hr = new Date().getHours();
+    const g = hr < 12 ? "Morning" : hr < 18 ? "Hey" : "Evening";
+    try { if (window.HoloQ && window.HoloQ.ready && window.HoloQ.ready() && window.HoloQ.reachOut) { const r = await window.HoloQ.reachOut(); if (r && String(r).trim()) return String(r).trim(); } } catch {}   // prefer the brain's own proactive reach when warm
+    let facts = []; try { if (window.HoloQ && window.HoloQ.recall) facts = await window.HoloQ.recall("", 3); } catch {}
+    if (facts && facts.length) return `${g}, ${who}. You mentioned ${trimFact(facts[0])} — how's that going?`;
+    if (reason === "gap") return `${g}, ${who}. It's been a little while — I'm right here whenever you want to think something through.`;
+    return `${g}, ${who}. Just checking in — anything on your mind?`;
+  }
+  const within = () => { const c = load().count || {}; return !(c.date === today() && (c.n || 0) >= LIMIT); };
+  function reason() {
+    const st = load();
+    if (!prevVisit) return null;              // never reach out to someone you just met (first-ever visit)
+    if (quiet() || !within() || st.pending) return null;
+    if (daysSince >= 2) return "gap";         // you've been away a while
+    if (st.lastReachDay !== today()) return "day";   // first return of a new day
+    return null;
+  }
+  let composing = false;
+  async function evaluate() { if (composing) return; const r = reason(); if (!r) return; composing = true; let text = ""; try { text = await compose(r); } catch {} composing = false; if (!text) return; const st = load(); st.pending = { text, at: Date.now(), reason: r }; save(st); setBadge(true); }
+  let delivering = false;
+  async function deliver() {
+    const st = load(), p = st.pending; if (!p || !p.text || delivering) return; delivering = true;
+    // COUNT + clear FIRST (atomic, before any async) so restraint holds and no timer re-queues it
+    delete st.pending; st.lastReachDay = today(); const c = st.count || {}; st.count = (c.date === today()) ? { date: today(), n: (c.n || 0) + 1 } : { date: today(), n: 1 }; save(st); setBadge(false);
+    // deliver as a REAL Q bubble via the thread ingest (React-managed, persists; the observer seals it), + speak
+    try { if (window.HoloQ && window.HoloQ.liveIngest) await window.HoloQ.liveIngest("q", p.text); } catch {}
+    try { seal("q", p.text); } catch {}   // ensure sealed to the κ-thread even if the ingest path is quiet (dedup-safe)
+    try { voice.speak(p.text); } catch {}
+    delivering = false;
+  }
+  const openObs = new MutationObserver(() => { if (heroOpen()) setTimeout(deliver, 700); });
+  openObs.observe(DOC.body, { childList: true, subtree: true });
+  setTimeout(evaluate, 4000);                                   // a beat after load
+  setInterval(() => { if (!heroOpen()) evaluate(); }, 600000);  // every 10 min while closed — calm, never spammy
+  setInterval(() => { const b = DOC.getElementById("q-reach-badge"); if (b && b.classList.contains("on") && !heroOpen()) positionBadge(); }, 1500);
+  window.QReach = { evaluate, deliver, reason, within, state: load, badge: setBadge,
+    force: async () => { const st = load(); st.pending = { text: await compose("gap"), at: Date.now(), reason: "gap" }; save(st); setBadge(true); return st.pending.text; }, version: 1 };
+} catch (e) { try { console.warn("[q-reach] init failed:", e); } catch {} } })();
+
 // ── debug/verification surface ────────────────────────────────────────────────────────────────────────────
 window.QSummon = {
   thread: () => ledger.slice(),
