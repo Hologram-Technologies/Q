@@ -1,11 +1,11 @@
 {
  "v": 1,
  "created": 1783617984833,
- "aggregate": "7574a379e2151f8506aee347836b757e87ba40110ee24b53add435eac9ad5798",
+ "aggregate": "c866442d08431ad0d957ff2cb0a0470c7886f03420ccc58d1c6b6a2f603cbb74",
  "assets": [
   {
    "path": "/apps/holo-messenger/app.html",
-   "kappa": "2f2b06f70bfb4b132aee16f55716553ca875d8c318f01bf8a15d33a960f49eb4",
+   "kappa": "2f5aaba36071f54c73d8b2de77dc2d8b31c39bbc7a3a72686babd31342a3d0e8",
    "bytes": 42268
   },
   {
@@ -40,13 +40,13 @@
   },
   {
    "path": "/apps/holo-messenger/messenger-skin.mjs",
-   "kappa": "8d34a1e9297fbaf472886031a90d3a06dfd4aa71c0621e4325e0112ef96fb07d",
-   "bytes": 1165
+   "kappa": "e222dfd05fac2a98854eaa75dd7fe4f019b2394a3d98b3186fc77e13605229d9",
+   "bytes": 1168
   },
   {
    "path": "/apps/holo-messenger/messenger-skins.css",
-   "kappa": "4b2007b56d1c82c5d7f797a59e864a921bc0bd171606b22602678475290f5026",
-   "bytes": 23545
+   "kappa": "f141d287bd4093490fc85ffd7fa6d9ca2d91e299207e92c69abd2bd26d2bfac6",
+   "bytes": 32364
   },
   {
    "path": "/apps/holo-messenger/messenger-sw-register.mjs",
