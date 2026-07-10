@@ -111,18 +111,18 @@ const HL_CSS = `#holo-login{position:fixed;inset:0;z-index:2147483000;color:var(
 #holo-login .hl-lock{position:fixed;inset:0;z-index:2;display:grid;justify-items:center;align-items:start;padding:calc(61.8vh - var(--avatar)/2) var(--g2) var(--g2);padding-top:calc(61.8dvh - var(--avatar)/2);pointer-events:none}
 @media (max-height:620px),(max-width:500px){#holo-login .hl-lock{padding-top:calc(56vh - var(--avatar)/2);padding-top:calc(56dvh - var(--avatar)/2)}}
 #holo-login .hl-panel{display:flex;flex-direction:column;align-items:center;text-align:center;width:var(--field);max-width:92vw;pointer-events:auto;animation:hl-rise .7s cubic-bezier(.4,0,.2,1) .05s both}
-#holo-login .hl-avatar{width:var(--avatar);height:var(--avatar);border-radius:50%;display:grid;place-items:center;color:#fff;font-size:calc(var(--avatar)*.37);font-weight:600;box-shadow:0 .6em 1.8em rgba(0,0,0,.4),inset 0 0 0 2px rgba(255,255,255,.6)}
+#holo-login .hl-avatar{width:var(--avatar);height:var(--avatar);border-radius:50%;display:grid;place-items:center;color:#fff;font-size:calc(var(--avatar)*.37);font-weight:600;box-shadow:0 .5em 1.5em rgba(0,0,0,.35),inset 0 0 0 1.5px rgba(255,255,255,.38)}
 #holo-login .hl-avatar svg{width:62%;height:62%;opacity:.92}
-#holo-login .hl-name{margin:var(--g1) 0 0;font-size:var(--u);font-weight:600;line-height:1.15;text-shadow:var(--shadow)}
+#holo-login .hl-name{margin:var(--g1) 0 0;font-size:calc(var(--u)*1.12);font-weight:600;letter-spacing:.01em;line-height:1.15;text-shadow:var(--shadow)}
 #holo-login .hl-auth{margin-top:var(--g1);display:flex;flex-direction:column;align-items:center;gap:var(--u);width:100%}
-#holo-login .hl-bio{position:relative;overflow:hidden;width:100%;min-height:max(var(--g2),52px);border:0;border-radius:calc(var(--u)*.7);cursor:pointer;display:inline-flex;align-items:center;justify-content:center;gap:calc(var(--u)*.55);font-size:var(--u);font-weight:600;color:#06140f;background:linear-gradient(135deg,var(--accent),var(--accent-2));box-shadow:inset 0 1px 0 rgba(255,255,255,.4),0 .7em 1.6em rgba(52,211,166,.32);font-family:inherit;transition:transform .12s,box-shadow .18s,filter .18s}
-#holo-login .hl-bio:hover{transform:translateY(-1px);filter:brightness(1.05)}
+#holo-login .hl-bio{position:relative;overflow:hidden;width:100%;min-height:max(var(--g2),52px);border:0;border-radius:10px;cursor:pointer;display:inline-flex;align-items:center;justify-content:center;gap:calc(var(--u)*.55);font-size:var(--u);font-weight:600;letter-spacing:.01em;color:#062019;background:linear-gradient(180deg,#38d9ab,#2cc79b);box-shadow:inset 0 1px 0 rgba(255,255,255,.22),0 1px 2px rgba(0,0,0,.3),0 8px 24px rgba(0,0,0,.22);font-family:inherit;transition:transform .12s,box-shadow .18s,filter .18s}
+#holo-login .hl-bio:hover{transform:translateY(-1px);filter:brightness(1.04);box-shadow:inset 0 1px 0 rgba(255,255,255,.22),0 2px 4px rgba(0,0,0,.3),0 10px 28px rgba(0,0,0,.26)}
 #holo-login .hl-bio:disabled{cursor:progress;filter:saturate(.9)}
 #holo-login .hl-bio:disabled::after{content:"";position:absolute;inset:0;background:linear-gradient(105deg,transparent 32%,rgba(255,255,255,.55) 50%,transparent 68%);transform:translateX(-100%);animation:hl-scan 1.15s cubic-bezier(.4,0,.2,1) infinite}
 @keyframes hl-scan{to{transform:translateX(100%)}}
 #holo-login .hl-bio svg{width:1.3em;height:1.3em;flex:0 0 auto}
-#holo-login .hl-alt{background:none;border:0;color:var(--ink-dim);font-size:var(--u);font-family:inherit;cursor:pointer;padding:calc(var(--u)*.3) calc(var(--u)*.55);border-radius:calc(var(--u)*.4);display:inline-flex;align-items:center;gap:calc(var(--u)*.4);min-height:44px}
-#holo-login .hl-alt:hover{color:var(--ink)}#holo-login .hl-alt svg{width:1.05em;height:1.05em}
+#holo-login .hl-alt{background:none;border:0;color:var(--ink-dim);opacity:.85;font-size:var(--u);font-weight:500;font-family:inherit;cursor:pointer;padding:calc(var(--u)*.3) calc(var(--u)*.55);border-radius:calc(var(--u)*.4);display:inline-flex;align-items:center;gap:calc(var(--u)*.4);min-height:44px;transition:color .15s,opacity .15s}
+#holo-login .hl-alt:hover{color:var(--ink);opacity:1}#holo-login .hl-alt svg{width:1.05em;height:1.05em}
 #holo-login .hl-more{opacity:.72}#holo-login .hl-more:hover{opacity:1}
 #holo-login .status{min-height:calc(var(--u)*1.5);font-size:var(--u);color:var(--status);display:flex;align-items:center;justify-content:center;gap:calc(var(--u)*.5);text-shadow:var(--shadow)}
 #holo-login .status.err{color:#ffc0c0}
@@ -241,7 +241,7 @@ export async function signIn({ root, params, app = "holospace", appName = "Holog
   try { import("./holo-plymouth.mjs").then((m) => { plymouth = m.attachPlymouth(overlay, plymouthHost); }).catch(() => {}); } catch {}
   // MANIFESTO + WORDMARK — the greeter's brand chrome (top-left door + bottom-centre Hologram mark), speaking
   // the OS's own words. Purely additive and fail-open (a hiccup never blocks sign-in).
-  try { import("./holo-manifesto.mjs?v=mark3").then((m) => m.mountManifesto(overlay)).catch(() => {}); } catch {}
+  try { import("./holo-manifesto.mjs?v=mark4").then((m) => m.mountManifesto(overlay)).catch(() => {}); } catch {}
   const panel = document.getElementById("holo-login-panel");
   const statusEl = () => panel.querySelector(".status");
   const setStatus = (t, err) => { if (err) { try { plymouth && plymouth.calm(); } catch {} } const el = statusEl(); if (el) { el.className = "status" + (err ? " err" : ""); el.textContent = t || ""; } };
