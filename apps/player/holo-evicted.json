@@ -38,7 +38,7 @@
   "holo-media-indexer.mjs": "65fa5e1b3240c6b98ba71816c668c4bff15eec8dc387e34ba311c916c364ca97",
   "holo-media-item-witness.mjs": "84a8f565a31dd8a46bfa95dbe45d82562c68e82df1006befc2d59879ba762568",
   "holo-media-item-witness.result.json": "eb63be6e5e0d38b7300bb3fcef95f1c4bea8c036aa99fd310f5aa5767175db0e",
-  "holo-media-item.mjs": "79d0a28eebeb7c6c6a8038e37e87f4db4ba34d8086f60f958f40c191c8736b08",
+  "holo-media-item.mjs": "23e4f84b126619414ef90eba73a97fc398e2629b8ced8c90d5390df35caaca26",
   "holo-media-stream-witness.mjs": "84d22fd68c0fc268767ea51a9f30a30ca1f627b53fd036fbc6191271be776471",
   "holo-media-stream.mjs": "3cf154bcefc3fc1a0e1f75ed63d96c2c188213c605f04da384113d4c4f0250fc",
   "holo-opensubtitles.mjs": "d6778b8ea853652d7103130deae2183be163c264ab85c3f77ec4436bb2eab939",
@@ -108,7 +108,11 @@
   "holo-tvdb.mjs": "e9d10ec2b90cc4f62e0acc03288efac3e53040d4bc17f0d71432b284fb8613ed",
   "holo-tvdb-witness.mjs": "8eb4171fc2472a04e7b6ec270350035618ea8e1c8e617b2d1ca98ff0ef92667e",
   "holo-tvdb-witness.result.json": "92b8ede1aa37a9b5b0b92bbd2b0f740691dbd920440e661ea8c1605a2e88a4ad",
-  "holo-library.mjs": "9ce7bf36b3de9318775510922233e762acacd3c259c630bd0c6b9d9d9369477f"
+  "holo-library.mjs": "9ce7bf36b3de9318775510922233e762acacd3c259c630bd0c6b9d9d9369477f",
+  "feed/library-index.json": "5f654b793ccf0c8d9b4e6bc530dd15f7a032fd440f7bb353496cbf6692b7374f",
+  "holo-library-forge.mjs": "a43249f4f27206cc010c369c220b1469ee0564c4d75f798d63d2c18425d063be",
+  "holo-library-witness.mjs": "e8e3471220a882a17984b9b6efb6a498bb3c82fcdb7a3547dc3905eed732c2fe",
+  "holo-library-witness.result.json": "52cf82d28c69b7ff9b5ae3df553c65957cf10295013dd6837a1c78e427874ef5"
  },
  "keep": []
 }
