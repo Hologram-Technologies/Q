@@ -12,7 +12,7 @@
 const WGSL = `
 @group(0) @binding(0) var src: texture_2d<f32>;
 @group(0) @binding(1) var samp: sampler;
-struct U { sharpen: f32, mode: f32, scale: f32, _pad: f32 };
+struct U { sharpen: f32, mode: f32, scale: f32, display: f32 };
 @group(0) @binding(2) var<uniform> u: U;
 struct VSOut { @builtin(position) pos: vec4<f32>, @location(0) uv: vec2<f32> };
 @vertex fn vs(@builtin(vertex_index) i: u32) -> VSOut {
@@ -27,52 +27,89 @@ fn cr(x: f32) -> f32 {
   return 0.0;
 }
 fn tap(uv: vec2<f32>) -> vec4<f32> { return textureSampleLevel(src, samp, uv, 0.0); }
+// ── DISPLAY stage: the authentic per-console panel, applied in OUTPUT space over the upscaled image.
+//    0 none · 1 DMG dot-matrix · 2 colour-LCD grid · 3 CRT (scanlines+aperture+vignette+bloom).
+//    A thin overlay — never blurs, never dims the image body; scales with the panel so a bigger screen
+//    reads as a bigger, more physical LCD/CRT (like the real hardware). ──
+fn applyDisplay(rgb0: vec3<f32>, pos: vec2<f32>, dim: vec2<f32>) -> vec3<f32> {
+  if (u.display < 0.5) { return rgb0; }
+  var rgb = rgb0;
+  let sc = max(u.scale, 1.0);
+  let sp = pos / sc;                                  // output px → source-pixel space (one cell per source px)
+  if (u.display < 1.5) {
+    let g = fract(sp); let e = 0.10;                  // DMG dot-matrix: dark gaps between LCD cells
+    let line = smoothstep(0.0, e, g.x) * smoothstep(0.0, e, 1.0 - g.x) * smoothstep(0.0, e, g.y) * smoothstep(0.0, e, 1.0 - g.y);
+    rgb = rgb * mix(0.80, 1.0, line);
+  } else if (u.display < 2.5) {
+    let g = fract(sp); let e = 0.14;                  // colour LCD: a whisper of a grid
+    let line = smoothstep(0.0, e, g.x) * smoothstep(0.0, e, 1.0 - g.x) * smoothstep(0.0, e, g.y) * smoothstep(0.0, e, 1.0 - g.y);
+    rgb = rgb * mix(0.92, 1.0, line);
+  } else {
+    let sl = 0.5 + 0.5 * cos(sp.y * 6.2831853);       // CRT: horizontal scanline per source row
+    rgb = rgb * mix(0.68, 1.0, sl);
+    let ap = 0.5 + 0.5 * cos(pos.x * 2.0943951);      // faint aperture grille (~3 output-px period)
+    rgb = rgb * mix(0.90, 1.0, ap);
+    let uv = pos / dim;                               // vignette
+    let v = uv * (vec2<f32>(1.0) - uv.yx);
+    let vig = clamp(v.x * v.y * 42.0, 0.0, 1.0);
+    rgb = rgb * mix(0.82, 1.0, pow(vig, 0.22));
+    rgb = rgb + rgb * rgb * 0.07;                     // gentle bloom lift on brights
+  }
+  return clamp(rgb, vec3<f32>(0.0), vec3<f32>(1.0));
+}
 @fragment fn fs(in: VSOut) -> @location(0) vec4<f32> {
   let dim = vec2<f32>(textureDimensions(src));
   let inv = 1.0/dim;
+  var rgb: vec3<f32>;
   if (u.mode < 0.5) {
     let pix = in.uv * dim;
     let fl = floor(pix);
     if (u.sharpen <= 0.0) {
       // ── NEAREST: hard pixels, MAXIMUM sharpness — sample the texel CENTRE, zero gray, zero blur. ──
       let uv2 = (fl + vec2<f32>(0.5)) * inv;
-      return vec4<f32>(textureSampleLevel(src, samp, uv2, 0.0).rgb, 1.0);
+      rgb = textureSampleLevel(src, samp, uv2, 0.0).rgb;
+    } else {
+      // ── SHARP-BILINEAR (canonical): solid texel centres for the body of each pixel, a ~1-output-px
+      //    edge transition only at block boundaries. Even-looking at non-integer scale, no shimmer. ──
+      let s = pix - fl;
+      let cd = s - vec2<f32>(0.5);
+      let rr = vec2<f32>(0.5) - vec2<f32>(0.5) / u.scale;
+      let f = (cd - clamp(cd, -rr, rr)) * u.scale + vec2<f32>(0.5);
+      let uv2 = (fl + f) * inv;
+      rgb = textureSampleLevel(src, samp, uv2, 0.0).rgb;
     }
-    // ── SHARP-BILINEAR (canonical): solid texel centres for the body of each pixel, a ~1-output-px
-    //    edge transition only at block boundaries. Even-looking at non-integer scale, no shimmer. ──
-    let s = pix - fl;
-    let cd = s - vec2<f32>(0.5);
-    let rr = vec2<f32>(0.5) - vec2<f32>(0.5) / u.scale;
-    let f = (cd - clamp(cd, -rr, rr)) * u.scale + vec2<f32>(0.5);
-    let uv2 = (fl + f) * inv;
-    return vec4<f32>(textureSampleLevel(src, samp, uv2, 0.0).rgb, 1.0);
-  }
-  // ── PHOTOGRAPHIC: Catmull-Rom (a=-0.5) sharp bicubic + light unsharp ──
-  let c = in.uv*dim - 0.5;
-  let base = floor(c);
-  let f = c - base;
-  var col = vec4<f32>(0.0); var wsum = 0.0;
-  for (var m = -1; m <= 2; m = m + 1) {
-    let wy = cr(f.y - f32(m));
-    for (var n = -1; n <= 2; n = n + 1) {
-      let w = cr(f.x - f32(n)) * wy;
-      let p = (base + vec2<f32>(f32(n), f32(m)) + 0.5) * inv;
-      col = col + w * tap(p); wsum = wsum + w;
+  } else {
+    // ── PHOTOGRAPHIC: Catmull-Rom (a=-0.5) sharp bicubic + light unsharp ──
+    let c = in.uv*dim - 0.5;
+    let base = floor(c);
+    let f = c - base;
+    var col = vec4<f32>(0.0); var wsum = 0.0;
+    for (var m = -1; m <= 2; m = m + 1) {
+      let wy = cr(f.y - f32(m));
+      for (var n = -1; n <= 2; n = n + 1) {
+        let w = cr(f.x - f32(n)) * wy;
+        let p = (base + vec2<f32>(f32(n), f32(m)) + 0.5) * inv;
+        col = col + w * tap(p); wsum = wsum + w;
+      }
     }
+    col = col / wsum;
+    if (u.sharpen > 0.0) {
+      let b = (tap((base+vec2<f32>(0.5,0.5))*inv) + tap((base+vec2<f32>(1.5,0.5))*inv)
+             + tap((base+vec2<f32>(0.5,1.5))*inv) + tap((base+vec2<f32>(1.5,1.5))*inv)) * 0.25;
+      col = clamp(col + (col - b) * u.sharpen, vec4<f32>(0.0), vec4<f32>(1.0));
+    }
+    rgb = col.rgb;
   }
-  col = col / wsum;
-  if (u.sharpen > 0.0) {
-    let b = (tap((base+vec2<f32>(0.5,0.5))*inv) + tap((base+vec2<f32>(1.5,0.5))*inv)
-           + tap((base+vec2<f32>(0.5,1.5))*inv) + tap((base+vec2<f32>(1.5,1.5))*inv)) * 0.25;
-    col = clamp(col + (col - b) * u.sharpen, vec4<f32>(0.0), vec4<f32>(1.0));
-  }
-  return vec4<f32>(col.rgb, 1.0);
+  rgb = applyDisplay(rgb, in.pos.xy, dim);
+  return vec4<f32>(rgb, 1.0);
 }`;
+const DISPLAY = { none: 0, dmg: 1, lcd: 2, crt: 3 };
 
 export class HoloProject {
-  constructor(canvas, { profile = "pixelart", tile = 32, sharpen = 0.5, maxDim = 8192 } = {}) {
+  constructor(canvas, { profile = "pixelart", tile = 32, sharpen = 0.5, maxDim = 8192, display = "none" } = {}) {
     this.canvas = canvas; this.tile = tile; this.sharpenAmt = sharpen; this.maxDim = maxDim;
     this.mode = profile === "photographic" ? 1 : 0;
+    this.display = DISPLAY[display] ?? 0;             // per-console panel (dmg / lcd / crt)
     this.device = null; this.ctx = null; this.tex = null;
     this.w = 0; this.h = 0; this.cols = 0; this.rows = 0; this.tileHash = null; this.scale = 1;
     this.stats = { frames: 0, dirtyTiles: 0, totalTiles: 0, dedupPct: 0, fps: 0, outW: 0, outH: 0, profile };
@@ -106,7 +143,7 @@ export class HoloProject {
   }
 
   _writeU() {
-    this.device.queue.writeBuffer(this.ubo, 0, new Float32Array([this.sharpenAmt, this.mode, this.scale, 0]));
+    this.device.queue.writeBuffer(this.ubo, 0, new Float32Array([this.sharpenAmt, this.mode, this.scale, this.display]));
   }
   _recomputeScale() {
     if (this.w && this.canvas.width) this.scale = Math.max(this.canvas.width / this.w, this.canvas.height / this.h);
@@ -127,6 +164,7 @@ export class HoloProject {
     this._recomputeScale();
   }
   setProfile(p) { this.mode = p === "photographic" ? 1 : 0; this.stats.profile = p; this._writeU(); }
+  setDisplay(name) { this.display = DISPLAY[name] ?? 0; if (this.device) this._writeU(); }   // toggle the panel at runtime
 
   setSource(w, h) {
     this.w = w; this.h = h;

@@ -235,6 +235,11 @@
   const sys = q.get("sys") || "Nintendo - Game Boy";
   const sysCode = codeForSys(sys);
   const con = CONSOLES[sysCode] || CONSOLES.gb;
+  // the authentic panel per console: DMG dot-matrix, colour-LCD for colour handhelds, CRT for TV consoles.
+  // (?fx=off disables — for a purist pixel view.) Applied by the WebGPU projector's display stage.
+  const DISPLAY_BY_CODE = { gb:"dmg", gbc:"lcd", gba:"lcd", gg:"lcd", wsc:"lcd", ngpc:"lcd", vb:"lcd",
+    nes:"crt", snes:"crt", gen:"crt", sms:"crt", pce:"crt", sg:"crt", a7800:"crt", a2600:"crt" };
+  const displayFx = q.get("fx") === "off" ? "none" : (DISPLAY_BY_CODE[sysCode] || "none");
   const src = q.get("src") || "";
   const art = q.get("art") || "";                       // box art → fills the LCD during the morph, then dissolves to the game
   const romUrl = q.get("rom") || (title ? null : "./roms/libbet.gb");
@@ -546,7 +551,7 @@ Atomics.store(this.h,0,r);if(ur)Atomics.add(this.h,2,ur);return true;}}registerP
     let proj = null, cx = null, img = null;
     try {
       const { HoloProject } = await import("./holo-project.mjs");
-      proj = await new HoloProject(cv, { profile: "pixelart", sharpen: 0 }).init();   // nearest = razor sharp
+      proj = await new HoloProject(cv, { profile: "pixelart", sharpen: 0, display: displayFx }).init();   // nearest = razor sharp + authentic panel
       proj.setSource(g.width, g.height);
       proj.resizeToDisplay();
       projector = proj;                                          // the immersive transition re-fits this once it settles
