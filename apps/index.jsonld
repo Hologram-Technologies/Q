@@ -540,6 +540,34 @@
    "dcat:landingPage": "apps/arcade/index.html",
    "schema:image": "apps/arcade/index.html",
    "holo:entry": "apps/arcade/index.html"
+  },
+  {
+   "@id": "did:holo:sha256:716b98aeeeaf3ac5278ccd763f8dea1762c8eb2f345ee7971ee6a4db67ccff65",
+   "holo:root": "did:holo:sha256:716b98aeeeaf3ac5278ccd763f8dea1762c8eb2f345ee7971ee6a4db67ccff65",
+   "@type": [
+    "schema:SoftwareApplication",
+    "schema:WebApplication"
+   ],
+   "schema:name": "Holo Games",
+   "schema:identifier": "org.hologram.Games",
+   "schema:description": "The full retro library — homebrew plays instantly; every system streams and plays on-device.",
+   "schema:applicationCategory": "GameApplication",
+   "holo:categories": [
+    "Game",
+    "Emulator",
+    "Player"
+   ],
+   "schema:keywords": [
+    "games",
+    "arcade",
+    "homebrew",
+    "game boy",
+    "retro",
+    "emulator"
+   ],
+   "dcat:landingPage": "apps/games/index.html",
+   "schema:image": "apps/games/index.html",
+   "holo:entry": "apps/games/index.html"
   }
  ]
 }
