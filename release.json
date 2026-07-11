@@ -20,8 +20,8 @@
   "prov:Entity",
   "holstr:Entry"
  ],
- "holstr:seq": 84,
- "holstr:prev": "did:holo:sha256:9bc770861b663dfaf9a896d474004b68b500d5ece307012b6c51525beb617a42",
+ "holstr:seq": 85,
+ "holstr:prev": "did:holo:sha256:9b16b52307fb95053f33c8f6784030d98f69126822f7ee6cea557983ef9838c8",
  "holstr:kind": "release",
  "holstr:payload": {
   "shell": "1cff79e7743c1ab197146d8e064ce384518e1d4557653a7566a59f8d2a6f6280",
@@ -38,19 +38,19 @@
   "apps": {
    "arcade": "760082b2b5fddbaf46c27f43e4ca32d3586147476f6eb00a7c119abcf573ad41",
    "files": "963401ee68a2e9b050456cdcd3aa582d9cfc50eb7c8afef6349fbcef1fb57ee3",
-   "games": "817392fd0eae10a5e54571568bcff357d221836cea0405717eb9a0d557b8dd86",
+   "games": "9015f6a7c448424d2f5b588d5cd775100bf56760f52be7f74d9b6fb4775dec1e",
    "holo-messenger": "def54890d386b620158eda1240a6d0604216ebd0bbe6c54007f9c2952ab02db2",
    "holo-money": "f00cac91e066181842873164c824f90e3c61b8160051c2012414eb7f44d36394",
    "resolve": "23aec66382775f5773693615338f37c37a5f58257ec95aece33a664baa6fe0db",
    "self": "0511772584510f0888d97dd5a72bf986ad6791bd8e305063ddd8a82c39888a70",
    "spaces": "d8aebefb67e7fc7802e757b9a7d95bb881e6d75b4a9bc4bd4227634541757e51"
   },
-  "closure": "6f0d7c4b9f6a975568ca654af286c4ef9e0c0a8e56049260d1d89f7b92b08c8d"
+  "closure": "e4cdaf15a319d6cdc6e805a88e80376a6e2a360199b0a6f675c1d77917322776"
  },
- "prov:generatedAtTime": "2026-07-11T16:50:10.994Z",
+ "prov:generatedAtTime": "2026-07-11T17:02:50.339Z",
  "holstr:op": "did:holo:sha256:87599792c7b13fad9d6c57d3b89d2cef35e4715869f5cde597ab60ca92699f0b",
- "id": "did:holo:sha256:9b16b52307fb95053f33c8f6784030d98f69126822f7ee6cea557983ef9838c8",
- "holstr:sig": "d5u9CxDvriXh38WSq4t9x55ErfdxW/6sNVYH+zX6VISt5ZvwstqNOmTZDp4WA7AUio6NTafEB8HzE0YftfpAAA==",
+ "id": "did:holo:sha256:5e79bb19b1c6d3e776bc6a0954aa4e5680a4af2d10a6394253072fdfb0781487",
+ "holstr:sig": "xoSfcjHO+52gNb5i89WXiKC/DkslZlf+EsDuwuEjbv4bePJdeN6u1fp7+ScqblsnzU9UOcB5LWdNGYH8z2nxCw==",
  "holstr:alg": "Ed25519",
  "holstr:pub": "snYY6y35gdZ1ngOE5E+G1BGFjlTo2MfpfP8h6yc7r+M="
 }
