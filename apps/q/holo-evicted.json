@@ -537,5 +537,6 @@
   "vendor/markdown/markdown-it.min.js": "9a3e58acd572c5f9123df04a1728b5e873c25cf2ec0f9366d33a401ae4f7e532",
   "vendor/mermaid/mermaid.min.js": "8a7854cf215cfeadc5b53896c90506821af5e38bc36f541fde7dd84d76a656bb",
   "wallpaper.jpg": "ffa452756fd9a7cf0331a4862d122ebbe374b04d3a8fdd744ded40d32a4bf780"
- }
+ },
+ "keep": []
 }
