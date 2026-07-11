@@ -54,7 +54,11 @@ function makeCorpus(mem) {
 
   async function summary() { try { if (mem.ready) await mem.ready(); const f = mem.recent({ kind: "fact", n: 200 }); const by = {}; for (const r of f) { const s = (r["holmem:meta"] && r["holmem:meta"].source) || "app"; by[s] = (by[s] || 0) + 1; } return { facts: f.length, sources: by }; } catch (e) { return { facts: 0, sources: {} }; } }
 
-  return { publish, recall, summary };
+  // recent — the most recent facts REGARDLESS of query (recall() needs query tokens; proactive surfacing needs
+  // "what has the user been doing lately", newest first). Same shape as recall's items.
+  async function recent(k = 6) { try { if (mem.ready) await mem.ready(); const f = mem.recent({ kind: "fact", n: Math.max(1, k | 0) }); return f.map((r) => ({ text: r["holmem:text"], source: (r["holmem:meta"] && r["holmem:meta"].source) || "app", at: r["prov:generatedAtTime"] || null })); } catch (e) { return []; } }
+
+  return { publish, recall, summary, recent };
 }
 
 // ── browser binding: window.HoloCorpus over window.HoloMemory (waits for it), + the same-origin holospace

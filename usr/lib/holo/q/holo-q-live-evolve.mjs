@@ -98,12 +98,13 @@ export function makeLiveEvolve({ memory = null, now = () => Date.now() } = {}) {
     if (!bytes) return { ok: false, reason: "no-proposal" };
     if (!/^---/.test(bytes)) bytes = SEED_BYTES + bytes.trim();      // a bare-body proposal is wrapped in the canonical frontmatter
     const testsPass = !!(defaultTests(bytes) && (typeof tests !== "function" || tests(bytes) === true));
+    if (!testsPass) return { ok: false, reason: "tests-fail" };      // a draft that fails the deterministic gate is DEAD ON ARRIVAL — it never becomes a pending revision (so it can't be shown or later approved)
     const rev = sealSkillRevision(store, {
       parentKappa: skillHead, corpusHeadKappa: corpusHead, proposalBytes: bytes,
-      gate: { testsPass, conscienceOutcome: testsPass ? "accept" : "block", ratifiedBy: "", coolingOffElapsed: true },
+      gate: { testsPass: true, conscienceOutcome: "accept", ratifiedBy: "", coolingOffElapsed: true },
     });
     pending = rev.id; persistSoon();
-    return { ok: true, kappa: rev.id, inForce: isInForce(rev), testsPass, preview: bytes.replace(/^---\s*\n[\s\S]*?\n---\s*\n?/, "").trim().slice(0, 400) };
+    return { ok: true, kappa: rev.id, inForce: isInForce(rev), testsPass: true, preview: bytes.replace(/^---\s*\n[\s\S]*?\n---\s*\n?/, "").trim().slice(0, 400) };
   }
 
   // ── approve: the USER ratifies → re-sealed in force → the persona changes ──

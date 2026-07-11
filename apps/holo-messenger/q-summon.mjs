@@ -164,27 +164,6 @@ html.q-drawer #q-stats.on{opacity:.5}
   /* the close affordance is a generous hit area */
   html.q-drawer .holo-hero-x{ display:flex!important; align-items:center!important; justify-content:center!important; }
 }
-/* ══ BULLETPROOF CLASS-FREE DRAWER (2026-07-13) — SUPER ROBUST ═══════════════════════════════════════
-   Style .holo-hero DIRECTLY so it is ALWAYS the 360px right slide-out whenever it exists, with ZERO
-   dependency on a JS-set html.q-drawer class (which raced/missed on React portal nesting → the
-   full-screen / wrong-width / seal-showing / orb-visible bugs). CSS presence (:has) drives the
-   conditional pieces. No observer, no timer, no class — it cannot break the same way. ══════════════ */
-html body .holo-hero{
-  position:fixed!important; inset:0 0 0 auto!important; right:0!important; top:0!important; left:auto!important;
-  width:min(360px,92vw)!important; max-width:min(360px,92vw)!important; min-width:0!important;
-  height:100%!important; margin:0!important; overflow:hidden!important;
-  background:var(--holo-chrome,#1f1f1e)!important; background-image:none!important;
-  box-shadow:-26px 0 64px -22px rgba(0,0,0,.62)!important; border:0!important; border-radius:0!important; z-index:900!important;
-}
-html body .holo-hero, html body .holo-hero *{ border-color:transparent!important; }             /* zero divider lines */
-html body .holo-hero-thread, html body .holo-hero-stage{ background:var(--holo-chrome,#1f1f1e)!important; background-image:none!important; border:0!important; }
-html body .holo-hero-open{ display:none!important; }                                            /* no "Open in chat" — this IS the chat */
-#q-kappa-chip{ display:none!important; }                                                        /* the seal line is never resting UI */
-body:has(.holo-hero) .holo-home-orb, body:has(.holo-hero) .holo-global-orb{ opacity:0!important; pointer-events:none!important; }
-html body .holo-hero .holo-hero-status{ display:block!important; }                              /* show the live status under "Q" */
-/* composer + chips centred in the RIGHT lane (class-free; --q-drawer-w is set unconditionally in :root) */
-html body .holo-hero-compose{ left:calc(100vw - var(--q-drawer-w,360px) / 2)!important; right:auto!important; transform:translateX(-50%)!important; width:min(calc(var(--q-drawer-w,360px) - 26px),92vw)!important; }
-
 `;
 DOC.head.appendChild(css);
 // keyboard-aware composer (mobile): track the VISUAL viewport so the composer/chips float above the soft
@@ -262,9 +241,14 @@ function onOrbDown(e) {
   const orb = e.target && e.target.closest && e.target.closest(".holo-home-orb, .holo-global-orb");
   if (!orb) return;
   warm();                           // low-latency: kick the brain + seed load on the gesture (idempotent, no UI)
-  // BELT-AND-SUSPENDERS: apply the drawer class the moment React mounts .holo-hero (in case the observer
-  // misses a deeply-nested portal mount) so the panel is ALWAYS the 360px right slide-out. Guarded → no flash.
-  let __t = 0; const __iv = setInterval(() => { if ($(".holo-hero")) { if (!HTML.classList.contains("q-drawer")) openClasses(); clearInterval(__iv); } else if (++__t > 20) clearInterval(__iv); }, 50);
+  // BELT-AND-SUSPENDERS: React mounts `.holo-hero` a beat after the tap. Poll briefly and apply the drawer
+  // class the moment it appears (in case the MutationObserver misses a deeply-nested portal mount) so the
+  // panel is ALWAYS the 360px right slide-out, never full-screen. Guarded → no flash, no close.
+  let tries = 0;
+  const t = setInterval(() => {
+    if ($(".holo-hero")) { if (!HTML.classList.contains("q-drawer")) openClasses(); clearInterval(t); }
+    else if (++tries > 20) clearInterval(t);   // ~1s window; the shell may open a non-hero surface — then do nothing
+  }, 50);
 }
 DOC.addEventListener("pointerdown", onOrbDown, { capture: true, passive: true });
 
@@ -334,7 +318,9 @@ const mo = new MutationObserver((muts) => {
   for (const mut of muts) {
     for (const n of mut.addedNodes) {
       if (!(n instanceof Element)) continue;
-      /* NESTING-PROOF: React portals mount .holo-hero inside a wrapper — match descendants too, or the drawer class never sets and the hero renders unstyled full-screen. */
+      // NESTING-PROOF (2026-07-11): React portals mount `.holo-hero` INSIDE a wrapper node, so the added
+      // node may not itself be the hero — check descendants too, or the drawer class never sets and the
+      // hero renders unstyled full-screen instead of the 360px right slide-out.
       if ((n.classList && n.classList.contains("holo-hero")) || (n.querySelector && n.querySelector(".holo-hero"))) { if (!HTML.classList.contains("q-drawer")) { openClasses(); verifyChain(); chip(); setTimeout(showChips, 300); } }
       const bubbles = n.classList && n.classList.contains("holo-hero-bubble") ? [n] : (n.querySelectorAll ? n.querySelectorAll(".holo-hero-bubble") : []);
       for (const b of bubbles) {
@@ -462,14 +448,13 @@ setInterval(renderStats, 1000);
   addEventListener("resize", () => { const b = DOC.getElementById("q-reach-badge"); if (b && b.classList.contains("on")) positionBadge(); }, { passive: true });
 
   const trimFact = (f) => { f = String(f || "").replace(/\s+/g, " ").trim(); return f.length > 64 ? f.slice(0, 62) + "…" : f; };
+  // Q NOTICES: the ranking brain decides WHAT is worth saying (grounded or nothing). QReach owns WHEN + delivery +
+  // restraint; QNotices.pick() returns the single most useful TRUE thing right now, or null → Q stays silent (the
+  // generic "just checking in" filler is gone). Fail-soft fallback ONLY for an explicit gap after a real absence.
   async function compose(reason) {
-    const name = firstName(), who = name || "there", hr = new Date().getHours();
-    const g = hr < 12 ? "Morning" : hr < 18 ? "Hey" : "Evening";
-    try { if (window.HoloQ && window.HoloQ.ready && window.HoloQ.ready() && window.HoloQ.reachOut) { const r = await window.HoloQ.reachOut(); if (r && String(r).trim()) return String(r).trim(); } } catch {}   // prefer the brain's own proactive reach when warm
-    let facts = []; try { if (window.HoloQ && window.HoloQ.recall) facts = await window.HoloQ.recall("", 3); } catch {}
-    if (facts && facts.length) return `${g}, ${who}. You mentioned ${trimFact(facts[0])} — how's that going?`;
-    if (reason === "gap") return `${g}, ${who}. It's been a little while — I'm right here whenever you want to think something through.`;
-    return `${g}, ${who}. Just checking in — anything on your mind?`;
+    try { if (window.QNotices && window.QNotices.pick) { const n = await window.QNotices.pick({ name: firstName(), reason }); if (n && n.text && String(n.text).trim()) return String(n.text).trim(); } } catch {}
+    if (reason === "gap") { const who = firstName() || "there", hr = new Date().getHours(); const g = hr < 12 ? "Morning" : hr < 18 ? "Hey" : "Evening"; return `${g}, ${who}. It's been a little while — I'm right here whenever you want to think something through.`; }
+    return "";   // grounded or nothing: no notice worth surfacing → silence
   }
   const within = () => { const c = load().count || {}; return !(c.date === today() && (c.n || 0) >= LIMIT); };
   function reason() {
