@@ -15,7 +15,7 @@ import { notificationFor, routeFor } from "./holo-push-route.mjs";
 // still resolve byte-identical, verified fail-closed (L5). Lazy + memoized = restart-safe.
 import { makeEvictRescue } from "../../usr/lib/holo/holo-evict-rescue.mjs";
 
-const CACHE = "holo-msgr-shell-aec632492619";                     // bump → old (unverified) caches are purged on activate
+const CACHE = "holo-msgr-shell-669f99cad27b";                     // bump → old (unverified) caches are purged on activate
 // BASE-RELOCATABLE: the worker may be served under ANY prefix (OS root, a GitHub Pages /<repo>/ subpath, a
 // static mirror). Every location below derives from where THIS script actually lives; at the OS root BASE is ""
 // and behavior is byte-identical. Manifest paths stay CANONICAL ("/apps/holo-messenger/…" — they are identity,

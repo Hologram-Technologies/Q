@@ -49,7 +49,17 @@ html.q-drawer .holo-hero{
 /* header row: a small living orb + status, top-left of the drawer (absolute within the hero → tracks the panel) */
 html.q-drawer .holo-hero-orb{ position:absolute!important; top:15px!important; left:17px!important; width:42px!important; height:42px!important; min-width:0!important; margin:0!important; filter:drop-shadow(0 0 12px rgba(91,140,255,.5))!important; }
 html.q-drawer .holo-hero-orb.listening{ filter:drop-shadow(0 0 20px rgba(125,239,201,.6))!important; }
-html.q-drawer .holo-hero-status{ display:none!important; }   /* DEDUP: the header shows ONE clean "Q" (#q-drawer-title); this duplicated it */
+/* q-chat header parity: "Q" name with the live status right under it (online · Listening… · Thinking… ·
+   Q is speaking…) — clear, concise feedback beside the orb, exactly like the standalone q-chat header. */
+html.q-drawer .holo-hero-status{ position:absolute!important; top:36px!important; left:68px!important; margin:0!important;
+  font-size:11.5px!important; line-height:1!important; font-weight:400!important; color:rgba(255,255,255,.42)!important;
+  text-align:left!important; max-width:calc(100% - 120px)!important; white-space:nowrap!important; overflow:hidden!important; text-overflow:ellipsis!important; }
+html.q-drawer .holo-hero-status:empty::before{ content:"online"; }
+/* IMMERSION: while Q is open, the home-canvas orb hides (Q is HERE — no second orb floating on the wallpaper) */
+html.q-drawer .holo-home-orb, html.q-drawer .holo-global-orb{ opacity:0!important; pointer-events:none!important; transition:opacity .2s ease!important; }
+/* zero divider lines anywhere in the frame — one flat plane, exactly the nav chrome */
+html.q-drawer .holo-hero, html.q-drawer .holo-hero *{ border-color:transparent!important; }
+html.q-drawer .holo-hero-thread, html.q-drawer .holo-hero-stage{ border:0!important; }
 html.q-drawer .holo-hero-x{ position:absolute!important; top:13px!important; right:13px!important; width:34px; height:34px; }
 html.q-drawer .holo-hero-stage{ max-width:none!important; width:100%!important; margin-top:62px!important; padding:0 10px!important; align-items:stretch!important; }
 html.q-drawer .holo-hero-thread{ max-width:none!important; width:100%!important; padding:8px 8px 88px!important; -webkit-mask-image:none!important; mask-image:none!important; }
@@ -563,8 +573,10 @@ try { console.info("[q-summon] live — RIGHT docked drawer (wallet parity) · s
     try { if (window.HoloMemory && window.HoloMemory.summary) out.memory = window.HoloMemory.summary(); } catch (e) {}
     try { if (window.HoloCorpus && window.HoloCorpus.summary) out.world = await window.HoloCorpus.summary(); } catch (e) {}
     try { if (window.QSummon && window.QSummon.verify) out.thread = window.QSummon.verify(); } catch (e) {}
+    try { if (window.QEvolve && window.QEvolve.status) out.evolution = await window.QEvolve.status(); } catch (e) {}   // U3b: the honest self-evolution record — how Q lawfully became more itself
     return out;
   });
+  add("evolve",   () => { const E = window.QEvolve; return (E && E.propose) ? window.Q.act("evolve yourself") : Promise.resolve(null); });   // the door's verb → the one action path
   window.Q = Q;
   try { console.info("[q-door] ONE door live — window.Q (ask · act · open · summon · call · remember · recall · know · facts · grounded · warm · self)"); } catch (e) {}
 } catch (e) { try { console.warn("[q-door] init failed:", e); } catch {} } })();
