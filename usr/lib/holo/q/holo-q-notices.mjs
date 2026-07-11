@@ -29,7 +29,7 @@ let _identityGuard = null, _guardTried = false;
 async function loadGuard() {
   if (_identityGuard || _guardTried) return _identityGuard;
   _guardTried = true;
-  try { const m = await import("../../../../apps/q/core/holo-q-guards.mjs"); _identityGuard = m && m.identityGuard; } catch (e) {}
+  try { const m = await import("./holo-q-guards.mjs"); _identityGuard = m && m.identityGuard; } catch (e) {}
   return _identityGuard;
 }
 
