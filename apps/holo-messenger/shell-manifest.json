@@ -1,17 +1,17 @@
 {
  "v": 1,
  "created": 1783758536412,
- "aggregate": "5307257a5995e5b42c842723e5f5b67be934e13fc2ae926837c5fd9543828a53",
+ "aggregate": "aec6324926197a2d5e8e293afec30ff0589f60068ba376acade1943fbe9abedd",
  "assets": [
   {
    "path": "/apps/holo-messenger/app.html",
-   "kappa": "718eb210d758155997df015e9e83bfaf103173f27fdb4fc97c95d752a662ce31",
+   "kappa": "13d6c49e1348132e2041152671e1901e364fac4b8ff2c098919ce5557833b49d",
    "bytes": 59026
   },
   {
    "path": "/apps/holo-messenger/_vendor/ui/chat-ui.bundle.js",
-   "kappa": "1383f2d5714d6b05109a1d593adabe5d048be7aba48a4cebca8af5dce7bf6b6b",
-   "bytes": 531319
+   "kappa": "16cb0d3d39c4bbf1f631d7976e5bdb787e53b908842ca1484976f1befd94e8d4",
+   "bytes": 530789
   },
   {
    "path": "/apps/holo-messenger/_vendor/ui/chat-ui.bundle.css",
