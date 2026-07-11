@@ -206,7 +206,7 @@ let m = MODELS[defaultModelIndex()];
     const cands = MODELS.filter((x) => famq.includes((x.fam || "").toLowerCase()) || (x.fam || "").toLowerCase().includes(famq)).sort((a, b) => (b.fam || "").length - (a.fam || "").length);
     const bit = cands[0] || MODELS.find((x) => (x.fam || "").toLowerCase() === "bitnet") || m;
     m = { ...bit, kappaUrl: base, name: bit.name, manifestKappa: kappa ? undefined : bit.manifestKappa }; } }
-let engine = null, convIds = [], busy = false, armed = false, idleT = null;
+let engine = null, convIds = [], busy = false, armed = false, idleT = null, _liteMode = false;   // _liteMode = no-WebGPU serverless brain (M2: NEVER dead-end — instant seed + on-device canned reasoning, any browser)
 // ── THE ONE REPLY-SPINE, instantiated with q-chat's OWN capabilities (the messenger injects its own). generate =
 // this surface's brain (engine.js); open/call route through the parent bridge when embedded (P3), else an honest
 // redirect; mem/corpus/evolve default to the shared window globals. The spine carries every faculty identically. ──
@@ -444,7 +444,7 @@ async function generate(text, skipUser) {
   } catch (e) {}
   let out = "", _streamed = false;
   try {
-    if (DEMO) { await sleep(560 + Math.random() * 420); out = demoReply(text); record({ ack: ackMs, cold: false, warm: false, ttft: 0, tokps: 0 }); }   // ack is a real UI-latency measurement even in demo
+    if (DEMO || _liteMode) { await sleep(_liteMode ? 90 : (560 + Math.random() * 420)); out = ((seedLookup && seedLookup(text)) || demoReply(text)); record({ ack: ackMs, cold: false, warm: false, ttft: 0, tokps: 0, seed: !!_liteMode }); }   // serverless brain: instant seed (real canonical) → on-device canned reasoning; ack is a real UI-latency measurement
     else {
       if (primingPromise) { setStatus("loading", "settling in…"); try { await primingPromise; } catch {} typing(true); }   // wait out any background persona-prime, then reuse it
       const firstTurn = convIds.length === 0;
@@ -507,7 +507,7 @@ function scheduleIdle() { clearTimeout(idleT); if (localStorage.getItem(HKEY + "
 function onSend() {
   const text = input.value.trim(); if (!text || busy) return;
   input.value = ""; input.style.height = "auto"; syncComposer();
-  if (!armed && !DEMO) {
+  if (!armed && !DEMO && !_liteMode) {
     bubble("u", text); remember("u", text);
     const hit = seedLookup ? seedLookup(text) : null;
     if (hit) {                                       // pre-sealed canonical answer — instant, real, honest
@@ -647,6 +647,11 @@ if (DEMO) { armed = true; setStatus("online"); if (!had) greet(); else renderChi
 else (async () => {
   try {
     setStatus("connecting");
+    // FAST no-WebGPU detection (≤1.8s): probe for a real GPU adapter BEFORE the multi-second model fetch. Brave
+    // (WebGPU off by default) returns no adapter instantly → we jump straight to the serverless LITE brain instead
+    // of making the user wait for a model download to fail. This is what makes Q feel instant in ANY browser.
+    const _gpuOk = await (async () => { try { if (!navigator.gpu || !navigator.gpu.requestAdapter) return false; const a = await Promise.race([navigator.gpu.requestAdapter().catch(() => null), new Promise((r) => setTimeout(() => r("t"), 1800))]); return !!a && a !== "t"; } catch (e) { return false; } })();
+    if (!_gpuOk) throw new Error("no-webgpu");   // → the LITE-brain fallback (catch below): answer instantly, right here
     // ?q=<κ> — boot the WHOLE of Q from one content address (resident weights + tokenizer named by the manifest),
     // reconstructed from the local store with no catalog + 0 network. The literal front door; falls back to the
     // normal catalog load if the κ isn't resolvable here.
@@ -673,6 +678,14 @@ else (async () => {
     // instant-greeted OR reloaded: prime + pin the persona in the BACKGROUND. This also compiles the prefill
     // pipeline (warmup) as a side effect, so the FIRST real turn is ⚡ warm, not a cold prefill.
     else { if (!greeted) renderChips(); if (!personaReady && !commonsRestored) primePersona(); }
-  } catch (e) { setStatus("offline", "offline · needs WebGPU (Chrome/Edge)"); if (!had) bubble("a", "I need WebGPU to think — open me in Chrome, Edge, or Brave and I'll be right here."); }
+  } catch (e) {
+    // M2 — NEVER DEAD-END: no WebGPU (Brave default) or the model load failed → drop to the SERVERLESS LITE brain
+    // (instant seed + on-device canned reasoning), so Q still answers in ANY browser, super low latency, 0 network.
+    // We do NOT tell the user to "open me elsewhere"; the conversation keeps going right here.
+    _liteMode = true; armed = true; setStatus("online", "on your device");
+    try { for (const tb of [...log.querySelectorAll(".msg.think")]) { const r = tb.closest(".row"); if (r) r.remove(); } } catch (x) {}
+    if (pendingQ.length) { const q = pendingQ.slice(); pendingQ = []; for (const pq of q) { try { await generate(pq, true); } catch (x) {} } }   // answer everything that queued while we tried the GPU brain
+    else if (!greeted && !had) { try { bubble("a", INSTANT_HELLO); remember("a", INSTANT_HELLO); renderChips(); greeted = true; } catch (x) {} }
+  }
 })();
 </script></body></html>
