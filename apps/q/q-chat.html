@@ -117,7 +117,11 @@
   #mic.rec{color:#fff;background:linear-gradient(135deg,#ff5b7b,#e0245e);border-color:transparent;animation:micpulse 1.2s ease-out infinite}
   #mic.busy{opacity:.55;pointer-events:none}
   @keyframes micpulse{0%{box-shadow:0 0 0 0 rgba(224,36,94,.5)}100%{box-shadow:0 0 0 15px rgba(224,36,94,0)}}
+/* LEAN EMBED (HOLO-Q-INSTANT-REAL): inside the drawer the frame is a side PANEL — drop the 8K wallpaper entirely
+   (the drawer supplies the surround). Set `qembed` BEFORE #wall renders so the browser never even fetches the jpg. */
+html.qembed #wall{display:none!important;background:none!important}
 </style></head><body>
+<script>try{if(window.self!==window.top)document.documentElement.classList.add("qembed");}catch(e){}</script>
 <div id=wall></div>
 <header>
   <div class=av><canvas id=orb></canvas></div>
@@ -577,18 +581,28 @@ async function warmKokoro() {
   try {
     const mod = await import("./core/voice-out.js");
     mod.loadVoice((p) => { if (p && p.status === "progress" && p.file) { try { console.debug("[Q voice] kokoro", p.file, Math.round(p.progress || 0) + "%"); } catch {} } })
-      .then(() => { _kokoro = mod; _voiceErr = null; try { console.info("[Q voice] Kokoro ready — natural voice active"); } catch {} _speakGreeting(false); })
+      .then(() => { _kokoro = mod; _voiceErr = null; try { console.info("[Q voice] Kokoro ready — natural voice active"); } catch {} _speakGreeting(false); try { _flushVoiceQ(); } catch (e) {} })
       .catch((e) => { _kokoro = null; _voiceErr = String((e && e.message) || e); try { console.warn("[Q voice] Kokoro FAILED, using system voice:", e); } catch {} });
   } catch (e) { _kokoro = null; _voiceErr = String((e && e.message) || e); try { console.warn("[Q voice] Kokoro import FAILED:", e); } catch {} }
 }
 // Diagnostic: run __voiceDebug() in the console to see why the voice is robotic (system) vs natural (kokoro).
 try { window.__voiceDebug = () => ({ crossOriginIsolated: !!self.crossOriginIsolated, hasSharedArrayBuffer: typeof SharedArrayBuffer !== "undefined", gpu: !!navigator.gpu, voiceOn: voiceOn, kokoroLoaded: !!_kokoro, kokoroReady: !!(_kokoro && _kokoro.ready && _kokoro.ready()), kokoroError: _voiceErr }); } catch {}
 function _osSpeak(text) { if (!_tts) return; try { const u = new SpeechSynthesisUtterance(String(text)); if (!_qVoice) _qVoice = pickVoice(); if (_qVoice) u.voice = _qVoice; u.rate = 0.99; u.pitch = 1.02; u.onend = u.onerror = () => { _qSpeaking = Math.max(0, _qSpeaking - 1); }; _qSpeaking++; _tts.speak(u); } catch {} }
+// HQ VOICE ONLY (HOLO-Q-INSTANT-REAL): Q speaks in its beautiful neural voice or it HOLDS — never the robotic OS
+// voice. If Kokoro isn't warm yet, we PARK the latest utterance and speak it (once) the instant HQ is ready, so
+// the first thing you ever hear from Q is already gorgeous. (?osvoice=1 re-enables the OS floor for accessibility.)
+let _voiceQ = null;
+const _OS_VOICE_OK = (() => { try { return /[?&]osvoice=1/.test(location.search); } catch (e) { return false; } })();
+function _flushVoiceQ() { const t = _voiceQ; if (t && _kokoro && _kokoro.ready && _kokoro.ready()) { _voiceQ = null; speak(t); } }
 function speak(text) {
   if (!voiceOn || !text) return;
-  qOrb("speaking");   // the orb flares while Q speaks
-  if (_kokoro && _kokoro.ready && _kokoro.ready()) { _qSpeaking++; _kokoro.speak(text).then(() => { _qSpeaking = Math.max(0, _qSpeaking - 1); if (!_qSpeaking) qOrb("idle"); }).catch(() => { _qSpeaking = Math.max(0, _qSpeaking - 1); _osSpeak(text); }); return; }   // beautiful voice, once warm
-  _osSpeak(text);   // instant OS voice until then
+  if (_kokoro && _kokoro.ready && _kokoro.ready()) {   // beautiful neural voice
+    qOrb("speaking"); _qSpeaking++;
+    _kokoro.speak(text).then(() => { _qSpeaking = Math.max(0, _qSpeaking - 1); if (!_qSpeaking) qOrb("idle"); }).catch(() => { _qSpeaking = Math.max(0, _qSpeaking - 1); if (!_qSpeaking) qOrb("idle"); if (_OS_VOICE_OK) _osSpeak(text); });
+    return;
+  }
+  if (_OS_VOICE_OK) { _osSpeak(text); return; }   // opt-in accessibility floor only
+  _voiceQ = text;   // HQ-only: hold the latest utterance until Kokoro is warm, then speak it beautifully
 }
 function stopSpeak() { _qSpeaking = 0; qOrb("idle"); try { if (_tts) _tts.cancel(); } catch {} try { if (_kokoro && _kokoro.stop) _kokoro.stop(); } catch {} }
 // Q's voice is always on — start warming the neural voice immediately (it upgrades the greeting + replies).
