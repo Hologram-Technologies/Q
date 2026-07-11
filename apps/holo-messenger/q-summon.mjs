@@ -181,6 +181,11 @@ html body .holo-hero .holo-hero-x{ z-index:6!important; }   /* keep the ✕ clos
    iframe (duplicate Call pill + doubled chips). The embedded q-chat has its own → hide the duplicates. */
 html body #q-call-btn, html body #q-hero-chips{ display:none!important; }
 
+/* ══ ONE CLEAN HEADER (2026-07-11) — kill the duplicate "Q" (=> "QQ") ════════════════════════════════
+   #q-drawer-title is a q-summon overlay OUTSIDE .holo-hero, floating over the iframe q-chat's own "Q"
+   header. The iframe header is the single source → hide the stray title. */
+html body #q-drawer-title{ display:none!important; }
+
 `;
 DOC.head.appendChild(css);
 // keyboard-aware composer (mobile): track the VISUAL viewport so the composer/chips float above the soft
@@ -572,6 +577,12 @@ function mountQChat() {
     const st = d.createElement("style"); st.id = "q-embed";
     st.textContent = "#wall,.wall,[class*=wall]{display:none!important}html,body,header,#log,main,[class*=thread]{background:#0d1117!important;background-image:none!important;backdrop-filter:none!important}body::before,body::after{display:none!important}";
     d.head.appendChild(st);
+    // ONE clean greeting: drop q-chat's idle "No rush…" nudge (it persists in history → reads as a 2nd greeting)
+    try {
+      const w = f.contentWindow, NUDGE = "No rush at all";
+      const kill = () => { d.querySelectorAll(".msg").forEach((m) => { if (((m.textContent || "").trim()).indexOf(NUDGE) === 0) m.remove(); }); };
+      kill(); new w.MutationObserver(kill).observe(d.body, { childList: true, subtree: true });
+    } catch {}
   } catch {} });
   hero.appendChild(f);
 }
