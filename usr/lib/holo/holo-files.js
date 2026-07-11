@@ -311,6 +311,54 @@ async function listDevice() {
   // real folders (File System Access mounts), then ONE honest affordance. Never a fake This PC.
   return listMounts();
 }
+// ── IMPORT MOUNTS (Explorer-Home E1): the UNIVERSAL real-folder rung. Every browser — Brave,
+// Firefox, Safari, all mobile — can OPEN a folder via the platform's own chooser
+// (<input webkitdirectory>), yielding a one-shot SNAPSHOT (File objects with relative paths).
+// Session-lived by nature (handles die with the page) — labeled honestly; bytes seal only on
+// explicit acts (Copy to Home / Share), never auto-indexed.
+const _imports = new Map();   // id → { name, root }  root: Map(name → {file} | {dir:Map})
+export function importFolder(fileList) {
+  const files = [...(fileList || [])].filter((f) => f && (f.webkitRelativePath || f.name));
+  if (!files.length) return null;
+  const first = files[0].webkitRelativePath || files[0].name;
+  const rooted = first.includes("/");
+  const rootName = rooted ? first.split("/")[0] : "Opened folder";
+  const root = new Map();
+  for (const f of files) {
+    const rel = (f.webkitRelativePath || f.name).split("/");
+    const parts = rooted && rel.length > 1 ? rel.slice(1) : rel;
+    let d = root;
+    for (let i = 0; i < parts.length - 1; i++) { const seg = parts[i]; if (!d.get(seg) || !d.get(seg).dir) d.set(seg, { dir: new Map() }); d = d.get(seg).dir; }
+    d.set(parts[parts.length - 1], { file: f });
+  }
+  const id = "i" + Math.random().toString(36).slice(2, 10);
+  _imports.set(id, { name: rootName, root });
+  try { window.dispatchEvent(new CustomEvent("holo-mounts-changed")); } catch {}
+  return { id, name: rootName, count: files.length, path: "import:" + id };
+}
+export const importsList = () => [..._imports.entries()].map(([id, m]) => ({ id, name: m.name }));
+function importResolve(p) {
+  const m = String(p).match(/^import:([a-z0-9]+)(?:\/(.*))?$/); if (!m) return null;
+  const rec = _imports.get(m[1]); if (!rec) return null;
+  let d = rec.root;
+  for (const seg of (m[2] || "").split("/").filter(Boolean)) { const e = d.get(seg); if (!e || !e.dir) return null; d = e.dir; }
+  return { id: m[1], dir: d };
+}
+function listImportDir(p) {
+  const r = importResolve(p); if (!r) return [];
+  const out = [];
+  for (const [name, e] of r.dir) {
+    if (e.dir) out.push(node({ name, path: p + "/" + name, kind: "dir", source: "import-dir", role: "" }));
+    else out.push(node({ name, path: p + "/" + name, kind: "file", source: "import", bytes: e.file.size, mtime: Math.floor((e.file.lastModified || 0) / 1000), mime: e.file.type || mimeOf(name), did: "" }));
+  }
+  return sortNodes(out);
+}
+function importFile(p) {
+  const parts = String(p).split("/"); const name = parts.pop();
+  const r = importResolve(parts.join("/")); if (!r) throw new Error("that folder is no longer open");
+  const e = r.dir.get(name); if (!e || !e.file) throw new Error("that file is no longer open");
+  return e.file;
+}
 // ── WEB MOUNTS — real folders granted via the platform's own picker/drop ceremony ────────────────
 async function listMounts() {
   let rows = []; try { rows = await Mounts.mounts(); } catch {}
@@ -318,8 +366,11 @@ async function listMounts() {
     name: m.name, path: "mount:" + m.id, kind: "dir", source: "mount-dir", writable: m.state === "granted",
     role: m.state === "granted" ? "folder on this device" : "tap to reconnect", glyph: "folder", _mountState: m.state,
   }));
+  for (const m of importsList()) out.push(node({ name: m.name, path: "import:" + m.id, kind: "dir", source: "import-dir", role: "snapshot · choose again to refresh", glyph: "folder" }));
+  // ALWAYS an actionable door (E1): live grants where the platform offers them, the universal
+  // one-shot chooser everywhere else — never a compatibility sentence as the only row.
   if (Mounts.supported()) out.push(node({ name: "Connect a folder…", path: "mount-connect:", kind: "connect", source: "mount-connect", role: "open a real folder from this device", glyph: "plus" }));
-  else if (!out.length) out.push(node({ name: "Real folders need Chrome or Edge here", path: "mount-none:", kind: "note", source: "mount-none", role: "your Hologram home works everywhere" }));
+  else out.push(node({ name: "Open a folder…", path: "import-connect:", kind: "connect", source: "import-connect", role: "browse a real folder from this device", glyph: "plus" }));
   return out;
 }
 async function listMountDir(p) {
@@ -504,6 +555,7 @@ export async function list(n) {
     case "device": return listDevice();
     case "device-dir": return listDeviceDir(n._absPath);
     case "mount-dir": return listMountDir(n.path);
+    case "import-dir": return listImportDir(n.path);
     case "smart": return listSmart(n._from || []);
     case "closure-dir": return treeFromClosure(await loadClosureFor(n._scheme), n._scheme, n._prefix);
     case "cloud": return listCloud(n._cloudPath || "/");
@@ -547,6 +599,10 @@ export async function read(n, max = 512 * 1024) {
   }
   if (n.source === "mount") {
     const f = await mountFile(n.path);
+    const bytes = new Uint8Array(await f.slice(0, max).arrayBuffer()); return { bytes, mime: n.mime || mimeOf(n.name), size: f.size };
+  }
+  if (n.source === "import") {
+    const f = importFile(n.path);
     const bytes = new Uint8Array(await f.slice(0, max).arrayBuffer()); return { bytes, mime: n.mime || mimeOf(n.name), size: f.size };
   }
   if (n.source === "cloud") {
@@ -756,6 +812,6 @@ export const HoloFiles = { ROOTS, knownFolders, ensureKappa, deviceOp, deviceMkd
   sendToCloud, cloudShareLink, searchAll, resolveInput, materialize, webSearch, freeSpace, extractZip, compressToZip,
   deskMkdir, deskRename, deskRemove, deskMove, deskCopy, deskUndo, deskRedo, onDesktopChange,
   recycle, restoreTrash, removeTrash, emptyTrash, trashCount,
-  deviceMounts, mountMkdir, mountCreateFile, mountRemove, mountRename, smartLocations };
+  deviceMounts, mountMkdir, mountCreateFile, mountRemove, mountRename, smartLocations, importFolder, importsList };
 if (typeof window !== "undefined") window.HoloFiles = HoloFiles;
 export default HoloFiles;

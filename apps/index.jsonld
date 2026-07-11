@@ -511,7 +511,7 @@
         "holo-answer.js",
         "holo-ask.js"
       ],
-      "holo:entry": "sha256:839adcc489f137c246a974e4ace889b2c2d590a5a8c614351ff94f331b8ea5ab"
+      "holo:entry": "sha256:ab6dba2d80806a5c974802256d570005ce1a89f85a65e293be39ba582726ede3"
     }
   ]
 }
