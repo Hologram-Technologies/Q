@@ -575,7 +575,7 @@ function mountQChat() {
   f.addEventListener("load", () => { try {
     const d = f.contentDocument; if (!d) return;                       // same-origin → we can style it plain
     const st = d.createElement("style"); st.id = "q-embed";
-    st.textContent = "#wall,.wall,[class*=wall]{display:none!important}html,body,header,#log,main,[class*=thread]{background:#0d1117!important;background-image:none!important;backdrop-filter:none!important}body::before,body::after{display:none!important}";
+    st.textContent = "#wall,.wall,[class*=wall]{display:none!important}html,body,header,#log,main,[class*=thread],footer{background:#1f1f1e!important;background-image:none!important;backdrop-filter:none!important;border:0!important}body::before,body::after{display:none!important}";
     d.head.appendChild(st);
     // ONE clean greeting: drop q-chat's idle "No rush…" nudge (it persists in history → reads as a 2nd greeting)
     try {
