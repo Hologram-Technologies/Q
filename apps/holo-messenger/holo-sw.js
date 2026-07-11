@@ -15,7 +15,7 @@ import { notificationFor, routeFor } from "./holo-push-route.mjs";
 // still resolve byte-identical, verified fail-closed (L5). Lazy + memoized = restart-safe.
 import { makeEvictRescue } from "../../usr/lib/holo/holo-evict-rescue.mjs";
 
-const CACHE = "holo-msgr-shell-33189d19c451";                     // bump → old (unverified) caches are purged on activate
+const CACHE = "holo-msgr-shell-d9b30905b86a";                     // bump → old (unverified) caches are purged on activate
 // BASE-RELOCATABLE: the worker may be served under ANY prefix (OS root, a GitHub Pages /<repo>/ subpath, a
 // static mirror). Every location below derives from where THIS script actually lives; at the OS root BASE is ""
 // and behavior is byte-identical. Manifest paths stay CANONICAL ("/apps/holo-messenger/…" — they are identity,
@@ -118,7 +118,7 @@ async function cacheFirst(req, pathname) {
   // integrity index, which is never intercepted/killed) so verification + κ-store recovery survive eviction.
   if (!SHELL_KAPPA.size) await loadManifest();
   const cache = await caches.open(CACHE);
-  const hit = (await cache.match(req)) || (await cache.match(req, { ignoreSearch: true }));
+  const hit = (await cache.match(req)) || (req.url.includes("?") ? null : (await cache.match(req, { ignoreSearch: true })));
   if (hit) return hit;
   const cpath = canon(pathname);   // κ lookups use the canonical id, wherever the shell is mounted
   let kappa = expectedKappa(cpath);
