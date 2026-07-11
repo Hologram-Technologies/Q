@@ -176,6 +176,11 @@ html.q-drawer .holo-hero > :not(.q-chat-iframe):not(.holo-hero-x), html body .ho
 html body .holo-hero .q-chat-iframe{ position:absolute!important; inset:0!important; width:100%!important; height:100%!important; border:0!important; display:block!important; background:var(--holo-chrome,#0d1117)!important; z-index:5!important; }
 html body .holo-hero .holo-hero-x{ z-index:6!important; }   /* keep the ✕ close above the iframe */
 
+/* ══ HIDE NATIVE OVERLAYS (2026-07-11) — the iframe q-chat owns the composer/chips/call now ═══════════
+   #q-call-btn + #q-hero-chips are q-summon fixed overlays OUTSIDE .holo-hero → they floated over the
+   iframe (duplicate Call pill + doubled chips). The embedded q-chat has its own → hide the duplicates. */
+html body #q-call-btn, html body #q-hero-chips{ display:none!important; }
+
 `;
 DOC.head.appendChild(css);
 // keyboard-aware composer (mobile): track the VISUAL viewport so the composer/chips float above the soft
