@@ -22,9 +22,12 @@ const SIGN_ALG = { name: "ECDSA", namedCurve: "P-256" }, SIGN_OP = { name: "ECDS
 const BOX_ALG = { name: "ECDH", namedCurve: "P-256" };
 
 // ── identities (in production these come from holo-identity / the TEE; here we can also mint them for tests) ──
+// NON-EXTRACTABLE private halves: sign() and deriveBits() never need export, exportPublic() exports only the
+// public keys (always exportable), and persistence (holo-direct-id) STRUCTURED-CLONES the CryptoKeys into
+// IndexedDB — key material can never be serialized out of the runtime.
 export async function generateIdentity() {
-  const sign = await _subtle().generateKey(SIGN_ALG, true, ["sign", "verify"]);
-  const box = await _subtle().generateKey(BOX_ALG, true, ["deriveBits"]);
+  const sign = await _subtle().generateKey(SIGN_ALG, false, ["sign", "verify"]);
+  const box = await _subtle().generateKey(BOX_ALG, false, ["deriveBits"]);
   return { sign, box };
 }
 // the shareable public identity - hand this to contacts (both keys are public)

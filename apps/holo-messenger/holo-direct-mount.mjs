@@ -1,0 +1,275 @@
+// holo-direct-mount.mjs — Holo Direct in the LIVE messenger: the native holospace↔holospace sealed chat,
+// mounted the app's own way (self-mounting, fail-soft, additive — the q-summon / power-session idiom).
+// ONE rail button (🔐) → a small sheet: your Direct code (copy) · paste a peer's code · Start — which opens
+// the finished sealed-conversation panel (holo-direct-ui) wired to the dual-path engine (holo-direct):
+// warm P2P when the peer is up (~30 ms sealed words over WebRtcLink), the blind mailbox when not, TOFU +
+// key-change + safety number exactly as the engine enforces them. LAZY: the 3 MB spine wasm loads on FIRST
+// use — cold boot and TTFW pay nothing (D5). Manual code exchange is the honest N4 door; N5 replaces it
+// with the joinable κ link/QR. window.HoloDirect = { open(peerPub,{name}), code(), state } for harnesses.
+
+const DOC = typeof document !== "undefined" ? document : null;
+const $ = (s, r) => (r || DOC).querySelector(s);
+
+let direct = null, spine = null, bootP = null;
+const panels = new Map();            // contactId → panel handle (the store, not a queue, holds unseen messages)
+
+async function _boot() {
+  if (direct) return direct;
+  if (bootP) return bootP;
+  bootP = (async () => {
+    const { makeSpine } = await import("./holo-net.mjs");        // ← the 3 MB spine loads HERE, first use only
+    const { makeDirect } = await import("./holo-direct.mjs?v=n8");
+    const { getIdentity } = await import("./holo-direct-id.mjs");
+    // the operator namespace: the signed-in identity's stable id when the gate resolved one, else "guest"
+    // (ONE stable identity per device+origin — never per session). 3 s race: Direct must not hang on auth.
+    let ns = "guest";
+    try {
+      const auth = await Promise.race([window.__holoAuthP, new Promise((r) => setTimeout(() => r(null), 3000))]);
+      const stable = auth && (auth.principal && (auth.principal.id || auth.principal) || auth.operator);
+      if (stable) ns = String(stable).slice(0, 64);
+    } catch {}
+    const { identity } = await getIdentity({ ns });               // same operator tomorrow → same keys (K1)
+    // the conversation survives (N6): contacts + messages in the vault-encrypted store, same ns rule
+    let store = null;
+    try {
+      const { getVaultKey } = await import("./holo-direct-id.mjs");
+      const { openStore } = await import("./holo-direct-store.mjs");
+      store = await openStore({ ns, vaultKey: await getVaultKey({ ns }) });
+    } catch (e) { console.warn("[direct] store unavailable — session-only conversations:", String(e)); }
+    spine = await makeSpine();
+    const displayName = (localStorage.getItem("holo.direct.name") || "").trim() || null;   // rides sealed payloads (N8 two-way door)
+    direct = await makeDirect({ identity, spine, store, displayName });   // drop-box: origin /mbox, or relays on a static origin (holo-dm gate)
+    direct.on("message", (m) => {
+      const p = panels.get(m.contactId);
+      if (p) p.addMessage({ from: m.from, text: m.text, verified: m.verified, kappa: m.kappa });
+      else { _badge(true); _unseen(m.contactId); _notify(m.contactId, m.text); }   // main list shows it (unread badge)
+      _renderSection();
+    });
+    // media (N7): pending → an honest placeholder bubble; fetched → the bytes become an image/file chip.
+    direct.on("media", (m) => {
+      const p = panels.get(m.contactId);
+      if (!p) {                                              // store + vault already hold it; hydration renders it
+        _badge(true);
+        if (m.status === "pending-bytes") { _unseen(m.contactId); _notify(m.contactId, "📎 " + (m.media && m.media.name || "file")); _renderSection(); }
+        return;
+      }
+      if (m.status === "fetched" && m.bytes) {
+        const url = URL.createObjectURL(new Blob([m.bytes], { type: m.media.mime }));
+        p.setMedia(m.kappa, { from: "them", name: m.media.name, mime: m.media.mime, size: m.media.size, url });
+      } else if (m.status === "pending-bytes") {
+        p.addMedia({ from: "them", name: m.media.name, mime: m.media.mime, size: m.media.size, kappa: m.kappa, url: null });
+      }
+    });
+    direct.on("tick", (t) => { const p = panels.get(t.contactId); if (p) p.setTick(t.kappa, t.status); });
+    direct.on("typing", (t) => { const p = panels.get(t.contactId); if (p) p.setTyping(true); });
+    direct.on("keychange", (k) => { const p = panels.get(k.contactId); if (p) p.showKeyChange(true); });
+    // the mailbox needs draining: messages AND acks that fall to the drop-box (peer offline, link not yet
+    // warm) arrive ONLY on poll. A steady background poll makes offline delivery real and ✓✓ reliable;
+    // exactly-once (κ-dedup + durable store) makes redundant polls free. Poll once now, then every 4 s.
+    const _poll = () => direct.poll().catch(() => {});
+    _poll(); setInterval(_poll, 4000);
+    // live push (N8/GL3): on the relay transport a landing blob triggers an IMMEDIATE poll — WhatsApp
+    // immediacy instead of the 4 s cadence. No-op on the HTTP transport (returns null). κ-dedup makes
+    // the extra poll free.
+    import("./holo-dm.mjs?v=n8").then((DM) => DM.mailboxLive(direct.myPub.box, _poll)).catch(() => {});
+    return direct;
+  })();
+  return bootP;
+}
+
+// ── the one-link door (K2): the link is a FRAGMENT — public keys never appear in a request line, a log,
+// or the drop-box. Opening it = introduction (TOFU) + warm + panel, one motion. Format:
+//   <origin><app-path>#direct=v1.<base64url(JSON{ sign, box, name? })>
+const _b64u = (s) => btoa(unescape(encodeURIComponent(s))).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
+const _ub64u = (s) => decodeURIComponent(escape(atob(s.replace(/-/g, "+").replace(/_/g, "/"))));
+async function myLink() {
+  await _boot();
+  const name = (localStorage.getItem("holo.direct.name") || "").trim() || undefined;
+  const payload = { sign: direct.myPub.sign, box: direct.myPub.box, name };
+  return location.origin + location.pathname + "#direct=v1." + _b64u(JSON.stringify(payload));
+}
+function _parseFragment() {
+  const m = /[#&]direct=v1\.([A-Za-z0-9_-]+)/.exec(location.hash || "");
+  if (!m) return null;
+  // SCRUB FIRST — the keys must not linger in the address bar, history, or anything that reads location
+  try { history.replaceState(null, "", location.pathname + location.search); } catch {}
+  try { const p = JSON.parse(_ub64u(m[1])); return p && p.sign && p.box ? p : null; } catch { return null; }
+}
+
+async function _refreshSafety(cid, panel) {
+  const sn = await direct.safetyNumber(cid); if (!sn) return;
+  const st = direct.verifyStatus(cid);
+  panel.setSafety({ emojis: direct.safetyEmojis(sn), digits: direct.safetyDigits(sn),
+                    status: st.status === "same" && st.verified ? "same-verified" : st.status });
+}
+
+export async function open(peerPub, { name = null } = {}) {
+  await _boot();
+  const cid = name || "direct:" + (peerPub.sign || "").slice(0, 12);
+  if (peerPub && peerPub.box) direct.addContact(cid, peerPub);    // a stub contact (inbound-only) has no pub to add
+  direct.warm(cid);                                               // the cold dial happens while the human reads (D2)
+  const { openDirectChat } = await import("./holo-direct-ui.mjs?v=n8");
+  const panel = openDirectChat({
+    name: cid,
+    onSend: (t) => direct.send(cid, t).then((r) => { if (r.ok) panel.addMessage({ from: "me", text: t, kappa: r.kappa, status: "sent" }); else if (r.keychange) panel.showKeyChange(true); }),
+    onVerify: () => { direct.markVerified(cid); _refreshSafety(cid, panel); },
+    onTyping: () => direct.sendTyping(cid),
+    onClose: () => panels.delete(cid),
+    // 📎 (N7): seal + κ-ship the file; my bubble renders from the local bytes immediately. A refusal
+    // (over 25 MB, no spine) surfaces as the engine's own plain sentence — never a silent drop.
+    onAttach: (file) => direct.sendMedia(cid, file).then((r) => {
+      if (r.ok) panel.addMedia({ from: "me", name: file.name, mime: file.type, size: file.size, url: URL.createObjectURL(file), kappa: r.kappa, status: "sent" });
+      else if (r.keychange) panel.showKeyChange(true);
+      else panel.notice(r.error || "the file could not be sent");
+    }),
+  });
+  panels.set(cid, panel);
+  unread.delete(cid); _renderSection();                           // opening the thread clears its badge
+  // HYDRATE from the sealed store BEFORE the network warms (C6): history renders instantly, offline-capable.
+  for (const m of await direct.history(cid).catch(() => [])) {
+    if (m.media) {
+      const held = await direct.mediaBytes(m.media.kappa).catch(() => null);
+      panel.addMedia({ from: m.dir === "out" ? "me" : "them", name: m.media.name, mime: m.media.mime, size: m.media.size,
+                       url: held ? URL.createObjectURL(new Blob([held.bytes], { type: held.mime })) : null, kappa: m.kappa, status: m.status });
+    } else panel.addMessage({ from: m.dir === "out" ? "me" : "them", text: m.text, verified: true, kappa: m.kappa, status: m.status });
+  }
+  _refreshSafety(cid, panel);
+  return panel;
+}
+
+// ── the MAIN-LIST section (N8/S3): Direct threads live where every thread lives — the left pane, above
+// the app's own list. WhatsApp anatomy: avatar · name · last-word preview · time · green unread badge;
+// tap → the sealed panel. Foreign DOM inside a React container gets wiped on re-render — the interval
+// re-attach below (the same idiom as the rail button) heals it within 2 s. Styled by the wa-skin vars.
+const unread = new Map();            // contactId → count (cleared when the panel opens)
+function _unseen(cid) { unread.set(cid, (unread.get(cid) || 0) + 1); }
+function _notify(cid, text) {
+  // never prompt from here — only speak if the operator already granted it and is looking away
+  try {
+    if (typeof Notification === "undefined" || Notification.permission !== "granted" || !DOC.hidden) return;
+    new Notification(cid, { body: String(text).slice(0, 90), tag: "holo-direct-" + cid, silent: false });
+  } catch {}
+}
+const _fmtT = (ts) => { if (!ts) return ""; const d = new Date(ts), now = new Date(); return d.toDateString() === now.toDateString() ? d.toTimeString().slice(0, 5) : d.toLocaleDateString(undefined, { month: "short", day: "numeric" }); };
+let _secBusy = false;
+async function _renderSection() {
+  if (_secBusy || !direct || !DOC) return;
+  _secBusy = true;
+  try {
+    const wrap = $(".holo-convlist-wrap"); if (!wrap) return;
+    const convs = await direct.conversations().catch(() => []);
+    let sec = wrap.querySelector(".holo-direct-section");
+    if (!convs.length) { if (sec) sec.remove(); return; }
+    if (!sec) {
+      sec = DOC.createElement("div"); sec.className = "holo-direct-section";
+      sec.style.cssText = "display:flex;flex-direction:column;padding:2px 0 4px;border-bottom:1px solid var(--wa-border,rgba(255,255,255,.08))";
+      wrap.prepend(sec);
+    }
+    sec.innerHTML = `<div style="font-size:10.5px;letter-spacing:.08em;text-transform:uppercase;color:var(--wa-dim,#8aa0ad);padding:6px 16px 2px">Holo Direct · sealed</div>`;
+    for (const c of convs.slice(0, 12)) {
+      const cid = c.name || c.contactId;
+      const n = unread.get(cid) || 0;
+      const row = DOC.createElement("button");
+      row.type = "button"; row.className = "holo-direct-row";
+      row.style.cssText = "display:flex;align-items:center;gap:11px;background:transparent;border:0;padding:8px 14px;cursor:pointer;text-align:left;color:var(--wa-text,#e9f1f5);width:100%";
+      row.onmouseenter = () => { row.style.background = "rgba(255,255,255,.05)"; };
+      row.onmouseleave = () => { row.style.background = "transparent"; };
+      const preview = c.last ? ((c.last.dir === "out" ? "You: " : "") + c.last.text) : "say hello";
+      row.innerHTML = `<div style="width:40px;height:40px;border-radius:50%;display:grid;place-items:center;font-weight:700;color:#04110d;background:linear-gradient(135deg,#00d09c,#27e3b3);flex:0 0 auto">${(cid.trim()[0] || "·").toUpperCase()}</div>
+        <div style="min-width:0;flex:1"><div style="display:flex;justify-content:space-between;gap:8px"><span style="font-weight:600;font-size:14px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${cid}</span><span style="font-size:11px;color:var(--wa-dim,#8aa0ad);flex:0 0 auto">${_fmtT(c.last && c.last.ts)}</span></div>
+        <div style="display:flex;justify-content:space-between;gap:8px;align-items:center"><span style="font-size:12.5px;color:var(--wa-dim,#8aa0ad);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">🔒 ${preview}</span>${n ? `<span class="holo-direct-unread" style="background:#00d09c;color:#04110d;font-size:11px;font-weight:700;border-radius:10px;padding:1px 6px;flex:0 0 auto">${n}</span>` : ""}</div></div>`;
+      row.onclick = () => { if (c.pub && c.pub.box) open(c.pub, { name: cid }); };
+      sec.append(row);
+    }
+  } finally { _secBusy = false; }
+}
+
+// ── the rail affordance (React-reconciliation-proof, the power-session idiom) ─────────────────────────────
+let railBtn = null;
+function _badge(on) { if (railBtn) railBtn.style.boxShadow = on ? "0 0 0 2px #00d09c" : ""; }
+function _sheet() {
+  const el = (t, css, html) => { const n = DOC.createElement(t); if (css) n.style.cssText = css; if (html != null) n.innerHTML = html; return n; };
+  const ov = el("div", "position:fixed;inset:0;z-index:2147483400;background:rgba(4,7,11,.7);backdrop-filter:blur(6px);display:flex;align-items:center;justify-content:center;padding:18px;font:14px/1.5 system-ui,sans-serif");
+  const card = el("div", "width:min(380px,94vw);background:#0e1620;border:1px solid #1f2c35;border-radius:18px;padding:18px;color:#e9f1f5;display:flex;flex-direction:column;gap:10px");
+  card.append(el("div", "font-weight:700;font-size:15px", "🔐 Holo Direct — sealed, native, serverless"));
+  // the conversation list: who you've talked to + the last word, newest first. Tap to reopen (history
+  // hydrates from the sealed store). Populated async; hidden until there's at least one conversation.
+  const convWrap = el("div", "display:none;flex-direction:column;gap:2px;max-height:180px;overflow:auto;margin:-2px 0 2px");
+  card.append(convWrap);
+  _boot().then(() => direct.conversations()).then((convs) => {
+    if (!convs || !convs.length) return;
+    convWrap.style.display = "flex";
+    convWrap.append(el("div", "font-size:11px;color:#8aa0ad;letter-spacing:.04em;text-transform:uppercase;margin-bottom:2px", "Conversations"));
+    for (const c of convs) {
+      const row = el("button", "display:flex;align-items:center;gap:9px;background:transparent;border:0;border-radius:10px;padding:7px 8px;cursor:pointer;text-align:left;color:#e9f1f5");
+      row.onmouseenter = () => { row.style.background = "rgba(255,255,255,.05)"; };
+      row.onmouseleave = () => { row.style.background = "transparent"; };
+      const av = (c.name || c.contactId || "·").trim()[0].toUpperCase();
+      row.innerHTML = `<div style="width:32px;height:32px;border-radius:50%;display:grid;place-items:center;font-weight:700;color:#04110d;background:linear-gradient(135deg,#00d09c,#27e3b3);flex:0 0 auto">${av}</div>
+        <div style="min-width:0;flex:1"><div style="font-weight:600;font-size:13px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${c.name || c.contactId}</div>
+        <div style="font-size:11.5px;color:#8aa0ad;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${c.last ? (c.last.dir === "out" ? "You: " : "") + c.last.text : "…"}</div></div>`;
+      row.onclick = () => { ov.remove(); if (c.pub && c.pub.box) open(c.pub, { name: c.name || c.contactId }); };
+      convWrap.append(row);
+    }
+  }).catch(() => {});
+  const me = el("input", "background:#0a1119;border:1px solid #1f2c35;border-radius:10px;color:#e9f1f5;padding:8px;font-size:13px");
+  me.placeholder = "Your display name (travels with your link)"; me.value = localStorage.getItem("holo.direct.name") || "";
+  me.onchange = () => { localStorage.setItem("holo.direct.name", me.value.trim()); mine.value = "…"; myLink().then((l) => { mine.value = l; }); };
+  card.append(me);
+  card.append(el("div", "font-size:12px;color:#8aa0ad", "Your link — send it over anything. It carries your PUBLIC keys only; every message is sealed end-to-end; verification is the safety-number ritual, not the link:"));
+  const mine = el("textarea", "background:#0a1119;border:1px solid #1f2c35;border-radius:10px;color:#9fd;padding:8px;font:11px ui-monospace,monospace;height:64px;resize:none");
+  mine.readOnly = true; mine.className = "holo-direct-mylink"; mine.value = "…";
+  myLink().then((l) => { mine.value = l; });
+  const copy = el("button", "align-self:flex-start;background:rgba(255,255,255,.06);border:1px solid #1f2c35;border-radius:9px;color:#e9f1f5;padding:6px 10px;font-size:12px;cursor:pointer", "Copy my link");
+  copy.onclick = () => { try { navigator.clipboard.writeText(mine.value); copy.textContent = "Copied ✓"; } catch {} };
+  card.append(mine, copy);
+  card.append(el("div", "font-size:12px;color:#8aa0ad;margin-top:4px", "Got someone's link? Just open it — or paste it here:"));
+  const theirs = el("textarea", "background:#0a1119;border:1px solid #1f2c35;border-radius:10px;color:#e9f1f5;padding:8px;font:11px ui-monospace,monospace;height:48px;resize:none");
+  const start = el("button", "background:linear-gradient(90deg,#00d09c,#1fd6ac);color:#04110d;border:0;border-radius:11px;padding:10px;font-weight:700;cursor:pointer", "Start sealed chat");
+  const err = el("div", "display:none;color:#ffb0b0;font-size:12px");
+  start.onclick = async () => {
+    try {
+      const m = /[#&]direct=v1\.([A-Za-z0-9_-]+)/.exec(theirs.value.trim());
+      if (!m) throw new Error("that's not a Direct link");
+      const pub = JSON.parse(_ub64u(m[1]));
+      if (!pub.sign || !pub.box) throw new Error("the link is missing its keys");
+      ov.remove(); await open(pub, { name: pub.name || null });
+    } catch (e) { err.style.display = "block"; err.textContent = "Not a Direct link — " + (e.message || e); }
+  };
+  const close = el("button", "background:transparent;border:0;color:#8aa0ad;cursor:pointer", "Close");
+  close.onclick = () => ov.remove();
+  card.append(theirs, start, err, close); ov.append(card); DOC.body.append(ov);
+}
+function _attach() {
+  const rail = $(".holo-rail"); if (!rail) return false;
+  if (railBtn && railBtn.isConnected) return true;
+  const existing = rail.querySelector(".holo-direct-btn"); if (existing) { railBtn = existing; return true; }
+  const btn = DOC.createElement("button");
+  btn.type = "button"; btn.className = "holo-rail-btn holo-direct-btn";
+  btn.title = "Holo Direct — sealed native chat"; btn.setAttribute("aria-label", "Holo Direct");
+  btn.textContent = "🔐";
+  btn.addEventListener("click", (e) => { e.preventDefault(); e.stopPropagation(); _badge(false); _sheet(); });
+  rail.appendChild(btn); railBtn = btn; return true;
+}
+
+function start() {
+  if (!DOC || typeof window === "undefined") return;
+  if (window.__holoDirectMount) return; window.__holoDirectMount = true;
+  window.HoloDirect = { open, boot: _boot, link: myLink, code: async () => { await _boot(); return JSON.stringify(direct.myPub); }, state: (cid) => (direct ? direct.linkState(cid) : "off") };
+  setInterval(() => { _attach(); _renderSection(); }, 2000); _attach();
+  // returning operator: if the sealed store already exists, boot in the background so the Direct threads
+  // are VISIBLE in the main list without any click (the 3 MB spine cost is deferred past first paint;
+  // a first-time visitor has no store and pays nothing).
+  setTimeout(async () => {
+    try {
+      if (direct || bootP || !("databases" in indexedDB)) return;
+      const dbs = await indexedDB.databases();
+      if ((dbs || []).some((d) => d && d.name === "holo-direct-store")) { await _boot(); _renderSection(); }
+    } catch {}
+  }, 2500);
+  // the one-link door: arrived via someone's Direct link → scrubbed already by _parseFragment, then
+  // introduction (TOFU) + warm + panel, one motion. The 3 MB spine loads here because this IS first use.
+  const invite = _parseFragment();
+  if (invite) open({ sign: invite.sign, box: invite.box }, { name: invite.name || null }).catch((e) => console.warn("[direct] link open failed:", String(e)));
+}
+start();
