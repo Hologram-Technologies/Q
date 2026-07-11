@@ -20,12 +20,12 @@
   "prov:Entity",
   "holstr:Entry"
  ],
- "holstr:seq": 92,
- "holstr:prev": "did:holo:sha256:25907c87e5a3db82c71d8a1524e2ef765301369a6c690588983f7883f8531bbf",
+ "holstr:seq": 93,
+ "holstr:prev": "did:holo:sha256:fd82c2a373934ce2bdc3e824e6298357d0df0f2265227efaaa55fe7fe1c5e078",
  "holstr:kind": "release",
  "holstr:payload": {
-  "shell": "7429dfb9b2e8923c6fbd91e56a88416abcaeb446bb6b722b6ec140a6c1eee883",
-  "manifest": "492aa4faf5858a4a31d9745e9fedc44594240cc41aa42d5980a815d3a9ac46ce",
+  "shell": "87797f7e2dd6bab403aa48e3726ef1debbaf45e466ad990efe66752dfd1d6949",
+  "manifest": "a71a704d484b5e9562be542307b59d42d467bce8d097ec361fb3caf8a9bcc7bc",
   "runtime": {
    "apps/q/pkg/holospaces_web.js": "b9f8a887de588c5193dc65ca9ce206a70c6df53595b848e0ce0299c2d88a5753",
    "apps/q/pkg/holospaces_web_bg.wasm": "9d90b4ea8bccee8c239073c7ec7dd5158c6d11f1f668487570d17475d79e661e",
@@ -45,12 +45,12 @@
    "self": "0511772584510f0888d97dd5a72bf986ad6791bd8e305063ddd8a82c39888a70",
    "spaces": "d8aebefb67e7fc7802e757b9a7d95bb881e6d75b4a9bc4bd4227634541757e51"
   },
-  "closure": "6856330ab9b6da020c0b6dd6bcc12f969af3c08565f7c1c7bd158e7141462c21"
+  "closure": "25813de134620d62ec272e3de3d352156b04c1ac87099592e3baf694bf7ddacb"
  },
- "prov:generatedAtTime": "2026-07-11T17:48:49.221Z",
+ "prov:generatedAtTime": "2026-07-11T17:56:38.957Z",
  "holstr:op": "did:holo:sha256:87599792c7b13fad9d6c57d3b89d2cef35e4715869f5cde597ab60ca92699f0b",
- "id": "did:holo:sha256:fd82c2a373934ce2bdc3e824e6298357d0df0f2265227efaaa55fe7fe1c5e078",
- "holstr:sig": "0lG/HzP2oyOApYw5fLiN0N8+ctKq/iLp29hosHJ29UeF3ZydtnQH8PzDS8g1n4otu6O/rU4xOVEAYBTtG5w4CA==",
+ "id": "did:holo:sha256:87e94720320bfcb308f629002fe21c6cbb65c505dee616448f95530cc88c9249",
+ "holstr:sig": "tCiwt8YvQkzYcEdGRFewj6ty/c8lfFVD7GJcumgFvSvq2dO3vczMuTM2PpIyS/MdtQgjsh9jH8Hv4UltEI0mBw==",
  "holstr:alg": "Ed25519",
  "holstr:pub": "snYY6y35gdZ1ngOE5E+G1BGFjlTo2MfpfP8h6yc7r+M="
 }
