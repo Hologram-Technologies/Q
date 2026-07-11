@@ -236,5 +236,12 @@ self.addEventListener("fetch", (e) => {
   }
 
   if (!BASE) return;   // at a root mount — untouched
-  if (ROOT_FILES[p] || RESCUE.some((d) => p.startsWith(d))) e.respondWith(fetch(BASE + p + url.search));
+  // ROOT-RESCUE: a CANONICAL absolute path ("/apps/…", "/usr/…") emitted by runtime code resolves against
+  // the document — on the /Q mount it escapes the bundle, so remap it onto BASE. O5: this was network-ONLY
+  // (fetch(BASE+p)); offline it rejected and the asset (a wallpaper, a login module addressed absolutely)
+  // died even though the pin holds it. Now the remapped path falls back to the pinned closure → store.
+  if (ROOT_FILES[p] || RESCUE.some((d) => p.startsWith(d))) {
+    const rp = BASE + p;
+    e.respondWith(fetch(rp + url.search).catch(async () => (await pathFallback(rp)) || Response.error()));
+  }
 });
