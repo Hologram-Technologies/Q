@@ -211,6 +211,13 @@ let engine = null, convIds = [], busy = false, armed = false, idleT = null, _lit
 // this surface's brain (engine.js); open/call route through the parent bridge when embedded (P3), else an honest
 // redirect; mem/corpus/evolve default to the shared window globals. The spine carries every faculty identically. ──
 const _bridge = { openSpace: null, startCall: null };   // P3 wires these to the parent (postMessage) when q-chat is embedded
+// ONE BRAIN (canonical + unified): when q-chat is the SAME-ORIGIN iframe inside the Hologram drawer, it uses the
+// PARENT drawer's ALREADY-LOADED brain (window.parent.HoloQ) instead of loading a second engine — one model in
+// memory, instant boot, truly unified. Standalone (not embedded) still loads its own engine. Cross-origin embeds
+// can't reach the parent (the access throws) → they fall back to their own brain / the lite path. Fail-soft.
+const _embedded = (() => { try { return window.self !== window.top && typeof window.parent.location.href === "string"; } catch (e) { return false; } })();
+function _parentBrain() { try { return _embedded ? window.parent.HoloQ : null; } catch (e) { return null; } }
+function _parentReady() { try { const h = _parentBrain(); return !!(h && h.generate && (!h.ready || h.ready())); } catch (e) { return false; } }
 const reply = makeReply({
   generate: async (prompt) => { try { if (!engine) return ""; let framed = frameSystem() + engine.frameTurn(String(prompt), false); let ids = engine.tokenize(framed); if (m.bos && engine.bosId != null) ids = [engine.bosId, ...ids]; const r = await engine.generate(ids, { maxNew: 512 }); return (r && r.text) || ""; } catch (e) { return ""; } },
   basePersona: () => { try { return selfPersona ? selfPersona({ model: m, engine }) : ""; } catch (e) { return ""; } },
@@ -444,7 +451,13 @@ async function generate(text, skipUser) {
   } catch (e) {}
   let out = "", _streamed = false;
   try {
-    if (DEMO || _liteMode) { await sleep(_liteMode ? 90 : (560 + Math.random() * 420)); out = ((seedLookup && seedLookup(text)) || demoReply(text)); record({ ack: ackMs, cold: false, warm: false, ttft: 0, tokps: 0, seed: !!_liteMode }); }   // serverless brain: instant seed (real canonical) → on-device canned reasoning; ack is a real UI-latency measurement
+    if (_embedded) {
+      // ONE BRAIN: the drawer's already-loaded brain answers (no 2nd engine). While it's still warming, the instant
+      // seed / on-device reasoning keeps the conversation alive — so the embedded frame is ALWAYS responsive.
+      if (_parentReady()) { let g = ""; try { g = (await reply.groundedContext(text)) || ""; } catch (e) {} try { out = String((await window.parent.HoloQ.generate((g ? g + "\n\n" : "") + text)) || "").trim(); } catch (e) { out = ""; } record({ ack: ackMs, warm: true, cold: false, ttft: 0, tokps: 0 }); }
+      if (!out) { await sleep(90); out = ((seedLookup && seedLookup(text)) || demoReply(text)); record({ ack: ackMs, cold: true, warm: false, ttft: 0, tokps: 0, seed: true }); }
+    }
+    else if (DEMO || _liteMode) { await sleep(_liteMode ? 90 : (560 + Math.random() * 420)); out = ((seedLookup && seedLookup(text)) || demoReply(text)); record({ ack: ackMs, cold: false, warm: false, ttft: 0, tokps: 0, seed: !!_liteMode }); }   // serverless brain: instant seed (real canonical) → on-device canned reasoning; ack is a real UI-latency measurement
     else {
       if (primingPromise) { setStatus("loading", "settling in…"); try { await primingPromise; } catch {} typing(true); }   // wait out any background persona-prime, then reuse it
       const firstTurn = convIds.length === 0;
@@ -644,6 +657,13 @@ const WELCOME_BACK = "Welcome back. I'm right here — what's on your mind?";
 if (!DEMO && !had && !params.get("q")) { bubble("a", INSTANT_HELLO); remember("a", INSTANT_HELLO); renderChips(); scheduleIdle(); greeted = true; armGreeting(INSTANT_HELLO); window.__ttfw.helloMs = Math.round(performance.now() - window.__ttfw.t0); }
 else { armGreeting(had ? WELCOME_BACK : INSTANT_HELLO); }   // returning / ?q / demo → still GREET ALOUD on first gesture (spoken only, no extra bubble)
 if (DEMO) { armed = true; setStatus("online"); if (!had) greet(); else renderChips(); }
+else if (_embedded) (async () => {
+  // ONE BRAIN + instant boot: embedded in the drawer → do NOT load a 2nd engine. The parent's brain answers (and
+  // generate() auto-upgrades to it the moment it's warm); the instant seed keeps us responsive meanwhile. 0 model load.
+  armed = true; setStatus("online", "on your device");
+  if (pendingQ.length) { const q = pendingQ.slice(); pendingQ = []; for (const pq of q) { try { await generate(pq, true); } catch (x) {} } }
+  else if (!greeted) { try { renderChips(); } catch (x) {} }
+})();
 else (async () => {
   try {
     setStatus("connecting");
