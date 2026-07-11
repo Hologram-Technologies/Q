@@ -222,15 +222,15 @@ function reserveAside() { try { if (window.HoloAside) window.HoloAside.open("q")
 function releaseAside() { try { if (window.HoloAside) window.HoloAside.close("q"); else HTML.style.removeProperty("--holo-aside-w"); } catch (e) {} }
 function openClasses() { HTML.classList.add("q-drawer", "q-docked"); ensureTitle(); requestAnimationFrame(reserveAside); }
 function closeClasses() { HTML.classList.remove("q-drawer", "q-docked"); releaseAside(); }
+// MINIMAL-FIRST STABILITY (2026-07-11): the messenger shell now owns the Q surface's open/close via its
+// own React state. This handler MUST NOT toggle drawer classes or squeeze the canvas — doing so raced the
+// shell (its 1.5s safety timer, finding no `.holo-hero` of its own, released the canvas squeeze the shell's
+// panel sat in → "opens then closes"). It now does ONE non-visual thing: pre-warm the brain on the tap, so
+// the first reply is instant. No classes, no aside, no timer, no duplicate greeting — zero UI conflict.
 function onOrbDown(e) {
-  if (heroOpen()) return;
   const orb = e.target && e.target.closest && e.target.closest(".holo-home-orb, .holo-global-orb");
   if (!orb) return;
-  openClasses();                    // the hero mounts already-docked (canvas squeezes as Q slides in)
-  speakGreeting();                  // the tap IS the gesture → Q speaks by name at t=0
-  warm();                           // …and the SAME gesture kicks the brain + seed load NOW (not at idle) → by the
-                                    // time you finish reading the greeting + typing, the seed can answer instantly
-  setTimeout(() => { if (!heroOpen()) closeClasses(); }, 1500);   // safety: never leave the canvas squeezed with no drawer
+  warm();                           // low-latency: kick the brain + seed load on the gesture (idempotent, no UI)
 }
 DOC.addEventListener("pointerdown", onOrbDown, { capture: true, passive: true });
 
@@ -528,6 +528,43 @@ window.QSummon = {
   kappaOf: (i) => (ledger[i] || {}).k || null,
   speak: (t) => voice.speak(t),
   name: () => firstName(),
+  open: () => { if (!heroOpen()) { const orb = $(".holo-home-orb, .holo-global-orb"); if (orb) orb.click(); openClasses(); speakGreeting(); warm(); } },   // programmatic summon (the one door's Q.summon)
   version: 4,
 };
 try { console.info("[q-summon] live — RIGHT docked drawer (wallet parity) · sealed:", ledger.length, "· chain:", chainOk ? "verified" : "BROKEN@" + brokenAt); } catch {}
+
+// ══ THE ONE DOOR (Q-ONE U4): window.Q — the single canonical surface every human, app, and agent touches.
+// ZERO new logic: every verb DELEGATES to the one proven implementation underneath (HoloQ · HoloCorpus ·
+// HoloMemory · QSummon · QLiveHero) — this is unification, not another Q. Non-clobbering: if a window.Q
+// already exists (the holospace shim, the OS shell), only the MISSING verbs are added, so the door is one
+// continuous surface everywhere. Fail-soft (the Q-Sees law): the drawer never depends on this block.
+(function qDoor() { try {
+  const Q = (window.Q && typeof window.Q === "object") ? window.Q : {};
+  const HQ = () => window.HoloQ || {};
+  const add = (name, fn) => { if (!(name in Q)) Q[name] = fn; };
+  add("act",      (t) => { const h = HQ(); return h.act ? h.act(t) : Promise.resolve(null); });                       // say it, done (classify → do, injection-immune)
+  add("ask",      async (t) => { const h = HQ(); try { const a = h.act ? await h.act(t) : null; if (a) return a; } catch (e) {} try { if (h.ready && h.ready() && h.generate) return await h.generate(String(t || "")); } catch (e) {} return null; });   // an answer or a deed — the brain when warm, honest null when cold
+  add("open",     (app) => { const h = HQ(); return h.act ? h.act("open " + String(app || "")) : Promise.resolve(null); });
+  add("summon",   () => { try { window.QSummon && window.QSummon.open && window.QSummon.open(); return true; } catch (e) { return false; } });
+  add("call",     () => { try { return !!(window.QLiveHero && (window.QLiveHero.start(), true)); } catch (e) { return false; } });
+  add("remember", (t) => { const h = HQ(); return h.remember ? h.remember(t) : undefined; });
+  add("recall",   (q, k) => { const h = HQ(); return h.recall ? h.recall(q, k) : Promise.resolve([]); });
+  add("know",     (source, text, meta) => { const C = window.HoloCorpus; return (C && C.publish) ? C.publish({ source, text, meta }) : Promise.resolve(null); });   // project a fact into Q's world
+  add("facts",    (q, k) => { const C = window.HoloCorpus; return (C && C.recall) ? C.recall(q, k) : Promise.resolve([]); });
+  add("grounded", (q) => { const h = HQ(); return h.grounded ? h.grounded(q) : Promise.resolve(""); });
+  add("warm",     () => { const h = HQ(); try { h.warm && h.warm(); h.warmSeed && h.warmSeed(); } catch (e) {} });
+  add("ready",    () => { const h = HQ(); try { return !!(h.ready && h.ready()); } catch (e) { return false; } });
+  add("stats",    () => { const h = HQ(); try { return h.stats ? h.stats() : null; } catch (e) { return null; } });
+  add("self",     async () => {   // Q's honest, live self-description — derived, never confabulated
+    const h = HQ(); const out = { name: "Q", where: "on this device — private, serverless", ready: false };
+    try { out.ready = !!(h.ready && h.ready()); } catch (e) {}
+    try { out.persona = h.persona ? h.persona().slice(0, 400) : ""; } catch (e) {}
+    try { out.stats = h.stats ? h.stats() : null; } catch (e) {}
+    try { if (window.HoloMemory && window.HoloMemory.summary) out.memory = window.HoloMemory.summary(); } catch (e) {}
+    try { if (window.HoloCorpus && window.HoloCorpus.summary) out.world = await window.HoloCorpus.summary(); } catch (e) {}
+    try { if (window.QSummon && window.QSummon.verify) out.thread = window.QSummon.verify(); } catch (e) {}
+    return out;
+  });
+  window.Q = Q;
+  try { console.info("[q-door] ONE door live — window.Q (ask · act · open · summon · call · remember · recall · know · facts · grounded · warm · self)"); } catch (e) {}
+} catch (e) { try { console.warn("[q-door] init failed:", e); } catch {} } })();
