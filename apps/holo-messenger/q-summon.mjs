@@ -492,6 +492,35 @@ setInterval(renderStats, 1000);
   window.QProject = { tick, version: 1 };
 } catch (e) { try { console.warn("[q-project] init failed:", e); } catch {} } })();
 
+// ══ Q DOES: REMINDERS FIRE (D1). Every 15s scan the realm store for due reminders and deliver them through
+// the living surfaces: drawer open → a real spoken κ bubble right now (liveIngest); closed → the QReach badge
+// pulses and the message waits (you ASKED for this — an explicit reminder bypasses the 1/day restraint).
+// Append-only lifecycle: firing/cancelling appends a reminder-x record referencing the reminder's sealed id —
+// nothing is ever mutated, and the whole thing rides U1's realms (encrypted, claimed at sign-in). Fail-soft.
+(function qRemind() { try {
+  let busy = false;
+  async function tick() {
+    if (busy) return; busy = true;
+    try {
+      const M = window.HoloMemory; if (!M || !M.recent) return;
+      if (M.ready) await M.ready();
+      const xs = new Set(M.recent({ kind: "reminder-x", n: 80 }).map((r) => r["holmem:meta"] && r["holmem:meta"].ref).filter(Boolean));
+      const due = M.recent({ kind: "reminder", n: 80 }).filter((r) => !xs.has(r.id) && r["holmem:meta"] && r["holmem:meta"].at && new Date(r["holmem:meta"].at) <= new Date());
+      if (!due.length) return;
+      const r = due[due.length - 1];                                   // oldest due first (recent() is newest-first)
+      await M.remember({ kind: "reminder-x", text: "fired", meta: { ref: r.id } });
+      const msg = "⏰ You asked me to remind you: " + r["holmem:text"] + ".";
+      if (heroOpen() && window.HoloQ && window.HoloQ.liveIngest) { window.HoloQ.liveIngest("q", msg); try { voice.speak(msg); } catch {} }
+      else {
+        try { const K = "holo.q.reach.v1"; const st = JSON.parse(localStorage.getItem(K) || "{}"); if (!st.pending) { st.pending = { text: msg, at: Date.now(), reason: "reminder" }; localStorage.setItem(K, JSON.stringify(st)); } } catch {}
+        try { window.QReach && window.QReach.badge && window.QReach.badge(true); } catch {}
+      }
+    } catch (e) {} finally { busy = false; }
+  }
+  setInterval(tick, 15000); setTimeout(tick, 6000);
+  window.QRemind = { tick, version: 1 };
+} catch (e) { try { console.warn("[q-remind] init failed:", e); } catch {} } })();
+
 // ── debug/verification surface ────────────────────────────────────────────────────────────────────────────
 window.QSummon = {
   thread: () => ledger.slice(),
