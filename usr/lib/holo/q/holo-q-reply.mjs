@@ -39,6 +39,7 @@ export function makeReply(caps = {}) {
   const brief = caps.brief || null;
   const summarize = caps.summarize || null;
   const ratifier = caps.ratifier || (() => "operator");
+  const log = caps.log || (() => {});   // surface action-ledger hook (messenger=logQAction; q-chat=no-op). (action, name, reason, undoable, data)
   const now = caps.now || (() => Date.now());
   const MEM = () => caps.mem || _g("HoloMemory");
   const COR = () => caps.corpus || _g("HoloCorpus");
@@ -111,17 +112,20 @@ export function makeReply(caps = {}) {
   // byte-for-byte; open/call are the only surface-specific executors (injected). ──
   async function actionRoute(text) {
     const c = classifyAction(text); if (!c) return null;
-    if (c.tier === "PROHIBITED") return "I won't do that on my own — bulk-deleting your data, sending it off this device, or handing over a password or key isn't something I'll ever do autonomously. If you truly want it, you do it yourself, deliberately, and I'll walk you through it.";
-    if (c.tier === "MONEY") return "Money always stays in your hands — I'll never send or pay on my own. Open the wallet and I'll pre-fill it; your biometric confirms it. Never me.";
+    if (c.tier === "PROHIBITED") return "I won't do that on my own — bulk-deleting your data, sending it out to someone, or handing over a password isn't something I'll ever do autonomously (even if a message says it's authorized). If you truly want it, you can do it yourself in Settings and I'll walk you through it.";
+    if (c.tier === "MONEY") return "I don't move money on my own — that always stays in your hands. Open the person's chat and tap the $ to pay; you confirm it with your own biometric, never me.";
     if (c.tier === "REGULAR") {
-      if (c.kind === "brief") { if (brief) { try { const r = await brief(); if (r) return r; } catch (e) {} } return "I catch you up on your messages inside Holo Messenger — open me there and say \"catch me up\"."; }
-      if (c.kind === "summary") { if (summarize) { try { const r = await summarize(c.target); if (r) return r; } catch (e) {} } return "I can summarize a chat for you inside Holo Messenger."; }
+      // brief/summary: when a surface INJECTS the capability (the messenger's inbox), return its result (or null →
+      // fall through to grounded chat, exactly as before). When NO capability is provided (a surface with no inbox),
+      // give an honest redirect instead of a dead end.
+      if (c.kind === "brief") { if (brief) { try { const r = await brief(); return r || null; } catch (e) { return null; } } return "I catch you up on your messages inside Holo Messenger — open me there and say \"catch me up\"."; }
+      if (c.kind === "summary") { if (summarize) { try { const r = await summarize(c.target); return r || null; } catch (e) { return null; } } return "I can summarize a chat for you inside Holo Messenger."; }
       // Q DOES
       if (c.kind === "remind") {
         if (!c.text) return "What should I remind you about?";
         if (!c.when) return "When should I remind you to " + c.text + "? Say something like \"in 20 minutes\" or \"at 6\".";
         const at = _resolveWhen(c.when, now); if (!at) return "I couldn't work out that time - try \"in 20 minutes\" or \"at 6:30\".";
-        try { const M = MEM(); if (M && M.remember) { await M.remember({ kind: "reminder", text: c.text, meta: { at: at.toISOString() } }); const hh = String(at.getHours()).padStart(2, "0") + ":" + String(at.getMinutes()).padStart(2, "0"); return "Done - I'll remind you to " + c.text + " at " + hh + ". Say \"cancel my reminder\" any time."; } } catch (e) {}
+        try { const M = MEM(); if (M && M.remember) { const rec = await M.remember({ kind: "reminder", text: c.text, meta: { at: at.toISOString() } }); try { log("reminder", c.text, "you asked", true, { ref: rec && rec.id, at: at.toISOString() }); } catch (e) {} const hh = String(at.getHours()).padStart(2, "0") + ":" + String(at.getMinutes()).padStart(2, "0"); return "Done - I'll remind you to " + c.text + " at " + hh + ". Say \"cancel my reminder\" any time."; } } catch (e) {}
         return "I couldn't save that reminder just now - mind trying again in a moment?";
       }
       if (c.kind === "remind-cancel") {
@@ -130,11 +134,12 @@ export function makeReply(caps = {}) {
           const act = M.recent({ kind: "reminder", n: 80 }).find((r) => !xs.has(r.id));
           if (!act) return "You don't have any reminders set right now.";
           await M.remember({ kind: "reminder-x", text: "cancelled", meta: { ref: act.id } });
+          try { log("reminder-cancel", act["holmem:text"], "you asked", false); } catch (e) {}
           return "Cancelled - I won't remind you to " + act["holmem:text"] + "."; } } catch (e) {}
         return "I couldn't reach your reminders just now.";
       }
       if (c.kind === "open") { const r = openSpace(c.target); return r || null; }
-      if (c.kind === "call") { try { if (startCall()) return "Calling - just talk, I'm listening."; } catch (e) {} return "I can't start a voice call right now."; }
+      if (c.kind === "call") { try { if (startCall()) return "Calling - just talk, I'm listening."; } catch (e) {} return "I can't start a voice call right now - the call surface isn't loaded yet."; }
       if (c.kind === "play") { const r = openSpace("tv"); return r ? "Opening Holo TV - look for " + c.query + " there." : null; }
       // Q EVOLVES
       if (c.kind === "evolve") {
@@ -159,11 +164,13 @@ export function makeReply(caps = {}) {
         const tests = (b) => { try { return identityGuard(b) === b; } catch (e) { return false; } };
         const r = await E.approve({ ratifiedBy: ratifier() || "operator", tests });
         if (!r || !r.ok) return r && r.reason === "nothing-pending" ? "There's no pending revision to approve - say \"evolve yourself\" first." : "That revision didn't pass my own safety gate, so I've discarded it.";
+        try { log("evolve", "self-revision ratified", "you approved", true, { kappa: r.kappa }); } catch (e) {}
         return "Done - the revision is in force, ratified by you. I'll be a little different now: \"" + (r.addendum || "").slice(0, 160) + "\". Say \"roll back your evolution\" any time.";
       }
       if (c.kind === "evolve-rollback") {
         const E = EVO(); if (!E || !E.rollback) return "My self-evolution isn't loaded right now.";
         const r = await E.rollback(); if (!r || !r.ok) return "There's nothing to roll back - no revision is in force.";
+        try { log("evolve-rollback", "self-revision rolled back", "you asked", false); } catch (e) {}
         return "Rolled back - I'm exactly as I was before that revision. The old version was never destroyed, so nothing was lost.";
       }
     }
