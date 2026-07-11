@@ -257,15 +257,11 @@ function _sheet() {
   card.append(theirs, start, err, close); ov.append(card); DOC.body.append(ov);
 }
 function _attach() {
-  const rail = $(".holo-rail"); if (!rail) return false;
-  if (railBtn && railBtn.isConnected) return true;
-  const existing = rail.querySelector(".holo-direct-btn"); if (existing) { railBtn = existing; return true; }
-  const btn = DOC.createElement("button");
-  btn.type = "button"; btn.className = "holo-rail-btn holo-direct-btn";
-  btn.title = "Holo Direct — sealed native chat"; btn.setAttribute("aria-label", "Holo Direct");
-  btn.textContent = "🔐";
-  btn.addEventListener("click", (e) => { e.preventDefault(); e.stopPropagation(); _badge(false); _sheet(); });
-  rail.appendChild(btn); railBtn = btn; return true;
+  // Holo Direct rail icon removed by request. The 🔐 left-rail button is no longer mounted;
+  // Direct stays fully reachable via the main-list "Holo Direct · sealed" section and the
+  // one-link door. Any stale button from a cached DOM is swept so the rail reads clean.
+  try { const b = DOC && $(".holo-direct-btn"); if (b) { b.remove(); railBtn = null; } } catch {}
+  return true;
 }
 
 function start() {
