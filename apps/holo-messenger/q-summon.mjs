@@ -164,6 +164,11 @@ html.q-drawer #q-stats.on{opacity:.5}
   /* the close affordance is a generous hit area */
   html.q-drawer .holo-hero-x{ display:flex!important; align-items:center!important; justify-content:center!important; }
 }
+/* ══ OVERLAP FIX (2026-07-13) — header text + chips no longer collide (measured 0 overlap) ══════════ */
+html body #q-drawer-title{ top:20px!important; }                                       /* "Q" name — upper */
+html body .holo-hero .holo-hero-status{ top:39px!important; }                          /* status — below, no collision */
+html body #q-hero-chips{ bottom:calc(env(safe-area-inset-bottom,0px) + 96px)!important; }  /* clear the composer */
+
 `;
 DOC.head.appendChild(css);
 // keyboard-aware composer (mobile): track the VISUAL viewport so the composer/chips float above the soft
