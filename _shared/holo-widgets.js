@@ -275,10 +275,19 @@
   function wallUrlOf(w) { if (!w) return ""; var m = String(w).match(/^(sha256|blake3|sha512):([0-9a-f]+)$/i); return m ? "/.holo/" + m[1].toLowerCase() + "/" + m[2] : String(w); }
   function currentWall() {
     try { var s = JSON.parse(W.localStorage.getItem(THEME_KEY) || "{}") || {}; var raw = String(s.wallpaper || "");
-      if (!raw || raw === "plain") return { kind: "none" };
+      if (raw === "plain") return { kind: "none" };
       if (/^live:/i.test(raw)) return { kind: "live" };
-      return { kind: "photo", url: wallUrlOf(raw) };
-    } catch (e) { return { kind: "none" }; }
+      if (raw) return { kind: "photo", url: wallUrlOf(raw) };
+    } catch (e) {}
+    // The DEFAULT wallpaper lives ONLY in the --holo-wallpaper custom property (set pre-paint by
+    // holo-appearance-boot.js) for an operator who never explicitly picked one — localStorage.wallpaper is
+    // empty. Mirror holo-immersive-backdrop.mjs's resolver and read it here, else the default sky is unseen.
+    try {
+      var cv = getComputedStyle(DOC.documentElement).getPropertyValue("--holo-wallpaper").trim();
+      var m = cv.match(/url\(\s*["']?([^"')]+)["']?\s*\)/);
+      if (m && m[1]) return { kind: "photo", url: m[1] };
+    } catch (e) {}
+    return { kind: "none" };
   }
   // a plain (no-photo) desktop is a solid theme colour — read ITS luminance so ink still flips light/dark.
   function themeBgLuma() {
