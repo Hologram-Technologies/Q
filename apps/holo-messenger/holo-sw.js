@@ -14,6 +14,15 @@ import { notificationFor, routeFor } from "./holo-push-route.mjs";
 // THE evicted rescue — ONE shared module (also used by root-sw): bytes that left Q for the κ-mirror
 // still resolve byte-identical, verified fail-closed (L5). Lazy + memoized = restart-safe.
 import { makeEvictRescue } from "../../usr/lib/holo/holo-evict-rescue.mjs";
+// O3/O5 (HOLO-SOVEREIGN-OFFLINE): the DEVICE κ-STORE weld. holo-sw owns the messenger scope, which sits
+// IN FRONT of root-sw — so without this, an offline shell asset the precache missed would 502 here and
+// never reach root-sw's pinned-closure fallback (the first-visit-then-offline residual O0.5 flagged).
+// With the pin's store as a last resort, EVERY object the pin sealed serves offline through this worker
+// too: manifested shell assets by their sha256 κ (the pin stores a sha256 alias for every object), and
+// non-manifested statics by the signed closure's path→blake3 map. Static import = cached with the
+// registration (available with the radio dead); any trouble is caught → today's 502/504 exactly.
+import { makeStoreRung } from "../../usr/lib/holo/holo-store-rung.mjs";
+const _RUNG = (() => { try { return makeStoreRung(); } catch { return null; } })();
 
 const CACHE = "holo-msgr-shell-16b2d2e02a82";                     // bump → old (unverified) caches are purged on activate
 // BASE-RELOCATABLE: the worker may be served under ANY prefix (OS root, a GitHub Pages /<repo>/ subpath, a
@@ -109,6 +118,46 @@ self.addEventListener("message", (e) => { const d = e.data || {}; if (d.type ===
 
 const CACHEABLE = /\.(jpg|jpeg|png|gif|svg|webp|avif|ico|css|js|mjs|wasm|woff2?|ttf|otf)$/i;
 const STATIC_DIRS = [SCOPE, BASE + "/_shared/", BASE + "/usr/share/", BASE + "/usr/lib/holo/", BASE + "/apps/q/pkg/", BASE + "/apps/workspace/pkg/", BASE + "/usr/lib/pkg/"];
+const MIME_EXT = { js: "text/javascript", mjs: "text/javascript", css: "text/css", json: "application/json", svg: "image/svg+xml", wasm: "application/wasm", html: "text/html", png: "image/png", jpg: "image/jpeg", jpeg: "image/jpeg", webp: "image/webp", woff2: "font/woff2", ico: "image/x-icon" };
+
+// O3/O5: the pinned closure as this worker's offline path→κ map. holo-pin.mjs verified os-closure.json
+// against the SIGNED head and handed it over through the "holo-pin" cache; we re-derive it here against
+// payload.closure from the sealed release pointer before trusting it. Memoized; no pin yet → null.
+let _cl = null, _clP = null;
+function pinnedClosure() {
+  if (_cl !== null) return Promise.resolve(_cl);
+  return (_clP ||= (async () => {
+    try {
+      const hit = await caches.match(BASE + "/os-closure.json");
+      if (!hit) return (_cl = false);
+      const bytes = new Uint8Array(await hit.arrayBuffer());
+      let want = null;
+      try { const rr = await caches.match(BASE + "/release.json", { ignoreSearch: true }); if (rr) want = (JSON.parse(await rr.clone().text())["holstr:payload"] || {}).closure; } catch {}
+      if (want && (await sha256hex(bytes)) !== want) return (_cl = false);
+      return (_cl = JSON.parse(new TextDecoder().decode(bytes)));
+    } catch { return (_cl = false); }
+  })());
+}
+// serve a request from the device store when cache+network both failed (offline). Manifested assets pass
+// their sha256 κ (the pin's sha256 alias resolves it); statics resolve via the closure path→blake3 map.
+// A hit is re-derived by the rung before it returns, so an offline byte is still verified (L5).
+async function storeFallback(pathname, kappa) {
+  if (!_RUNG) return null;
+  try {
+    if (kappa) { const u8 = await _RUNG.get("sha256", kappa); if (u8) return storeResponse(pathname, u8); }
+    const cl = await pinnedClosure();
+    if (cl && cl.files) {
+      let rel = canon(pathname).replace(/^\//, "").split("?")[0];
+      let e = cl.files[rel] || (!/\.[a-z0-9]{2,8}$/i.test(rel) ? (cl.files[rel + "/index.html"] || cl.files[rel + ".html"]) : null);
+      if (e && e.blake3) { const u8 = await _RUNG.get("blake3", e.blake3); if (u8) return storeResponse(pathname, u8); }
+    }
+  } catch {}
+  return null;
+}
+function storeResponse(pathname, u8) {
+  const ext = (pathname.split(".").pop() || "").toLowerCase();
+  return new Response(u8, { status: 200, headers: { "content-type": MIME_EXT[ext] || "application/octet-stream", "x-holo-source": "device-store" } });
+}
 
 // cache-first, with κ-verified refill. A cached hit was verified when stored → served directly (0 net). A miss on a
 // MANIFESTED shell asset must pass verification (origin → κ-store) or is REFUSED (502). Non-manifested statics keep
@@ -118,6 +167,9 @@ async function cacheFirst(req, pathname) {
   // integrity index, which is never intercepted/killed) so verification + κ-store recovery survive eviction.
   if (!SHELL_KAPPA.size) await loadManifest();
   const cache = await caches.open(CACHE);
+  // A ?query is an explicit version intent (e.g. q-summon.mjs?v=9) — it MUST bust the cache. ignoreSearch
+  // would serve a stale ?v=8 entry for a ?v=9 request (the bug that froze the Q drawer on old bytes), so
+  // only fall back to the query-insensitive match for queryless requests (plain static assets, unchanged).
   const hit = (await cache.match(req)) || (req.url.includes("?") ? null : (await cache.match(req, { ignoreSearch: true })));
   if (hit) return hit;
   const cpath = canon(pathname);   // κ lookups use the canonical id, wherever the shell is mounted
@@ -131,11 +183,17 @@ async function cacheFirst(req, pathname) {
     // Never BRICK the shell on an integrity miss: fall back to the plain network response (manifest lag / drift).
     // The bytes still came from the origin over TLS; failing closed to a blank 502 is strictly worse for the user.
     try { const res = await fetch(req, { cache: "reload" }); if (res && res.ok) return res; } catch {}
+    // O3/O5: offline last resort — the pinned device store (verified by the rung against this same κ).
+    const fromStore = await storeFallback(pathname, kappa); if (fromStore) { try { await cache.put(req, fromStore.clone()); } catch {} return fromStore; }
     return new Response("shell integrity check failed", { status: 502, headers: { "content-type": "text/plain" } });
   }
   // non-manifested static: refill from network, cache basic 200s.
   try { const res = await fetch(req); try { if (res && res.ok && res.type === "basic") cache.put(req, res.clone()); } catch {} return res; }
-  catch { return new Response("offline", { status: 504 }); }
+  catch {
+    // O3/O5: offline — resolve the static from the pinned closure → device store before giving up (504).
+    const fromStore = await storeFallback(pathname, null); if (fromStore) { try { await cache.put(req, fromStore.clone()); } catch {} return fromStore; }
+    return new Response("offline", { status: 504 });
+  }
 }
 
 self.addEventListener("fetch", (e) => {
@@ -145,22 +203,23 @@ self.addEventListener("fetch", (e) => {
   if (url.origin !== self.location.origin) return;    // own-origin only
   if (self.location.port === "8472" || self.location.port === "8474") return;   // DEV-ITERATE PORTS: never cache/verify — always serve live (edits appear instantly; no stale shell, no integrity brick)
   const p = url.pathname;
-  if (p === MANIFEST_URL || p.startsWith(BASE + "/b/")) return;
+  if (p === MANIFEST_URL || p.startsWith(BASE + "/b/")) return;     // the integrity index + same-origin κ-store: never intercept (avoid loops)
   // EVICTED rescue (U2): a messenger-page request under an evicted app/tree is served from the κ-mirror,
   // verified fail-closed, then CACHED — the offline/warm contract holds for evicted closures (ui, q).
+  // Runs BEFORE root-rescue/cacheFirst so an evicted path never falls through to an origin 404.
   {
     const pp = (BASE && !p.startsWith(BASE + "/")) ? BASE + p : p;
     const cand = RESCUER.matchSync(pp);
     if (cand) {
       e.respondWith((async () => {
-        const hit = await caches.match(req); if (hit) return hit;
+        const hit = await caches.match(req); if (hit) return hit;               // admitted-verified once (L3)
         const res = await RESCUER.rescue(req, cand);
         if (res.ok && res.headers.get("x-holo-kappa")) { try { const cc = await caches.open(CACHE); await cc.put(req, res.clone()); } catch (x) {} }
         return res;
       })());
       return;
     }
-  }     // the integrity index + same-origin κ-store: never intercept (avoid loops)
+  }
   // NAVIGATION (app.html) — κ-verified, cache-first, so the 2nd open needs 0 network to paint.
   if (req.mode === "navigate" && p.startsWith(SCOPE)) { e.respondWith(cacheFirst(req, p)); return; }
   // ROOT-RESCUE (mounted hosts only): runtime code addresses the OS by CANONICAL absolute paths ("/usr/…",
