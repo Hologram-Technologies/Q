@@ -3,23 +3,47 @@
 // a KEY-CHANGE warning banner (anti-MITM), message bubbles (with a per-message unverified flag), and a composer. The app
 // wires it to the holo-direct engine (onSend → engine.send; engine "message"/"keychange" → addMessage/showKeyChange).
 
-export function openDirectChat({ name = "Contact", onSend = () => {}, onVerify = () => {}, onClose = () => {}, onTyping = () => {}, onAttach = null } = {}) {
-  if (typeof document === "undefined") return { addMessage() {}, addMedia() {}, setMedia() {}, notice() {}, setSafety() {}, showKeyChange() {}, setVerified() {}, setTick() {}, setTyping() {}, close() {} };
+export function openDirectChat({ name = "Contact", onSend = () => {}, onVerify = () => {}, onClose = () => {}, onTyping = () => {}, onAttach = null, onRename = null } = {}) {
+  if (typeof document === "undefined") return { addMessage() {}, addMedia() {}, setMedia() {}, notice() {}, setName() {}, setSafety() {}, showKeyChange() {}, setVerified() {}, setTick() {}, setTyping() {}, close() {} };
   const el = (t, css, html) => { const n = document.createElement(t); if (css) n.style.cssText = css; if (html != null) n.innerHTML = html; return n; };
+  const _esc = (s) => String(s == null ? "" : s).replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
   const overlay = el("div", "position:fixed;inset:0;z-index:2147483500;background:rgba(4,7,11,.72);backdrop-filter:blur(8px);display:flex;align-items:center;justify-content:center;padding:20px;font:14px/1.5 system-ui,-apple-system,'Segoe UI',Roboto,sans-serif");
   const card = el("div", "width:min(420px,96vw);height:min(720px,92vh);background:#0e1620;border:1px solid #1f2c35;border-radius:20px;box-shadow:0 32px 90px rgba(0,0,0,.6);display:flex;flex-direction:column;color:#e9f1f5;overflow:hidden");
 
-  const initial = (name.trim()[0] || "·").toUpperCase();
+  let curName = name;
+  const initial = (String(name).trim()[0] || "·").toUpperCase();
   const head = el("div", "display:flex;align-items:center;gap:10px;padding:13px 14px;border-bottom:1px solid #16212b");
-  head.innerHTML = `<div style="width:38px;height:38px;border-radius:50%;display:grid;place-items:center;font-weight:700;color:#04110d;background:linear-gradient(135deg,#00d09c,#27e3b3)">${initial}</div>
-    <div style="flex:1;min-width:0"><div style="font-weight:700">${name}</div><div style="font-size:12px;color:#00d09c">🔒 End-to-end encrypted</div></div>`;
+  const avatar = el("div", "width:38px;height:38px;border-radius:50%;display:grid;place-items:center;font-weight:700;color:#04110d;background:linear-gradient(135deg,#00d09c,#27e3b3);flex:0 0 auto", initial);
+  const idwrap = el("div", "flex:1;min-width:0");
+  // the name is TAP-TO-RENAME (WhatsApp: open a chat, tap the name to set who it is). Rename is a LOCAL
+  // label only — it never touches the sealed key or forks the thread; onRename persists it.
+  const nameEl = el("div", "font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis" + (onRename ? ";cursor:text" : ""), _esc(name));
+  if (onRename) { nameEl.title = "Tap to rename"; nameEl.className = "hd-name"; }
+  const sub = el("div", "font-size:12px;color:#00d09c", "🔒 End-to-end encrypted");
+  idwrap.append(nameEl, sub);
+  const doRename = () => {
+    if (!onRename) return;
+    const inp = el("input", "font:700 14px system-ui;background:#0a1119;border:1px solid #00d09c;border-radius:8px;color:#e9f1f5;padding:3px 7px;width:100%;outline:none");
+    inp.className = "hd-name-input"; inp.value = curName; idwrap.replaceChild(inp, nameEl); inp.focus(); inp.select();
+    let done = false;   // Enter AND blur both fire (removing a focused input triggers blur) — commit ONCE, never throw
+    const commit = (save) => {
+      if (done) return; done = true;
+      const v = inp.value.trim();
+      if (inp.parentElement === idwrap) idwrap.replaceChild(nameEl, inp);
+      if (save && v && v !== curName) { curName = v; nameEl.textContent = v; avatar.textContent = (v[0] || "·").toUpperCase(); try { onRename(v); } catch {} }
+    };
+    inp.onkeydown = (e) => { if (e.key === "Enter") commit(true); else if (e.key === "Escape") commit(false); };
+    inp.onblur = () => commit(true);
+  };
+  nameEl.onclick = doRename;
+  head.append(avatar, idwrap);
   const shield = el("button", "background:rgba(255,255,255,.06);border:1px solid #1f2c35;border-radius:10px;padding:7px 10px;font-size:13px;color:#e9f1f5;cursor:pointer", "🛡 Verify");
   const closeBtn = el("button", "background:transparent;border:0;color:#8aa0ad;font-size:20px;cursor:pointer;padding:0 6px", "✕");
   closeBtn.className = "hd-close";
   head.append(shield, closeBtn); closeBtn.onclick = () => { onClose(); close(); };
 
   const banner = el("div", "display:none;background:rgba(233,111,111,.14);border-bottom:1px solid rgba(233,111,111,.4);color:#ffd7d7;padding:9px 14px;font-size:12.5px");
-  const typing = el("div", "display:none;padding:2px 16px 0;font-size:12px;color:#00d09c;font-style:italic", `${name} is typing…`);
+  const typing = el("div", "display:none;padding:2px 16px 0;font-size:12px;color:#00d09c;font-style:italic", `typing…`);
   const list = el("div", "flex:1;overflow:auto;padding:14px;display:flex;flex-direction:column;gap:8px");
   const notice = el("div", "display:none;padding:4px 16px 0;font-size:12px;color:#ffd7a8");
   const composer = el("div", "display:flex;gap:8px;padding:12px;border-top:1px solid #16212b;align-items:center");
@@ -50,7 +74,7 @@ export function openDirectChat({ name = "Contact", onSend = () => {}, onVerify =
   let safety = { emojis: "", digits: "", status: "new" };
   shield.onclick = () => {
     const verified = safety.status === "same-verified";
-    sheetBody.innerHTML = `<div style="font-size:15px;font-weight:700;margin-bottom:4px">Verify ${name}</div>
+    sheetBody.innerHTML = `<div style="font-size:15px;font-weight:700;margin-bottom:4px">Verify ${_esc(curName)}</div>
       <div style="color:#8aa0ad;font-size:12.5px;margin-bottom:14px">Compare this in person or over a call. If it matches, no one is in the middle.</div>
       <div style="font-size:30px;letter-spacing:4px;margin:8px 0">${safety.emojis}</div>
       <div style="font-family:ui-monospace,monospace;font-size:12px;color:#cfe;word-spacing:4px;line-height:1.8">${safety.digits}</div>`;
@@ -95,7 +119,7 @@ export function openDirectChat({ name = "Contact", onSend = () => {}, onVerify =
     }
     const ph = el("div", "font-size:13px;opacity:.85");
     ph.className = "hd-media-pending";
-    ph.textContent = "📎 " + (m.name || "file") + " — appears when " + name + " is online";
+    ph.textContent = "📎 " + (m.name || "file") + " — appears when " + curName + " is online";
     return ph;
   }
   function mediaBubble(m) {
@@ -128,7 +152,8 @@ export function openDirectChat({ name = "Contact", onSend = () => {}, onVerify =
     setTick(kappa, status) { const b = list.querySelector(`.hd-bubble[data-kappa="${kappa}"] .hd-tick`); if (b) b.textContent = _tick(status); },
     setTyping(on) { typing.style.display = on ? "block" : "none"; if (on) { clearTimeout(_typeT); _typeT = setTimeout(() => { typing.style.display = "none"; }, 4000); } },
     setSafety({ emojis, digits, status }) { safety = { emojis, digits, status }; shield.textContent = status === "same-verified" ? "🛡 Verified" : (status === "changed" ? "⚠ Verify" : "🛡 Verify"); shield.style.color = status === "same-verified" ? "#00d09c" : (status === "changed" ? "#ffb0b0" : "#e9f1f5"); },
-    showKeyChange(on) { banner.style.display = on ? "block" : "none"; if (on) banner.innerHTML = `⚠ <b>${name}'s security code changed.</b> Verify again before trusting new messages.`; },
+    setName(nm) { if (!nm) return; curName = nm; nameEl.textContent = nm; avatar.textContent = (String(nm).trim()[0] || "·").toUpperCase(); },
+    showKeyChange(on) { banner.style.display = on ? "block" : "none"; if (on) banner.innerHTML = `⚠ <b>${_esc(curName)}'s security code changed.</b> Verify again before trusting new messages.`; },
     setVerified(v) { this.setSafety({ ...safety, status: v ? "same-verified" : safety.status }); },
     close,
   };

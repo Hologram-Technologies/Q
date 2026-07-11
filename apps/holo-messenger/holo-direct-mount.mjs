@@ -13,6 +13,19 @@ const $ = (s, r) => (r || DOC).querySelector(s);
 let direct = null, spine = null, bootP = null;
 const panels = new Map();            // contactId → panel handle (the store, not a queue, holds unseen messages)
 
+// ── the human LABEL (WhatsApp-seamless): the raw key-derived id (`direct:<hex>`) is NEVER shown to a
+// human. Priority: your local alias (you renamed them) → the name they travel under (their chosen
+// displayName becomes the contactId, so a non-raw id IS their name) → a clean, stable "Sealed contact ·
+// <code>" fallback. The alias is pure presentation keyed by the immutable contactId, so renaming can
+// never fork a sealed thread. This is the one thing that made the live list read as jargon, not people.
+const _isRawId = (cid) => /^direct:/.test(String(cid || ""));
+const _shortCode = (cid) => (String(cid || "").replace(/^direct:/, "").replace(/[^A-Za-z0-9]/g, "").slice(0, 4).toUpperCase() || "····");
+function _alias(cid) { try { return (localStorage.getItem("holo.direct.alias." + cid) || "").trim() || null; } catch { return null; } }
+function _setAlias(cid, nm) { try { nm = String(nm || "").trim(); if (nm) localStorage.setItem("holo.direct.alias." + cid, nm); else localStorage.removeItem("holo.direct.alias." + cid); } catch {} }
+function _label(cid) { return _alias(cid) || (!_isRawId(cid) ? String(cid) : "Sealed contact · " + _shortCode(cid)); }
+// names + previews are peer-controlled → escape before they touch innerHTML (a link's name is untrusted).
+const _htm = (s) => String(s == null ? "" : s).replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+
 async function _boot() {
   if (direct) return direct;
   if (bootP) return bootP;
@@ -108,11 +121,12 @@ export async function open(peerPub, { name = null } = {}) {
   const cid = name || "direct:" + (peerPub.sign || "").slice(0, 12);
   if (peerPub && peerPub.box) direct.addContact(cid, peerPub);    // a stub contact (inbound-only) has no pub to add
   direct.warm(cid);                                               // the cold dial happens while the human reads (D2)
-  const { openDirectChat } = await import("./holo-direct-ui.mjs?v=n8");
+  const { openDirectChat } = await import("./holo-direct-ui.mjs?v=n9");
   const panel = openDirectChat({
-    name: cid,
+    name: _label(cid),
     onSend: (t) => direct.send(cid, t).then((r) => { if (r.ok) panel.addMessage({ from: "me", text: t, kappa: r.kappa, status: "sent" }); else if (r.keychange) panel.showKeyChange(true); }),
     onVerify: () => { direct.markVerified(cid); _refreshSafety(cid, panel); },
+    onRename: (nm) => { _setAlias(cid, nm); _renderSection(); },   // WhatsApp: tap the name → set who it is (local label)
     onTyping: () => direct.sendTyping(cid),
     onClose: () => panels.delete(cid),
     // 📎 (N7): seal + κ-ship the file; my bubble renders from the local bytes immediately. A refusal
@@ -147,7 +161,7 @@ function _notify(cid, text) {
   // never prompt from here — only speak if the operator already granted it and is looking away
   try {
     if (typeof Notification === "undefined" || Notification.permission !== "granted" || !DOC.hidden) return;
-    new Notification(cid, { body: String(text).slice(0, 90), tag: "holo-direct-" + cid, silent: false });
+    new Notification(_label(cid), { body: String(text).slice(0, 90), tag: "holo-direct-" + cid, silent: false });
   } catch {}
 }
 const _fmtT = (ts) => { if (!ts) return ""; const d = new Date(ts), now = new Date(); return d.toDateString() === now.toDateString() ? d.toTimeString().slice(0, 5) : d.toLocaleDateString(undefined, { month: "short", day: "numeric" }); };
@@ -168,16 +182,17 @@ async function _renderSection() {
     sec.innerHTML = `<div style="font-size:10.5px;letter-spacing:.08em;text-transform:uppercase;color:var(--wa-dim,#8aa0ad);padding:6px 16px 2px">Holo Direct · sealed</div>`;
     for (const c of convs.slice(0, 12)) {
       const cid = c.name || c.contactId;
+      const label = _label(cid);                                  // human name — never the raw direct:<key>
       const n = unread.get(cid) || 0;
       const row = DOC.createElement("button");
       row.type = "button"; row.className = "holo-direct-row";
       row.style.cssText = "display:flex;align-items:center;gap:11px;background:transparent;border:0;padding:8px 14px;cursor:pointer;text-align:left;color:var(--wa-text,#e9f1f5);width:100%";
       row.onmouseenter = () => { row.style.background = "rgba(255,255,255,.05)"; };
       row.onmouseleave = () => { row.style.background = "transparent"; };
-      const preview = c.last ? ((c.last.dir === "out" ? "You: " : "") + c.last.text) : "say hello";
-      row.innerHTML = `<div style="width:40px;height:40px;border-radius:50%;display:grid;place-items:center;font-weight:700;color:#04110d;background:linear-gradient(135deg,#00d09c,#27e3b3);flex:0 0 auto">${(cid.trim()[0] || "·").toUpperCase()}</div>
-        <div style="min-width:0;flex:1"><div style="display:flex;justify-content:space-between;gap:8px"><span style="font-weight:600;font-size:14px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${cid}</span><span style="font-size:11px;color:var(--wa-dim,#8aa0ad);flex:0 0 auto">${_fmtT(c.last && c.last.ts)}</span></div>
-        <div style="display:flex;justify-content:space-between;gap:8px;align-items:center"><span style="font-size:12.5px;color:var(--wa-dim,#8aa0ad);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">🔒 ${preview}</span>${n ? `<span class="holo-direct-unread" style="background:#00d09c;color:#04110d;font-size:11px;font-weight:700;border-radius:10px;padding:1px 6px;flex:0 0 auto">${n}</span>` : ""}</div></div>`;
+      const preview = c.last ? ((c.last.dir === "out" ? "You: " : "") + (c.last.text || "")) : "say hello";
+      row.innerHTML = `<div style="width:40px;height:40px;border-radius:50%;display:grid;place-items:center;font-weight:700;color:#04110d;background:linear-gradient(135deg,#00d09c,#27e3b3);flex:0 0 auto">${(label.trim()[0] || "·").toUpperCase()}</div>
+        <div style="min-width:0;flex:1"><div style="display:flex;justify-content:space-between;gap:8px"><span style="font-weight:600;font-size:14px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${_htm(label)}</span><span style="font-size:11px;color:var(--wa-dim,#8aa0ad);flex:0 0 auto">${_fmtT(c.last && c.last.ts)}</span></div>
+        <div style="display:flex;justify-content:space-between;gap:8px;align-items:center"><span style="font-size:12.5px;color:var(--wa-dim,#8aa0ad);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">🔒 ${_htm(preview)}</span>${n ? `<span class="holo-direct-unread" style="background:#00d09c;color:#04110d;font-size:11px;font-weight:700;border-radius:10px;padding:1px 6px;flex:0 0 auto">${n}</span>` : ""}</div></div>`;
       row.onclick = () => { if (c.pub && c.pub.box) open(c.pub, { name: cid }); };
       sec.append(row);
     }
@@ -204,10 +219,11 @@ function _sheet() {
       const row = el("button", "display:flex;align-items:center;gap:9px;background:transparent;border:0;border-radius:10px;padding:7px 8px;cursor:pointer;text-align:left;color:#e9f1f5");
       row.onmouseenter = () => { row.style.background = "rgba(255,255,255,.05)"; };
       row.onmouseleave = () => { row.style.background = "transparent"; };
-      const av = (c.name || c.contactId || "·").trim()[0].toUpperCase();
+      const label = _label(c.name || c.contactId);
+      const av = (label.trim()[0] || "·").toUpperCase();
       row.innerHTML = `<div style="width:32px;height:32px;border-radius:50%;display:grid;place-items:center;font-weight:700;color:#04110d;background:linear-gradient(135deg,#00d09c,#27e3b3);flex:0 0 auto">${av}</div>
-        <div style="min-width:0;flex:1"><div style="font-weight:600;font-size:13px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${c.name || c.contactId}</div>
-        <div style="font-size:11.5px;color:#8aa0ad;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${c.last ? (c.last.dir === "out" ? "You: " : "") + c.last.text : "…"}</div></div>`;
+        <div style="min-width:0;flex:1"><div style="font-weight:600;font-size:13px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${_htm(label)}</div>
+        <div style="font-size:11.5px;color:#8aa0ad;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${c.last ? (c.last.dir === "out" ? "You: " : "") + _htm(c.last.text) : "…"}</div></div>`;
       row.onclick = () => { ov.remove(); if (c.pub && c.pub.box) open(c.pub, { name: c.name || c.contactId }); };
       convWrap.append(row);
     }
