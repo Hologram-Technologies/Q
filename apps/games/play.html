@@ -2,7 +2,20 @@
 <html lang="en">
 <head>
 <meta charset="utf-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1" />
+<!-- viewport-fit=cover → draw under the notch/home-indicator; user-scalable=no → the console never pinch-zooms
+     (a game surface must eat gestures as INPUT, not scroll/zoom). interactive-widget keeps the layout stable
+     when a soft keyboard appears in the picker. -->
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover, interactive-widget=resizes-content" />
+<meta name="theme-color" content="#07080b" />
+<meta name="color-scheme" content="dark" />
+<!-- installable → launches chrome-free from the home screen (the only real "fullscreen" iOS Safari offers) -->
+<link rel="manifest" href="./manifest.webmanifest" />
+<meta name="mobile-web-app-capable" content="yes" />
+<meta name="apple-mobile-web-app-capable" content="yes" />
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+<meta name="apple-mobile-web-app-title" content="Holo Games" />
+<link rel="apple-touch-icon" href="./icon-console.svg" />
+<link rel="icon" href="./icon-console.svg" type="image/svg+xml" />
 <title>Holo Games — Play</title>
 <style>
   /* φ drives the whole layout: spacing steps, and A/B = D-pad ÷ φ. Nothing tiny, nothing redundant. */
@@ -10,9 +23,13 @@
     --u: clamp(13px, 1.6vh, 19px);                       /* base text/space unit — never smaller */
     --gap: var(--u); --gap-phi: calc(var(--u) * var(--phi)); --gap-phi2: calc(var(--u) * var(--phi) * var(--phi));
     --dpad: clamp(120px, 18.5vh, 178px); --ab: calc(var(--dpad) / var(--phi)); }
-  * { box-sizing:border-box; -webkit-user-select:none; user-select:none; }
-  html,body { margin:0; height:100%; overflow:hidden; background:radial-gradient(120% 120% at 50% 0%, #14171f 0%, #07080b 70%); color:#e8ecf4; font-family:system-ui,Segoe UI,Roboto,sans-serif; }
-  #wrap { height:100vh; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:var(--gap-phi); padding:var(--gap); }
+  * { box-sizing:border-box; -webkit-user-select:none; user-select:none; -webkit-touch-callout:none; -webkit-tap-highlight-color:transparent; }
+  /* overscroll-behavior:none → no pull-to-refresh / rubber-band; 100dvh (not vh) tracks the live viewport as
+     the mobile URL-bar collapses, so the console never jumps. */
+  html,body { margin:0; height:100%; overflow:hidden; overscroll-behavior:none; touch-action:none; background:radial-gradient(120% 120% at 50% 0%, #14171f 0%, #07080b 70%); color:#e8ecf4; font-family:system-ui,Segoe UI,Roboto,sans-serif; }
+  /* safe-area insets keep the console clear of the notch + home indicator when drawn under them (viewport-fit=cover) */
+  #wrap { height:100dvh; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:var(--gap-phi);
+    padding: calc(var(--gap) + env(safe-area-inset-top,0px)) calc(var(--gap) + env(safe-area-inset-right,0px)) calc(var(--gap) + env(safe-area-inset-bottom,0px)) calc(var(--gap) + env(safe-area-inset-left,0px)); }
   #toptitle { font-weight:650; font-size:calc(var(--u) * var(--phi)); letter-spacing:.2px; opacity:.96; }
   #toptitle small { display:none; }                      /* hide the redundant system subtitle */
 
@@ -26,13 +43,17 @@
     padding: clamp(10px,2vh,24px) clamp(12px,1.6vw,28px); box-shadow: inset 0 3px 12px #00000075, 0 1px 0 #ffffff55; }
   .gb-screen::before { content:""; position:absolute; left:9%; top:5.5%; width:36%; height:5px; border-radius:3px; background:linear-gradient(90deg,#7b2733 0 48%, transparent 48% 52%, #2b3570 52%); opacity:.75; }
   .gb-led { position:absolute; left:3%; top:48%; width:9px; height:9px; border-radius:50%; background:radial-gradient(circle at 35% 35%,#ff8a8a,#c01b1b); box-shadow:0 0 7px #ff3b3b99; }
+  /* photoreal recessed screen: a black bezel ring sunk into the body (skin-lab MATERIAL KIT), then the LCD glass */
   .gb-lcd { position:relative; height: min(70vh, 50vw); aspect-ratio:160/144; background:var(--screen-bg,#9bbc0f); border-radius:5px; overflow:hidden;
-    box-shadow: inset 0 0 0 2px #00000060, inset 0 0 18px #00000045, 0 0 40px -6px #cfeaa030; }
+    box-shadow: 0 0 0 7px #0e1016, 0 0 0 8px #000, inset 0 0 0 2px #00000060, inset 0 2px 10px #000000a0, inset 0 0 18px #00000045, 0 0 40px -6px #cfeaa030; }
   .gb-lcd canvas { display:block; width:100%; height:100%; }
 
   .wing { display:flex; flex-direction:column; align-items:center; justify-content:center; gap: var(--gap-phi2); }
   .gb-dpad { position:relative; width:var(--dpad); height:var(--dpad); touch-action:none;
     transform: perspective(300px) rotateX(var(--tx,0deg)) rotateY(var(--ty,0deg)); transition: transform .055s cubic-bezier(.2,.85,.3,1); }
+  /* recessed dish under the cross (skin-lab) — the d-pad sits in a molded well, not floating on the body */
+  .gb-dpad::before { content:""; position:absolute; inset:-12%; border-radius:50%; z-index:0;
+    background:radial-gradient(circle at 50% 36%, #ffffff12, #00000026 70%); box-shadow:0 2px 7px #00000055 inset, 0 1px 0 #ffffff30; }
   /* the arrow on the arm you're pressing lights up — real-button feedback for keyboard + gamepad too */
   .gb-dpad.u .dhint.up, .gb-dpad.d .dhint.down, .gb-dpad.l .dhint.left, .gb-dpad.r .dhint.right { color:#fff; text-shadow:0 0 11px #ffffffd8, 0 1px 2px #000; }
   .gb-dpad .cross { position:absolute; inset:0; }
@@ -50,8 +71,9 @@
   .btn-wrap { display:flex; flex-direction:column; align-items:center; gap: calc(var(--u)*.5); }
   .gb-btn { width:var(--ab); height:var(--ab); border-radius:50%; border:0; background:radial-gradient(circle at 36% 30%,#cf4d86,var(--gb-magenta) 72%);
     color:#fff; font-weight:800; font-size:calc(var(--u)*var(--phi)); cursor:pointer; touch-action:none;
-    box-shadow:0 6px 9px #0006, inset 0 2px 3px #ffffff55, inset 0 -3px 5px #00000055; transition:transform .05s cubic-bezier(.2,.9,.3,1.5), box-shadow .05s; }
-  .gb-btn:active, .gb-btn.on { transform:translateY(4px) scale(.93); box-shadow:0 1px 2px #0008, inset 0 3px 8px #00000088, 0 0 26px #ff77b04d; }
+    box-shadow:0 5px 0 #00000055, 0 7px 10px #0007, inset 0 2px 3px #ffffff66, inset 0 -3px 5px #00000055; transition:transform .05s cubic-bezier(.2,.9,.3,1.5), box-shadow .05s; }
+  /* pressing sinks the cap flush onto its own sidewall — a real, physical button travel */
+  .gb-btn:active, .gb-btn.on { transform:translateY(5px) scale(.95); box-shadow:0 0 0 #00000055, 0 1px 2px #0008, inset 0 3px 8px #00000088, 0 0 26px #ff77b04d; }
   .gb-btn span { display:block; transform:rotate(22deg); }
   /* keyboard hint key-cap under each face button */
   .keycap { transform:rotate(22deg); display:inline-flex; align-items:center; justify-content:center; min-width:1.7em; height:1.7em; padding:0 .45em;
@@ -115,7 +137,7 @@
   #toast { font-size: var(--u); min-height:1.4em; opacity:.8; text-align:center; }
   #status, #hint, #padind, #sysname { display:none; }     /* dev/debug + redundant — kept for JS, never shown */
 
-  #picker { display:none; position:absolute; inset:0; background:#0d1b08f2; color:#cdeaa0; padding:6%; font-size: var(--u); overflow:auto; z-index:3; }
+  #picker { display:none; position:absolute; inset:0; background:#0d1b08f2; color:#cdeaa0; padding:6%; font-size: var(--u); overflow:auto; touch-action:pan-y; z-index:3; }   /* the one scrollable surface — re-allow vertical pan */
   #picker.show { display:block; }
   #drop { border:1.5px dashed #cdeaa055; border-radius:12px; padding:8% 6%; text-align:center; cursor:pointer; }
   #drop.over { border-color:#fff; }
@@ -351,6 +373,17 @@
   addEventListener("pointermove", (e) => { if (e.buttons && e.target.closest && e.target.closest(".dock")) return; wakeChrome(); }, { passive: true });
   addEventListener("pointerdown", (e) => { if (e.target.closest && e.target.closest(".dock")) return; wakeChrome(); }, { passive: true });
 
+  // ── Screen Wake Lock: the display must never sleep mid-game. The OS drops the lock when the tab blurs,
+  //    so re-acquire on return to foreground. Silent no-op where unsupported (iOS < 16.4). ──
+  let wakeLock = null;
+  async function keepAwake(on) {
+    try {
+      if (on && !wakeLock && "wakeLock" in navigator) { wakeLock = await navigator.wakeLock.request("screen"); wakeLock.addEventListener?.("release", () => { wakeLock = null; }); }
+      else if (!on && wakeLock) { const w = wakeLock; wakeLock = null; await w.release(); }
+    } catch (e) { wakeLock = null; }
+  }
+  document.addEventListener("visibilitychange", () => { if (document.visibilityState === "visible" && running) keepAwake(true); });
+
   const toggleImmersive = () => setImmersive(!document.body.classList.contains("imm"));
   $("immersive").addEventListener("click", toggleImmersive);
   $("lcd").addEventListener("dblclick", toggleImmersive);
@@ -417,7 +450,7 @@
   }
   $("save").addEventListener("click", saveState);
   $("load").addEventListener("click", loadState);
-  $("eject").addEventListener("click", () => { running = false; showPicker(""); });
+  $("eject").addEventListener("click", () => { running = false; keepAwake(false); showPicker(""); });
 
   // ── audio. Two transports, best first:
   //    SAB ring — the page is crossOriginIsolated (dev server / holo host send COOP/COEP), so the
@@ -508,7 +541,7 @@ Atomics.store(this.h,0,r);if(ur)Atomics.add(this.h,2,ur);return true;}}registerP
       cx = cv.getContext("2d"); img = cx.createImageData(g.width, g.height);
     }
     await initAudio(core.sampleRate);
-    running = true;
+    running = true; keepAwake(true);
     const HZ = core.fps || 60, STEP = 1000 / HZ;
     let frames = 0, t0 = performance.now(), st = null, acc = 0, prev = performance.now(), lastVideo = null;
     // perf witness: emu step cost, worst rAF gap, audio underruns — shown in the status line + __holoPerf
