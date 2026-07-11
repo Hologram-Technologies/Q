@@ -302,7 +302,11 @@ try {
     try { m.probe().then((p) => { if (p) _tier = p; }).catch(() => {}); } catch {}
   }).catch(() => {});
 } catch {}
-const emblemDpr = () => Math.min(window.devicePixelRatio || 1, (_tier && _tier.dprCap) || 3);
+// The emblem is ONE small sprite blit — cheap even at full native resolution — so it renders at the
+// device's TRUE pixel ratio (capped at 3), NOT the tier's conservative full-screen dprCap. A 3×-DPR phone
+// on the `balanced` tier was drawing the boot emblem at 1.5× and upscaling it to the screen → visibly soft.
+// Full native res is what makes it read as razor-sharp and high-resolution against the wallpaper.
+const emblemDpr = () => Math.min(window.devicePixelRatio || 1, 3);
 const emblemStill = () => !!(_tier && (_tier.renderPath === "static" || (_tier.compute && _tier.compute.saveData)));
 
 // ── CEREMONY BEATS — the boot's own beacons (HOLO-BOOT-CEREMONY-PROMPT B0). performance.mark always;
@@ -409,7 +413,15 @@ function make2dPlayer(overlay, layer, canvas, onLive) {
   let dpr = emblemDpr();        // tier-capped (lite=1 … ultra=3) — the loop picks up an async tier refine
   let lastRect = null;          // last painted rect (CSS px) — the DIRTY RECT: clear only where the emblem was/is
   let parked = false, settleN = 0;   // static-tier poster: once the pose settles, the loop PARKS (zero steady cost)
-  function size() { dpr = emblemDpr(); canvas.width = Math.round(innerWidth * dpr); canvas.height = Math.round(innerHeight * dpr); lastRect = null; unpark(); }
+  // MOBILE FLICKER FIX: a phone's dynamic address bar fires `resize` in a storm during boot, and setting
+  // canvas.width — even to the SAME value — instantly blanks the backing store (the wallpaper flashes
+  // through until the next rAF repaints). Guard: only reallocate when the backing dimensions actually
+  // change, so a no-op resize can never blank the emblem.
+  function size() {
+    const nd = emblemDpr(), w = Math.round(innerWidth * nd), h = Math.round(innerHeight * nd);
+    if (w === canvas.width && h === canvas.height && nd === dpr) return;
+    dpr = nd; canvas.width = w; canvas.height = h; lastRect = null; unpark();
+  }
   size(); addEventListener("resize", size);
   function unpark() { if (parked && alive) { parked = false; settleN = 0; raf = requestAnimationFrame(loop); } }
   // anchored poses resolve to the avatar slot's live rect (panel rise/resize tracked every frame)
@@ -431,20 +443,26 @@ function make2dPlayer(overlay, layer, canvas, onLive) {
     const s = Math.min(pose.up || 1, (vmin * pose.cap) / Math.max(iw, ih));
     const w = iw * s, h = ih * s;
     const cx = cw * pose.cx, cy = ch * pose.cy;
-    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
     // DIRTY RECT: the wallpaper behind the emblem is static — clear only the union of the previous and the
     // new sprite rect (a small box), never the whole viewport backing store. On a dpr-3 phone this is the
     // difference between repainting ~9 Mpx and ~0.7 Mpx every frame — the measured mobile jank, gone.
-    const pad = 4;
+    const pad = 6;
     const r = { x: cx - w / 2 - pad, y: cy - h / 2 - pad, w: w + pad * 2, h: h + pad * 2 };
+    // Clear in DEVICE pixels, snapped OUTWARD to whole pixels: a fractional-dpr clear (balanced tier = 1.5×)
+    // or the breathing sub-pixel drift would otherwise leave a 1px anti-aliased rim of the previous frame
+    // uncleared → a shifting shimmer at the emblem's edge. Whole-device-pixel bounds erase it cleanly.
+    ctx.setTransform(1, 0, 0, 1, 0, 0);
     if (lastRect) {
       const x0 = Math.min(r.x, lastRect.x), y0 = Math.min(r.y, lastRect.y);
-      ctx.clearRect(x0, y0, Math.max(r.x + r.w, lastRect.x + lastRect.w) - x0, Math.max(r.y + r.h, lastRect.y + lastRect.h) - y0);
-    } else ctx.clearRect(0, 0, cw, ch);
+      const x1 = Math.max(r.x + r.w, lastRect.x + lastRect.w), y1 = Math.max(r.y + r.h, lastRect.y + lastRect.h);
+      const dx = Math.floor(x0 * dpr), dy = Math.floor(y0 * dpr);
+      ctx.clearRect(dx, dy, Math.ceil(x1 * dpr) - dx, Math.ceil(y1 * dpr) - dy);
+    } else ctx.clearRect(0, 0, canvas.width, canvas.height);
     lastRect = r;
-    // TEMPORAL BLEND to the display's own rate (the GPU worker's trick, now on the 2D floor too): the 25 fps
-    // sprite pair is crossfaded by fractional phase, so a 60/120 Hz phone presents NEW pixels every vsync —
-    // motion reads continuous, never stepped. Costs one extra drawImage inside the same dirty rect.
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    // The loop now always passes phase 0 (crossfade retired — it shimmered the moving dots). This optional
+    // two-frame blend path is kept as a no-op so `pose(name)` under reduced motion can still request it if
+    // ever needed; with phase 0 it collapses to a single crisp drawImage.
     const nimg = (phase > 0 && nxt != null && nxt !== idx) ? images[nxt] : null;
     if (nimg) {
       ctx.globalAlpha = 1 - phase;
@@ -474,8 +492,11 @@ function make2dPlayer(overlay, layer, canvas, onLive) {
     const still = emblemStill();
     const tt = (now - t0) / (1000 / FPS);
     const idx = still ? 0 : Math.floor(tt) % Math.max(prefix, 1);
-    const nxt = (still || prefix < 2) ? idx : (idx + 1) % prefix;
-    draw(idx, nxt, still ? 0 : tt - Math.floor(tt));
+    // Play the TRUE 25 fps frames — no sub-frame crossfade. Averaging two frames of a sparse dot-torus
+    // renders any dot that moves between them at half opacity/brightness mid-phase, so every dot pulses at
+    // 25 Hz — a shimmer that reads as flicker (worst at low DPR, i.e. on mobile). Stepping is clean. Pose
+    // glide + the breathing float still move per-rAF, so the emblem's overall motion stays smooth.
+    draw(idx, idx, 0);
     if (still) {
       const eps = 0.0006;
       if (Math.abs(tgt.cx - pose.cx) < eps && Math.abs(tgt.cy - pose.cy) < eps && Math.abs(tgt.cap - pose.cap) < eps * 8) {
@@ -566,7 +587,7 @@ const GPU_WORKER_SRC =
   " else if(d.t==='frame'){frame(d.i,d.buf);}\n" +
   " else if(d.t==='pose'){target={cx:d.cx,cy:d.cy,cap:d.cap,up:d.up||1};if(!pose.cap){pose.cx=d.cx;pose.cy=d.cy;pose.cap=d.cap;pose.up=target.up;}if(reduced&&started){pose.cx=d.cx;pose.cy=d.cy;pose.cap=d.cap;pose.up=target.up;render(0,0,0.016,0);}}\n" +
   " else if(d.t==='ink'){ink=d.on?1:0;if(reduced&&started)render(0,0,0.016,0);}\n" +
- " else if(d.t==='resize'){dpr=d.dpr;cw=d.w;chh=d.h;if(canvas&&ctx){canvas.width=Math.max(1,Math.round(cw*dpr));canvas.height=Math.max(1,Math.round(chh*dpr));}}\n" +
+ " else if(d.t==='resize'){var nw=Math.max(1,Math.round(d.w*d.dpr)),nh=Math.max(1,Math.round(d.h*d.dpr));if(canvas&&(canvas.width!==nw||canvas.height!==nh)){dpr=d.dpr;cw=d.w;chh=d.h;canvas.width=nw;canvas.height=nh;}}\n" +
   " else if(d.t==='reset'){for(var i=0;i<tex.length;i++){if(tex[i]){try{tex[i].tex.destroy();}catch(err){}}}tex.length=0;pend.length=0;prefix=0;started=false;t0=0;}\n" +
   "};\n" +
   "async function init(d){\n" +
@@ -603,8 +624,7 @@ const GPU_WORKER_SRC =
   " var dt=Math.min((now-last)/1000,0.1);last=now;\n" +
   " var tt=(now-t0)/40;\n" +
   " var idx=Math.floor(tt)%prefix;\n" +
-  " var phase=tt-Math.floor(tt);\n" +
-  " render(idx,prefix>1?(idx+1)%prefix:idx,dt,phase);\n" +
+  " render(idx,idx,dt,0);\n" +
   "}\n" +
   "function render(idx,nxt,dt,phase){\n" +
   " var a=tex[idx];if(!a||!ctx||!pipeline)return;\n" +
