@@ -241,6 +241,9 @@ function onOrbDown(e) {
   const orb = e.target && e.target.closest && e.target.closest(".holo-home-orb, .holo-global-orb");
   if (!orb) return;
   warm();                           // low-latency: kick the brain + seed load on the gesture (idempotent, no UI)
+  // BELT-AND-SUSPENDERS: apply the drawer class the moment React mounts .holo-hero (in case the observer
+  // misses a deeply-nested portal mount) so the panel is ALWAYS the 360px right slide-out. Guarded → no flash.
+  let __t = 0; const __iv = setInterval(() => { if ($(".holo-hero")) { if (!HTML.classList.contains("q-drawer")) openClasses(); clearInterval(__iv); } else if (++__t > 20) clearInterval(__iv); }, 50);
 }
 DOC.addEventListener("pointerdown", onOrbDown, { capture: true, passive: true });
 
@@ -310,7 +313,8 @@ const mo = new MutationObserver((muts) => {
   for (const mut of muts) {
     for (const n of mut.addedNodes) {
       if (!(n instanceof Element)) continue;
-      if (n.classList && n.classList.contains("holo-hero")) { openClasses(); verifyChain(); chip(); setTimeout(showChips, 300); }
+      /* NESTING-PROOF: React portals mount .holo-hero inside a wrapper — match descendants too, or the drawer class never sets and the hero renders unstyled full-screen. */
+      if ((n.classList && n.classList.contains("holo-hero")) || (n.querySelector && n.querySelector(".holo-hero"))) { if (!HTML.classList.contains("q-drawer")) { openClasses(); verifyChain(); chip(); setTimeout(showChips, 300); } }
       const bubbles = n.classList && n.classList.contains("holo-hero-bubble") ? [n] : (n.querySelectorAll ? n.querySelectorAll(".holo-hero-bubble") : []);
       for (const b of bubbles) {
         if (b.classList.contains("typing")) { injectDots(b); continue; }   // Q "typing…" — 3 animated dots
@@ -323,7 +327,7 @@ const mo = new MutationObserver((muts) => {
       }
     }
     for (const n of mut.removedNodes) {
-      if (n instanceof Element && n.classList && n.classList.contains("holo-hero")) {
+      if (n instanceof Element && ((n.classList && n.classList.contains("holo-hero")) || (n.querySelector && n.querySelector(".holo-hero"))) && !$(".holo-hero")) {
         closeClasses();                          // un-squeeze the canvas
         if (chipEl) chipEl.classList.remove("on");
         hideChips(); bargeIn();
