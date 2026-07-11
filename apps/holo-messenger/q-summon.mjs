@@ -164,6 +164,27 @@ html.q-drawer #q-stats.on{opacity:.5}
   /* the close affordance is a generous hit area */
   html.q-drawer .holo-hero-x{ display:flex!important; align-items:center!important; justify-content:center!important; }
 }
+/* ══ BULLETPROOF CLASS-FREE DRAWER (2026-07-13) — SUPER ROBUST ═══════════════════════════════════════
+   Style .holo-hero DIRECTLY so it is ALWAYS the 360px right slide-out whenever it exists, with ZERO
+   dependency on a JS-set html.q-drawer class (which raced/missed on React portal nesting → the
+   full-screen / wrong-width / seal-showing / orb-visible bugs). CSS presence (:has) drives the
+   conditional pieces. No observer, no timer, no class — it cannot break the same way. ══════════════ */
+html body .holo-hero{
+  position:fixed!important; inset:0 0 0 auto!important; right:0!important; top:0!important; left:auto!important;
+  width:min(360px,92vw)!important; max-width:min(360px,92vw)!important; min-width:0!important;
+  height:100%!important; margin:0!important; overflow:hidden!important;
+  background:var(--holo-chrome,#1f1f1e)!important; background-image:none!important;
+  box-shadow:-26px 0 64px -22px rgba(0,0,0,.62)!important; border:0!important; border-radius:0!important; z-index:900!important;
+}
+html body .holo-hero, html body .holo-hero *{ border-color:transparent!important; }             /* zero divider lines */
+html body .holo-hero-thread, html body .holo-hero-stage{ background:var(--holo-chrome,#1f1f1e)!important; background-image:none!important; border:0!important; }
+html body .holo-hero-open{ display:none!important; }                                            /* no "Open in chat" — this IS the chat */
+#q-kappa-chip{ display:none!important; }                                                        /* the seal line is never resting UI */
+body:has(.holo-hero) .holo-home-orb, body:has(.holo-hero) .holo-global-orb{ opacity:0!important; pointer-events:none!important; }
+html body .holo-hero .holo-hero-status{ display:block!important; }                              /* show the live status under "Q" */
+/* composer + chips centred in the RIGHT lane (class-free; --q-drawer-w is set unconditionally in :root) */
+html body .holo-hero-compose{ left:calc(100vw - var(--q-drawer-w,360px) / 2)!important; right:auto!important; transform:translateX(-50%)!important; width:min(calc(var(--q-drawer-w,360px) - 26px),92vw)!important; }
+
 `;
 DOC.head.appendChild(css);
 // keyboard-aware composer (mobile): track the VISUAL viewport so the composer/chips float above the soft
