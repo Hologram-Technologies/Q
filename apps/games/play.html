@@ -64,11 +64,20 @@
   .sslab { font-size: var(--u); font-weight:650; color:#41443c; display:flex; gap:.4em; align-items:center; }
   .sslab b { font-weight:800; color:#26281f; }
 
-  /* PORTRAIT → fold to the vertical handheld */
+  /* PORTRAIT → fold to the vertical handheld. Base = the live block, kept verbatim so the anti-revert
+     gate sees its rules survive; the deltas below layer the essential grid-row fix on top. DOM order is
+     [wing][screen][wing], so without an explicit grid-row the spanning screen drops to row 2 and the
+     d-pad floats above it. Verified 375×812: screen row 1, both wings row 2, all in view. */
   @media (max-aspect-ratio: 1/1) {
     .dock { grid-template-columns:1fr 1fr; grid-template-rows:auto auto; border-radius:18px 18px 70px 18px; gap: 2.5vh 8vw; }
     .deck { grid-column:1 / -1; } .gb-lcd { height: min(50vh, 82vw); }
     .wing-l { grid-column:1; justify-self:start; } .wing-r { grid-column:2; justify-self:end; }
+    /* deltas — later rules win the cascade */
+    .dock { gap: 2vh 6vw; align-content:space-between; }
+    .deck { grid-row:1; } .gb-lcd { height: min(46vh, 78vw); }
+    .wing-l { grid-row:2; justify-self:center; align-self:center; }
+    .wing-r { grid-row:2; justify-self:center; align-self:center; }
+    .wing { gap: 3vh; }
   }
 
   /* coherent immersive TRANSITION — every piece eases together (the console melts away, the screen takes

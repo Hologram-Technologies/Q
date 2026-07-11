@@ -542,8 +542,8 @@
    "holo:entry": "apps/arcade/index.html"
   },
   {
-   "@id": "did:holo:sha256:eb79b0efeaf318eeba63657f2713a788abbf4690ea1a82951a438013c3052c10",
-   "holo:root": "did:holo:sha256:eb79b0efeaf318eeba63657f2713a788abbf4690ea1a82951a438013c3052c10",
+   "@id": "did:holo:sha256:b4299d113428c3ab5f0bb1d887d242c33b1709d86491010685e02f333a1f6d0a",
+   "holo:root": "did:holo:sha256:b4299d113428c3ab5f0bb1d887d242c33b1709d86491010685e02f333a1f6d0a",
    "@type": [
     "schema:SoftwareApplication",
     "schema:WebApplication"
