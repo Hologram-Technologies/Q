@@ -369,7 +369,11 @@ function setStatus(state, detail) {
     : state === "offline" ? (detail || "offline")
     : "online";   // WhatsApp-plain: the green presence dot says the rest
 }
-function typing(on) { setStatus(on ? "typing" : "online"); }
+// LIVING Q ORB: drive the geodesic orb's animation from Q's real state. The orb (mountOrb, #orb) listens for a
+// `holo-q-state` window event and eases between idle · listening · thinking · speaking — so the avatar breathes
+// with Q: it stirs while thinking, flares while speaking, calms at rest. One dispatch, zero coupling.
+function qOrb(mode, level) { try { window.dispatchEvent(new CustomEvent("holo-q-state", { detail: { mode: mode || "idle", level: (typeof level === "number" ? level : -1) } })); } catch (e) {} }
+function typing(on) { setStatus(on ? "typing" : "online"); qOrb(on ? "thinking" : "idle"); }
 // ABSTRACT THE COMPLEXITY: the loader narrates itself in engine terms (κ-object, LDLQ 2-bit, tokenizer
 // header, requant, resident…). The user should never see that — they see a warm friend waking up. The raw
 // line still goes to the console for debugging; the header shows only human, on-brand reassurance.
@@ -582,10 +586,11 @@ try { window.__voiceDebug = () => ({ crossOriginIsolated: !!self.crossOriginIsol
 function _osSpeak(text) { if (!_tts) return; try { const u = new SpeechSynthesisUtterance(String(text)); if (!_qVoice) _qVoice = pickVoice(); if (_qVoice) u.voice = _qVoice; u.rate = 0.99; u.pitch = 1.02; u.onend = u.onerror = () => { _qSpeaking = Math.max(0, _qSpeaking - 1); }; _qSpeaking++; _tts.speak(u); } catch {} }
 function speak(text) {
   if (!voiceOn || !text) return;
-  if (_kokoro && _kokoro.ready && _kokoro.ready()) { _qSpeaking++; _kokoro.speak(text).then(() => { _qSpeaking = Math.max(0, _qSpeaking - 1); }).catch(() => { _qSpeaking = Math.max(0, _qSpeaking - 1); _osSpeak(text); }); return; }   // beautiful voice, once warm
+  qOrb("speaking");   // the orb flares while Q speaks
+  if (_kokoro && _kokoro.ready && _kokoro.ready()) { _qSpeaking++; _kokoro.speak(text).then(() => { _qSpeaking = Math.max(0, _qSpeaking - 1); if (!_qSpeaking) qOrb("idle"); }).catch(() => { _qSpeaking = Math.max(0, _qSpeaking - 1); _osSpeak(text); }); return; }   // beautiful voice, once warm
   _osSpeak(text);   // instant OS voice until then
 }
-function stopSpeak() { _qSpeaking = 0; try { if (_tts) _tts.cancel(); } catch {} try { if (_kokoro && _kokoro.stop) _kokoro.stop(); } catch {} }
+function stopSpeak() { _qSpeaking = 0; qOrb("idle"); try { if (_tts) _tts.cancel(); } catch {} try { if (_kokoro && _kokoro.stop) _kokoro.stop(); } catch {} }
 // Q's voice is always on — start warming the neural voice immediately (it upgrades the greeting + replies).
 warmKokoro();
 try { if (_tts) _tts.onvoiceschanged = () => { _qVoice = pickVoice(); }; } catch {}
