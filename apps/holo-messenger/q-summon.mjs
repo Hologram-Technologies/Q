@@ -169,6 +169,13 @@ html body #q-drawer-title{ top:20px!important; }                                
 html body .holo-hero .holo-hero-status{ top:39px!important; }                          /* status — below, no collision */
 html body #q-hero-chips{ bottom:calc(env(safe-area-inset-bottom,0px) + 96px)!important; }  /* clear the composer */
 
+/* ══ THE DRAWER IS Q-CHAT (2026-07-13) — feature-complete by construction ════════════════════════════
+   Fill the Q hero with an iframe of the standalone q-chat (SW-rescued, same-origin). Hide the native
+   hero UI; the iframe owns the 360px lane. q-chat brings streaming · voice · pill · seed · persona. ══ */
+html.q-drawer .holo-hero > :not(.q-chat-iframe):not(.holo-hero-x), html body .holo-hero > :not(.q-chat-iframe):not(.holo-hero-x){ display:none!important; }
+html body .holo-hero .q-chat-iframe{ position:absolute!important; inset:0!important; width:100%!important; height:100%!important; border:0!important; display:block!important; background:var(--holo-chrome,#0d1117)!important; z-index:5!important; }
+html body .holo-hero .holo-hero-x{ z-index:6!important; }   /* keep the ✕ close above the iframe */
+
 `;
 DOC.head.appendChild(css);
 // keyboard-aware composer (mobile): track the VISUAL viewport so the composer/chips float above the soft
@@ -547,6 +554,25 @@ setInterval(renderStats, 1000);
 } catch (e) { try { console.warn("[q-remind] init failed:", e); } catch {} } })();
 
 // ── debug/verification surface ────────────────────────────────────────────────────────────────────────────
+
+// THE DRAWER IS Q-CHAT (2026-07-13): mount the feature-complete standalone q-chat inside the Q hero.
+function mountQChat() {
+  const hero = DOC.querySelector(".holo-hero");
+  if (!hero || hero.querySelector(".q-chat-iframe")) return;
+  const f = DOC.createElement("iframe");
+  f.className = "q-chat-iframe";
+  try { f.src = new URL("../q/q-chat.html?guest=1&embed=1", import.meta.url).href; } catch { f.src = "/apps/q/q-chat.html?guest=1&embed=1"; }
+  f.addEventListener("load", () => { try {
+    const d = f.contentDocument; if (!d) return;                       // same-origin → we can style it plain
+    const st = d.createElement("style"); st.id = "q-embed";
+    st.textContent = "#wall,.wall,[class*=wall]{display:none!important}html,body,header,#log,main,[class*=thread]{background:#0d1117!important;background-image:none!important;backdrop-filter:none!important}body::before,body::after{display:none!important}";
+    d.head.appendChild(st);
+  } catch {} });
+  hero.appendChild(f);
+}
+new MutationObserver(mountQChat).observe(DOC.body, { childList: true, subtree: true });
+mountQChat();
+
 window.QSummon = {
   thread: () => ledger.slice(),
   verify: () => ({ ok: verifyChain(), brokenAt, sealed: ledger.length }),

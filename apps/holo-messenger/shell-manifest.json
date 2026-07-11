@@ -1,11 +1,11 @@
 {
  "v": 1,
  "created": 1783787054008,
- "aggregate": "1cff79e7743c1ab197146d8e064ce384518e1d4557653a7566a59f8d2a6f6280",
+ "aggregate": "637d246f02ed2318fde2c69b817107e1abcc493525b2636a473eba630bfb0bcd",
  "assets": [
   {
    "path": "/apps/holo-messenger/app.html",
-   "kappa": "def54890d386b620158eda1240a6d0604216ebd0bbe6c54007f9c2952ab02db2",
+   "kappa": "9681894855dcc4aa3d7fa3a2193a7c54074ac2217cf2c26918a828e8a519db23",
    "bytes": 61816
   },
   {
