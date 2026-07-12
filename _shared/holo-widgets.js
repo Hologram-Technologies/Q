@@ -1037,8 +1037,8 @@
           '<circle class="orb" cx="50" cy="' + (50 - R) + '" r="3.4" fill="currentColor" style="transition:cx .5s ease,cy .5s ease,r .8s ease,opacity .8s ease"></circle>' +
         '</svg>' +
         '<div class="lab" style="position:absolute;text-align:center;line-height:1.05;pointer-events:none">' +
-          '<div class="big" style="font-weight:200;font-variant-numeric:tabular-nums;letter-spacing:-.01em;font-size:clamp(22px,calc(var(--hw-w,190px)*.2),60px)"></div>' +
-          '<div class="sub" style="margin-top:.5em;font-size:clamp(12px,calc(var(--hw-w,190px)*.074),18px);letter-spacing:.06em;opacity:.6"></div>' +
+          '<div class="big" style="font-weight:200;font-variant-numeric:tabular-nums;letter-spacing:-.01em;font-size:clamp(24px,calc(var(--hw-w,190px)*.225),68px)"></div>' +
+          '<div class="sub" style="margin-top:.5em;font-size:clamp(13px,calc(var(--hw-w,190px)*.084),20px);letter-spacing:.06em;opacity:.6"></div>' +
         '</div>';
       host.body.appendChild(ring);
       var prog = ring.querySelector(".prog"), orb = ring.querySelector(".orb"), big = ring.querySelector(".big"), sub = ring.querySelector(".sub");
