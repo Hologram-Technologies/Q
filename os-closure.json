@@ -4489,8 +4489,8 @@
    "source": "hf"
   },
   "apps/player/holo-evicted.json": {
-   "sha256": "2e8fd6d9fe9a05275f52b559d5a3da127807820a785e7bce3aee556ef08d5893",
-   "blake3": "d3dce1144c8c2d5edd4eb82378be0e3334a5ea9bce33a3751e4cba21ce2e6405",
+   "sha256": "532a5553c2db81f67fea1e9c035cd9a564c2fb4917cd039d45441f36bfa807cb",
+   "blake3": "66817b0e2affa9994cb6883e57b013cbd2c8189a8c2176a80e0538a2c48eee69",
    "bytes": 10722,
    "tier": "apps",
    "source": "origin"
@@ -4521,7 +4521,7 @@
    "source": "hf"
   },
   "apps/player/holo-imusic.mjs": {
-   "blake3": "5bb852a421a782725eb899c2b3aac2456e48ad5052a268924b5a2e485af7f9c3",
+   "blake3": "cd699964ca8a551d18703446253cd550485e4db11c83020a3cddb2a229c0dfbe",
    "tier": "apps",
    "source": "hf"
   },
@@ -4896,7 +4896,7 @@
    "source": "hf"
   },
   "apps/player/index.html": {
-   "blake3": "668255c39db7cd2111480750a16b052e80c2be9bd637ec8f70f3f234498e51da",
+   "blake3": "c233349414053678a457c7946f36629d69e7f343aa971f118f4406cf698fa6fc",
    "tier": "apps",
    "source": "hf"
   },
