@@ -9,7 +9,7 @@
  "tiers": {
   "core": {
    "files": 605,
-   "bytes": 28191748,
+   "bytes": 28192824,
    "hf": 0
   },
   "apps": {
@@ -17343,9 +17343,9 @@
    "source": "origin"
   },
   "root-sw.js": {
-   "sha256": "bff6de81b22198a0d7503eeed9b5bb8696ed72e72e25b9bb1cf386a39fbeba7e",
-   "blake3": "bc40b558bae3e4645c916b2adaa6981395a6ee0f547939b07932a9dabbc7c670",
-   "bytes": 16589,
+   "sha256": "7727bf0e0aab7fa38f9d7108c59dc12168c916900b9d6be09395be04b2e649d6",
+   "blake3": "229cccb5721eaa8753db151282bdcf7b712e19594fae4c0e80d53a53aa7c1755",
+   "bytes": 17665,
    "tier": "core",
    "source": "origin"
   },

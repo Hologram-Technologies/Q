@@ -18,6 +18,13 @@ const BOOT_DIRS = ["/usr/lib/holo/", "/usr/share/plymouth/", "/apps/holo-messeng
 const BOOT_FILES = { "/root-door.mjs": 1, "/holo-root-resolver.mjs": 1, "/holo-resolve-view.mjs": 1, "/apps/index.jsonld": 1, "/apps-blake3.json": 1 };
 const ROOT_FILES = { "/holo-resolver.mjs": 1, "/holo-fabric.mjs": 1, "/manifest.webmanifest": 1 };
 const MIME = { js: "text/javascript", mjs: "text/javascript", css: "text/css", json: "application/json", svg: "image/svg+xml", wasm: "application/wasm", html: "text/html" };
+// κ-CAS mirrors — UNTRUSTED capacity: a mirror byte only ships after it re-derives to its κ (L5/SEC-1).
+//   blake3 → the HF shell mirror b/, streaming-verified below.
+//   sha256 → the HF shell mirror sha256/ (HOLO-LEAN-RESOLVER U6): PRUNED origin-b/ objects (release-
+//   history snapshots the strand pins by sha256) live there, buffer-verified before serving. NOT the
+//   hologram-apps release archive (also populated) — its CDN sends no ACAO, so a SW can't reach it.
+const KAPPA_MIRROR = "https://huggingface.co/HOLOGRAMTECH/holo-messenger-shell/resolve/main/b/";
+const PROVENANCE_MIRROR = "https://huggingface.co/HOLOGRAMTECH/holo-messenger-shell/resolve/main/sha256/";
 
 self.addEventListener("install", () => self.skipWaiting());
 // THE rescue lives in ONE shared module (holo-evict-rescue.mjs) — root-sw and the messenger's holo-sw
@@ -124,10 +131,11 @@ self.addEventListener("fetch", (e) => {
       // origin b/ next; PRUNED objects fall to the kappa-mirror (U5) — same fail-closed verify below,
       // so the store can shrink while every kappa keeps resolving (the mirror is untrusted capacity).
       // Network throws (radio dead) must answer 504, never reject the respondWith (offline honesty).
-      let r = null; try { r = await fetch(BASE + "/b/" + hex); } catch {}
-      // mirror rung is blake3-only: that axis re-derives through the verifier below; sha256 has no
-      // streaming verify here, and an UNVERIFIED untrusted-mirror byte must never ship (L5/SEC-1).
-      if ((!r || !r.ok) && axis === "blake3") { try { r = await fetch("https://huggingface.co/HOLOGRAMTECH/holo-messenger-shell/resolve/main/b/" + hex); } catch {} }
+      let r = null, mirrored = false; try { r = await fetch(BASE + "/b/" + hex); } catch {}
+      // mirror rungs: blake3 re-derives through the streaming verifier below; sha256 (U6) buffers and
+      // re-derives BEFORE serving — on either axis an unverified untrusted-mirror byte never ships (L5/SEC-1).
+      if ((!r || !r.ok) && axis === "blake3") { try { r = await fetch(KAPPA_MIRROR + hex); } catch {} }
+      if ((!r || !r.ok) && axis === "sha256") { try { const m = await fetch(PROVENANCE_MIRROR + hex); if (m.ok) { r = m; mirrored = true; } } catch {} }
       if (!r || !r.ok) return r || new Response("unresolvable offline — not in the device store (O2)", { status: 504 });
       const headers = { "content-type": MIME[(kap[3] || "").toLowerCase()] || r.headers.get("content-type") || "application/octet-stream" };
       let body = r.body;
@@ -139,19 +147,21 @@ self.addEventListener("fetch", (e) => {
           if (R && body.tee) { const [serve, capture] = body.tee(); body = serve; RESCUER.captureInto?.(R, "blake3", hex, capture); }
           body = body.pipeThrough(v);
         }
-      } else if (axis === "sha256" && R && r.body) {
+      } else if (axis === "sha256" && r.body && (R || mirrored)) {
         // sha256 has no streaming verifier here — buffer (bounded), re-derive, THEN serve + store.
-        // Oversized or hash-trouble falls back to today's streamed origin response (origin-only rung).
+        // ORIGIN bytes: oversized or hash-trouble falls back to today's streamed origin response
+        // (origin-only rung). MIRROR bytes are untrusted capacity: unverifiable = REFUSED, never served.
         try {
           const buf = new Uint8Array(await r.clone().arrayBuffer());
           if (buf.length <= 64 * 1024 * 1024) {
             const d = await crypto.subtle.digest("SHA-256", buf);
             const got = Array.from(new Uint8Array(d), (b) => b.toString(16).padStart(2, "0")).join("");
-            if (got !== hex) { R.witness?.("kappa-route-mismatch", { axis, want: hex, got, source: "origin-b" }); return new Response("kappa mismatch — refused (L5)", { status: 502 }); }
-            R.put("sha256", hex, buf);
+            if (got !== hex) { R && R.witness?.("kappa-route-mismatch", { axis, want: hex, got, source: mirrored ? "provenance-mirror" : "origin-b" }); return new Response("kappa mismatch — refused (L5)", { status: 502 }); }
+            R && R.put("sha256", hex, buf);
             return new Response(buf, { status: 200, headers });
           }
         } catch {}
+        if (mirrored) return new Response("mirror sha256 unverified — refused (L5)", { status: 502 });
       }
       return new Response(body, { status: 200, headers });
     })());
