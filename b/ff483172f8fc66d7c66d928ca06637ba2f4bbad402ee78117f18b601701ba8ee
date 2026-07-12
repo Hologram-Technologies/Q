@@ -8,14 +8,14 @@
  "mirror": "https://huggingface.co/HOLOGRAMTECH/holo-messenger-shell/resolve/main/b/",
  "tiers": {
   "core": {
-   "files": 605,
-   "bytes": 28192824,
+   "files": 600,
+   "bytes": 18223659,
    "hf": 0
   },
   "apps": {
-   "files": 2894,
-   "bytes": 26013695,
-   "hf": 2694
+   "files": 2899,
+   "bytes": 1038448,
+   "hf": 2856
   },
   "heavy": {
    "files": 20,
@@ -1103,9 +1103,9 @@
    "source": "origin"
   },
   "_shared/voice/vendor/holo-evicted.json": {
-   "sha256": "d9c0b6fdc4865a1b3cf1968c651e8799a2bd7aa1c6af2b99a3847255ac08c165",
-   "blake3": "79578e2aa73f197cae691632e85a1a3afc7bf40551dfd76a70ed1e091ee39dc8",
-   "bytes": 892,
+   "sha256": "b905920f5508cd03303becc8ec2743ff05f3fa119afd6ed7d1c3cf55cf4ec0d8",
+   "blake3": "964137d8a5e46b2033a75b4da29547856ac0efc43d2a5ff32015cd212bd07d7c",
+   "bytes": 891,
    "tier": "core",
    "source": "origin"
   },
@@ -1140,11 +1140,9 @@
    "source": "hf"
   },
   "_shared/voice/vendor/transformers/transformers.js": {
-   "sha256": "3171218a65957f10e616cc2a639282d574d327bda3e1a7d0edbb375e4b091e91",
    "blake3": "3b98ac7f08d7d0c7be4f66c93514f615869f1cfe65351c0dc481a2b4e135e5ad",
-   "bytes": 1767984,
-   "tier": "core",
-   "source": "origin"
+   "tier": "apps",
+   "source": "hf"
   },
   "_shared/wdk-crypto/wdk-crypto.bundle.mjs": {
    "sha256": "ba2220ea0a10a488d25f33aa5a6534cbd353594b2617fcd8910f396637b351d9",
@@ -1677,1012 +1675,726 @@
    "source": "origin"
   },
   "apps/games/_dev/kappa-compile.mjs": {
-   "sha256": "3de81da6772cf6225b57dfc5b445a5d3129c7e3ca3cd3bd5fb906667c30c084f",
    "blake3": "c9ab958ee1ee4168fa8c56fb68c7ed9447977395568e951164df77967778e767",
-   "bytes": 3227,
    "tier": "apps",
-   "source": "origin"
+   "source": "hf"
   },
   "apps/games/_dev/pin-homebrew-all.mjs": {
-   "sha256": "94df2d73bb8a15c7681b600198e5fc852bab64133e96fb8ba66c81773f91d938",
    "blake3": "3a26864076c713a1fdeb41c5be4b2916662f237bfc8b18cb0db9fd8e3a2207ea",
-   "bytes": 5061,
    "tier": "apps",
-   "source": "origin"
+   "source": "hf"
   },
   "apps/games/_dev/pin-ipfs.mjs": {
-   "sha256": "a53d5ba5e0df5b21bb5470aeb8f3523b2d78834c5e78101f555257ca68e9a13f",
    "blake3": "e375f9e8f327d5969ad5a98c5d09af93e4e5d65f7ccde9de830c057e16dd32c0",
-   "bytes": 2774,
    "tier": "apps",
-   "source": "origin"
+   "source": "hf"
   },
   "apps/games/arcade.json": {
-   "sha256": "92e09c2e7908761edf8d43c8292d10c54ecc49808396f2fb269b7c2454795a40",
    "blake3": "6c73e2c98e3786ae6ac975e0af12eaba89bad900d4933dfb3e64ac68f56a3724",
-   "bytes": 14221,
    "tier": "apps",
-   "source": "origin"
+   "source": "hf"
   },
   "apps/games/catalog/gb.json": {
-   "sha256": "64df6ddf7faacae165f2589424c84577a6dca5ad9a310ff1dfa62dd2d640a414",
    "blake3": "5e4411d95ea3c9286ec96aef20f707476910edd50de7244102127cc745ee6207",
-   "bytes": 605284,
    "tier": "apps",
-   "source": "origin"
+   "source": "hf"
   },
   "apps/games/catalog/gba.json": {
-   "sha256": "4d53f092c08ca7a5102f731fe7ee08895032892bab076e1a7e51e815916dedfe",
    "blake3": "bb3bb2e73f7dd936ada7dc940c41e93fb5643bc6b70bdad1d547ada1ef26586f",
-   "bytes": 1128886,
    "tier": "apps",
-   "source": "origin"
+   "source": "hf"
   },
   "apps/games/catalog/gbc.json": {
-   "sha256": "e216d342ae5449b7e73b5eb3822cca7b20a3c5314309d674968116234c7b77fe",
    "blake3": "284b5ac316506543d75ec5f712be05f3c9f92e5fed45cc0c053ecc2e43f67b01",
-   "bytes": 600005,
    "tier": "apps",
-   "source": "origin"
+   "source": "hf"
   },
   "apps/games/catalog/gen.json": {
-   "sha256": "b3f24ab335bcf969f8774e278fc8c8737a314fea56affebab22bc5ad0f00de7f",
    "blake3": "583dea628c8bce54a59f2fead895d306d922f95701ce68c8fbc03042e9325a4b",
-   "bytes": 817704,
    "tier": "apps",
-   "source": "origin"
+   "source": "hf"
   },
   "apps/games/catalog/gg.json": {
-   "sha256": "ce1a3bcf4b89e10b086612aece8817111c586c3d4bbc5c25b3234789c7923661",
    "blake3": "0f2e84de16089d3ad024010b0113ccd77bc264f8b1c522108a342fa4a2a9f3a9",
-   "bytes": 242608,
    "tier": "apps",
-   "source": "origin"
+   "source": "hf"
   },
   "apps/games/catalog/nes.json": {
-   "sha256": "38b94ffcf9e08448ab428b8cfd4cd513dccb47bd2dd1b1c26ce9d744f247cd93",
    "blake3": "dd4fa9c38d9f59a8f84a5914add9dd5ce4071025009a3309cb228d01afd8d0f2",
-   "bytes": 1601025,
    "tier": "apps",
-   "source": "origin"
+   "source": "hf"
   },
   "apps/games/catalog/sms.json": {
-   "sha256": "b86a4878a085297e99b933fe9d8c01df1dc10ab5965c0d08e9d182f02bad8656",
    "blake3": "ec0342ddaf06fc01aa80c6ef2c2c9bb4262ce2a9878db72c23fc1e10014126a9",
-   "bytes": 356411,
    "tier": "apps",
-   "source": "origin"
+   "source": "hf"
   },
   "apps/games/catalog/snes.json": {
-   "sha256": "007d6a56d5ac193f4195c2ec2199477e4e753e13a42a9dea67bd1bc618992b44",
    "blake3": "1272b3963ca1654a5dfc153ac16e8b2bf3070dc575b24da70a4bee7f016c81c3",
-   "bytes": 1243264,
    "tier": "apps",
-   "source": "origin"
+   "source": "hf"
   },
   "apps/games/consoles.mjs": {
-   "sha256": "8323b08d15687c311976f61b2b868e95caa3f0533e125b075330ce5da7c72f98",
    "blake3": "7780812f0fc5c0af30ebf2ce0cb4ef44a619339053066eef2149bf6c202bd316",
-   "bytes": 9620,
    "tier": "apps",
-   "source": "origin"
+   "source": "hf"
   },
   "apps/games/gambatte.mjs": {
-   "sha256": "0be550725002192193c6d53e660624f380d93958f5c35675351753dc70dee784",
    "blake3": "c22a7ba5eef473d68d9e58b03f7fb6c224fd9f2013843e320be3245273a43d9b",
-   "bytes": 18480,
    "tier": "apps",
-   "source": "origin"
+   "source": "hf"
   },
   "apps/games/gambatte.wasm": {
-   "sha256": "5a6295e72dd3565aa2778a505ff86f4188c9bc3eab35f125ab18e31672aa1479",
    "blake3": "bdd88349176eb46434e9b3d48ab2680a4f874312fc8c83954957ef3fea480f35",
-   "bytes": 582579,
    "tier": "apps",
-   "source": "origin"
+   "source": "hf"
   },
   "apps/games/genesis.mjs": {
-   "sha256": "1356b40e8d75e6b39f2ddf157e69b766b70d0f2a4349eef559389dfbcd7860b1",
    "blake3": "1ae88505e750e8cd74448f6c46f20cc6a5d5a8e7167e6fac2ca9726946b652eb",
-   "bytes": 65302,
    "tier": "apps",
-   "source": "origin"
+   "source": "hf"
   },
   "apps/games/genesis.wasm": {
-   "sha256": "f20ae165b159fb257a026c2f0a2f58f6dc0649dd3f626e802ccbc18d458250de",
    "blake3": "d86c7acd179e9d6f7f1985a858ed2ef6382d038772938e9f5e131a48d5920f98",
-   "bytes": 2909806,
    "tier": "apps",
-   "source": "origin"
+   "source": "hf"
   },
   "apps/games/holo-evicted.json": {
-   "sha256": "cd7ace2db1487c2d78d1a0682b87f994a64a4313526506a0307d1b7eccce1f3c",
-   "blake3": "420b4dc171a17dda95bc0a8c095bc268637c2c9dce64a95ad817d61f24d6409d",
-   "bytes": 14041,
+   "sha256": "5989d50df3dada0f5f550aa48feb97dbe0cd4b1b0c2665d8ac96b51220c0ecb5",
+   "blake3": "6b5218c54bb5194954e0ba89e852bada1ec5a71a53102d1274572d6c1aae89a4",
+   "bytes": 14040,
    "tier": "apps",
    "source": "origin"
   },
   "apps/games/holo-ipfs.js": {
-   "sha256": "b3300639bba0f4b676fe17842c5d1793ec8479feee70ce996e50894948847d94",
    "blake3": "bbdd0ad292df0e66af6db27d40b9819b2ef6da6e11152444acb6a1ef86f7ad78",
-   "bytes": 37357,
    "tier": "apps",
-   "source": "origin"
+   "source": "hf"
   },
   "apps/games/holo-libretro.js": {
-   "sha256": "6b58895a0022f163967182d91106e02d789c7ecda6d88cc8a80e719773bf796f",
    "blake3": "e494305e9d9c24faea176fa2bc0e8b51be1790636b8c413e19c548c0578c02a3",
-   "bytes": 6241,
    "tier": "apps",
-   "source": "origin"
+   "source": "hf"
   },
   "apps/games/holo-project.mjs": {
-   "sha256": "e1e8efac8ffe85552c50a3e1df350edb87bfefe89d907a2d815c725d54f240f2",
    "blake3": "3f058aa7774319aa7ea01a5d2a2557a210583222dd63daa06a728fecddc30c6b",
-   "bytes": 12974,
    "tier": "apps",
-   "source": "origin"
+   "source": "hf"
   },
   "apps/games/holo-stream.mjs": {
-   "sha256": "a4f5aa272861f8591a5ef6662f36d4bb51a37f67903712dd54942109b89c9ed2",
    "blake3": "e693f0558496b7caf2e7b50dfcab17de4c21e8e20a6b0cf93fbf6b106485fcc9",
-   "bytes": 17923,
    "tier": "apps",
-   "source": "origin"
+   "source": "hf"
   },
   "apps/games/homebrew-manifest.json": {
-   "sha256": "83d72656bb7c27708c8b84eb7a90fdc653a6970608db670e84d4b7c00749da73",
    "blake3": "9b1f2c69ac8ccea145badf7b0ebac17395130a9a6045b6522df5ae3addf85161",
-   "bytes": 253187,
    "tier": "apps",
-   "source": "origin"
+   "source": "hf"
   },
   "apps/games/icon-console.svg": {
-   "sha256": "354908debab87f77793d6a219d03a9bdf54d08a63d68e6b3071b136b1ffa1621",
    "blake3": "00660842bec9d97249caae28f11fb4108e920f0612a94371ee862e2881698d33",
-   "bytes": 1640,
    "tier": "apps",
-   "source": "origin"
+   "source": "hf"
   },
   "apps/games/index.html": {
-   "sha256": "5de2be050dc5a4f9fcb464ffd45bbfcdca368ac02c39e5807ef6ce9430c45edd",
    "blake3": "fa4a01ee5aa472e43e4fc5aeddabc2ce2b6f4b3c1c8963a159a0244f72a32946",
-   "bytes": 20451,
    "tier": "apps",
-   "source": "origin"
+   "source": "hf"
   },
   "apps/games/index/No-Intro_NES.json": {
-   "sha256": "5b67703cfa21316345eb5070a1e1952b1a20ff7b88dc886ac5b792b12ddb4043",
    "blake3": "6b804d62807840efc9fd9d313294e424f824c28700075826f6beba12cce85549",
-   "bytes": 233761,
    "tier": "apps",
-   "source": "origin"
+   "source": "hf"
   },
   "apps/games/index/No-Intro_Super_Nintendo_SNES.json": {
-   "sha256": "6b4fc95044beca8f855478c1e9a4744fc7dae0ec1459329e9915782e53b6211f",
    "blake3": "313607e30defa867eea493ed329345ebfdb582fe57ad420c4b1d4d1ec8747a55",
-   "bytes": 148373,
    "tier": "apps",
-   "source": "origin"
+   "source": "hf"
   },
   "apps/games/index/NoIntroVirtualBoy.json": {
-   "sha256": "cba2facd93ab561f2639e4168b55e74d1c14724adb7460000ecb7b65da880f51",
    "blake3": "18e77eb0f12da955c491728d3bbc1a61508b161ce229b112ae528c09a84f3a5e",
-   "bytes": 852,
    "tier": "apps",
-   "source": "origin"
+   "source": "hf"
   },
   "apps/games/index/a2600.json": {
-   "sha256": "5bf3ff3b304ca98bb68373b28f993b86e894c689ba8b3460824d771ae1cea322",
    "blake3": "98014770a36e9ddaa15f0b3033086469ccd7743eba076afe07407e8f8d203b03",
-   "bytes": 25047,
    "tier": "apps",
-   "source": "origin"
+   "source": "hf"
   },
   "apps/games/index/a7800.json": {
-   "sha256": "d35c057409d8c08bdc6357f472217109142cf3d2fb1fc6eecf5bbc1ac90db505",
    "blake3": "6674b91e1069ba1b073d368f227015ee821e9d9922069657b99c0425337c7c71",
-   "bytes": 11885,
    "tier": "apps",
-   "source": "origin"
+   "source": "hf"
   },
   "apps/games/index/atari-2600-no-intro-romset-2026-05-29.json": {
-   "sha256": "d59979688d4b5263be746ce52355461c644e718c2cfbe90afb6039e21384fb88",
    "blake3": "265f843e9378017ddb3225a96709f7664482738385af45867852b6d82edcfd28",
-   "bytes": 35013,
    "tier": "apps",
-   "source": "origin"
+   "source": "hf"
   },
   "apps/games/index/atari-7800-no-intro-romset-2025-06-25.json": {
-   "sha256": "a93699d14fe33af8ad005c768e346077c9fdff678eae237fc1b0e75d05ecb31e",
    "blake3": "c05dfb3c18c41ff99774700a8faeef70023c10c222763b93d9e3f69bc065831f",
-   "bytes": 11020,
    "tier": "apps",
-   "source": "origin"
+   "source": "hf"
   },
   "apps/games/index/ef_bandai_wonderswan_color_no-intro_2024-04-08.json": {
-   "sha256": "80412e449a5acd738fff22982f9a08edd82340a8f152bef8a6e0765da8e72166",
    "blake3": "bc3b5b61b3ffbd7bd754727d4d9657c85fecad5e2a84c99a52b8ea0a47a5df36",
-   "bytes": 12053,
    "tier": "apps",
-   "source": "origin"
+   "source": "hf"
   },
   "apps/games/index/ef_bandai_wonderswan_no-intro_2024-04-08.json": {
-   "sha256": "47e9eff012269b79a2aed8d5bf296dd4a0a98d36208325a9a8b5420c3347e7ff",
    "blake3": "1bf0c946b8949b107a33a3184432dc2327fd269e14d5535ec72995e897f65980",
-   "bytes": 11789,
    "tier": "apps",
-   "source": "origin"
+   "source": "hf"
   },
   "apps/games/index/ef_gba_no-intro_2024-02-21.json": {
-   "sha256": "de857a574683e8588fad2e90dbb2722945c4467b9688b2e94c5c336e6dd0f6cb",
    "blake3": "a03993a3265dbd5e81404988a1aab1c76f7d299b99f18ef3a45e9234ffea232e",
-   "bytes": 167308,
    "tier": "apps",
-   "source": "origin"
+   "source": "hf"
   },
   "apps/games/index/ef_mega_genesis_no-intro_2024-04-21.json": {
-   "sha256": "ef0a21e5855b6a6033efc1532b9a213a2a438c33a7b66b7a42df5a475ae91a45",
    "blake3": "2f381fdc335329c26a976723ba320f61bbdfbdb4dfd3bd7ea359b51a444ddc8c",
-   "bytes": 145813,
    "tier": "apps",
-   "source": "origin"
+   "source": "hf"
   },
   "apps/games/index/ef_pce_No-Intro_2024.json": {
-   "sha256": "52aee33762cfafbe56aa0bd570d2af335547eb64737489841faead139a7fa2c7",
    "blake3": "94a03d08e2df891b49c43db05bd6b25279afecaee198ec654ae97f4b1d59b554",
-   "bytes": 15940,
    "tier": "apps",
-   "source": "origin"
+   "source": "hf"
   },
   "apps/games/index/ef_sega_game_gear_no-intro_2024-02-21.json": {
-   "sha256": "37ed1ad0fe966f1c47a55d75f31d14ae947fa704d787f95e487fee8196bbaebe",
    "blake3": "655d87e75d01b37056ac3fa51d7626a7081623adf9271ada15b488d0ae78e4f4",
-   "bytes": 20953,
    "tier": "apps",
-   "source": "origin"
+   "source": "hf"
   },
   "apps/games/index/ef_sg-1000_No-Intro.json": {
-   "sha256": "840e021224aeb07f9005cec6ac9b3dc46607fc5999d99f1635fed59be36342bb",
    "blake3": "d8a74415ef923815a1d3d8b0e7902717fddb759a4684ab6bb3e4bf3a28f89a73",
-   "bytes": 9748,
    "tier": "apps",
-   "source": "origin"
+   "source": "hf"
   },
   "apps/games/index/ef_sms_No-Intro_2024-03-08.json": {
-   "sha256": "a28454076691f7870b5653119b51020d9f1bee1e7fe09add131d618470f0d6fc",
    "blake3": "df772d9a92ba81f9a0bc0f7979ebede03b5d3db6d02f9060acae2998e3f6247c",
-   "bytes": 45734,
    "tier": "apps",
-   "source": "origin"
+   "source": "hf"
   },
   "apps/games/index/ef_snk_neogeo_Pocket_neogeo_pocket_color_no-intro_2024.json": {
-   "sha256": "386f3b757dc602c6f4b5d47d7585977be05327afe1c00734ea7e767915356a86",
    "blake3": "20c4218699b3cdd30d1f22e1d39e81f45ce12d970ee1a53764a08dfb2950eb30",
-   "bytes": 13088,
    "tier": "apps",
-   "source": "origin"
+   "source": "hf"
   },
   "apps/games/index/game-gear-no-intro-romset-2025-07-29.json": {
-   "sha256": "c178d0330641f20696b603271449e522425013d004e0741537464be8283d84df",
    "blake3": "3a90fe5ddd19e129f07c4aaca35080260bed1a7d939531dd30e5b7fa5ac1f074",
-   "bytes": 46083,
    "tier": "apps",
-   "source": "origin"
+   "source": "hf"
   },
   "apps/games/index/master-system-no-intro-romset-2025-06-06.json": {
-   "sha256": "50278a46db45146f2a864219ae6e20a99103b44c998a8ed6c587106e56b1f5e6",
    "blake3": "96fcf493ef1178315f72b48ae4a2246b1cb5b0473aaf6e3ff0991c48c25288a9",
-   "bytes": 56343,
    "tier": "apps",
-   "source": "origin"
+   "source": "hf"
   },
   "apps/games/index/min.json": {
-   "sha256": "7f9f56b1bb9fb5844d1a9d7a30d45e8dd129e1aa8e707d335a72139d098f773f",
    "blake3": "8119ad1536edac9a53c48612a484d00b79b0282df45127f0a88108e622e802ef",
-   "bytes": 1877,
    "tier": "apps",
-   "source": "origin"
+   "source": "hf"
   },
   "apps/games/index/n64.json": {
-   "sha256": "1adb50e1c51393ff5ab8a2d8948cce8923354edb97f34a4a2a6ff42002b11981",
    "blake3": "090bd8e7160e89dacec990e8a2d06507b54e5366389bc621a6e277ad10465346",
-   "bytes": 37211,
    "tier": "apps",
-   "source": "origin"
+   "source": "hf"
   },
   "apps/games/index/ngpc.json": {
-   "sha256": "32e9d9af8908c4e3337070045390446d96f7fc5478fd362309bf7871146f44ca",
    "blake3": "d13c93542fec969fb14354fc1cd58aac004424411306e7948802586908d43df8",
-   "bytes": 5236,
    "tier": "apps",
-   "source": "origin"
+   "source": "hf"
   },
   "apps/games/index/sg.json": {
-   "sha256": "d2f43e114f6ca62a19e98f7b520d61ca0424c4820ca8af093a01089ef3a12c6c",
    "blake3": "66a75658b2cd09eae52703eaf9fe760a9e283e2dfd6a2558ae499b9da4efd3e9",
-   "bytes": 5105,
    "tier": "apps",
-   "source": "origin"
+   "source": "hf"
   },
   "apps/games/index/theentireGAMEBOYCOLORcollection.json": {
-   "sha256": "bd1a3498edd86e0dba57c96259dfaba9c86d9d2df61f9c903bb120d1a62c4def",
    "blake3": "2a1cbf1edf404be5c577c5e3d3ef8ea3d4ed7d4262107783a90151161ad9dd7d",
-   "bytes": 99260,
    "tier": "apps",
-   "source": "origin"
+   "source": "hf"
   },
   "apps/games/index/theentiregameboycollection.json": {
-   "sha256": "ac0ff5caa0a95c1f4a47947a4453c47ce4211a465b138a474f72872ecdcb1b00",
    "blake3": "146e71a7352aa2f8c800d881df0a79d6e43131aeee60d8288b805b19e45e85d1",
-   "bytes": 79569,
    "tier": "apps",
-   "source": "origin"
+   "source": "hf"
   },
   "apps/games/index/theentirepokemonminicollection.json": {
-   "sha256": "849807bbb0cd29c3ede8e3661cb4d97abe2fc14554839c0536fde14ed9007b60",
    "blake3": "31d78201c46242acfb511a24cc41284c4f66b7cbdf53b86c4279f75da44b422f",
-   "bytes": 1952,
    "tier": "apps",
-   "source": "origin"
+   "source": "hf"
   },
   "apps/games/ipfs-manifest.json": {
-   "sha256": "3de42f133897ade767019baa37a8b562ce62653fb17a9792b02e3b25455a8026",
    "blake3": "b2233de3153c69e0b3f6b75d413dbe61342688c58be3c41927ef83238e195b0b",
-   "bytes": 11196,
    "tier": "apps",
-   "source": "origin"
+   "source": "hf"
   },
   "apps/games/lib/holo-7z.mjs": {
-   "sha256": "19585d5b986c0bc563529b078fed0c0a97beb8f6dede6524ef66239f64f90dd9",
    "blake3": "e9f49a8814467e43cefb232dfc59a7ad02b75d03930d3dafa6c81cab63a9bbc2",
-   "bytes": 1630,
    "tier": "apps",
-   "source": "origin"
+   "source": "hf"
   },
   "apps/games/lib/libarchive/libarchive.js": {
-   "sha256": "7948329343f4039e3088bb9818af96b2e70fc7dac8a43b878ced4314de0c8f2a",
    "blake3": "53f45dc27f31e5982d022694f815aeedbd694a0680d95670e1858387b00ec250",
-   "bytes": 8085,
    "tier": "apps",
-   "source": "origin"
+   "source": "hf"
   },
   "apps/games/lib/libarchive/libarchive.wasm": {
-   "sha256": "8a66066ed3ea1e6db0469ec752d8fca888a6bf737c6cff21fdbcb62241a72424",
    "blake3": "c82ad0198e0ee8d79df5a7d02ec959ceb8a0ba59f79bb124d03839a1968d3463",
-   "bytes": 1002547,
    "tier": "apps",
-   "source": "origin"
+   "source": "hf"
   },
   "apps/games/lib/libarchive/worker-bundle.js": {
-   "sha256": "552fd4c4e96e677b8d1ee28b96eec3f7761f19ae9069b6df40c1848b3b632493",
    "blake3": "18b51917777ad84f0cb8cd0bbe2dc65d9ea7e4d0181fc15369c92e619b7dab06",
-   "bytes": 61634,
    "tier": "apps",
-   "source": "origin"
+   "source": "hf"
   },
   "apps/games/manifest.webmanifest": {
-   "sha256": "2cbe52135965a06eda513c73dc3261fbe87419472ab2ce6d3a3a2979fabe5902",
    "blake3": "0dc3cc77256585ad06471157c63f9c28980294570309a88265ebd70de3bbc724",
-   "bytes": 587,
    "tier": "apps",
-   "source": "origin"
+   "source": "hf"
   },
   "apps/games/mgba.mjs": {
-   "sha256": "b0906dd3a747aa54f88e283941d2567f3a46b245b12ea5f8bde1afdbb4872e44",
    "blake3": "e3bc6271f0c74e295bfa9e31d41b39c7e58776683b62feea1258f77e6aa2c637",
-   "bytes": 68326,
    "tier": "apps",
-   "source": "origin"
+   "source": "hf"
   },
   "apps/games/mgba.wasm": {
-   "sha256": "10a5f81f43cd401782e88a4d21cb531be6a2912a4ae60f2849fd83fe7ae9bc55",
    "blake3": "da90eb74379c15cf062b5bcbcc1fcbf678cf411ec4049494e0428be4bc7bcc78",
-   "bytes": 916370,
    "tier": "apps",
-   "source": "origin"
+   "source": "hf"
   },
   "apps/games/play.html": {
-   "sha256": "c6052de1708460fbbcbf3de1c7545f6a7d2a6326279432eaf06e05542eb64ce9",
    "blake3": "97d502e3ee7663293665bab075a66744884888b74af697da78b33433de987453",
-   "bytes": 57932,
    "tier": "apps",
-   "source": "origin"
+   "source": "hf"
   },
   "apps/games/quicknes.mjs": {
-   "sha256": "8e77729210b02bd2fa55d6b88abc558ca00f480bbc29cf3081feed992aa48454",
    "blake3": "248172b3ccb76e102c66fec90bd358f3bb6ae35165e9016d3a18b4e0a8aa6f48",
-   "bytes": 16533,
    "tier": "apps",
-   "source": "origin"
+   "source": "hf"
   },
   "apps/games/quicknes.wasm": {
-   "sha256": "402352774a8daeef9ca8488bb678b9798d6a056a2f2e6b16b91249f7ec4df395",
    "blake3": "779f33a5c4de9630428105a8fd4b43b3903901e5708384d32884e223773662c2",
-   "bytes": 235485,
    "tier": "apps",
-   "source": "origin"
+   "source": "hf"
   },
   "apps/games/roms/hh/1d-marathon.gb": {
-   "sha256": "5e8b6775490767d9b917b903d3af36f66e552b0a7c78d7d11d8fe101921a7930",
    "blake3": "b14f5ed6f4e08a3e60d7858a137a0958b6230805e9f92f62a09b91570cf14c45",
-   "bytes": 32768,
    "tier": "apps",
-   "source": "origin"
+   "source": "hf"
   },
   "apps/games/roms/hh/1d-marathon.png": {
-   "sha256": "0b3defc31e29ac1c98bb5bd719d9ad8b6fb56875e07be3889a7f0d029237c350",
    "blake3": "fcc1044d016ca54685628cc309e2949e45da0c7007a865dce0c31615b4b6c65a",
-   "bytes": 45253,
    "tier": "apps",
-   "source": "origin"
+   "source": "hf"
   },
   "apps/games/roms/hh/2048gb.gb": {
-   "sha256": "3ea2376b15b34bd26b10e6b31d2753bf8b086098dbdb5ee84d9c0f03d66d3d7f",
    "blake3": "90e5f9fdb4e19dd58a850195db50c0cc824017e7c32caf4c9b51fb38223b2ffd",
-   "bytes": 32768,
    "tier": "apps",
-   "source": "origin"
+   "source": "hf"
   },
   "apps/games/roms/hh/2048gb.png": {
-   "sha256": "cdceafbd925296ab895c190a5f4d0089f2f2e592c0d7162ad8288e36ca02a400",
    "blake3": "da4caa5e8a2d1e00480e03eefe0213facde6a8731639b7bd4576923cbf2d05b3",
-   "bytes": 2632,
    "tier": "apps",
-   "source": "origin"
+   "source": "hf"
   },
   "apps/games/roms/hh/2friendly.gb": {
-   "sha256": "495f5c92f9bb478c170c2f68e7b491ea4dcb8300f841a1c586eb7615cb07d6f4",
    "blake3": "f57d0629959227b2aa200511a6c8e91f9c29d0620359bb62b956c0371e275f3d",
-   "bytes": 131072,
    "tier": "apps",
-   "source": "origin"
+   "source": "hf"
   },
   "apps/games/roms/hh/2friendly.png": {
-   "sha256": "04247555e602357fc8ba675719cbdebfa28ee21e2b47af54f0c3345a7f3018ee",
    "blake3": "cf1ebc5bb751e993267e80d73c615c2baab29cb2d2c5ecaa3abb7412ff96b8b3",
-   "bytes": 300350,
    "tier": "apps",
-   "source": "origin"
+   "source": "hf"
   },
   "apps/games/roms/hh/5-mazes.gb": {
-   "sha256": "4cb6a4a021056164dfad11ba041cb1c36d7453d2ebe6bb7fa9fe4b3eadbc4c60",
    "blake3": "8b591024a5ca2a38f074b2da91524f8a1b5db81e1dc6ed93eb93f44c94683868",
-   "bytes": 262144,
    "tier": "apps",
-   "source": "origin"
+   "source": "hf"
   },
   "apps/games/roms/hh/5-mazes.png": {
-   "sha256": "b2119fee2d83ff1775afc682453b44549c591e75db9e82f60644df538c3624dc",
    "blake3": "8f4d1ef9e08984aabd37ccee16a21818afaa2eccbe8a625dbb2e182ee632875d",
-   "bytes": 13464,
    "tier": "apps",
-   "source": "origin"
+   "source": "hf"
   },
   "apps/games/roms/hh/5-more-mazes.gb": {
-   "sha256": "95d095823ecbf9f31482e7981a06e34a1d5b966d4a5b62bf89f4f89b2f1cf318",
    "blake3": "ca0184988ea7dfe3ff0fc77809a049b762c346eac76cafaf3e2c7f25f8915732",
-   "bytes": 262144,
    "tier": "apps",
-   "source": "origin"
+   "source": "hf"
   },
   "apps/games/roms/hh/5-more-mazes.png": {
-   "sha256": "15cc7b1a3dd0fbe39fc0ad09c6161a73f5052fa171f466664ba94b42a35403b5",
    "blake3": "29c21561a6285b6b547239bb05c3b6639ddbb518e1168d9d3a1ee9e02def6920",
-   "bytes": 15066,
    "tier": "apps",
-   "source": "origin"
+   "source": "hf"
   },
   "apps/games/roms/hh/89.gb": {
-   "sha256": "38f6cc4bbee921b80d82719af41dbd1521c7ca03a236c4bd9681db5f2376bef4",
    "blake3": "c49e14fdf614fd92379cf48e86600a5384c0d9378cf6828eea63ee2c5ccd8cb1",
-   "bytes": 262144,
    "tier": "apps",
-   "source": "origin"
+   "source": "hf"
   },
   "apps/games/roms/hh/89.png": {
-   "sha256": "35c092398a1fcc33d3fd6a4db427d15df2a0bac9cf1da1939ed29eac1225bc28",
    "blake3": "2b8498980e51a681d1ef5538c4e2e20e4581add93aaed1dfbefda995b6d12d95",
-   "bytes": 1868,
    "tier": "apps",
-   "source": "origin"
+   "source": "hf"
   },
   "apps/games/roms/hh/a-bride.gb": {
-   "sha256": "025a12bd6f8ab759103f108679edae998cdb476251fe4ddf3a40d7c5544508f2",
    "blake3": "9fec9c2521ceb37e09a5ed6371f81f4896e2497771c5e03aa8aff2ae46d2e8cb",
-   "bytes": 262144,
    "tier": "apps",
-   "source": "origin"
+   "source": "hf"
   },
   "apps/games/roms/hh/a-bride.png": {
-   "sha256": "7ed369c6e9016f93699bb74cfe402a341a07bbf2b2dad3b334697da546376282",
    "blake3": "b1f63f4759a0de76df642e5eeaea027ad57a48123a0df7c7b28be71fa6c6df31",
-   "bytes": 6566,
    "tier": "apps",
-   "source": "origin"
+   "source": "hf"
   },
   "apps/games/roms/hh/a-grave-encounter.gb": {
-   "sha256": "5f2957bacea09ec54947310cd89d56dc11760cf06bb0f796c59d1c478af5ae0b",
    "blake3": "0e15ba68e63276ec6e6bb6192e4357e3d28a3dc81f003940b2e6fb1c68c4de54",
-   "bytes": 262144,
    "tier": "apps",
-   "source": "origin"
+   "source": "hf"
   },
   "apps/games/roms/hh/a-grave-encounter.png": {
-   "sha256": "88e9c3ee2c3f1080f08cff14ec86e6fa557996cf548f69d7825951c778b296bc",
    "blake3": "dd2304b04c8587fd74ab677860820ff04b0c7a632c8bee542ec87b76f5642140",
-   "bytes": 238485,
    "tier": "apps",
-   "source": "origin"
+   "source": "hf"
   },
   "apps/games/roms/hh/a-short-day.gb": {
-   "sha256": "dd3441c9fbb76d1aa3c5acac79e4e1ef64f78fe5d04e683efdee5c1eb9db3c70",
    "blake3": "c330b80e8baf81f101b24e2ff3348891217aaf97ea2bfe2920ccca477ce447a2",
-   "bytes": 262144,
    "tier": "apps",
-   "source": "origin"
+   "source": "hf"
   },
   "apps/games/roms/hh/a-short-day.png": {
-   "sha256": "fc145e169a7c9a22a4c7416bc3f51eb3a0727923ea1555979c656f8c39ec3447",
    "blake3": "997d6d7738b99b1400e43aa97a7534e8b9f1f7aaf21c11a875e0e8e49305268a",
-   "bytes": 3830,
    "tier": "apps",
-   "source": "origin"
+   "source": "hf"
   },
   "apps/games/roms/hh/a-slime-travel.gbc": {
-   "sha256": "a92919a1e0d78683f0a245de55d3fc1a0fc07df74a758084ab2e552cb3bc115c",
    "blake3": "5b96535547da0eef0440764aade6c2fe0824be8e58364d4e11ffee54c87bc311",
-   "bytes": 262144,
    "tier": "apps",
-   "source": "origin"
+   "source": "hf"
   },
   "apps/games/roms/hh/a-slime-travel.png": {
-   "sha256": "11b18a46009e750031e03427622388677f40b430228df29174304f0cd870d876",
    "blake3": "2b2219eea17ee7dce99c1f2bc7b98c58c7772fca4687b6e7674a77dfd5b6a4b9",
-   "bytes": 67156,
    "tier": "apps",
-   "source": "origin"
+   "source": "hf"
   },
   "apps/games/roms/hh/a-walk-in-snow.gbc": {
-   "sha256": "a70a8c20d020748ecfe9e192c3183f24321d6115f07e3691b089ef935b57f095",
    "blake3": "9879c624a702910ab6e15544451a89fba3cfc0141bd1738f36655f15055af6c4",
-   "bytes": 262144,
    "tier": "apps",
-   "source": "origin"
+   "source": "hf"
   },
   "apps/games/roms/hh/a-walk-in-snow.png": {
-   "sha256": "a0d46478218f5b1b9fbbababfffc1b9adf9d5981cca3128c2fa66207d4b4d29e",
    "blake3": "d07c195dc7f67aebf467b3fbfea2fea551724ca55988912537deaec9fbf6f751",
-   "bytes": 639121,
    "tier": "apps",
-   "source": "origin"
+   "source": "hf"
   },
   "apps/games/roms/hh/acattag.gb": {
-   "sha256": "5c0243438561a228df22d186aa1140035fe0446fba9c8486d4ea3c5791c82706",
    "blake3": "7d6971d6d9c37a92f5e757c3477f6ab689d5fed55797755d2b6d47fe3110ba20",
-   "bytes": 65536,
    "tier": "apps",
-   "source": "origin"
+   "source": "hf"
   },
   "apps/games/roms/hh/acattag.png": {
-   "sha256": "cfe86df01fc8ff80117c8ccc22dc0d1c126e64903def10948b74a9a4dc080fe6",
    "blake3": "5581714d5afb6711c12edabbb0bf5e1d74227878975dde9a474a31c4162036f0",
-   "bytes": 9899,
    "tier": "apps",
-   "source": "origin"
+   "source": "hf"
   },
   "apps/games/roms/hh/adjustris.gb": {
-   "sha256": "47f1fa0b5d0ee47f6380c8c388dce2a839f73a55cb4060a4decb44cf36c2a13b",
    "blake3": "8a4b05db868018686fd8f05cf25be0e159ee9f7f8e1c9366ced9efc529cb3308",
-   "bytes": 32768,
    "tier": "apps",
-   "source": "origin"
+   "source": "hf"
   },
   "apps/games/roms/hh/adjustris.png": {
-   "sha256": "1722c7cf1227db75beb8bc53f24ff1ca50790b4f90560d7a4da4f2faade769a3",
    "blake3": "527385c6f640db6df5f1d6eff5decb50dc1aeb6f04c6c34a15eceb96f3ca1e10",
-   "bytes": 524,
    "tier": "apps",
-   "source": "origin"
+   "source": "hf"
   },
   "apps/games/roms/hh/adulting.gb": {
-   "sha256": "5de8ee49c1b98ece0f408393a0d1a42c449fed1659d397d919cf599d0eef35b0",
    "blake3": "e37098b1c410d8c4b3e69bb83d92e3d97067ac00b207d3fb41c73d45002966a6",
-   "bytes": 131072,
    "tier": "apps",
-   "source": "origin"
+   "source": "hf"
   },
   "apps/games/roms/hh/adulting.png": {
-   "sha256": "84ee2f6433bc426a1a991305d7981e6c7136b503a3605f4d76b075b5324e1883",
    "blake3": "5f2f0707f88961524b1427e8fbb102e4aa6553beb9b30bf16567c1dfd92073ef",
-   "bytes": 177889,
    "tier": "apps",
-   "source": "origin"
+   "source": "hf"
   },
   "apps/games/roms/hh/aevilia.gbc": {
-   "sha256": "67e784ed61846bc84bfe9f45b9da343371eec6b896ed1b945b64c0aec7aa735b",
    "blake3": "8c3b8fc30da8b63f58b60c8e98e61cecb0f10eb6d32ef0249a54c845eadac246",
-   "bytes": 131072,
    "tier": "apps",
-   "source": "origin"
+   "source": "hf"
   },
   "apps/games/roms/hh/aevilia.png": {
-   "sha256": "1be4c5c278d8b161a991cb9ab9cdd852f50e309a28e58ac01a6b2392738749b5",
    "blake3": "c3ce374a2d9e158539bd29bef36acf8a901628a4dfdae2f1496865b0056a5e35",
-   "bytes": 3856,
    "tier": "apps",
-   "source": "origin"
+   "source": "hf"
   },
   "apps/games/roms/hh/airaki.gb": {
-   "sha256": "fd8fe6e023d9969935e05e7469c0f687f34a430d1a71fdeb5bb30183ce1ea2dd",
    "blake3": "175a74e8924fa2a5f18140228119eade5298d8ca83f1536b2b7ca73334fd7b0e",
-   "bytes": 32768,
    "tier": "apps",
-   "source": "origin"
+   "source": "hf"
   },
   "apps/games/roms/hh/airaki.png": {
-   "sha256": "54e84e2fc24409a9d7d7efd547f221ed9dd54c766c92438ec28e9143e86d7e50",
    "blake3": "e6eac4590aa9b73c57871f12f067f3aae85276bfa20902e67aa10028c665f782",
-   "bytes": 2504,
    "tier": "apps",
-   "source": "origin"
+   "source": "hf"
   },
   "apps/games/roms/hh/aironium_gb-biringan.gb": {
-   "sha256": "cb68b3a68fe748ea84d94657ea03ac2f9851e516fe5249c5fa982e533ac99078",
    "blake3": "db23344a6f7ca5e7a04896992712fac65110ba16fd9f128fc07265c49d626226",
-   "bytes": 262144,
    "tier": "apps",
-   "source": "origin"
+   "source": "hf"
   },
   "apps/games/roms/hh/aironium_gb-biringan.png": {
-   "sha256": "a2d4b26db54ea6e66af6963f8006eb464abd6507754f011149748d9389ee0d60",
    "blake3": "9d879f029289e8d44c36546b9574a204f3b8094348d58242f11903186192cbed",
-   "bytes": 474978,
    "tier": "apps",
-   "source": "origin"
+   "source": "hf"
   },
   "apps/games/roms/hh/airplanz.gb": {
-   "sha256": "736b821e17f5509d9b0088289977e1232e18338cad923f3e5588300d8622a662",
    "blake3": "c5b552aa07509a6e76a3c587665d1fb7b66b957e4ceb9797afcd18492d51e59d",
-   "bytes": 32768,
    "tier": "apps",
-   "source": "origin"
+   "source": "hf"
   },
   "apps/games/roms/hh/airplanz.png": {
-   "sha256": "976cc2f424b796e3ced4258a6345136842f6a7a01d167d9fe355e8c07f3062cd",
    "blake3": "dff1fd6a7ebd48c8043299045df6c1eaecfc6f7047f2507632c2e003d2765b47",
-   "bytes": 3022,
    "tier": "apps",
-   "source": "origin"
+   "source": "hf"
   },
   "apps/games/roms/hh/akaru-hime-the-red-princess.gb": {
-   "sha256": "09f54e53c47dc45b83e17dcc2d678212c7035c5f2bc71a8c0756b2cb4c321853",
    "blake3": "c571d24fa4459c884d439663a7383349e6e5726f578266e7423316bd1a92a7eb",
-   "bytes": 65536,
    "tier": "apps",
-   "source": "origin"
+   "source": "hf"
   },
   "apps/games/roms/hh/akaru-hime-the-red-princess.png": {
-   "sha256": "cc7a77da1d77033d4d575bbad23cebec9513fbccb7e633f189fa609ac5ad9714",
    "blake3": "36cc3d7241c4eaf7cba8869945c5a6d52d42ae43e61b98c0ccb4d86e8e6e9dae",
-   "bytes": 239807,
    "tier": "apps",
-   "source": "origin"
+   "source": "hf"
   },
   "apps/games/roms/hh/alien-invasion.gb": {
-   "sha256": "78cbb13080f587c108d8a18661db7d7b4a5c14c730f5bb86794a41132035fbf0",
    "blake3": "980b39dade174f75ac04365f6716d4e24f9b8a981610d730576e84ab7cfc2985",
-   "bytes": 32768,
    "tier": "apps",
-   "source": "origin"
+   "source": "hf"
   },
   "apps/games/roms/hh/alien-invasion.png": {
-   "sha256": "23184d1d0eba98ddf1a8c1f4eec155707f0c9b030ee55486a47714f010844a4c",
    "blake3": "15ebdc4ed370a377746d5f2ad1755b7d41fea3291ba53a16da61507fa3d0ee4d",
-   "bytes": 8160,
    "tier": "apps",
-   "source": "origin"
+   "source": "hf"
   },
   "apps/games/roms/hh/alien-planet.gb": {
-   "sha256": "b02ef6405e1e0275d4d78449811658ee611e373194ced89193003e3542e7ce02",
    "blake3": "41174f9da64277e3b23c427dd451f6b273fd818a372097a2a8b5f27a283889ce",
-   "bytes": 65536,
    "tier": "apps",
-   "source": "origin"
+   "source": "hf"
   },
   "apps/games/roms/hh/alien-planet.png": {
-   "sha256": "e53c645ec574836f16a6dfc9e5b9a344bac7c22d00e6d5a33754c64c9d5bbafc",
    "blake3": "f7f78d3c6daf68a77e869625000e6275ae232ea2acd29413a7f7843f207557d7",
-   "bytes": 3047,
    "tier": "apps",
-   "source": "origin"
+   "source": "hf"
   },
   "apps/games/roms/hh/all-humans-must-die.gb": {
-   "sha256": "7d4829cb9dd23029cbcc2c03a049da94d11222a5c67896a710f146736ac3581c",
    "blake3": "b4ca3c9079fb2c6f09b22e21891b6c027a0665d5559eae7484618f4a827e4602",
-   "bytes": 262144,
    "tier": "apps",
-   "source": "origin"
+   "source": "hf"
   },
   "apps/games/roms/hh/all-humans-must-die.png": {
-   "sha256": "b0fe7ada0b97bc5ca3d5c821671368a19796c728ccd67d7f426fb33ef840ee7c",
    "blake3": "4c30ad75caed1eca7c497d2a2dcbecab405754818e973b6a27dc165b16d500eb",
-   "bytes": 398293,
    "tier": "apps",
-   "source": "origin"
+   "source": "hf"
   },
   "apps/games/roms/hh/amingos-wild-journey.gbc": {
-   "sha256": "6a1f4b8e196dfc60508116e172d762be4721a060d6a07a3638f40063dcd76237",
    "blake3": "9bd6c32f7c6f986050a47ae37ead5b6239b8d1922214d49bee23bdcf748b4513",
-   "bytes": 32768,
    "tier": "apps",
-   "source": "origin"
+   "source": "hf"
   },
   "apps/games/roms/hh/amingos-wild-journey.png": {
-   "sha256": "6459b12e8e25f077b55ff1e24d4abd017878cb1587b41eff9eb34e99613aa951",
    "blake3": "dd2ebc8dbd63f13194b050d97229e2000024d364bcc3539255dd621ee1bac975",
-   "bytes": 763,
    "tier": "apps",
-   "source": "origin"
+   "source": "hf"
   },
   "apps/games/roms/hh/ankoku-housou-gb.gb": {
-   "sha256": "9fb159a2cdd111751ba4191a13a3411d55c91df9a8238b048202b6821a455151",
    "blake3": "120078798fd58eef7fa68309177a2f0b920db4ead0e03c1a62cfa499189e0de7",
-   "bytes": 32768,
    "tier": "apps",
-   "source": "origin"
+   "source": "hf"
   },
   "apps/games/roms/hh/ankoku-housou-gb.png": {
-   "sha256": "a8b1ef7000f2223c30b14d5b11e1808ede58da62634fd5ce0ad73f7f15b78204",
    "blake3": "7e227716acc22f7f88604c6d14fb22a4910a3a8ac69fc7402cca1a33b891ffdb",
-   "bytes": 1309,
    "tier": "apps",
-   "source": "origin"
+   "source": "hf"
   },
   "apps/games/roms/hh/ant-hill.gb": {
-   "sha256": "501f182e0c886d271b97658d980615b689ec9bce38321d13fac4648e0721472b",
    "blake3": "8d6fb0f7840083f14e9572499e70cffb5cfc96484ef583dbcd640f2c90c90990",
-   "bytes": 32768,
    "tier": "apps",
-   "source": "origin"
+   "source": "hf"
   },
   "apps/games/roms/hh/ant-hill.png": {
-   "sha256": "9ae2986be1eb57a36ec53a83de7c286539b807d4acd3df386d456ca5e678350a",
    "blake3": "de0fc5f767bd7dad7a95b9523f7cc1ac562e5577ada30e59b9be5069612bd886",
-   "bytes": 840,
    "tier": "apps",
-   "source": "origin"
+   "source": "hf"
   },
   "apps/games/roms/hh/black-castle.gb": {
-   "sha256": "457aff350dc6fb3caa137c89fe14fed91fbc7002fcab9173517e1aa4f88763a6",
    "blake3": "4fc541f263cb1ab4914e415ae789452f1303a1c3eb2609e3d65e63003491c2ae",
-   "bytes": 65536,
    "tier": "apps",
-   "source": "origin"
+   "source": "hf"
   },
   "apps/games/roms/hh/black-castle.png": {
-   "sha256": "7439b3c4b90337d86d417b2329f4dfe6b55b8f601bf42da5dc209b60b9662ab7",
    "blake3": "bd066cd4f73162b1479954905654de73fce6dff6863b91b6e06d3b74286ed477",
-   "bytes": 98882,
    "tier": "apps",
-   "source": "origin"
+   "source": "hf"
   },
   "apps/games/roms/hh/canight__slime-trials.gb": {
-   "sha256": "38879f865221131e83f59e1168417566356fb8139e3e59c76422bd2b05305b14",
    "blake3": "47679e6b9ec07921eb8076e3ae931de2dcf1f254383d3eec5508876a6f06d322",
-   "bytes": 65536,
    "tier": "apps",
-   "source": "origin"
+   "source": "hf"
   },
   "apps/games/roms/hh/canight__slime-trials.png": {
-   "sha256": "f2b320b52de8ddb2c249ab8cc0f0af2600b49ac1fbddff7388a757d85687972d",
    "blake3": "e29369ed4982cf1473ee1754e2e23418a65079c18e09c4bd2e5d15db8897350d",
-   "bytes": 7410,
    "tier": "apps",
-   "source": "origin"
+   "source": "hf"
   },
   "apps/games/roms/hh/cavern-mvm-9.gb": {
-   "sha256": "2653f587fb7bc645ac663b1fa1c4e1ece1ef4f971a3269cc84a499974310c96d",
    "blake3": "667555275933ccc71481fc26435c2e067370ab46109f909448c98ae4b5aa4166",
-   "bytes": 131072,
    "tier": "apps",
-   "source": "origin"
+   "source": "hf"
   },
   "apps/games/roms/hh/cavern-mvm-9.png": {
-   "sha256": "28647bbea7edbe26d9fdcf5b114d25244a8b200b2553a2b726dbf2ea87cc81b9",
    "blake3": "63dcb2532842b99439787771025a79edee7e2f79e7f867015e6271fc6488b0a9",
-   "bytes": 12948,
    "tier": "apps",
-   "source": "origin"
+   "source": "hf"
   },
   "apps/games/roms/hh/dangan.gb": {
-   "sha256": "28a21445177534b9b9a39aa87ef305e2bd240e9b453bbfef549e014ba26cbae0",
    "blake3": "f70cfb4bc3f6076399ec1183b3cff1295b92ee58aed64cfeaeea0e1f9c7308fe",
-   "bytes": 262144,
    "tier": "apps",
-   "source": "origin"
+   "source": "hf"
   },
   "apps/games/roms/hh/dangan.png": {
-   "sha256": "52fe5cd8f35a67b8fca2bca9ab21ca0c6b64ca51bb7ebef551c4fdea6316dde8",
    "blake3": "6e1b7fea808d7075bfb79edbc30dad2ed36a426aad8e3322f643d4566b8c5693",
-   "bytes": 3509,
    "tier": "apps",
-   "source": "origin"
+   "source": "hf"
   },
   "apps/games/roms/hh/dino-racers.gbc": {
-   "sha256": "8e346afcb459025b0977dc4d2df1a3ef5207258a95d6b99bdbf7ae151e5a6026",
    "blake3": "fe1ce6101902c4447044ad5ee9a61994e642611b32bb418706e5f247b1a0ad55",
-   "bytes": 262144,
    "tier": "apps",
-   "source": "origin"
+   "source": "hf"
   },
   "apps/games/roms/hh/dino-racers.png": {
-   "sha256": "fc9ba7049f8891a2aa5750515777affac65a9421f5aa9380e1267fd8a484e7b9",
    "blake3": "75423981f07b9427569f9823b863c7e35b99f989f1d539606cc1f95f90725c8b",
-   "bytes": 6094,
    "tier": "apps",
-   "source": "origin"
+   "source": "hf"
   },
   "apps/games/roms/hh/into-the-blue.gb": {
-   "sha256": "71c4c7cdaee320385407c7c68211b2b388459e9da2090f2888601802b328ba8b",
    "blake3": "689bf9bc6b42120f8f86a3569ba92f153d71b47fe10b2db47f6a948b842df3ff",
-   "bytes": 131072,
    "tier": "apps",
-   "source": "origin"
+   "source": "hf"
   },
   "apps/games/roms/hh/into-the-blue.png": {
-   "sha256": "f70de3f356c555aad549be50c682c69b3627b3dd2653ef3004b725751907b6d3",
    "blake3": "11990ef80bd66bf9f7b966fe2c79fcb0a1d02617f3c4d5a41538d00d20710801",
-   "bytes": 40225,
    "tier": "apps",
-   "source": "origin"
+   "source": "hf"
   },
   "apps/games/roms/hh/libbet.gb": {
-   "sha256": "079d161bf2bff4f3baec01339b4f6f02ff6f966c69456885a165b97aac11fa12",
    "blake3": "b81cd0fce335c7b0b3af03eb15b1be3beb08184ee6902ef8c5a292d7002301ee",
-   "bytes": 32768,
    "tier": "apps",
-   "source": "origin"
+   "source": "hf"
   },
   "apps/games/roms/hh/libbet.png": {
-   "sha256": "c8352c8226b5777bead02a18ac320edfa198e29f15f690c3ab5ffde99e3480b0",
    "blake3": "3e4b622390dcd13c57e807b8cac861a7aeb2e3706e46e90bb08fd07220b23225",
-   "bytes": 1591,
    "tier": "apps",
-   "source": "origin"
+   "source": "hf"
   },
   "apps/games/roms/hh/loderunner.gbc": {
-   "sha256": "056def5a6d8dd2006ed99696099dd4cc33073ccf7f1b9209b9e748362456e2f2",
    "blake3": "9a46e0ac4bcf8644fd7208b298874e08b31444c6aee527c9fadf21dd60e6c3c4",
-   "bytes": 65536,
    "tier": "apps",
-   "source": "origin"
+   "source": "hf"
   },
   "apps/games/roms/hh/loderunner.png": {
-   "sha256": "41208032695bb561fbc1b547864f5a073446ace86c8afc37a4bb62ac8bbe6a97",
    "blake3": "2d100a80e49dd69245f9178c2963c4b513c8aae344d5258ee6721a20b5f81862",
-   "bytes": 834,
    "tier": "apps",
-   "source": "origin"
+   "source": "hf"
   },
   "apps/games/roms/hh/petris.gbc": {
-   "sha256": "4711b5cdaf3da8fb20b6296787dd11834d34fbc9fdad5a446c0ee0e563807d92",
    "blake3": "b28b53c3f09f8da0a1628864ad99fc88925b9ec476fcf01a7f84959d50cf0a57",
-   "bytes": 32768,
    "tier": "apps",
-   "source": "origin"
+   "source": "hf"
   },
   "apps/games/roms/hh/petris.png": {
-   "sha256": "13d277acb048dd1e5484da38d0c6d2b497bedbc66e3e3ae0c1a385c0e5d640c0",
    "blake3": "0c65f4cd7a5b13fd9d8b920ba081eabb83157b401372f26ee90c6bd42b27e456",
-   "bytes": 137670,
    "tier": "apps",
-   "source": "origin"
+   "source": "hf"
   },
   "apps/games/roms/hh/robot-x-slime.gb": {
-   "sha256": "64bb2d16738cf2600e25c5db81468e640e7c51862adfbbe0bd8fc23b006541af",
    "blake3": "1eb058a765c7ba4766bbafa77c02233ff477482c78543a4c7d0a26d421148a31",
-   "bytes": 262144,
    "tier": "apps",
-   "source": "origin"
+   "source": "hf"
   },
   "apps/games/roms/hh/robot-x-slime.png": {
-   "sha256": "3d009b3d40ee7453a1d714fe981280204659335426a6d9ab27674a7a6532fa38",
    "blake3": "c8f2090b4408f3e1676896829c24a0f6501edcdf24895d274fc2646f423bb6c3",
-   "bytes": 39137,
    "tier": "apps",
-   "source": "origin"
+   "source": "hf"
   },
   "apps/games/roms/hh/shock-lobster.gb": {
-   "sha256": "f14efd0340903b1b00d7e8b4b39687d4bc33355ac7742267ccfddfe92f54a611",
    "blake3": "db9375980ac8a4934fcab24d169b9ab17f36b070267250771da05769903e88c5",
-   "bytes": 32768,
    "tier": "apps",
-   "source": "origin"
+   "source": "hf"
   },
   "apps/games/roms/hh/shock-lobster.png": {
-   "sha256": "4ac82a8b281a19750956eaaa30c540faa94437fe78ef5e20df3a81bfc63601de",
    "blake3": "6379641ffeb34e43936cb60eb01d4ee10bdce9f6ecdec4cbbf840bdc4f24af60",
-   "bytes": 3640,
    "tier": "apps",
-   "source": "origin"
+   "source": "hf"
   },
   "apps/games/roms/hh/super-princess-2092.gb": {
-   "sha256": "897926ad289f86654982f7e42ea873cb5d73e0aeeb6d6f129681acc142161f67",
    "blake3": "9ace330d2286df22b3dab13f67a4b0ac2cd515f5499299f345ce925af45b87e2",
-   "bytes": 131072,
    "tier": "apps",
-   "source": "origin"
+   "source": "hf"
   },
   "apps/games/roms/hh/super-princess-2092.png": {
-   "sha256": "9230850dcb94549b4a2ca6860295cb935380676b4083eb13f40f83e6c4d8ac2c",
    "blake3": "f120ab5ce517d42a465860225ecaa6eacba2470a4f4d9af98ccf0f365c635d7a",
-   "bytes": 2157,
    "tier": "apps",
-   "source": "origin"
+   "source": "hf"
   },
   "apps/games/roms/hh/the-bouncing-ball.gb": {
-   "sha256": "039f5b7037cd3535b10c3679beab32fb2d420e48c45a096d8a38c5fc0356a669",
    "blake3": "d1a37b1b3c4b7468b9fd533d9b6dfb6da29dccc07c48af902d3cf36815397a8d",
-   "bytes": 65536,
    "tier": "apps",
-   "source": "origin"
+   "source": "hf"
   },
   "apps/games/roms/hh/the-bouncing-ball.png": {
-   "sha256": "d207307625d5680b83028a9a377539e05f42fce52245dfde3d0e5464af3c75ab",
    "blake3": "85b39761b38b9a1b3b5249bc52351a63ad6a5274cd1d727c87347547db5f9d99",
-   "bytes": 18565,
    "tier": "apps",
-   "source": "origin"
+   "source": "hf"
   },
   "apps/games/roms/hh/tuff.gb": {
-   "sha256": "ca28220f7f04460cef5d652a6298989ff00efe92e2a08a67f874bc865d98f7a6",
    "blake3": "157d52621fc8baf6382a9db320183753206ab258ee2d595ac0cfe26aeb73d2c9",
-   "bytes": 65536,
    "tier": "apps",
-   "source": "origin"
+   "source": "hf"
   },
   "apps/games/roms/hh/tuff.png": {
-   "sha256": "529d18b625d4c79ddaa9024ab3bf257ed03c62d4e32034920c7ac5175c47fd82",
    "blake3": "92321540fa41c211d96714d7018f4a9e005e2c72045a56e0fc800351c732c935",
-   "bytes": 3354,
    "tier": "apps",
-   "source": "origin"
+   "source": "hf"
   },
   "apps/games/roms/hh/ucity.gbc": {
-   "sha256": "0d608db175dd8ba22780be5df5fc17bf135876f6964f58ee141e4f8d81c62947",
    "blake3": "ea80d0b889e2c29c2d5a216f50f05c8d575e2e285751c8f4393a9f4c06173dcf",
-   "bytes": 131072,
    "tier": "apps",
-   "source": "origin"
+   "source": "hf"
   },
   "apps/games/roms/hh/ucity.png": {
-   "sha256": "f17e624f6534be0c2a883fce3bc9c58f81dac467fd4dac65fb9707557d71d380",
    "blake3": "b1999ef600acb8fb96681a660284672cdd21ee509d8d34caf6989f371322e426",
-   "bytes": 10198,
    "tier": "apps",
-   "source": "origin"
+   "source": "hf"
   },
   "apps/games/snes9x.mjs": {
-   "sha256": "150f140406ce5a81872044e261030eb7347a87ac9dd7060cccf065084aa3ef66",
    "blake3": "024ba97c7a82deeb6e1bb6d5d2bc50482998a5c7b40b9709593ad13c02b0880b",
-   "bytes": 67910,
    "tier": "apps",
-   "source": "origin"
+   "source": "hf"
   },
   "apps/games/snes9x.wasm": {
-   "sha256": "2e386549f4b425ec2c6cf2325e87f97dcdd5c1645b5894c4d392a91e64596e95",
    "blake3": "709a462105d2ef7e496a8249d00bb77db1d454cf5251dc3414e0e3f8bc3d218e",
-   "bytes": 2284718,
    "tier": "apps",
-   "source": "origin"
+   "source": "hf"
   },
   "apps/games/sources.mjs": {
-   "sha256": "da2166a63ebb076eb9c3d4cde828e7138f37049c6a5be766edbaa7a797037074",
    "blake3": "348bc9bd3780a4ade81906d4bcd8bc2307ec816b3b20e11b330a578dfa377d54",
-   "bytes": 2692,
    "tier": "apps",
-   "source": "origin"
+   "source": "hf"
   },
   "apps/hello/index.html": {
    "sha256": "66c1ada5ac08a2d4f73851bbe7458ad5fb6e2226c5a131c3829abfe715900fed",
@@ -2797,9 +2509,9 @@
    "source": "hf"
   },
   "apps/holo-games/holo-evicted.json": {
-   "sha256": "f3bac6743903d7ea2fbb0d09256ac3d8886a0b98a8940b298a3a0b682652adb7",
-   "blake3": "4741ed999294c4f8d29cf7a078a535a1ab2640cc98b8eae52be248c35dfe948a",
-   "bytes": 3614,
+   "sha256": "e21fb95ddca6e7ff202b14df929d2cf14b26cb191348781af4550d0baa06c157",
+   "blake3": "fc8644263a6b413816fbcb762ed9b6e05c02c58078832f22715a238543cc2a0c",
+   "bytes": 3613,
    "tier": "apps",
    "source": "origin"
   },
@@ -2839,11 +2551,9 @@
    "source": "hf"
   },
   "apps/holo-games/index.html": {
-   "sha256": "791a9ac999486256499d76a938345b173053b8de643cc89797bf946c38c365e3",
    "blake3": "0a7327ae8a356725f45cdffc1eb8f00d63ada64e7b127e5b66fe599aed76cc55",
-   "bytes": 339,
    "tier": "apps",
-   "source": "origin"
+   "source": "hf"
   },
   "apps/holo-games/roms/free/dmg-acid2.gb": {
    "blake3": "4e7855580304fca5983a005f0494c86439fa9aa17e2fcaf9f86894a6d6706531",
@@ -3084,16 +2794,16 @@
    "source": "origin"
   },
   "apps/holo-messenger/_vendor/ui/chat-ui.bundle.css": {
-   "sha256": "ee54de1d0be3920757eda24f2d9d2f9eb24597cfe75c39532486ff357e59546b",
-   "blake3": "164a28aa5f0604c20b38ca965c558d67464bfb893466cde0e5fb10e7be36b6a2",
-   "bytes": 193878,
+   "sha256": "2e4d865cebf5ccf8032cc2682c4575b6de30f106e83177532de225883f8a029f",
+   "blake3": "fab30aa770e2655f962b4fd25243a6496f56fc3eb467b4083f12740f25b0a5f1",
+   "bytes": 194442,
    "tier": "core",
    "source": "origin"
   },
   "apps/holo-messenger/_vendor/ui/chat-ui.bundle.js": {
-   "sha256": "c6c04deb6973b1a8e64b29696d2d2f9ba0726533143b282a005cd5e5a2403f54",
-   "blake3": "10f493e93eb6dcd6c5dbd9d483b30d886f6e07c222e980daf69e55069be46088",
-   "bytes": 530626,
+   "sha256": "0be32fa1a345d3b100d5707db56c3f4ec906b63df5b5163802678fb49c5c2e99",
+   "blake3": "630078d4522c13a444f8a076edfe9b786841bd5cca9017966d8a83610f597a74",
+   "bytes": 530642,
    "tier": "core",
    "source": "origin"
   },
@@ -3322,8 +3032,8 @@
    "source": "origin"
   },
   "apps/holo-messenger/app.html": {
-   "sha256": "b76a47dd4bf19e7243642a9c42928fff7fa815b79c7f579d95e5d401d46041a1",
-   "blake3": "eed4c24d27e62f2b035844db28d7b3bb547d51a4fd7776b336f409fb3b156619",
+   "sha256": "69422bfdb78a598ae32e6cda675115114ddf24563e53739ca0ff5fd5290177b0",
+   "blake3": "c8b56f3f9fc7c2a348bd161dfdbb1b0d603f8e6fb331c3aff3161e6abd325ae8",
    "bytes": 67684,
    "tier": "core",
    "source": "origin"
@@ -3707,8 +3417,8 @@
    "source": "origin"
   },
   "apps/holo-messenger/holo-sw.js": {
-   "sha256": "a73963ac704de6141a602307d9e36208744918d8f2e3f85908cd97206205bffe",
-   "blake3": "b5ae2694285441df26e0fe2fa980a416ce23a4620f449dc96ddf40ade6ee821c",
+   "sha256": "5a79081e312452b678c3c194959603d600826e97c36c9c2b9fbe9b6f1d8a6262",
+   "blake3": "128e9569484153d1cf0bee98a2e86478a982ca850805d11b6e4bd9788cd75b0f",
    "bytes": 19135,
    "tier": "core",
    "source": "origin"
@@ -4085,8 +3795,8 @@
    "source": "origin"
   },
   "apps/holo-messenger/shell-manifest.json": {
-   "sha256": "bd6b61a6dd8c18f5fa6d80ec3f1bdd91c66a3e2a39c70ae21a297d57f2207a2b",
-   "blake3": "8caf8ed62a1276eca84d03c5c366aefdb9ee28df5b199f4bd841bfec09f46941",
+   "sha256": "448ae5719dda4d3f5c517bf425ef6329c629c1a56c8b45bdee6c781f313a21ee",
+   "blake3": "fdfbf959142eeac15f5cfddc897ebb9a4385d41fd16dee23d93c8750cddc673f",
    "bytes": 8507,
    "tier": "core",
    "source": "origin"
@@ -5057,11 +4767,9 @@
    "source": "origin"
   },
   "apps/q/core/holo-stream-load.mjs": {
-   "sha256": "15946662c1c6260b87ab3580d7bdf3eed2d7bad0d5b51177f32c92b1d80bd7f4",
    "blake3": "7755e7711bcb44adabe8e58dc34dfa905795bc6343993b4fa5ec3e5d0f67eb91",
-   "bytes": 6833,
    "tier": "apps",
-   "source": "origin"
+   "source": "hf"
   },
   "apps/q/core/kappa.js": {
    "sha256": "08294ce5d214685d8aefd06917d6f22175635fbbf9f447bd6adf997cae634b83",
@@ -5076,18 +4784,14 @@
    "source": "hf"
   },
   "apps/q/core/kv-commons.mjs": {
-   "sha256": "9b86277419a90118b994c512d54192a0beee1434b42d1a7ffce0bc6d3ad2cab5",
    "blake3": "32c9ef2f711e28db8d9e269fe2e456c2e4ac4a2e7c3e42fdeba88b903b576781",
-   "bytes": 2664,
    "tier": "apps",
-   "source": "origin"
+   "source": "hf"
   },
   "apps/q/core/listen.js": {
-   "sha256": "48934f231f90ef530decafbc5f1f68c0a2a2ab0ca71b255efc69699dfc8c6798",
    "blake3": "2a37b822045f9d99a56bee7f5eaa66ebcee84cc245a38242d63f7e35e2e46482",
-   "bytes": 11031,
    "tier": "apps",
-   "source": "origin"
+   "source": "hf"
   },
   "apps/q/core/loader.js": {
    "sha256": "b76c635f12a827c92bdc8e57bbb2ce4414ac1353c6f932924d27421f30bf86e0",
@@ -5112,11 +4816,9 @@
    "source": "hf"
   },
   "apps/q/core/parts-cache.mjs": {
-   "sha256": "87ad4e893627fd9d12a27f0a125e920daffa13258a9d82f252ac13de7243f97c",
    "blake3": "7125d6d489bf8649e5021f7c0da4f2751cfa1f79bbff18c47afb97658d7a322d",
-   "bytes": 2613,
    "tier": "apps",
-   "source": "origin"
+   "source": "hf"
   },
   "apps/q/core/presets.js": {
    "blake3": "cf2ead1f344ebc25d5e19bd30a65d083793c9c6df3323a49b087aaf682162750",
@@ -5505,18 +5207,14 @@
    "source": "hf"
   },
   "apps/q/forge/gguf-forge-iq-dequant.mjs": {
-   "sha256": "8d80347eeb0d71ddd2a4ea11b63cff46ed202dba7a41772cbd1c6a341e6ae9d8",
    "blake3": "213e24bdc3ce4c6da25d4eebc96e103b2190292595c3074dd32b2a408a62b79c",
-   "bytes": 11568,
    "tier": "apps",
-   "source": "origin"
+   "source": "hf"
   },
   "apps/q/forge/gguf-forge-iq-grids.mjs": {
-   "sha256": "8c64149d0987499961778a53273f95774a40c71f4a7916a9e46a8645b238d70a",
    "blake3": "87880133b512c20baf3cfc78dec9f37d24233c70d1a6ff88cec8f5c16ba7fc8b",
-   "bytes": 46068,
    "tier": "apps",
-   "source": "origin"
+   "source": "hf"
   },
   "apps/q/forge/gguf-forge-iq.test.mjs": {
    "blake3": "0ac1dba553d5460a209ab91ba562c0353ff42528e8b038128926fa8035362b05",
@@ -7274,39 +6972,31 @@
    "source": "hf"
   },
   "apps/q/holo-delta.mjs": {
-   "sha256": "2f23f53d099addaca60a6b9b53002af6a182eb8f9f329843e72b7d49a8c0f66e",
    "blake3": "28b845c09b34d8bca7c2c2889e00a5ec19a4daf7d7f8a1d2f2b2336b54e49b3c",
-   "bytes": 10781,
    "tier": "apps",
-   "source": "origin"
+   "source": "hf"
   },
   "apps/q/holo-evicted.json": {
-   "sha256": "8f6c7836237d71cc81c31085c3885c8007a3424c0188e485d7e8d22cb03879e6",
-   "blake3": "00d4335e65fd25b49a79cfeb6732da1a03bc4c9fae6b0dc2e1e6af1e7db5932f",
-   "bytes": 56428,
+   "sha256": "dd54ff055ec042eb9d79d2347f840a92f6ba687868ea49df143479dfbae9c009",
+   "blake3": "28e6edc9f083704767f21d9551aa10629a3667fe64424ae991f9576bf060dd43",
+   "bytes": 56894,
    "tier": "apps",
    "source": "origin"
   },
   "apps/q/holo-load-delta.mjs": {
-   "sha256": "e61e122e645c3e1998801ff8cd3008bdcb9253dc6a81f0f5085f403b3f40bf3b",
    "blake3": "20858f7b5361ed90eeeffbd854595eee3436c019d88bb27775e5da7defc12672",
-   "bytes": 3805,
    "tier": "apps",
-   "source": "origin"
+   "source": "hf"
   },
   "apps/q/holo-load2bit.mjs": {
-   "sha256": "7a914d1bfa9b6c10bbe8661f4f52f094601d5cbafe76afb00cbe27f00eed9e63",
    "blake3": "4dd45595ca109128b672544e96ab21716059018b0bc80b351d043b3ee9ee2ce4",
-   "bytes": 11563,
    "tier": "apps",
-   "source": "origin"
+   "source": "hf"
   },
   "apps/q/holo-model-frame.mjs": {
-   "sha256": "2ca8430190e7c31e5c831792f1f32907a0b7cbf0f8a43530ea4495b4a22141f1",
    "blake3": "e55fbef3d5779c8b09464ad673d4f3a3efe694bd13db5e856e3511e1213f2305",
-   "bytes": 6480,
    "tier": "apps",
-   "source": "origin"
+   "source": "hf"
   },
   "apps/q/holo-splash.js": {
    "blake3": "69e9bfc55ac61137f83090028126b4484b19bd3075a74e9cd0c77aaf1e489bc3",
@@ -7339,11 +7029,9 @@
    "source": "hf"
   },
   "apps/q/make-chat-space.mjs": {
-   "sha256": "2b618dbf0a44c67004bd25a57ee843d2c3886e8042ba604a82bf4523ede3f3c4",
    "blake3": "349dd23eaa43cc103dfe8eadc99f90c17f22cd711000ccce7b3d35cdf691306b",
-   "bytes": 5700,
    "tier": "apps",
-   "source": "origin"
+   "source": "hf"
   },
   "apps/q/make-space.mjs": {
    "blake3": "140eb5f6a96777146714328b8612e5804c919a417b217268818f6087374336f7",
@@ -7414,18 +7102,14 @@
    "source": "origin"
   },
   "apps/q/qvac-ingest.mjs": {
-   "sha256": "e01af72dfc17b4638e72026fbb79b6ec7dc3af333a37eeff356cc74bfca422ef",
    "blake3": "598bd95b2bb16d5bff61aae814c0f39f40339dbe9dc2bfefe2073b351ba8d323",
-   "bytes": 28560,
    "tier": "apps",
-   "source": "origin"
+   "source": "hf"
   },
   "apps/q/qvac-kdisk.mjs": {
-   "sha256": "a83e882c2cbb49278a239dc70df4026841e9a5185c84871e9f049b6a45890176",
    "blake3": "05d5d96082c0baec31176021759fcadb2645f11a124f9e0c03441cf38bd691d4",
-   "bytes": 7242,
    "tier": "apps",
-   "source": "origin"
+   "source": "hf"
   },
   "apps/q/qvac-kstore.mjs": {
    "blake3": "d24c843bfb6e306b08dac4918537c0c6dc89d127a236921eded52d72882b7ddc",
@@ -17252,9 +16936,9 @@
    "source": "hf"
   },
   "evicted.json": {
-   "sha256": "d6461c6897c9d9eefba6405ce33e0be20ea9c222f4207c0ab0e589a2de64c8a4",
-   "blake3": "936daa3e6e44f8878336e4fbb9ea0cdfc5687ed9f4f38abbf1363b6e6caf8f4a",
-   "bytes": 352,
+   "sha256": "fd47044d6885b5cbaed77763263b749cc0fccd5459470e1f0a852a509060edc2",
+   "blake3": "1b61297352187dd33ea2fc9360268481d2ff9e3a0567ff2474597ab60356cd8a",
+   "bytes": 362,
    "tier": "core",
    "source": "origin"
   },
@@ -19128,11 +18812,9 @@
    "source": "origin"
   },
   "usr/share/wallpapers/alps.jpg": {
-   "sha256": "f6caa9eeead2c99deeb2cdb70b7e25bbaa2cf5c60555f5b4030ecf6b6d9efa51",
    "blake3": "890035b55824b753280dd0b52af44be1cc04c999604d7c24db8342a2ef849b98",
-   "bytes": 546613,
-   "tier": "core",
-   "source": "origin"
+   "tier": "apps",
+   "source": "hf"
   },
   "usr/share/wallpapers/aurora-depth.png": {
    "blake3": "fb1fd493822e75c2101bee936070be3c79e574c54c76b4ccd468e461b03c7db1",
@@ -19155,18 +18837,14 @@
    "source": "hf"
   },
   "usr/share/wallpapers/galaxy-2560.jpg": {
-   "sha256": "c4dff02733d2f8d6ede310e97a5c3067b1bfbddebd1d180c4c781db286b14607",
    "blake3": "1d8ffbadd49687289a0a0cc61edfe288e727d9e9791c4aa230c7874aa655b6f2",
-   "bytes": 986636,
-   "tier": "core",
-   "source": "origin"
+   "tier": "apps",
+   "source": "hf"
   },
   "usr/share/wallpapers/galaxy-8k.jpg": {
-   "sha256": "27be74593a1b8eaacfdd1ef1be749e785800bb50e70b6b9283a5215afb4020e4",
    "blake3": "c975fc5e32a255a65475c733154f3c3b2c6430bcd4fc63d10d4419c48902630f",
-   "bytes": 4046761,
-   "tier": "core",
-   "source": "origin"
+   "tier": "apps",
+   "source": "hf"
   },
   "usr/share/wallpapers/galaxy-depth.png": {
    "blake3": "f9bac524596699df92fd641867b9f18dd1d7927c019bbe739eb5eb1d758b438a",
@@ -19179,9 +18857,9 @@
    "source": "hf"
   },
   "usr/share/wallpapers/holo-evicted.json": {
-   "sha256": "b4e5872ddc7b70428e2ef9515a27189d2fa7ffede42331f030a761461e233643",
-   "blake3": "a4ea3d924e09f7b811504723d67e6543917f330e52cb08fa709b3d1cfd9801d8",
-   "bytes": 1218,
+   "sha256": "c5b441b28022321a840f46e5e5a57149a9dac777ff7196320c46d58a12d2125b",
+   "blake3": "4ea343f8d81dd9b812cf1a34369d0fdfb5ef9a2e5286d5924defb9b481a63b24",
+   "bytes": 1566,
    "tier": "core",
    "source": "origin"
   },
@@ -19201,11 +18879,9 @@
    "source": "hf"
   },
   "usr/share/wallpapers/mountain-lake.jpg": {
-   "sha256": "5a0bac32c4f1cb95d8df2251584e9d1cc09adc87740ec78e1cc7b979f34883dc",
    "blake3": "352ae9f1a43ded57192421a956efa14ad5b6df6344237d5546244c59e7126a78",
-   "bytes": 2622108,
-   "tier": "core",
-   "source": "origin"
+   "tier": "apps",
+   "source": "hf"
   },
   "usr/share/wallpapers/uor-2560.jpg": {
    "blake3": "52b9f08b6766c1621b6d130d1f5b08d9a0ead9678c007d6f13b304aee4282e2d",

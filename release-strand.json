@@ -10724,5 +10724,63 @@
   "holstr:sig": "YfEutTJM4A3guFqAmQNfNyAviGmembmjjBXrRqQ8tqHCORxKWuBnfDemzQiKs6JmYIjZdN6trPKz+WCYtjOaAA==",
   "holstr:alg": "Ed25519",
   "holstr:pub": "snYY6y35gdZ1ngOE5E+G1BGFjlTo2MfpfP8h6yc7r+M="
+ },
+ {
+  "@context": [
+   "https://www.w3.org/ns/did/v1",
+   "https://w3id.org/security/data-integrity/v2",
+   {
+    "schema": "https://schema.org/",
+    "prov": "http://www.w3.org/ns/prov#",
+    "dcterms": "http://purl.org/dc/terms/",
+    "rel": "schema:additionalType",
+    "links": {
+     "@id": "schema:hasPart",
+     "@container": "@set"
+    }
+   },
+   {
+    "holstr": "https://hologram.os/ns/strand#"
+   }
+  ],
+  "@type": [
+   "prov:Entity",
+   "holstr:Entry"
+  ],
+  "holstr:seq": 192,
+  "holstr:prev": "did:holo:sha256:52c6cdda9bb1bfe6a3d18231f3a681858f0ab60987b90c5ef3c91fe7c1a45057",
+  "holstr:kind": "release",
+  "holstr:payload": {
+   "shell": "30ecfd9331168d07d738ac8b14abb8bebf78897302d1d0b201dcecd3a4584121",
+   "manifest": "448ae5719dda4d3f5c517bf425ef6329c629c1a56c8b45bdee6c781f313a21ee",
+   "runtime": {
+    "apps/q/pkg/holospaces_web.js": "b9f8a887de588c5193dc65ca9ce206a70c6df53595b848e0ce0299c2d88a5753",
+    "apps/q/pkg/holospaces_web_bg.wasm": "9d90b4ea8bccee8c239073c7ec7dd5158c6d11f1f668487570d17475d79e661e",
+    "apps/workspace/pkg/holospaces_web.js": "8c30aa5582dffe4548d27fa7863163eba689ed65126be472c003f5884fc8e534",
+    "usr/lib/holo/holowhat/holospaces_web.js": "a5b5d9c559a1d2812c33e9d7a4b1c24bb03059482503a23356e4c9c32d4d8b88",
+    "usr/lib/holo/holowhat/holospaces_web_bg.wasm": "00cfa4960b319ba1ba7291cddb20dea130a407ce8b42426218854f4f68f4dcd7",
+    "usr/lib/pkg/holospaces_web.js": "8c30aa5582dffe4548d27fa7863163eba689ed65126be472c003f5884fc8e534",
+    "usr/lib/pkg/holospaces_web_bg.wasm": "3370b22070b56218a57df6406e2e4ba7cc171e942d4d1f2ae4297ea2c4c08d9c"
+   },
+   "apps": {
+    "carry": "9f44164b17e6b7e37f39623bb445d49b6608da5f2b04cef8b1a8b183362a6b9a",
+    "hello": "66c1ada5ac08a2d4f73851bbe7458ad5fb6e2226c5a131c3829abfe715900fed",
+    "holo-messenger": "69422bfdb78a598ae32e6cda675115114ddf24563e53739ca0ff5fd5290177b0",
+    "resolve": "23aec66382775f5773693615338f37c37a5f58257ec95aece33a664baa6fe0db",
+    "self": "0511772584510f0888d97dd5a72bf986ad6791bd8e305063ddd8a82c39888a70",
+    "spaces": "d8aebefb67e7fc7802e757b9a7d95bb881e6d75b4a9bc4bd4227634541757e51"
+   },
+   "boot": {
+    "entry": "holo-portal.mjs",
+    "sha256": "caeb3e57b6eeab09bee6d67c022145a8e2dae610c929a7f51bc169898625e7e8"
+   },
+   "closure": "ff483172f8fc66d7c66d928ca06637ba2f4bbad402ee78117f18b601701ba8ee"
+  },
+  "prov:generatedAtTime": "2026-07-12T21:14:52.314Z",
+  "holstr:op": "did:holo:sha256:87599792c7b13fad9d6c57d3b89d2cef35e4715869f5cde597ab60ca92699f0b",
+  "id": "did:holo:sha256:96ce4b4e4fe2fac1992da340dc796ec63479fcf1b349f168e1b8f69217ec91f3",
+  "holstr:sig": "O6kUoOZuDcYVQHErQ23n5tJopv5m++oS4Wwn24k3jEvcwMtmx5ZNoC/TJVBaTnf0+muontWUbv83D5FMyCXwAQ==",
+  "holstr:alg": "Ed25519",
+  "holstr:pub": "snYY6y35gdZ1ngOE5E+G1BGFjlTo2MfpfP8h6yc7r+M="
  }
 ]
