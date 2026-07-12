@@ -93,7 +93,7 @@ async function hydrateFace(panel, u) {
 // SUPER-CLEAN GATE: two choices on the face — the biometric (your name) + "Continue as guest". The rare
 // recovery doors (another device / restore) live behind the SAME ⋯ the appearance does (holo-plymouth's
 // panel renders whatever actions the primitive offers it) — one quiet door for everything secondary.
-const guestBtnHtml = () => `<button class="hl-alt" id="hl-guestbtn">${I.ghost}Continue as guest</button>`;
+const guestBtnHtml = () => `<button class="hl-alt" id="hl-guestbtn">Continue as guest</button>`;
 
 const _linkStyle = "width:100%;font-size:12px;padding:10px;border-radius:8px;background:rgba(255,255,255,.08);color:#cfe;border:1px solid rgba(255,255,255,.15);font-family:inherit";
 function renderAddDevice(panel, url) {
@@ -173,7 +173,7 @@ const HL_CSS = `#holo-login{position:fixed;inset:0;z-index:2147483000;color:var(
 #holo-login .hl-slide .hl-knob svg{width:1.3em;height:1.3em;color:#062019}
 #holo-login .hl-slide.armed{border-color:rgba(125,239,201,.5)}
 #holo-login .hl-slide.done .hl-fill{width:100%!important;background:linear-gradient(90deg,#34d3a6,#7defc9)}
-#holo-login .hl-alt{background:none;border:0;color:var(--ink-dim);opacity:.85;font-size:var(--u);font-weight:500;font-family:inherit;cursor:pointer;padding:calc(var(--u)*.3) calc(var(--u)*.55);border-radius:calc(var(--u)*.4);display:inline-flex;align-items:center;gap:calc(var(--u)*.4);min-height:44px;transition:color .15s,opacity .15s}
+#holo-login .hl-alt{background:none;border:0;color:var(--ink-dim);opacity:.66;margin-top:calc(var(--u)*.3);font-size:calc(var(--u)*.82);font-weight:500;font-family:inherit;cursor:pointer;padding:calc(var(--u)*.3) calc(var(--u)*.55);border-radius:calc(var(--u)*.4);display:inline-flex;align-items:center;gap:calc(var(--u)*.4);min-height:44px;transition:color .15s,opacity .15s}
 #holo-login .hl-alt:hover{color:var(--ink);opacity:1}#holo-login .hl-alt svg{width:1.05em;height:1.05em}
 #holo-login .hl-more{opacity:.72}#holo-login .hl-more:hover{opacity:1}
 #holo-login .status{min-height:calc(var(--u)*1.5);font-size:var(--u);color:var(--status);display:flex;align-items:center;justify-content:center;gap:calc(var(--u)*.5);text-shadow:var(--shadow)}
@@ -214,14 +214,14 @@ function renderReturning(panel, u) {
     ? slideHtml(u.label || "you")
     : `<button class="hl-bio" id="hl-bio" aria-label="Sign in as ${esc(u.label || "you")}">${beamHtml()}${I.fp}<span>${label}</span></button>`;
   panel.innerHTML = `${avatarHtml(u)}
-    <div class="hl-auth">${control}${enclaveHtml()}${guestBtnHtml()}<div class="status"></div></div>`;
+    <div class="hl-auth">${control}${guestBtnHtml()}<div class="status"></div></div>`;
   hydrateFace(panel, u);
   if (!COARSE) requestAnimationFrame(() => sizeBeam(panel));
 }
 function renderFirstRun(panel) {
   // First run enrols this device's enclave — a deliberate one-time act, so it stays a tap on every device.
   panel.innerHTML = `${avatarHtml(null)}
-    <div class="hl-auth"><button class="hl-bio" id="hl-signin" title="One tap, nothing to set up">${beamHtml()}${I.fp}<span>Sign in</span></button>${enclaveHtml()}${guestBtnHtml()}<div class="status"></div></div>`;
+    <div class="hl-auth"><button class="hl-bio" id="hl-signin" title="One tap, nothing to set up">${beamHtml()}${I.fp}<span>Sign in</span></button>${guestBtnHtml()}<div class="status"></div></div>`;
   requestAnimationFrame(() => sizeBeam(panel));
 }
 function renderNoBio(panel, u, reason) {
