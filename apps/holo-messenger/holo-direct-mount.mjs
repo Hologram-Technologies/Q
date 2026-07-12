@@ -51,7 +51,24 @@ async function _boot() {
     } catch (e) { console.warn("[direct] store unavailable — session-only conversations:", String(e)); }
     spine = await makeSpine();
     const displayName = (localStorage.getItem("holo.direct.name") || "").trim() || null;   // rides sealed payloads (N8 two-way door)
-    direct = await makeDirect({ identity, spine, store, displayName });   // drop-box: origin /mbox, or relays on a static origin (holo-dm gate)
+    // R2/R3 — the audited Olm/Megolm ratchet, OPT-IN via ?e2e=voz (or localStorage holo.e2e=voz). The default
+    // door stays exactly holo-seal (olm=null). When on, we load the vodozemac wasm (the spine's way, lazy),
+    // derive a vault-persisted pickleKey, and build a seal2 waist keyed to the SAME operator ns → sessions +
+    // identity survive every reload (persistence for returning users). Fail-soft: any hiccup → holo-seal.
+    let olm = null;
+    try {
+      const voznOn = (() => { try { return new URLSearchParams(location.search).get("e2e") === "voz" || localStorage.getItem("holo.e2e") === "voz"; } catch { return false; } })();
+      if (voznOn && store && store.getMeta) {
+        const vbase = new URL("./_vendor/vodozemac/", import.meta.url);
+        const voz = await import(new URL("holo_vodozemac.js", vbase));
+        await voz.default({ module_or_path: new URL("holo_vodozemac_bg.wasm", vbase) });
+        let pickleKey = await store.getMeta("voz:pk").catch(() => null);
+        if (!pickleKey) { const a = new Uint8Array(32); crypto.getRandomValues(a); pickleKey = btoa(String.fromCharCode(...a)); await store.setMeta("voz:pk", pickleKey); }
+        const { makeSeal2 } = await import("./holo-seal2.mjs");
+        olm = makeSeal2({ voz, pickleKey, getState: (k) => store.getMeta("voz:" + k).catch(() => null), putState: (k, v) => store.setMeta("voz:" + k, v).catch(() => {}) });
+      }
+    } catch (e) { console.warn("[direct] Olm ratchet unavailable — holo-seal default:", String(e)); olm = null; }
+    direct = await makeDirect({ identity, spine, store, displayName, olm });   // drop-box: origin /mbox, or relays on a static origin (holo-dm gate)
     direct.on("message", (m) => {
       const p = panels.get(m.contactId);
       if (p) p.addMessage({ from: m.from, text: m.text, verified: m.verified, kappa: m.kappa });
@@ -267,7 +284,8 @@ function _attach() {
 function start() {
   if (!DOC || typeof window === "undefined") return;
   if (window.__holoDirectMount) return; window.__holoDirectMount = true;
-  window.HoloDirect = { open, boot: _boot, link: myLink, code: async () => { await _boot(); return JSON.stringify(direct.myPub); }, state: (cid) => (direct ? direct.linkState(cid) : "off") };
+  window.HoloDirect = { open, boot: _boot, link: myLink, code: async () => { await _boot(); return JSON.stringify(direct.myPub); }, state: (cid) => (direct ? direct.linkState(cid) : "off"),
+    vozReady: async (cid) => (direct ? direct.vozReady(cid) : false), sealStats: () => (direct ? direct.sealStats() : null) };
   setInterval(() => { _attach(); _renderSection(); }, 2000); _attach();
   // returning operator: if the sealed store already exists, boot in the background so the Direct threads
   // are VISIBLE in the main list without any click (the 3 MB spine cost is deferred past first paint;

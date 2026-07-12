@@ -16,12 +16,77 @@ import * as RDV from "./holo-rendezvous.mjs";
 import { wireEncode, wireDecode } from "./holo-net-wire.mjs";
 import * as Media from "./holo-direct-media.mjs";
 
-const DEFAULT_STUN = "stun:stun.l.google.com:19302";   // sees addresses, never content; pass stun:null to go host-only
+// STUN opens most links (a STUN server sees addresses, never content); TURN relays ENCRYPTED bytes it
+// cannot read, for symmetric/mobile NATs (home↔office↔cellular — the team case) where a direct link never
+// forms — Law L1/L5 hold, a relay is a dumb pipe. Open Relay is a shared best-effort PUBLIC TURN
+// (rate-limited); a durable owned TURN (Cloudflare Calls) is a later rung. Pass ice:null (or stun:null) to
+// go host-only (LAN / same machine — what most witnesses want).
+const DEFAULT_ICE = [
+  { urls: "stun:stun.l.google.com:19302" },
+  { urls: "turn:openrelay.metered.ca:80", username: "openrelayproject", credential: "openrelayproject" },
+  { urls: "turn:openrelay.metered.ca:443", username: "openrelayproject", credential: "openrelayproject" },
+  { urls: "turns:openrelay.metered.ca:443", username: "openrelayproject", credential: "openrelayproject" },
+];
 
 export async function makeDirect({ identity = null, mailboxBase = null, trustStore = null, load = null, save = null,
-                                   spine = null, stun = DEFAULT_STUN, store = null, displayName = null } = {}) {
+                                   spine = null, stun = null, ice = DEFAULT_ICE, store = null, displayName = null, olm = null } = {}) {
   const id = identity || await Seal.generateIdentity();
   const myPub = await Seal.exportPublic(id);
+  // ── THE SEAL WAIST (R1-R3) — one interface so the door never knows which cipher sealed a message. Default
+  //    impl is holo-seal (X25519 box + Ed25519 sign). When an Olm ratchet (`olm` = a seal2 instance) is passed
+  //    AND we hold the peer's prekey bundle, outbound seals with vodozemac (envelope tag s:"olm") for forward
+  //    secrecy + PCS; inbound routes by the `s` tag. Sessions bootstrap over holo-seal `voz-bundle` control
+  //    frames (R2), so holo-seal is BOTH the fallback and the handshake carrier — never removed. An untagged
+  //    envelope is holo-seal (backward-compatible with every already-shipped peer).
+  let olmId = null;
+  if (olm) { try { await olm.init(); olmId = olm.identityKey(); } catch (e) { olm = null; } }
+  const vozBook = new Map();   // cid → { bundle, oid } — the peer's Olm prekey bundle + identity key (persisted)
+  const _vozSent = new Set();  // contacts we've already handed our bundle to (send it once)
+  const _stats = { olmSealed: 0, seal1Sealed: 0, olmOpened: 0 };   // honest instrumentation (witness + a truthful lock)
+  const sealer = {
+    get kind() { return olm ? "olm" : "seal1"; },
+    seal: (cid, plaintext, pub) => _sealImpl(cid, plaintext, pub),
+    open: (env) => _openImpl(env),
+    toWire: (env) => Seal.toWire(env),
+    fromWire: (s) => Seal.fromWire(s),
+  };
+  async function _sha256hex(s) { const h = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(s)); return [...new Uint8Array(h)].map((x) => x.toString(16).padStart(2, "0")).join(""); }
+  // seal TO a contact: ratchet if we hold their bundle (establish the outbound session on first use), else
+  // holo-seal — AND kick off the handshake so the NEXT word ratchets. A ratchet hiccup falls back, never drops.
+  async function _sealImpl(cid, plaintext, pub) {
+    if (olm && pub && pub.box) {
+      const peer = vozBook.get(cid);
+      if (peer && peer.bundle) {
+        try {
+          if (!(await olm.hasSession(cid))) await olm.startOutbound(cid, peer.bundle);
+          const m = await olm.sealTo(cid, plaintext);                      // {t,c}; the pickle re-persists (HARD-1)
+          const env = { s: "olm", t: m.t, c: m.c, from: myPub.sign, oid: olmId, ts: Date.now() };
+          env.kappa = await _sha256hex(JSON.stringify([env.s, env.t, env.c, env.from, env.oid, env.ts]));
+          _stats.olmSealed++;
+          return env;
+        } catch (e) { /* ratchet hiccup → holo-seal keeps the conversation alive (debt=HONESTY) */ }
+      } else { _ensureVoz(cid); }                                          // no bundle yet → send ours
+    }
+    return Seal.seal(plaintext, { toBoxPub: pub.box, fromKeys: id, fromPub: myPub });
+  }
+  async function _openImpl(env) {
+    if (env && env.s === "olm") {
+      if (!olm) return { ok: false };
+      const cid = _findBySign(env.from); if (!cid) return { ok: false };   // no session route for an unknown sender
+      try { const pt = await olm.receive(cid, env.oid, { t: env.t, c: env.c }); _stats.olmOpened++; return { ok: true, from: env.from, verified: true, plaintext: pt }; }
+      catch { return { ok: false }; }
+    }
+    return Seal.open(env, { myKeys: id });
+  }
+  // hand our Olm prekey bundle to a contact ONCE (a holo-seal-sealed, signed control frame → the bundle is
+  // authenticated + bound to our sign key at bootstrap, TOFU). Reciprocated on receipt. No prekey server.
+  async function _ensureVoz(cid) {
+    if (!olm || _vozSent.has(cid)) return;
+    const pub = book.get(cid); if (!pub || !pub.box) return;
+    _vozSent.add(cid);
+    try { const bundle = await olm.publishBundle(); await _sendControl(cid, { t: "voz-bundle", bundle, oid: olmId }); }
+    catch { _vozSent.delete(cid); }
+  }
   // each sovereign identity gets its OWN trust store - never a shared global key (else two identities, or a stale entry
   // from a prior session, collide and look like a key change). Namespace the persistence by my own identity.
   const nsKey = "holo.direct.trust." + myPub.sign.slice(0, 22);
@@ -37,6 +102,9 @@ export async function makeDirect({ identity = null, mailboxBase = null, trustSto
   // Hydrate the address book NOW — identity persistence without contact persistence is a door with no
   // address book. Without a store the engine degrades to exactly the old in-memory behavior.
   if (store) { try { for (const c of await store.contacts()) book.set(c.contactId, c.pub); } catch {} }
+  // R2/R4 — rehydrate each contact's Olm prekey bundle so a RETURNING user keeps ratcheting with no fresh
+  // handshake (the seal2 account + sessions rehydrate from the vault inside `olm`; this restores the peer half).
+  if (olm && store && store.getMeta) { for (const cid of [...book.keys()]) { try { const v = await store.getMeta("voz:peer:" + cid); if (v) vozBook.set(cid, JSON.parse(v)); } catch {} } }
 
   // ── ONE wire contract (C3): user text travels as {t:"msg",text}; control frames are {t:"ack"|"typing"}.
   // Legacy inbound bare text is accepted as a message (older peers); outbound always wraps.
@@ -89,22 +157,34 @@ export async function makeDirect({ identity = null, mailboxBase = null, trustSto
   // (An unknown sender can't be acked: we know their sign key from the envelope, not their box key.)
   async function _sendControl(contactId, frame) {
     const pub = book.get(contactId); if (!pub) return false;
-    const env = await Seal.seal(JSON.stringify(frame), { toBoxPub: pub.box, fromKeys: id, fromPub: myPub });
+    const env = await sealer.seal(contactId, JSON.stringify(frame), pub);
     const link = links.get(contactId);
     if (link && link.open) { try { link.send(wireEncode(env)); return true; } catch { links.delete(contactId); } }
     if (frame.t === "typing") return false;                  // a typing hint is never worth a drop-box round-trip
-    await DM.mailboxDrop(pub.box, Seal.toWire(env), { mailboxBase }).catch(() => {});
+    await DM.mailboxDrop(pub.box, sealer.toWire(env), { mailboxBase }).catch(() => {});
     return true;
   }
 
   // ---- the ONE receive gate: both carriers (p2p frame, mailbox blob) end here ----
   async function _deliver(env, ts) {
     if (!env || !env.kappa) return null;
-    const r = await Seal.open(env, { myKeys: id }); if (!r.ok) return null;
+    const r = await sealer.open(env); if (!r.ok) return null;
     const contactId = _findBySign(r.from);
     const known = !!contactId;
     const verified = !!r.verified && known;                  // signature valid AND from a contact we know
     const payload = _parse(r.plaintext);
+
+    // R2 — the SEALED HANDSHAKE: a verified contact handed us their Olm prekey bundle (over holo-seal, so it
+    // is authenticated + bound to their sign key, TOFU). Record + persist it, then reciprocate ours. Consumed,
+    // never shown. From here the next word to/from this contact rides the ratchet.
+    if (payload.t === "voz-bundle") {
+      if (verified && contactId && olm && payload.bundle) {
+        vozBook.set(contactId, { bundle: payload.bundle, oid: payload.oid });
+        if (store && store.setMeta) store.setMeta("voz:peer:" + contactId, JSON.stringify({ bundle: payload.bundle, oid: payload.oid })).catch(() => {});
+        _ensureVoz(contactId);                                 // reciprocate (once) so BOTH sides can ratchet
+      }
+      return null;
+    }
 
     // control frames: consumed, never persisted, never emitted as messages. Idempotent by nature (a
     // redelivered ack re-marks the same κ), so they skip the dedup index entirely.
@@ -215,14 +295,14 @@ export async function makeDirect({ identity = null, mailboxBase = null, trustSto
     if (dialing.has(contactId)) return false;
     if (trust.check(contactId, pub).status === "changed") return false;   // key change never auto-dials
     dialing.add(contactId);
-    try { _attach(contactId, await RDV.rendezvousDial(pub, { identity: id, myPub, mailboxBase, spine, stun, trust })); return true; }
+    try { _attach(contactId, await RDV.rendezvousDial(pub, { identity: id, myPub, mailboxBase, spine, stun, ice, trust })); return true; }
     catch { return false; }
     finally { dialing.delete(contactId); }
   }
   // answer incoming dials from KNOWN contacts whose key hasn't changed - same policy as addContact, no new trust logic
   let stopListen = null;
   if (spine) {
-    stopListen = RDV.onRendezvous({ identity: id, myPub, mailboxBase, spine, stun, trust },
+    stopListen = RDV.onRendezvous({ identity: id, myPub, mailboxBase, spine, stun, ice, trust },
       (peerPub) => { const cid = _findBySign(peerPub.sign); return !!cid && trust.check(cid, { sign: peerPub.sign, box: peerPub.box }).status !== "changed"; },
       (link, peerPub) => { const cid = _findBySign(peerPub.sign); if (cid) _attach(cid, link); });
   }
@@ -232,7 +312,7 @@ export async function makeDirect({ identity = null, mailboxBase = null, trustSto
     const pub = book.get(contactId); if (!pub) return { ok: false, error: "unknown contact" };
     if (!pub.box) return { ok: false, error: "no box key — they must share their link first" };   // inbound-only stub
     if (trust.check(contactId, pub).status === "changed") { emit("keychange", { contactId, pub }); return { ok: false, error: "key-changed", keychange: true }; }
-    const env = await Seal.seal(_wrap(text), { toBoxPub: pub.box, fromKeys: id, fromPub: myPub });
+    const env = await sealer.seal(contactId, _wrap(text), pub);
     // persist BEFORE transport (✓ = it exists durably and was handed to a carrier; ✓✓ = the ack came back)
     if (store) await store.putMsg({ kappa: env.kappa, contactId, ts: env.ts, dir: "out", text, status: "sent" }).catch(() => {});
     const link = links.get(contactId);
@@ -240,7 +320,7 @@ export async function makeDirect({ identity = null, mailboxBase = null, trustSto
       try { link.send(wireEncode(env)); return { ok: true, kappa: env.kappa, ts: env.ts, contactId, path: "p2p" }; }
       catch { links.delete(contactId); }                     // dead link - fall through to the mailbox, re-warm below
     }
-    await DM.mailboxDrop(pub.box, Seal.toWire(env), { mailboxBase });   // offline-safe, exactly as always
+    await DM.mailboxDrop(pub.box, sealer.toWire(env), { mailboxBase });   // offline-safe, exactly as always
     if (spine) warm(contactId);                              // background - the NEXT word takes the fast path
     return { ok: true, kappa: env.kappa, ts: env.ts, contactId, path: "mailbox" };
   }
@@ -255,7 +335,7 @@ export async function makeDirect({ identity = null, mailboxBase = null, trustSto
     const bytes = new Uint8Array(await file.arrayBuffer());
     if (bytes.length > Media.MAX_MEDIA_BYTES) return { ok: false, error: Media.TOO_BIG };
     const desc = { ...(await Media.encryptAndPut(spine, bytes)), name: file.name || "file", mime: file.type || "application/octet-stream" };
-    const env = await Seal.seal(JSON.stringify({ t: "media", ...desc, ..._intro() }), { toBoxPub: pub.box, fromKeys: id, fromPub: myPub });
+    const env = await sealer.seal(contactId, JSON.stringify({ t: "media", ...desc, ..._intro() }), pub);
     if (store) {
       await store.putMsg({ kappa: env.kappa, contactId, ts: env.ts, dir: "out", text: "📎 " + desc.name, media: desc, status: "sent" }).catch(() => {});
       await store.putMedia(desc.kappa, { bytes, name: desc.name, mime: desc.mime }).catch(() => {});   // we stay a holder across reloads
@@ -265,7 +345,7 @@ export async function makeDirect({ identity = null, mailboxBase = null, trustSto
       try { link.send(wireEncode(env)); return { ok: true, kappa: env.kappa, mediaKappa: desc.kappa, ts: env.ts, contactId, path: "p2p" }; }
       catch { links.delete(contactId); }
     }
-    await DM.mailboxDrop(pub.box, Seal.toWire(env), { mailboxBase });   // the MESSAGE is offline-safe; the bytes wait for a link
+    await DM.mailboxDrop(pub.box, sealer.toWire(env), { mailboxBase });   // the MESSAGE is offline-safe; the bytes wait for a link
     if (spine) warm(contactId);
     return { ok: true, kappa: env.kappa, mediaKappa: desc.kappa, ts: env.ts, contactId, path: "mailbox" };
   }
@@ -285,7 +365,7 @@ export async function makeDirect({ identity = null, mailboxBase = null, trustSto
     const out = [], acked = [];
     for (const it of items) {
       acked.push(it.id);                                     // ack even the refused - a corrupt blob must not loop forever
-      const env = Seal.fromWire(it.blob); if (!env) continue;
+      const env = sealer.fromWire(it.blob); if (!env) continue;
       const msg = await _deliver(env, it.ts);
       if (msg) out.push(msg);
     }
@@ -308,6 +388,8 @@ export async function makeDirect({ identity = null, mailboxBase = null, trustSto
       return out.sort((a, b) => ((b.last && b.last.ts) || b.addedTs || 0) - ((a.last && a.last.ts) || a.addedTs || 0));
     },
     linkState: (contactId) => { const l = links.get(contactId); return l && l.open ? "p2p" : (dialing.has(contactId) ? "dialing" : "mailbox"); },
+    vozReady: async (contactId) => !!olm && !!vozBook.get(contactId) && await olm.hasSession(contactId),   // is this thread on the ratchet?
+    sealStats: () => ({ ..._stats, olm: !!olm }),                                                          // honest counters (witness + truthful lock)
     safetyNumber: (contactId) => { const p = book.get(contactId); return p ? Verify.safetyNumber(myPub, p) : Promise.resolve(null); },
     safetyEmojis: Verify.safetyEmojis, safetyDigits: Verify.safetyDigits,
     verifyStatus: (contactId) => { const p = book.get(contactId); return p ? trust.check(contactId, p) : { status: "unknown" }; },
