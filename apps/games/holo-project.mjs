@@ -36,24 +36,34 @@ fn applyDisplay(rgb0: vec3<f32>, pos: vec2<f32>, dim: vec2<f32>) -> vec3<f32> {
   var rgb = rgb0;
   let sc = max(u.scale, 1.0);
   let sp = pos / sc;                                  // output px → source-pixel space (one cell per source px)
+  let uv = pos / dim;
+  let vg = uv * (vec2<f32>(1.0) - uv.yx);             // shared glass-vignette term
   if (u.display < 1.5) {
-    let g = fract(sp); let e = 0.10;                  // DMG dot-matrix: dark gaps between LCD cells
-    let line = smoothstep(0.0, e, g.x) * smoothstep(0.0, e, 1.0 - g.x) * smoothstep(0.0, e, g.y) * smoothstep(0.0, e, 1.0 - g.y);
-    rgb = rgb * mix(0.80, 1.0, line);
+    // Game Boy LCD — each source pixel is a PILLOWED cell (bright centre, dark rounded edge) in a dark grid,
+    // under a soft backlight. Reads like looking at a real DMG panel, not a flat grid.
+    let g = fract(sp) - vec2<f32>(0.5);
+    let cell = 1.0 - smoothstep(0.30, 0.5, max(abs(g.x), abs(g.y)));
+    rgb = rgb * mix(0.70, 1.05, cell);
+    rgb = rgb * mix(0.88, 1.0, clamp(vg.x * vg.y * 30.0, 0.0, 1.0));
   } else if (u.display < 2.5) {
-    let g = fract(sp); let e = 0.14;                  // colour LCD: a whisper of a grid
-    let line = smoothstep(0.0, e, g.x) * smoothstep(0.0, e, 1.0 - g.x) * smoothstep(0.0, e, g.y) * smoothstep(0.0, e, 1.0 - g.y);
-    rgb = rgb * mix(0.92, 1.0, line);
+    // colour LCD — fine pillow grid + a hair of glass falloff
+    let g = fract(sp) - vec2<f32>(0.5);
+    let cell = 1.0 - smoothstep(0.40, 0.5, max(abs(g.x), abs(g.y)));
+    rgb = rgb * mix(0.86, 1.0, cell);
+    rgb = rgb * mix(0.94, 1.0, clamp(vg.x * vg.y * 30.0, 0.0, 1.0));
   } else {
-    let sl = 0.5 + 0.5 * cos(sp.y * 6.2831853);       // CRT: horizontal scanline per source row
-    rgb = rgb * mix(0.68, 1.0, sl);
-    let ap = 0.5 + 0.5 * cos(pos.x * 2.0943951);      // faint aperture grille (~3 output-px period)
-    rgb = rgb * mix(0.90, 1.0, ap);
-    let uv = pos / dim;                               // vignette
-    let v = uv * (vec2<f32>(1.0) - uv.yx);
-    let vig = clamp(v.x * v.y * 42.0, 0.0, 1.0);
-    rgb = rgb * mix(0.82, 1.0, pow(vig, 0.22));
-    rgb = rgb + rgb * rgb * 0.07;                     // gentle bloom lift on brights
+    // CRT — RGB aperture-grille phosphor triad + brightness-compensated gaussian scanlines + glass vignette
+    // + soft bloom on brights. A Trinitron in your pocket (rich, never dim).
+    var c = rgb * 1.22;                               // pre-boost; the scanlines darken it back
+    let fy = fract(sp.y) - 0.5;
+    let scan = exp(-fy * fy * 5.0);                   // bright gaussian line per source row
+    c = c * mix(0.58, 1.10, scan);
+    let ap = pos.x * 2.0943951;                       // 3-output-px RGB phosphor stripes (2π/3 phase)
+    let mask = vec3<f32>(0.82 + 0.18 * cos(ap), 0.82 + 0.18 * cos(ap - 2.0943951), 0.82 + 0.18 * cos(ap - 4.1887902));
+    c = c * mask;
+    c = c * mix(0.76, 1.0, pow(clamp(vg.x * vg.y * 38.0, 0.0, 1.0), 0.20));
+    c = c + c * c * 0.09;                             // bloom
+    rgb = c;
   }
   return clamp(rgb, vec3<f32>(0.0), vec3<f32>(1.0));
 }
