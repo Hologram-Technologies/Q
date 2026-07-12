@@ -1,9 +1,41 @@
 <!doctype html>
 <html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <meta name="theme-color" content="#1f1f1e">
-<!-- GROUND LAW: the root shim wears the SAME --boot-ground token as app.html's boot + login wall —
-     arriving at /Q must never flash a different dark than the sign-in it hands off to. -->
-<title>Hologram</title><style>:root{--boot-ground:#1f1f1e}html,body{height:100%;margin:0;background:var(--boot-ground,#1f1f1e);color-scheme:dark}</style>
+<title>Hologram</title>
+<style>:root{--boot-ground:#1f1f1e}html,body{height:100%;margin:0;background:var(--boot-ground,#1f1f1e);color-scheme:dark}</style>
 <link rel="icon" href="./apps/holo-messenger/icon.svg">
-<script type="module" src="./holo-portal.mjs"></script>
+<!-- THE SEED. The first byte the browser runs, before any service worker exists. It trusts nothing by
+     location: it reads the boot fingerprint from the signed release, re-derives its first stage, and
+     unfolds the OS only if the bytes match (Law L5). A tampered or corrupt stage cannot boot Hologram —
+     the seed refuses. The trust root is the platform's own hash (zero bytes of verifier code); the
+     verified portal then governs everything on the BLAKE3 κ-substrate, and the service worker re-derives
+     every byte that follows. Self-declaring, self-verifying, self-initiating. -->
+<script type="module">
+const FALLBACK = "holo-portal.mjs";
+const okEntry = (e) => /^[a-z0-9._/-]+$/i.test(e) && !e.includes("..");
+const hexOf = (b) => [...new Uint8Array(b)].map(x => x.toString(16).padStart(2, "0")).join("");
+const refuse = (why) => { document.body.innerHTML =
+  '<main style="max-width:640px;margin:12vh auto;padding:0 22px;color:#e9edef;font:15px/1.6 system-ui,sans-serif">'
+  + '<h1 style="font-size:19px;font-weight:600;margin:0 0 .5em">Hologram refused to boot</h1>'
+  + '<p style="color:#8696a0;margin:0">The first stage did not re-derive to its fingerprint, so nothing ran. '
+  + 'Reload — if it persists, the source you reached is tampered or corrupt.</p></main>';
+  console.error("seed:", why); };
+(async () => {
+  let entry = FALLBACK, pin = null;
+  try {                                                     // read the boot pin from the SIGNED release (always current)
+    const rel = await (await fetch(new URL("release.json", location.href), { cache: "no-cache" })).json();
+    const boot = rel && rel["holstr:payload"] && rel["holstr:payload"].boot;
+    if (boot && okEntry(String(boot.entry || "")) && /^[0-9a-f]{64}$/.test(boot.sha256 || "")) { entry = boot.entry; pin = boot.sha256; }
+  } catch {}                                                // no release / no pin → boot as before (fail-safe, network-resilient)
+  try {
+    const url = new URL(entry, location.href);
+    if (pin) {                                              // re-derive the first stage against the signed κ (L5)
+      const bytes = await (await fetch(url, { cache: "no-cache" })).arrayBuffer();
+      const got = hexOf(await crypto.subtle.digest("SHA-256", bytes));
+      if (got !== pin) return refuse("re-derive " + got.slice(0, 12) + " ≠ signed boot pin " + pin.slice(0, 12));
+    }
+    await import(url.href);                                 // verified (or unpinned) → unfold; the SW re-derives all that follow
+  } catch (e) { refuse(String(e && e.message || e)); }
+})();
+</script>
 </head><body></body></html>
