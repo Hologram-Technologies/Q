@@ -128,6 +128,11 @@ const CSS = `
   #holo-login .hlm-doc p{font-size:16px}
   #holo-login .hlm-doc h2{font-size:17.5px}
 }
+/* CLAUDE-DESK ⤵ — appended overrides; base rules keep their anti-revert probes (SHIP NOTE above) */
+#holo-login .hl-manifesto{font-weight:500;letter-spacing:0;padding:7px 11px;border-radius:9px;-webkit-font-smoothing:antialiased;transition:background .15s,color .15s}
+#holo-login .hl-manifesto:hover{background:var(--field-bg,rgba(255,255,255,.08));color:var(--ink,#fff)}
+#holo-login .hlm-scrim,#holo-login .hlm-doc{-webkit-font-smoothing:antialiased}
+/* CLAUDE-DESK ⤴ */
 `;
 
 function injectCss() { try { const old = document.getElementById("holo-manifesto-css"); if (old) old.remove(); const s = document.createElement("style"); s.id = "holo-manifesto-css"; s.textContent = CSS; document.head.appendChild(s); } catch {} }

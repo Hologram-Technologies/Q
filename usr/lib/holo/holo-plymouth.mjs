@@ -282,6 +282,21 @@ const CSS = `
 @keyframes hlp-toast{0%{opacity:0;transform:translate(-50%,8px)}10%,82%{opacity:1;transform:translate(-50%,0)}100%{opacity:0}}
 @media (prefers-reduced-motion:reduce){#holo-login .hlp,#holo-login .hlp canvas,#holo-login .hlp-btn,#holo-login .hlp-prev .hlp-shim{transition:none;animation:none;opacity:1}
 #holo-login.hlp-reveal:not(.hl-boot):not(.unfog) .hl-panel{animation:none}}
+/* CLAUDE-DESK ⤵ — appended overrides; base rules keep their anti-revert probes */
+#holo-login .hlp-btn{width:40px;height:40px;transition:background .15s,color .15s,border-color .15s,box-shadow .15s}
+#holo-login .hlp-btn:hover{background:var(--field-bg,rgba(255,255,255,.12));border-color:var(--glass-border,rgba(255,255,255,.2));color:var(--ink,#fff)}
+#holo-login .hlp-btn:focus-visible{outline:2px solid var(--accent,#7defc9);outline-offset:2px}
+#holo-login .hlp-sheet{border-radius:18px;box-shadow:0 24px 70px rgba(0,0,0,.5)}
+#holo-login .hlp-head{padding:18px 20px 12px}
+#holo-login .hlp-title{font-weight:600;letter-spacing:-.01em}
+#holo-login .hlp-x{background:transparent;border-radius:9px}
+#holo-login .hlp-x:hover{background:var(--field-bg,rgba(255,255,255,.08))}
+#holo-login .hlp-list{border-radius:12px}
+#holo-login .hlp-row{min-height:52px}
+#holo-login .hlp-srch input{border-radius:10px}
+#holo-login .hlp,#holo-login .hlp-sheet,#holo-login .hlp-scrim{-webkit-font-smoothing:antialiased}
+@media (max-width:560px){#holo-login .hlp-sheet{width:96vw;border-radius:16px}#holo-login .hlp-modes,#holo-login .hlp-list{margin-left:16px;margin-right:16px}}
+/* CLAUDE-DESK ⤴ */
 `;
 function injectCss() {
   try { if (document.getElementById("holo-plymouth-css")) return; const s = document.createElement("style"); s.id = "holo-plymouth-css"; s.textContent = CSS; document.head.appendChild(s); } catch {}
