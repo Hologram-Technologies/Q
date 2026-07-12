@@ -24,7 +24,7 @@ import { makeEvictRescue } from "../../usr/lib/holo/holo-evict-rescue.mjs";
 import { makeStoreRung } from "../../usr/lib/holo/holo-store-rung.mjs";
 const _RUNG = (() => { try { return makeStoreRung(); } catch { return null; } })();
 
-const CACHE = "holo-msgr-shell-f794924a04ab";                     // bump → old (unverified) caches are purged on activate
+const CACHE = "holo-msgr-shell-c32e57f0fix1";                     // bump → old (unverified) caches are purged on activate
 // BASE-RELOCATABLE: the worker may be served under ANY prefix (OS root, a GitHub Pages /<repo>/ subpath, a
 // static mirror). Every location below derives from where THIS script actually lives; at the OS root BASE is ""
 // and behavior is byte-identical. Manifest paths stay CANONICAL ("/apps/holo-messenger/…" — they are identity,
@@ -212,7 +212,14 @@ self.addEventListener("fetch", (e) => {
     const cand = RESCUER.matchSync(pp);
     if (cand) {
       e.respondWith((async () => {
-        const hit = await caches.match(req); if (hit) return hit;               // admitted-verified once (L3)
+        // FRESH EVICTED HTML: a navigation to an evicted app (the q-chat iframe) is an ENTRY the user must get
+        // CURRENT — cache-first / rescue-by-pinned-κ froze the drawer's Q on old bytes for days. Go network-first
+        // for HTML navigations (origin → refresh the cache), and only fall back to cache/rescue when offline.
+        const isHtmlNav = (req.mode === "navigate") || /\.html($|\?)/.test(pp);
+        if (isHtmlNav) {
+          try { const net = await fetch(req, { cache: "reload" }); if (net && net.ok) { try { const cc = await caches.open(CACHE); await cc.put(req, net.clone()); } catch (x) {} return net; } } catch (x) {}
+        }
+        const hit = await caches.match(req); if (hit) return hit;               // admitted-verified once (L3) / offline
         const res = await RESCUER.rescue(req, cand);
         if (res.ok && res.headers.get("x-holo-kappa")) { try { const cc = await caches.open(CACHE); await cc.put(req, res.clone()); } catch (x) {} }
         return res;

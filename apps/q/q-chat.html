@@ -399,7 +399,10 @@ function prettyStatus(s) {
 
 // ── memory: persist + restore the visible conversation so Q feels continuous across reloads ──
 function remember(side, text) { try { const h = JSON.parse(localStorage.getItem(HKEY) || "[]"); h.push({ side, text, ts: Date.now() }); localStorage.setItem(HKEY, JSON.stringify(h.slice(-60))); } catch {} }
-function restore() { try { const h = JSON.parse(localStorage.getItem(HKEY) || "[]"); for (const x of h) bubble(x.side, x.text, { ts: x.ts }); return h.length; } catch { return 0; } }
+// FRESH CONVERSATION EVERY OPEN: Q always opens on a clean greeting — never replay old history. Clear the stored
+// transcript so each open is a new conversation. (Q's real MEMORY still lives in the encrypted realm; only the
+// visible chat resets.)
+function restore() { try { localStorage.removeItem(HKEY); localStorage.removeItem(HKEY + ":nudged"); } catch (e) {} return 0; }
 
 // ── proactive suggestion chips (Q offers, you tap) ──
 const CHIPS = ["Tell me something amazing", "Write me something beautiful", "Help me think through something", "Tell me a joke"];
@@ -598,9 +601,7 @@ function pickVoice() {
 // voice — never a regression, never a wait.
 let _kokoro = null, _kokoroTried = false, _qSpeaking = 0, _voiceErr = null;   // _qSpeaking > 0 while Q's voice is playing (gates the mic)
 async function warmKokoro() {
-  if (_kokoro || _kokoroTried) return;
-  try { if (_embedded && window.parent.HoloVoice && window.parent.HoloVoice.speak) { _kokoroTried = true; return; } } catch (e) {}   // LEAN: reuse the drawer's voice — never load a 2nd Kokoro in the frame
-  _kokoroTried = true;
+  if (_kokoro || _kokoroTried) return; _kokoroTried = true;   // HQ-ONLY GUARANTEE: always warm THIS frame's neural voice (never depend on a parent voice that might use an OS floor)
   try {
     const mod = await import("./core/voice-out.js");
     mod.loadVoice((p) => { if (p && p.status === "progress" && p.file) { try { console.debug("[Q voice] kokoro", p.file, Math.round(p.progress || 0) + "%"); } catch {} } })
@@ -619,10 +620,7 @@ const _OS_VOICE_OK = (() => { try { return /[?&]osvoice=1/.test(location.search)
 function _flushVoiceQ() { const t = _voiceQ; if (t && _kokoro && _kokoro.ready && _kokoro.ready()) { _voiceQ = null; speak(t); } }
 function speak(text) {
   if (!voiceOn || !text) return;
-  // ONE VOICE (HOLO-Q-INSTANT-REAL): embedded → speak through the DRAWER's already-warmed neural voice
-  // (window.parent.HoloVoice) — no 2nd Kokoro in the frame, and it's HQ from the very first word.
-  try { const pv = _embedded && window.parent.HoloVoice; if (pv && pv.speak) { qOrb("speaking"); _qSpeaking++; const done = () => { _qSpeaking = Math.max(0, _qSpeaking - 1); if (!_qSpeaking) qOrb("idle"); }; let r = null; try { r = pv.speak(text); } catch (e) {} if (r && typeof r.then === "function") r.then(done, done); else setTimeout(done, Math.min(7000, 500 + text.length * 45)); return; } } catch (e) {}
-  if (_kokoro && _kokoro.ready && _kokoro.ready()) {   // beautiful neural voice
+  if (_kokoro && _kokoro.ready && _kokoro.ready()) {   // beautiful neural voice — the ONLY voice Q uses
     qOrb("speaking"); _qSpeaking++;
     _kokoro.speak(text).then(() => { _qSpeaking = Math.max(0, _qSpeaking - 1); if (!_qSpeaking) qOrb("idle"); }).catch(() => { _qSpeaking = Math.max(0, _qSpeaking - 1); if (!_qSpeaking) qOrb("idle"); if (_OS_VOICE_OK) _osSpeak(text); });
     return;
@@ -699,20 +697,21 @@ input.focus();
 let greeted = false;
 const INSTANT_HELLO = "Hey, I'm Q. I live right here on your device, so whatever you tell me stays with you, always. What's on your mind?";
 const WELCOME_BACK = "Welcome back. I'm right here — what's on your mind?";
-if (!DEMO && !had && !params.get("q")) { bubble("a", INSTANT_HELLO); remember("a", INSTANT_HELLO); renderChips(); scheduleIdle(); greeted = true; armGreeting(INSTANT_HELLO); window.__ttfw.helloMs = Math.round(performance.now() - window.__ttfw.t0); }
-else { armGreeting(had ? WELCOME_BACK : INSTANT_HELLO); }   // returning / ?q / demo → still GREET ALOUD on first gesture (spoken only, no extra bubble)
-// RETURNING = PERSONAL (HOLO-Q-INSTANT-REAL): pull the name from the SHARED realm and greet BY NAME, instantly,
-// before any brain warms — "Welcome back, <name>." Async (memory hydrates in <1s); re-arms the spoken greeting and
-// drops ONE warm, ephemeral continuity line. Silent fallback to the generic welcome if there's no name yet.
-if (had && !DEMO) { (async () => { try {
-  let M = window.HoloMemory; for (let i = 0; i < 25 && !M; i++) { await new Promise((r) => setTimeout(r, 200)); M = window.HoloMemory; }   // wait for the realm to bind (it hydrates async at boot)
+// FRESH GREETING EVERY OPEN: Q opens on ONE clean greeting bubble, shown instantly. If the shared realm knows your
+// name, this SAME bubble is personalized to "Welcome back, <name>" (async, in place — never a second line).
+let _greetBubble = null;
+if (!DEMO && !params.get("q")) { _greetBubble = bubble("a", INSTANT_HELLO); renderChips(); scheduleIdle(); greeted = true; armGreeting(INSTANT_HELLO); window.__ttfw.helloMs = Math.round(performance.now() - window.__ttfw.t0); }
+else { armGreeting(INSTANT_HELLO); }
+if (!DEMO) { (async () => { try {
+  let M = window.HoloMemory; for (let i = 0; i < 25 && !M; i++) { await new Promise((r) => setTimeout(r, 200)); M = window.HoloMemory; }   // wait for the realm to bind (hydrates async)
   if (!M) return; if (M.ready) await M.ready();
   const rows = M.recent ? M.recent({ kind: "profile", n: 20 }) : [];
   const nm = (rows.map((r) => r["holmem:text"]).find((t) => /name is/i.test(String(t))) || "");
   const name = nm ? String(nm).replace(/.*name is\s+/i, "").trim().split(/\s+/)[0] : "";
-  if (!name || _greetDone) return;
-  const g = "Welcome back, " + name + ". I'm right here — what have you been thinking about?";
-  armGreeting(g); bubble("a", g); log.scrollTop = log.scrollHeight;   // spoken by name on first gesture + one fresh continuity bubble (not persisted)
+  if (!name) return;
+  const g = "Welcome back, " + name + ". I'm right here — what's on your mind?";
+  if (!_greetDone) armGreeting(g);                                     // speak the personal greeting (voice not yet fired)
+  try { if (_greetBubble) { const tn = [...(_greetBubble.childNodes || [])].find((n) => n.nodeType === 3 && n.nodeValue && n.nodeValue.length > 3); if (tn) tn.nodeValue = g; else _greetBubble.textContent = g; } } catch (e) {}   // personalize the SAME bubble in place
 } catch (e) {} })(); }
 if (DEMO) { armed = true; setStatus("online"); if (!had) greet(); else renderChips(); }
 else if (_embedded) (async () => {
