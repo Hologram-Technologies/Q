@@ -22,7 +22,17 @@ Nothing loads unverified — so Q never has to trust any single server to be onl
 - **Share without a host** — any file becomes a self-contained link that arrives, verified, on any device.
 - **Always current** — the engine lives upstream; every improvement reaches every experience the moment it ships, with nothing to update.
 
-<sub>Three layers, one idea — everything is a verifiable object:
-the resolver on <a href="https://github.com/Hologram-Technologies/Q/tree/main"><code>main</code></a> ·
-apps from <a href="https://github.com/Hologram-Technologies/hologram-apps">hologram-apps</a> ·
-the engine from <a href="https://github.com/Hologram-Technologies/holospaces">holospaces</a>. MIT licensed.</sub>
+## How it fits together
+
+Three layers, one idea — **everything is a verifiable object:**
+
+| Layer | What it is | Where |
+|-------|-----------|-------|
+| **Resolver** | reads any name as an object, resolves, verifies, renders | this project · served from [`main`](https://github.com/Hologram-Technologies/Q/tree/main) |
+| **Apps** | the surfaces, streamed on demand as objects | [hologram-apps](https://github.com/Hologram-Technologies/hologram-apps) |
+| **Engine** | the runtime that resolves and verifies, updated upstream | [holospaces](https://github.com/Hologram-Technologies/holospaces) |
+
+Read more in [`system/`](system/) — the [architecture](system/architecture.md), the [five laws](system/laws.md)
+it holds to, and [how it builds and ships](system/build.md).
+
+<sub>MIT licensed · <a href="https://github.com/Hologram-Technologies/Q/tree/main"><code>main</code></a> is the running resolver.</sub>
