@@ -8,8 +8,8 @@
  "mirror": "https://huggingface.co/HOLOGRAMTECH/holo-messenger-shell/resolve/main/b/",
  "tiers": {
   "core": {
-   "files": 600,
-   "bytes": 18224964,
+   "files": 602,
+   "bytes": 18225547,
    "hf": 0
   },
   "apps": {
@@ -4199,8 +4199,8 @@
    "source": "hf"
   },
   "apps/player/holo-evicted.json": {
-   "sha256": "8d48e4cb2a30cfa8974042248a70c7abb0750fb4631e8231e696b86b378dd2e2",
-   "blake3": "446e68a417157ae3b27d0ba5a19851f5533eae1006ce46eacd45d2f9b898f504",
+   "sha256": "fdede93a2f8442b866964a63570152318c97c7fc3c1aca837b9f1f27b051799c",
+   "blake3": "0fced08196e413ceafde1d87ce7336d8f5c7310e9be5780735928c62de7a04f9",
    "bytes": 10722,
    "tier": "apps",
    "source": "origin"
@@ -4231,7 +4231,7 @@
    "source": "hf"
   },
   "apps/player/holo-imusic.mjs": {
-   "blake3": "d5e6e4082fbfaced05aca3921d7eef6eb5fd5f3e0be45341acf84ecdeeb45fec",
+   "blake3": "5486d02478258fbd2e56a9d15172fcfcf0fef97dbb9f13eab9da4648e2c26de2",
    "tier": "apps",
    "source": "hf"
   },
@@ -4606,7 +4606,7 @@
    "source": "hf"
   },
   "apps/player/index.html": {
-   "blake3": "eed92c7f3247f89251b204914df13df527ff74f8ea3fa1c86a5646b0e412defe",
+   "blake3": "c5ab5be538ed34bbc608cae9c1c8689405647c2243244de6df48e72a9295ece4",
    "tier": "apps",
    "source": "hf"
   },
@@ -17027,9 +17027,16 @@
    "source": "origin"
   },
   "root-sw.js": {
-   "sha256": "7727bf0e0aab7fa38f9d7108c59dc12168c916900b9d6be09395be04b2e649d6",
-   "blake3": "229cccb5721eaa8753db151282bdcf7b712e19594fae4c0e80d53a53aa7c1755",
-   "bytes": 17665,
+   "sha256": "44ee83b87ca4d9627153ca678dc1f91b2b00548b9752e723146d221c3d8eafed",
+   "blake3": "025e506745cf20d3bc4ee891d84f57dd8559c05f013c8b5813bf98e4ac54c2b1",
+   "bytes": 14365,
+   "tier": "core",
+   "source": "origin"
+  },
+  "rungs.json": {
+   "sha256": "0a2b8d3107b225cedaf7c4421ba0c93b8399a7b0f73f1c07f977f9fed02633f0",
+   "blake3": "e2c7692d02deb796c9486c25df063a83cfc33f595ea4800d62e08a9428c236dd",
+   "bytes": 258,
    "tier": "core",
    "source": "origin"
   },
@@ -17258,9 +17265,9 @@
    "source": "origin"
   },
   "usr/lib/holo/holo-evict-rescue.mjs": {
-   "sha256": "fb4cec245bda970932369b72319ac3751b29c7965f68048e88a7f382782887e3",
-   "blake3": "850f092ebf90df3ab21c9b1acb0723965ae1dfd2b73f891313044afce786da6c",
-   "bytes": 8482,
+   "sha256": "2abb10ab81147ed8a8fd0e3d5f6e0cb04b74063d0f43ba0d218c2a74ee7c94e2",
+   "blake3": "69b0a70fe7d1aa7a79182513c83a6fd4423bd17e24edebeeb1c39849ae27388a",
+   "bytes": 5838,
    "tier": "core",
    "source": "origin"
   },
@@ -17828,6 +17835,13 @@
    "sha256": "c9afa9e1d0f5ddc27e749cb4e40adc276b6bb383ae3d49970caeb5d85c4b0fa3",
    "blake3": "f1d471220d882b17169e175f0bfd5784ba23c5fe15a289c72c99692a2cea2874",
    "bytes": 13604,
+   "tier": "core",
+   "source": "origin"
+  },
+  "usr/lib/holo/holo-rungs.mjs": {
+   "sha256": "fc9768c7f7fc5a223557dcabe609cf3c0dc679b0899875b99b6edc8133735725",
+   "blake3": "9c783563eea56ed541b2e75bd02a12503180f6ad55edcca34a1b5e358f647378",
+   "bytes": 6269,
    "tier": "core",
    "source": "origin"
   },
