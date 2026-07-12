@@ -212,13 +212,13 @@
     </div>
   </div>
 
+  <!-- meta-controls: only the essentials, and they auto-hide during play so the console is all you see -->
   <div class="strip">
-    <button id="save">💾 Save</button>
-    <button id="load">⟲ Load</button>
-    <select id="slot" title="save slot"><option>1</option><option>2</option><option>3</option></select>
-    <button id="immersive">⛶ Immersive</button>
-    <button id="eject">⏏ Eject</button>
+    <button id="save">Save</button>
+    <button id="load">Load</button>
+    <button id="immersive">Fullscreen</button>
   </div>
+  <select id="slot" hidden><option>1</option></select>
   <div id="toast"></div>
 
   <!-- kept for the script, never shown -->
@@ -480,23 +480,22 @@
       const bytes = core.serialize();
       const kappa = await sha(bytes.buffer.slice(0), "SHA-256");
       const tier = await saveWrite($("slot").value, bytes, { kappa, frame: core.frame, ts: Date.now() });
-      lastSaveKappa = kappa; toast(`saved · slot ${$("slot").value} · κ ${kappa.slice(0,10)}… · ${tier}`);
+      lastSaveKappa = kappa; toast(`saved · κ ${kappa.slice(0,10)}…`);
     } catch (e) { toast("save failed: " + e.message); }
   }
   async function loadState() {
     if (!core) return;
     const rec = await saveRead($("slot").value);
-    if (!rec) { toast(`no save in slot ${$("slot").value}`); return; }
+    if (!rec) { toast(`no save yet`); return; }
     try {
       const kappa = await sha(rec.bytes.buffer.slice(0), "SHA-256");
       if (kappa !== rec.meta.kappa) { toast("κ mismatch — save rejected"); return; }   // verify-before-restore
       core.unserialize(rec.bytes);
-      toast(`loaded · slot ${$("slot").value} · κ ${kappa.slice(0,10)}…`);
+      toast(`loaded · κ ${kappa.slice(0,10)}…`);
     } catch (e) { toast("load failed: " + e.message); }
   }
   $("save").addEventListener("click", saveState);
   $("load").addEventListener("click", loadState);
-  $("eject").addEventListener("click", () => { running = false; keepAwake(false); showPicker(""); });
 
   // ── audio. Two transports, best first:
   //    SAB ring — the page is crossOriginIsolated (dev server / holo host send COOP/COEP), so the
