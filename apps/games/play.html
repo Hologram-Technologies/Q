@@ -243,7 +243,8 @@
   const displayFx = q.get("fx") === "off" ? "none" : (DISPLAY_BY_CODE[sysCode] || "none");
   const src = q.get("src") || "";
   const art = q.get("art") || "";                       // box art → fills the LCD during the morph, then dissolves to the game
-  const ipfsCid = q.get("ipfs") || "";                  // a decentralized κ-object: resolve by BLAKE3 CID from the commons
+  const ipfsCid = q.get("ipfs") || "";                  // the IPFS-discoverable CID (Pinata's) — what gateways resolve
+  const kappa = q.get("k") || ipfsCid;                  // our blake3 κ — the bytes are verified against THIS (Law L5)
   const romUrl = q.get("rom") || ((title || ipfsCid) ? null : "./roms/libbet.gb");
   const $ = (id) => document.getElementById(id);
   // show the cover in the screen immediately (part of the materialize) — the game cross-fades over it on first paint
@@ -299,17 +300,23 @@
   // ── decentralized resolution: a game IS its BLAKE3 κ. Local κ-cache (returning-user 0-network) → a
   //    5-gateway race → verify-on-read (Law L5) → boot. Same discipline as the library grid, ported here
   //    so the console is self-sufficient: hand it ?ipfs=<cid> and it plays from the commons, verified. ──
-  const IPFS_GW = ["https://ipfs.io/ipfs/", "https://dweb.link/ipfs/", "https://w3s.link/ipfs/", "https://4everland.io/ipfs/", "https://flk-ipfs.xyz/ipfs/"];
+  // Gateways resolve by the DISCOVERY cid — the Pinata IPFS hash, which is what's actually announced to the
+  // IPFS network (ipfs.io serves it in ~100ms). Our blake3 κ is NOT announced by anyone, so requesting it
+  // times out — the classic pin gotcha. gateway.pinata.cloud is the guaranteed-present (slower) fallback.
+  const IPFS_GW = ["https://ipfs.io/ipfs/", "https://dweb.link/ipfs/", "https://4everland.io/ipfs/", "https://gateway.pinata.cloud/ipfs/", "https://w3s.link/ipfs/"];
   let _kdb;
   const kdb = () => _kdb || (_kdb = new Promise((res) => { let r; try { r = indexedDB.open("holo-kappa-roms", 1); } catch (e) { return res(null); } r.onupgradeneeded = () => { try { r.result.createObjectStore("k"); } catch (e) {} }; r.onsuccess = () => res(r.result); r.onerror = () => res(null); }));
   async function kGet(k) { const db = await kdb(); if (!db) return null; try { return await new Promise((res) => { const g = db.transaction("k").objectStore("k").get(k); g.onsuccess = () => res(g.result ? new Uint8Array(g.result) : null); g.onerror = () => res(null); }); } catch (e) { return null; } }
   async function kPut(k, b) { const db = await kdb(); if (!db) return; try { db.transaction("k", "readwrite").objectStore("k").put(b, k); } catch (e) {} }
-  async function resolveIpfs(cid) {
-    let bytes = await kGet(cid);
+  // fetchCid = the IPFS-discoverable CID (Pinata's); verifyCid = our blake3 κ (Law L5 — verify the bytes,
+  // whatever CID we fetched them by). Cache is keyed by the canonical κ so returning plays are 0-network.
+  async function resolveIpfs(fetchCid, verifyCid) {
+    verifyCid = verifyCid || fetchCid;
+    let bytes = await kGet(verifyCid);
     if (bytes) return bytes;                                                     // returning user → instant, 0 network
-    const tryGw = (gw) => fetch(gw + cid, { signal: AbortSignal.timeout(6000) }).then(async (r) => { if (!r.ok) throw 0; const b = new Uint8Array(await r.arrayBuffer()); if (!(await verifyBlock(cid, b))) throw 0; return b; });
+    const tryGw = (gw) => fetch(gw + fetchCid, { signal: AbortSignal.timeout(8000) }).then(async (r) => { if (!r.ok) throw 0; const b = new Uint8Array(await r.arrayBuffer()); if (!(await verifyBlock(verifyCid, b))) throw 0; return b; });
     try { bytes = await Promise.any(IPFS_GW.map(tryGw)); } catch (e) {}
-    if (bytes) kPut(cid, bytes);                                                 // fill the cache for next time
+    if (bytes) kPut(verifyCid, bytes);                                          // fill the κ-cache for next time
     return bytes;
   }
 
@@ -708,7 +715,7 @@ Atomics.store(this.h,0,r);if(ur)Atomics.add(this.h,2,ur);return true;}}registerP
 
   (async () => {
     if (ipfsCid) {   // a decentralized κ-object → resolve from the commons (κ-cache → 5-gw race → verify), then boot
-      try { setStatus("resolving “" + (title || ipfsCid.slice(0, 12)) + "” from the κ-commons…"); const bytes = await resolveIpfs(ipfsCid); if (!bytes) throw new Error("commons unreachable"); await bootBytes(bytes, title || null); return; }
+      try { setStatus("resolving “" + (title || ipfsCid.slice(0, 12)) + "” from the κ-commons…"); const bytes = await resolveIpfs(ipfsCid, kappa); if (!bytes) throw new Error("commons unreachable"); await bootBytes(bytes, title || null); return; }
       catch (e) { showPicker(`Couldn’t reach the commons for this game (${e.message}).`); return; }
     }
     if (romUrl) {   // explicit ?rom= (local demo / direct)
