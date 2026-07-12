@@ -20,8 +20,8 @@
   "prov:Entity",
   "holstr:Entry"
  ],
- "holstr:seq": 190,
- "holstr:prev": "did:holo:sha256:c3aa3af9aa75bcd4b694ac6acb139d775d34a8758ad6f7c9707613584620cb6e",
+ "holstr:seq": 191,
+ "holstr:prev": "did:holo:sha256:7d4cf63fd5115458f4ed49f0c5eaf9aa2bf206db8c412f5077560e6378a9c691",
  "holstr:kind": "release",
  "holstr:payload": {
   "shell": "2f3e5880a7c565d1e33ffdab0a79f9fb5a0c6b1d86a8a21d427ba6e76cc36492",
@@ -37,9 +37,7 @@
   },
   "apps": {
    "carry": "9f44164b17e6b7e37f39623bb445d49b6608da5f2b04cef8b1a8b183362a6b9a",
-   "games": "5de2be050dc5a4f9fcb464ffd45bbfcdca368ac02c39e5807ef6ce9430c45edd",
    "hello": "66c1ada5ac08a2d4f73851bbe7458ad5fb6e2226c5a131c3829abfe715900fed",
-   "holo-games": "791a9ac999486256499d76a938345b173053b8de643cc89797bf946c38c365e3",
    "holo-messenger": "b76a47dd4bf19e7243642a9c42928fff7fa815b79c7f579d95e5d401d46041a1",
    "resolve": "23aec66382775f5773693615338f37c37a5f58257ec95aece33a664baa6fe0db",
    "self": "0511772584510f0888d97dd5a72bf986ad6791bd8e305063ddd8a82c39888a70",
@@ -49,12 +47,12 @@
    "entry": "holo-portal.mjs",
    "sha256": "caeb3e57b6eeab09bee6d67c022145a8e2dae610c929a7f51bc169898625e7e8"
   },
-  "closure": "489a71d661c789d3dc3a4e160dec826a03279513283f7aa42247cd204c4040ad"
+  "closure": "6a1ae0278c13c3474f3a7cd0d0d4d1b27a362ee9c98cc0e87bc500f949e731d5"
  },
- "prov:generatedAtTime": "2026-07-12T21:08:41.807Z",
+ "prov:generatedAtTime": "2026-07-12T21:11:01.988Z",
  "holstr:op": "did:holo:sha256:87599792c7b13fad9d6c57d3b89d2cef35e4715869f5cde597ab60ca92699f0b",
- "id": "did:holo:sha256:7d4cf63fd5115458f4ed49f0c5eaf9aa2bf206db8c412f5077560e6378a9c691",
- "holstr:sig": "kQO+W2qPDCqVddFdCkUY5e/iHpOCIbziswgS4QKvzW51qnsXbxFwg/pOnD3D0Jx4YGjuVmtlA8KEYfCG7ruVBQ==",
+ "id": "did:holo:sha256:52c6cdda9bb1bfe6a3d18231f3a681858f0ab60987b90c5ef3c91fe7c1a45057",
+ "holstr:sig": "YfEutTJM4A3guFqAmQNfNyAviGmembmjjBXrRqQ8tqHCORxKWuBnfDemzQiKs6JmYIjZdN6trPKz+WCYtjOaAA==",
  "holstr:alg": "Ed25519",
  "holstr:pub": "snYY6y35gdZ1ngOE5E+G1BGFjlTo2MfpfP8h6yc7r+M="
 }
