@@ -583,8 +583,8 @@
    "holo:entry": "apps/games/index.html"
   },
   {
-   "@id": "did:holo:sha256:83b17b9f934c3d94ff5b21ff9de39b753116d89a095f1724268341d22db9e34f",
-   "holo:root": "did:holo:sha256:83b17b9f934c3d94ff5b21ff9de39b753116d89a095f1724268341d22db9e34f",
+   "@id": "did:holo:sha256:9f44164b17e6b7e37f39623bb445d49b6608da5f2b04cef8b1a8b183362a6b9a",
+   "holo:root": "did:holo:sha256:9f44164b17e6b7e37f39623bb445d49b6608da5f2b04cef8b1a8b183362a6b9a",
    "@type": [
     "schema:SoftwareApplication",
     "schema:WebApplication"
