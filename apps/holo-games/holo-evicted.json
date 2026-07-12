@@ -1,7 +1,7 @@
 {
  "app": "holo-games",
  "axis": "blake3",
- "mirror": "https://huggingface.co/HOLOGRAMTECH/holo-messenger-shell/resolve/main/b/",
+ "mirror": "https://hologram-technologies.github.io/hologram-apps/b/",
  "files": {
   "cores/gambatte.mjs": "c22a7ba5eef473d68d9e58b03f7fb6c224fd9f2013843e320be3245273a43d9b",
   "cores/gambatte.wasm": "bdd88349176eb46434e9b3d48ab2680a4f874312fc8c83954957ef3fea480f35",

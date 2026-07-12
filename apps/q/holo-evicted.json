@@ -1,7 +1,7 @@
 {
  "app": "q",
  "axis": "blake3",
- "mirror": "https://huggingface.co/HOLOGRAMTECH/holo-messenger-shell/resolve/main/b/",
+ "mirror": "https://hologram-technologies.github.io/hologram-apps/b/",
  "files": {
   ".gitignore": "afb199ac2c3f81880d7e5a819fceea49f93ff638b83f0ea9262e7b10b93ef327",
   "atlas-e8/atlas96-ledger.uor.json": "5a0b5dd355b7178461f68ba0fb0053b55b4edce9a7ef2ed7b82658a663bb8bb0",

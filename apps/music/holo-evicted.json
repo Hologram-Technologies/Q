@@ -1,7 +1,7 @@
 {
  "app": "music",
  "axis": "blake3",
- "mirror": "https://huggingface.co/HOLOGRAMTECH/holo-messenger-shell/resolve/main/b/",
+ "mirror": "https://hologram-technologies.github.io/hologram-apps/b/",
  "files": {
   "feed/kappa/kappa-sessions/01/chunk-0000.bin": "cc9222220df89dceb1c32b506f7359e9e57556ca2ba6c7c9c5e8b8d26e2165d5",
   "feed/kappa/kappa-sessions/01/chunk-0001.bin": "ccaeb2253d7de91d5cd3776bb00cc20dcbe778c06023ca2281a1b8c7a4ae7be1",

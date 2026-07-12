@@ -1,7 +1,7 @@
 {
  "app": "holo-linux",
  "axis": "blake3",
- "mirror": "https://huggingface.co/HOLOGRAMTECH/holo-messenger-shell/resolve/main/b/",
+ "mirror": "https://hologram-technologies.github.io/hologram-apps/b/",
  "files": {
   "holo-linux-sw.js": "dd131ed675da2a674042c42fc01402d48a323da675371368e89a4342cb02ccb1",
   "holo-linux-tee.mjs": "95d704019ecda0ed07685277867299b1e7cc94c0f2e435c9f047bd5cdeb5cdab",

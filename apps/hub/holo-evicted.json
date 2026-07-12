@@ -1,7 +1,7 @@
 {
  "app": "hub",
  "axis": "blake3",
- "mirror": "https://huggingface.co/HOLOGRAMTECH/holo-messenger-shell/resolve/main/b/",
+ "mirror": "https://hologram-technologies.github.io/hologram-apps/b/",
  "files": {
   "catalog.json": "e02f1e9bae8bae44f6038ca5947bda6d2682ad3294dfa33c12d2bdfd600ff635",
   "holo-app-worker.mjs": "0efc17c59789fb4e0a5fdbcd5453a1cd048f46ecfdfbf7ea25adc10a2a726de5",

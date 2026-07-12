@@ -1,7 +1,7 @@
 {
  "app": "animate",
  "axis": "blake3",
- "mirror": "https://huggingface.co/HOLOGRAMTECH/holo-messenger-shell/resolve/main/b/",
+ "mirror": "https://hologram-technologies.github.io/hologram-apps/b/",
  "files": {
   "animate-client.mjs": "dbe3e6ed0f585a4cd05dc636cedfa61910a9c00ca548340eee366f5ab906a8b9",
   "catalog.json": "2f156fc728ed9576f68326bd8e342b7d9f7497fea8dba1cd941bfd94b582174d",
