@@ -1,0 +1,8 @@
+{
+ "app": "hello",
+ "axis": "blake3",
+ "mirror": "https://hologram-technologies.github.io/hologram-apps/b/",
+ "files": {
+  "index.html": "35d0e375612ab3cccb973d4670916423e57f071bd64261426e94681c52807239"
+ }
+}
