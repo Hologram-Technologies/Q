@@ -134,7 +134,7 @@ function prewarm(warmPaint) {
 // creates its own overlay (i.e. the host page did NOT pre-place + style #holo-login). A host that provides
 // #holo-login (the messenger's app.html) owns its own look and this is a no-op — never overrides it.
 const HL_CSS = `#holo-login{position:fixed;inset:0;z-index:2147483000;color:var(--ink);font-family:"Segoe UI",system-ui,-apple-system,sans-serif;
-  --u:clamp(17px,1.8vmin,20px);--g1:calc(var(--u)*1.618);--g2:calc(var(--u)*2.618);--avatar:clamp(96px,calc(var(--u)*6.854),128px);--field:min(86vw,calc(var(--avatar)*2.618));--accent:#7defc9;--accent-2:#34d3a6;
+  --u:clamp(19px,2vmin,23px);--g1:calc(var(--u)*1.618);--g2:calc(var(--u)*2.618);--avatar:clamp(96px,calc(var(--u)*6.854),128px);--field:min(86vw,calc(var(--avatar)*2.618));--accent:#7defc9;--accent-2:#34d3a6;
   --ink:#f4f7fc;--ink-dim:rgba(231,237,250,.82);--status:#c4f3e2;--shadow:0 2px 18px rgba(0,0,0,.45);--wall:var(--boot-ground,#1f1f1e);
   --glass:rgba(10,14,20,.42);--glass-border:rgba(255,255,255,.14);--glass-ink:rgba(231,237,250,.8);
   --sheet:rgba(8,12,18,.94);--muted:#8b949e;--link:#58a6ff;--field-bg:rgba(255,255,255,.09);--field-border:rgba(255,255,255,.22)}
@@ -150,7 +150,7 @@ const HL_CSS = `#holo-login{position:fixed;inset:0;z-index:2147483000;color:var(
 #holo-login .hl-panel{display:flex;flex-direction:column;align-items:center;text-align:center;width:var(--field);max-width:92vw;pointer-events:auto;animation:hl-rise .7s cubic-bezier(.4,0,.2,1) .05s both}
 #holo-login .hl-avatar{width:var(--avatar);height:var(--avatar);border-radius:50%;display:grid;place-items:center;color:#fff;font-size:calc(var(--avatar)*.37);font-weight:600;box-shadow:0 .5em 1.5em rgba(0,0,0,.35),inset 0 0 0 1.5px rgba(255,255,255,.38)}
 #holo-login .hl-avatar svg{width:62%;height:62%;opacity:.92}
-#holo-login .hl-name{margin:var(--g1) 0 0;font-size:calc(var(--u)*1.12);font-weight:600;letter-spacing:.01em;line-height:1.15;text-shadow:var(--shadow)}
+#holo-login .hl-name{margin:var(--g1) 0 0;font-size:var(--u);font-weight:600;letter-spacing:.01em;line-height:1.15;text-shadow:var(--shadow)}
 #holo-login .hl-auth{margin-top:var(--g1);display:flex;flex-direction:column;align-items:center;gap:var(--u);width:100%}
 #holo-login .hl-bio{position:relative;overflow:hidden;width:100%;min-height:max(var(--g2),52px);border-radius:12px;cursor:pointer;display:inline-flex;align-items:center;justify-content:center;gap:calc(var(--u)*.55);font-size:var(--u);font-weight:600;letter-spacing:.01em;color:#eef2f8;background:linear-gradient(180deg,rgba(28,30,28,.94),rgba(12,13,12,.96));border:1px solid rgba(255,255,255,.16);box-shadow:inset 0 1px 0 rgba(255,255,255,.06),0 12px 34px rgba(0,0,0,.5);font-family:inherit;transition:transform .12s,box-shadow .18s,border-color .3s}
 #holo-login .hl-bio:hover{transform:translateY(-1px);border-color:rgba(125,239,201,.45);box-shadow:inset 0 1px 0 rgba(255,255,255,.08),0 16px 40px rgba(0,0,0,.55),0 0 0 1px rgba(52,211,166,.1)}
@@ -173,7 +173,7 @@ const HL_CSS = `#holo-login{position:fixed;inset:0;z-index:2147483000;color:var(
 #holo-login .hl-slide .hl-knob svg{width:1.3em;height:1.3em;color:#062019}
 #holo-login .hl-slide.armed{border-color:rgba(125,239,201,.5)}
 #holo-login .hl-slide.done .hl-fill{width:100%!important;background:linear-gradient(90deg,#34d3a6,#7defc9)}
-#holo-login .hl-alt{background:none;border:0;color:var(--ink-dim);opacity:.66;margin-top:calc(var(--u)*.3);font-size:calc(var(--u)*.82);font-weight:500;font-family:inherit;cursor:pointer;padding:calc(var(--u)*.3) calc(var(--u)*.55);border-radius:calc(var(--u)*.4);display:inline-flex;align-items:center;gap:calc(var(--u)*.4);min-height:44px;transition:color .15s,opacity .15s}
+#holo-login .hl-alt{background:none;border:0;color:var(--ink-dim);opacity:.66;margin-top:calc(var(--u)*.3);font-size:var(--u);font-weight:500;font-family:inherit;cursor:pointer;padding:calc(var(--u)*.3) calc(var(--u)*.55);border-radius:calc(var(--u)*.4);display:inline-flex;align-items:center;gap:calc(var(--u)*.4);min-height:44px;transition:color .15s,opacity .15s}
 #holo-login .hl-alt:hover{color:var(--ink);opacity:1}#holo-login .hl-alt svg{width:1.05em;height:1.05em}
 #holo-login .hl-more{opacity:.72}#holo-login .hl-more:hover{opacity:1}
 #holo-login .status{min-height:calc(var(--u)*1.5);font-size:var(--u);color:var(--status);display:flex;align-items:center;justify-content:center;gap:calc(var(--u)*.5);text-shadow:var(--shadow)}
