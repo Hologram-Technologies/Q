@@ -159,6 +159,9 @@ export function openDirectChat({ name = "Contact", onSend = () => {}, onVerify =
     setTyping(on) { typing.style.display = on ? "block" : "none"; if (on) { clearTimeout(_typeT); _typeT = setTimeout(() => { typing.style.display = "none"; }, 4000); } },
     setSafety({ emojis, digits, status }) { safety = { emojis, digits, status }; shield.textContent = status === "same-verified" ? "🛡 Verified" : (status === "changed" ? "⚠ Verify" : "🛡 Verify"); shield.style.color = status === "same-verified" ? "#00d09c" : (status === "changed" ? "#ffb0b0" : "#e9f1f5"); },
     setName(nm) { if (!nm) return; curName = nm; nameEl.textContent = nm; avatar.textContent = (String(nm).trim()[0] || "·").toUpperCase(); },
+    // TRUTHFUL lock (R5): the sub-line states the ACTUAL seal — "forward secret" only once the Olm ratchet is
+    // established with this contact; plain "end-to-end encrypted" (holo-seal) otherwise. Never claims more than holds.
+    setSeal(ratchet) { sub.textContent = ratchet ? "🔒 end-to-end encrypted · forward secret" : "🔒 end-to-end encrypted"; },
     showKeyChange(on) { banner.style.display = on ? "block" : "none"; if (on) banner.innerHTML = `⚠ <b>${_esc(curName)}'s security code changed.</b> Verify again before trusting new messages.`; },
     setVerified(v) { this.setSafety({ ...safety, status: v ? "same-verified" : safety.status }); },
     close,

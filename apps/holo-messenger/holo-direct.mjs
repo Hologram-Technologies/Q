@@ -42,6 +42,7 @@ export async function makeDirect({ identity = null, mailboxBase = null, trustSto
   if (olm) { try { await olm.init(); olmId = olm.identityKey(); } catch (e) { olm = null; } }
   const vozBook = new Map();   // cid → { bundle, oid } — the peer's Olm prekey bundle + identity key (persisted)
   const _vozSent = new Set();  // contacts we've already handed our bundle to (send it once)
+  const _vozPending = new Map();   // signKey → {bundle,oid} — a bundle that arrived BEFORE we knew the contact (race)
   const _stats = { olmSealed: 0, seal1Sealed: 0, olmOpened: 0 };   // honest instrumentation (witness + a truthful lock)
   const sealer = {
     get kind() { return olm ? "olm" : "seal1"; },
@@ -58,7 +59,13 @@ export async function makeDirect({ identity = null, mailboxBase = null, trustSto
       const peer = vozBook.get(cid);
       if (peer && peer.bundle) {
         try {
-          if (!(await olm.hasSession(cid))) await olm.startOutbound(cid, peer.bundle);
+          if (!(await olm.hasSession(cid))) {
+            // DETERMINISTIC initiator — avoids Olm's two-way establishment race (both sides createOutbound →
+            // mismatched sessions that can't decrypt each other). The smaller sign key initiates; the other
+            // WAITS for its pre-key message (→ inbound session), sealing holo-seal until then. One shared session.
+            if (myPub.sign < pub.sign) await olm.startOutbound(cid, peer.bundle);
+            else throw new Error("await-inbound");
+          }
           const m = await olm.sealTo(cid, plaintext);                      // {t,c}; the pickle re-persists (HARD-1)
           const env = { s: "olm", t: m.t, c: m.c, from: myPub.sign, oid: olmId, ts: Date.now() };
           env.kappa = await _sha256hex(JSON.stringify([env.s, env.t, env.c, env.from, env.oid, env.ts]));
@@ -86,6 +93,16 @@ export async function makeDirect({ identity = null, mailboxBase = null, trustSto
     _vozSent.add(cid);
     try { const bundle = await olm.publishBundle(); await _sendControl(cid, { t: "voz-bundle", bundle, oid: olmId }); }
     catch { _vozSent.delete(cid); }
+  }
+  // a bundle can arrive BEFORE its sender's first message creates the contact (the inviter knows the invitee
+  // from the link, so their bundle races their words). We stash such a bundle by sign key; when the contact
+  // forms (any inbound message), we bind it → the ratchet becomes symmetric. This fixed a one-way ratchet.
+  function _drainVoz(cid, fromSign) {
+    const p = _vozPending.get(fromSign); if (!p) return;
+    _vozPending.delete(fromSign);
+    vozBook.set(cid, p);
+    if (store && store.setMeta) store.setMeta("voz:peer:" + cid, JSON.stringify(p)).catch(() => {});
+    _ensureVoz(cid);   // reciprocate now that they're answerable
   }
   // each sovereign identity gets its OWN trust store - never a shared global key (else two identities, or a stale entry
   // from a prior session, collide and look like a key change). Namespace the persistence by my own identity.
@@ -178,10 +195,13 @@ export async function makeDirect({ identity = null, mailboxBase = null, trustSto
     // is authenticated + bound to their sign key, TOFU). Record + persist it, then reciprocate ours. Consumed,
     // never shown. From here the next word to/from this contact rides the ratchet.
     if (payload.t === "voz-bundle") {
-      if (verified && contactId && olm && payload.bundle) {
-        vozBook.set(contactId, { bundle: payload.bundle, oid: payload.oid });
-        if (store && store.setMeta) store.setMeta("voz:peer:" + contactId, JSON.stringify({ bundle: payload.bundle, oid: payload.oid })).catch(() => {});
-        _ensureVoz(contactId);                                 // reciprocate (once) so BOTH sides can ratchet
+      if (olm && payload.bundle && r.verified) {               // sig-valid bundle (known OR not-yet-known sender)
+        const peer = { bundle: payload.bundle, oid: payload.oid };
+        if (contactId) {
+          vozBook.set(contactId, peer);
+          if (store && store.setMeta) store.setMeta("voz:peer:" + contactId, JSON.stringify(peer)).catch(() => {});
+          _ensureVoz(contactId);                               // reciprocate (once) so BOTH sides can ratchet
+        } else { _vozPending.set(r.from, peer); }              // arrived before we knew them → bind when the contact forms
       }
       return null;
     }
@@ -205,6 +225,7 @@ export async function makeDirect({ identity = null, mailboxBase = null, trustSto
       if (store && await store.hasMsg(env.kappa).catch(() => false)) return null;
       const cid = contactId || (_nameFor(payload, r.from) || "direct:" + (r.from || "").slice(0, 12));
       _upgradeFrom(cid, r.from, payload);
+      _drainVoz(cid, r.from);                                  // apply any bundle that beat this contact into being
       const desc = { kappa: payload.kappa, kappas: payload.kappas || [payload.kappa], key: payload.key, iv: payload.iv,
                      name: payload.name || "file", mime: payload.mime || "application/octet-stream", size: payload.size };
       if (store) {
@@ -226,6 +247,7 @@ export async function makeDirect({ identity = null, mailboxBase = null, trustSto
 
     const cid = contactId || (_nameFor(payload, r.from) || "direct:" + (r.from || "").slice(0, 12));
     _upgradeFrom(cid, r.from, payload);                      // one-link two-way: stub → answerable contact
+    _drainVoz(cid, r.from);                                  // apply any Olm bundle that raced ahead of this first word
     if (store) {
       store.putMsg({ kappa: env.kappa, contactId: cid, ts: ts || env.ts, dir: "in", text: payload.text }).catch(() => {});
       if (!known && !payload.fromBox) store.putContact(cid, { pub: { sign: r.from, box: null }, addedTs: Date.now() }).catch(() => {});   // stub: listed, unanswerable until they share their link

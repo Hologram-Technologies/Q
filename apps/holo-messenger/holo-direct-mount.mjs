@@ -51,13 +51,15 @@ async function _boot() {
     } catch (e) { console.warn("[direct] store unavailable — session-only conversations:", String(e)); }
     spine = await makeSpine();
     const displayName = (localStorage.getItem("holo.direct.name") || "").trim() || null;   // rides sealed payloads (N8 two-way door)
-    // R2/R3 — the audited Olm/Megolm ratchet, OPT-IN via ?e2e=voz (or localStorage holo.e2e=voz). The default
-    // door stays exactly holo-seal (olm=null). When on, we load the vodozemac wasm (the spine's way, lazy),
-    // derive a vault-persisted pickleKey, and build a seal2 waist keyed to the SAME operator ns → sessions +
-    // identity survive every reload (persistence for returning users). Fail-soft: any hiccup → holo-seal.
+    // R5 — the audited Olm/Megolm ratchet is now the DEFAULT seal (forward secrecy + PCS). Opt-OUT with
+    // ?e2e=off (or localStorage holo.e2e=off). Interop is automatic: a peer with no ratchet just never sends a
+    // `voz-bundle`, so we fall back to holo-seal with them (untagged envelopes ARE holo-seal) — no dead ends.
+    // We load the vodozemac wasm (the spine's way, lazy) + a vault-persisted pickleKey + build a seal2 waist
+    // keyed to the SAME operator ns → sessions + identity survive every reload (persistence for returning
+    // users). Fail-soft: ANY hiccup (wasm, store) → olm=null → exactly the holo-seal door, never a broken one.
     let olm = null;
     try {
-      const voznOn = (() => { try { return new URLSearchParams(location.search).get("e2e") === "voz" || localStorage.getItem("holo.e2e") === "voz"; } catch { return false; } })();
+      const voznOn = (() => { try { const q = new URLSearchParams(location.search).get("e2e"); return !(q === "off" || localStorage.getItem("holo.e2e") === "off"); } catch { return true; } })();
       if (voznOn && store && store.getMeta) {
         const vbase = new URL("./_vendor/vodozemac/", import.meta.url);
         const voz = await import(new URL("holo_vodozemac.js", vbase));
@@ -155,6 +157,16 @@ export async function open(peerPub, { name = null } = {}) {
     }),
   });
   panels.set(cid, panel);
+  // TRUTHFUL lock (R5): reflect whether THIS thread is on the Olm ratchet. Poll vozReady until it establishes
+  // (the handshake completes after the first word or two), then stop; a holo-seal-only peer simply stays
+  // "end-to-end encrypted" (no forward-secret claim). Cheap, self-ending, never blocks the open.
+  try {
+    panel.setSeal && panel.setSeal(await direct.vozReady(cid).catch(() => false));
+    const _sealT = setInterval(async () => {
+      if (!panels.has(cid)) { clearInterval(_sealT); return; }
+      if (await direct.vozReady(cid).catch(() => false)) { panel.setSeal && panel.setSeal(true); clearInterval(_sealT); }
+    }, 3000);
+  } catch {}
   unread.delete(cid); _renderSection();                           // opening the thread clears its badge
   // HYDRATE from the sealed store BEFORE the network warms (C6): history renders instantly, offline-capable.
   for (const m of await direct.history(cid).catch(() => [])) {
