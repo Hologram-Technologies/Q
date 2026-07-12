@@ -55,4 +55,21 @@ export function applyWorld(state, store = globalThis.localStorage) {
 export async function carry(passphrase, store) { return seal(collectWorld(store), passphrase); }
 export async function restore(backup, passphrase, store) { return applyWorld(await open(backup.envelope, passphrase, backup.kappa), store); }
 
-export default { seal, open, collectWorld, applyWorld, carry, restore };
+// ── your world as a file you own ─────────────────────────────────────────────────────────────────────
+export function backupToText(backup) { return JSON.stringify({ v: 1, kappa: backup.kappa, envelope: backup.envelope }); }
+export function parseBackup(text) { const j = JSON.parse(text); if (!j || !j.envelope || !j.kappa) throw new Error("not a Hologram world backup"); return { kappa: j.kappa, envelope: j.envelope }; }
+
+// download your sealed world as a .holo file — a backup only your key opens. Returns its κ.
+export async function downloadBackup(passphrase, filename = "my-hologram-world.holo", store) {
+  const backup = await carry(passphrase, store);
+  const url = URL.createObjectURL(new Blob([backupToText(backup)], { type: "application/octet-stream" }));
+  const a = document.createElement("a"); a.href = url; a.download = filename; document.body.appendChild(a); a.click(); a.remove();
+  setTimeout(() => URL.revokeObjectURL(url), 4000);
+  return backup.kappa;
+}
+export async function restoreFromText(text, passphrase, store) { return restore(parseBackup(text), passphrase, store); }
+
+// self-register the door when in a browser — window.HoloWorld.backup(passphrase) / .restoreText(text, pass)
+try { if (typeof window !== "undefined") window.HoloWorld = Object.assign(window.HoloWorld || {}, { seal, open, carry, restore, backup: downloadBackup, restoreText: restoreFromText, backupToText, parseBackup, collectWorld }); } catch {}
+
+export default { seal, open, collectWorld, applyWorld, carry, restore, backupToText, parseBackup, downloadBackup, restoreFromText };
