@@ -8,18 +8,21 @@ export function openDirectChat({ name = "Contact", onSend = () => {}, onVerify =
   const el = (t, css, html) => { const n = document.createElement(t); if (css) n.style.cssText = css; if (html != null) n.innerHTML = html; return n; };
   const _esc = (s) => String(s == null ? "" : s).replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
   const overlay = el("div", "position:fixed;inset:0;z-index:2147483500;background:rgba(4,7,11,.72);backdrop-filter:blur(8px);display:flex;align-items:center;justify-content:center;padding:20px;font:14px/1.5 system-ui,-apple-system,'Segoe UI',Roboto,sans-serif");
-  const card = el("div", "width:min(420px,96vw);height:min(720px,92vh);background:#0e1620;border:1px solid #1f2c35;border-radius:20px;box-shadow:0 32px 90px rgba(0,0,0,.6);display:flex;flex-direction:column;color:#e9f1f5;overflow:hidden");
+  // WhatsApp dark-theme palette (styling our own components — familiar look, no copied assets):
+  //   chat bg #0b141a · header/composer bars #202c33 · incoming bubble #202c33 · outgoing #005c4b ·
+  //   ink #e9edef · dim rgba(233,237,239,.6) · accent #00a884 · read-tick blue #53bdeb · input #2a3942
+  const card = el("div", "width:min(420px,96vw);height:min(720px,92vh);background:#0b141a;border:0;border-radius:14px;box-shadow:0 32px 90px rgba(0,0,0,.6);display:flex;flex-direction:column;color:#e9edef;overflow:hidden");
 
   let curName = name;
   const initial = (String(name).trim()[0] || "·").toUpperCase();
-  const head = el("div", "display:flex;align-items:center;gap:10px;padding:13px 14px;border-bottom:1px solid #16212b");
+  const head = el("div", "display:flex;align-items:center;gap:11px;padding:10px 14px;background:#202c33;flex:0 0 auto");
   const avatar = el("div", "width:38px;height:38px;border-radius:50%;display:grid;place-items:center;font-weight:700;color:#04110d;background:linear-gradient(135deg,#00d09c,#27e3b3);flex:0 0 auto", initial);
   const idwrap = el("div", "flex:1;min-width:0");
   // the name is TAP-TO-RENAME (WhatsApp: open a chat, tap the name to set who it is). Rename is a LOCAL
   // label only — it never touches the sealed key or forks the thread; onRename persists it.
   const nameEl = el("div", "font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis" + (onRename ? ";cursor:text" : ""), _esc(name));
   if (onRename) { nameEl.title = "Tap to rename"; nameEl.className = "hd-name"; }
-  const sub = el("div", "font-size:12px;color:#00d09c", "🔒 End-to-end encrypted");
+  const sub = el("div", "font-size:12px;color:rgba(233,237,239,.6)", "🔒 end-to-end encrypted");
   idwrap.append(nameEl, sub);
   const doRename = () => {
     if (!onRename) return;
@@ -37,8 +40,9 @@ export function openDirectChat({ name = "Contact", onSend = () => {}, onVerify =
   };
   nameEl.onclick = doRename;
   head.append(avatar, idwrap);
-  const shield = el("button", "background:rgba(255,255,255,.06);border:1px solid #1f2c35;border-radius:10px;padding:7px 10px;font-size:13px;color:#e9f1f5;cursor:pointer", "🛡 Verify");
-  const closeBtn = el("button", "background:transparent;border:0;color:#8aa0ad;font-size:20px;cursor:pointer;padding:0 6px", "✕");
+  const shield = el("button", "background:transparent;border:0;color:#aebac1;padding:4px 6px;font-size:17px;cursor:pointer", "🛡");
+  shield.title = "Verify security code";
+  const closeBtn = el("button", "background:transparent;border:0;color:#aebac1;font-size:20px;cursor:pointer;padding:0 6px", "✕");
   closeBtn.className = "hd-close";
   head.append(shield, closeBtn); closeBtn.onclick = () => { onClose(); close(); };
 
@@ -46,12 +50,13 @@ export function openDirectChat({ name = "Contact", onSend = () => {}, onVerify =
   const typing = el("div", "display:none;padding:2px 16px 0;font-size:12px;color:#00d09c;font-style:italic", `typing…`);
   const list = el("div", "flex:1;overflow:auto;padding:14px;display:flex;flex-direction:column;gap:8px");
   const notice = el("div", "display:none;padding:4px 16px 0;font-size:12px;color:#ffd7a8");
-  const composer = el("div", "display:flex;gap:8px;padding:12px;border-top:1px solid #16212b;align-items:center");
-  const input = el("input", "flex:1;background:#0a1119;border:1px solid #1f2c35;border-radius:12px;padding:11px 13px;color:#e9f1f5;outline:none;font-size:14px"); input.placeholder = "Sealed message…";
-  const sendBtn = el("button", "background:linear-gradient(90deg,#00d09c,#1fd6ac);color:#04110d;border:0;border-radius:12px;padding:0 16px;font-weight:700;cursor:pointer;height:40px", "Send");
+  const composer = el("div", "display:flex;gap:8px;padding:8px 10px;background:#202c33;align-items:center;flex:0 0 auto");
+  const input = el("input", "flex:1;background:#2a3942;border:0;border-radius:20px;padding:10px 15px;color:#e9edef;outline:none;font-size:14px"); input.placeholder = "Message";
+  const sendBtn = el("button", "background:#00a884;color:#0b141a;border:0;border-radius:50%;width:40px;height:40px;font-size:17px;cursor:pointer;flex:0 0 auto;display:grid;place-items:center", "➤");
+  sendBtn.className = "hd-send"; sendBtn.title = "Send";
   // 📎 (N7/MD4): a hidden file input — images and any file; the engine seals + κ-ships the bytes
   const fileIn = el("input", "display:none"); fileIn.type = "file"; fileIn.className = "hd-file";
-  const attach = el("button", "background:rgba(255,255,255,.06);border:1px solid #1f2c35;border-radius:12px;color:#e9f1f5;padding:0 12px;font-size:16px;cursor:pointer;height:40px", "📎");
+  const attach = el("button", "background:transparent;border:0;color:#8696a0;padding:0 4px;font-size:20px;cursor:pointer;flex:0 0 auto", "📎");
   attach.className = "hd-attach"; attach.title = "Attach a file (sealed, peer-to-peer)";
   attach.onclick = () => fileIn.click();
   fileIn.onchange = () => { const f = fileIn.files && fileIn.files[0]; fileIn.value = ""; if (f && onAttach) onAttach(f); };
@@ -87,16 +92,17 @@ export function openDirectChat({ name = "Contact", onSend = () => {}, onVerify =
   };
 
   const _tick = (s) => (s === "delivered" ? "✓✓" : "✓");
+  const _bubbleCss = (mine) => `max-width:80%;padding:6px 9px 8px;border-radius:8px;font-size:14.2px;line-height:1.32;box-shadow:0 1px .5px rgba(0,0,0,.13);${mine ? "background:#005c4b;color:#e9edef;border-top-right-radius:2px" : "background:#202c33;color:#e9edef;border-top-left-radius:2px"}`;
+  const _addTick = (b, m) => { const t = el("span", `font-size:11px;margin-left:6px;vertical-align:-1px;color:${m.status === "delivered" ? "#53bdeb" : "rgba(233,237,239,.55)"}`, _tick(m.status)); t.className = "hd-tick"; b.append(t); };
   function bubble(m) {
     const mine = m.from === "me";
     const row = el("div", `display:flex;${mine ? "justify-content:flex-end" : "justify-content:flex-start"}`);
-    const b = el("div", `max-width:78%;padding:8px 12px;border-radius:14px;font-size:14px;${mine ? "background:linear-gradient(135deg,#0b6,#0a9);color:#04110d;border-bottom-right-radius:4px" : "background:#182430;border-bottom-left-radius:4px"}`);
+    const b = el("div", _bubbleCss(mine));
     b.className = "hd-bubble";
     if (m.kappa) b.dataset.kappa = m.kappa;
-    b.textContent = m.text;
+    const txt = el("span", null); txt.textContent = m.text; b.append(txt);
     if (!mine && m.verified === false) { const w = el("div", "font-size:11px;color:#ffb0b0;margin-top:3px", "⚠ unverified sender"); b.append(w); }
-    // ✓ sent / ✓✓ delivered — a small right-aligned mark on my own bubbles only
-    if (mine) { const t = el("div", "font-size:10px;opacity:.7;text-align:right;margin-top:2px", _tick(m.status)); t.className = "hd-tick"; b.append(t); }
+    if (mine) _addTick(b, m);   // ✓ sent / ✓✓ delivered (blue when read) — WhatsApp read receipts
     row.append(b); return row;
   }
 
@@ -125,11 +131,11 @@ export function openDirectChat({ name = "Contact", onSend = () => {}, onVerify =
   function mediaBubble(m) {
     const mine = m.from === "me";
     const row = el("div", `display:flex;${mine ? "justify-content:flex-end" : "justify-content:flex-start"}`);
-    const b = el("div", `max-width:78%;padding:6px 8px;border-radius:14px;font-size:14px;${mine ? "background:linear-gradient(135deg,#0b6,#0a9);color:#04110d;border-bottom-right-radius:4px" : "background:#182430;border-bottom-left-radius:4px"}`);
+    const b = el("div", _bubbleCss(mine).replace("padding:6px 9px 8px", "padding:4px 4px 6px"));
     b.className = "hd-bubble hd-media";
     if (m.kappa) b.dataset.kappa = m.kappa;
     b.append(_mediaContent(m));
-    if (mine) { const t = el("div", "font-size:10px;opacity:.7;text-align:right;margin-top:2px", _tick(m.status)); t.className = "hd-tick"; b.append(t); }
+    if (mine) _addTick(b, m);
     row.append(b); return row;
   }
 
@@ -149,7 +155,7 @@ export function openDirectChat({ name = "Contact", onSend = () => {}, onVerify =
       list.scrollTop = list.scrollHeight;
     },
     notice(text) { notice.textContent = text; notice.style.display = "block"; clearTimeout(_noticeT); _noticeT = setTimeout(() => { notice.style.display = "none"; }, 6000); },
-    setTick(kappa, status) { const b = list.querySelector(`.hd-bubble[data-kappa="${kappa}"] .hd-tick`); if (b) b.textContent = _tick(status); },
+    setTick(kappa, status) { const b = list.querySelector(`.hd-bubble[data-kappa="${kappa}"] .hd-tick`); if (b) { b.textContent = _tick(status); b.style.color = status === "delivered" ? "#53bdeb" : "rgba(233,237,239,.55)"; } },
     setTyping(on) { typing.style.display = on ? "block" : "none"; if (on) { clearTimeout(_typeT); _typeT = setTimeout(() => { typing.style.display = "none"; }, 4000); } },
     setSafety({ emojis, digits, status }) { safety = { emojis, digits, status }; shield.textContent = status === "same-verified" ? "🛡 Verified" : (status === "changed" ? "⚠ Verify" : "🛡 Verify"); shield.style.color = status === "same-verified" ? "#00d09c" : (status === "changed" ? "#ffb0b0" : "#e9f1f5"); },
     setName(nm) { if (!nm) return; curName = nm; nameEl.textContent = nm; avatar.textContent = (String(nm).trim()[0] || "·").toUpperCase(); },
