@@ -1,0 +1,9 @@
+{
+ "blake3": [
+  "https://huggingface.co/HOLOGRAMTECH/holo-messenger-shell/resolve/main/b/",
+  "https://hologram-technologies.github.io/hologram-apps/b/"
+ ],
+ "sha256": [
+  "https://huggingface.co/HOLOGRAMTECH/holo-messenger-shell/resolve/main/sha256/"
+ ]
+}

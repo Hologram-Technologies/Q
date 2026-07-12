@@ -17,14 +17,7 @@ const BOOT_DIRS = ["/usr/lib/holo/", "/usr/share/plymouth/", "/apps/holo-messeng
 // offline root navigation paints a door that 404s its own module graph and dead-ends at the floor line.
 const BOOT_FILES = { "/root-door.mjs": 1, "/holo-root-resolver.mjs": 1, "/holo-resolve-view.mjs": 1, "/apps/index.jsonld": 1, "/apps-blake3.json": 1 };
 const ROOT_FILES = { "/holo-resolver.mjs": 1, "/holo-fabric.mjs": 1, "/manifest.webmanifest": 1 };
-const MIME = { js: "text/javascript", mjs: "text/javascript", css: "text/css", json: "application/json", svg: "image/svg+xml", wasm: "application/wasm", html: "text/html" };
-// κ-CAS mirrors — UNTRUSTED capacity: a mirror byte only ships after it re-derives to its κ (L5/SEC-1).
-//   blake3 → the HF shell mirror b/, streaming-verified below.
-//   sha256 → the HF shell mirror sha256/ (HOLO-LEAN-RESOLVER U6): PRUNED origin-b/ objects (release-
-//   history snapshots the strand pins by sha256) live there, buffer-verified before serving. NOT the
-//   hologram-apps release archive (also populated) — its CDN sends no ACAO, so a SW can't reach it.
-const KAPPA_MIRROR = "https://huggingface.co/HOLOGRAMTECH/holo-messenger-shell/resolve/main/b/";
-const PROVENANCE_MIRROR = "https://huggingface.co/HOLOGRAMTECH/holo-messenger-shell/resolve/main/sha256/";
+// MIME + the κ-CAS rung table live in ONE place now: holo-rungs.mjs (G0 — one ladder, rungs are data).
 
 self.addEventListener("install", () => self.skipWaiting());
 // THE rescue lives in ONE shared module (holo-evict-rescue.mjs) — root-sw and the messenger's holo-sw
@@ -37,10 +30,13 @@ import { makeEvictRescue } from "./usr/lib/holo/holo-evict-rescue.mjs";
 // Reads re-derive before serving (warm ≠ trusted); a tampered entry is purged + witnessed by the rung.
 // Runtime rung trouble (IDB gone, private mode) → null per call → exactly the pre-O2 network path.
 import { makeStoreRung } from "./usr/lib/holo/holo-store-rung.mjs";
+// G0 (HOLO-GENESIS-SEED): THE rung ladder — device store → origin b/ → mirror rungs (data), every
+// byte re-derived before it ships. STATIC import (SWs disallow dynamic import); ships same-commit.
+import { makeLadder, MIME } from "./usr/lib/holo/holo-rungs.mjs";
 let _rung = null;
 const rung = async () => { try { return (_rung ||= makeStoreRung()); } catch { return null; } };
+const LADDER = makeLadder({ base: BASE, rung });
 const RESCUER = makeEvictRescue({ base: BASE, rung });
-const verifierFor = (hex) => RESCUER.verifierFor(hex);
 
 // ── PRISM (HOLO-PLAYGROUND-LIVE L1): the operator's personal refraction, NAME-keyed. The sealed
 // base is NEVER mutated: an edit mints κ-atoms into the device store and the prism maps a PATH →
@@ -119,51 +115,17 @@ self.addEventListener("fetch", (e) => {
   if (url.origin !== self.location.origin) return;
   const p = url.pathname;
 
-  // κ-route: serve an object BY ITS CONTENT ADDRESS, verified (fail-closed on the blake3 axis)
+  // κ-route: serve an object BY ITS CONTENT ADDRESS — ONE call into the ladder (G0). Device store
+  // first, then origin b/, then the mirror rungs; every rung fail-closed verified, a poisoned rung's
+  // bytes refused and the next rung tried. Network throws (radio dead) must answer 504, never reject
+  // the respondWith (offline honesty).
   const kap = p.match(/\/\.holo\/(sha256|blake3)\/([0-9a-f]{64})(?:\.([a-z0-9]+))?$/i);
   if (kap) {
     e.respondWith((async () => {
-      const axis = kap[1].toLowerCase(), hex = kap[2].toLowerCase();
-      const R = await rung();
-      // O2 TIER: device store FIRST — rung.get re-derives on the requested axis before returning
-      // (tamper → purge + witness + null); a hit serves with ZERO network, airplane mode included.
-      if (R) { try { const u8 = await R.get(axis, hex); if (u8) return new Response(u8, { status: 200, headers: { "content-type": MIME[(kap[3] || "").toLowerCase()] || "application/octet-stream", "x-holo-source": "device-store" } }); } catch {} }
-      // origin b/ next; PRUNED objects fall to the kappa-mirror (U5) — same fail-closed verify below,
-      // so the store can shrink while every kappa keeps resolving (the mirror is untrusted capacity).
-      // Network throws (radio dead) must answer 504, never reject the respondWith (offline honesty).
-      let r = null, mirrored = false; try { r = await fetch(BASE + "/b/" + hex); } catch {}
-      // mirror rungs: blake3 re-derives through the streaming verifier below; sha256 (U6) buffers and
-      // re-derives BEFORE serving — on either axis an unverified untrusted-mirror byte never ships (L5/SEC-1).
-      if ((!r || !r.ok) && axis === "blake3") { try { r = await fetch(KAPPA_MIRROR + hex); } catch {} }
-      if ((!r || !r.ok) && axis === "sha256") { try { const m = await fetch(PROVENANCE_MIRROR + hex); if (m.ok) { r = m; mirrored = true; } } catch {} }
-      if (!r || !r.ok) return r || new Response("unresolvable offline — not in the device store (O2)", { status: 504 });
-      const headers = { "content-type": MIME[(kap[3] || "").toLowerCase()] || r.headers.get("content-type") || "application/octet-stream" };
-      let body = r.body;
-      if (axis === "blake3" && r.body) {
-        const v = await verifierFor(hex);
-        if (v) {
-          // write-back rides a tee'd branch through its OWN verifier inside the rescuer — only bytes
-          // that fully re-derive enter the store; the serve stream stays untouched (no added latency).
-          if (R && body.tee) { const [serve, capture] = body.tee(); body = serve; RESCUER.captureInto?.(R, "blake3", hex, capture); }
-          body = body.pipeThrough(v);
-        }
-      } else if (axis === "sha256" && r.body && (R || mirrored)) {
-        // sha256 has no streaming verifier here — buffer (bounded), re-derive, THEN serve + store.
-        // ORIGIN bytes: oversized or hash-trouble falls back to today's streamed origin response
-        // (origin-only rung). MIRROR bytes are untrusted capacity: unverifiable = REFUSED, never served.
-        try {
-          const buf = new Uint8Array(await r.clone().arrayBuffer());
-          if (buf.length <= 64 * 1024 * 1024) {
-            const d = await crypto.subtle.digest("SHA-256", buf);
-            const got = Array.from(new Uint8Array(d), (b) => b.toString(16).padStart(2, "0")).join("");
-            if (got !== hex) { R && R.witness?.("kappa-route-mismatch", { axis, want: hex, got, source: mirrored ? "provenance-mirror" : "origin-b" }); return new Response("kappa mismatch — refused (L5)", { status: 502 }); }
-            R && R.put("sha256", hex, buf);
-            return new Response(buf, { status: 200, headers });
-          }
-        } catch {}
-        if (mirrored) return new Response("mirror sha256 unverified — refused (L5)", { status: 502 });
-      }
-      return new Response(body, { status: 200, headers });
+      try {
+        const r = await LADDER.resolve(kap[1].toLowerCase(), kap[2].toLowerCase(), { ext: (kap[3] || "").toLowerCase() });
+        return r || new Response("unresolvable offline — not in the device store (O2)", { status: 504 });
+      } catch { return new Response("unresolvable offline — not in the device store (O2)", { status: 504 }); }
     })());
     return;
   }
