@@ -581,6 +581,19 @@
    "dcat:landingPage": "apps/games/index.html",
    "schema:image": "apps/games/index.html",
    "holo:entry": "apps/games/index.html"
+  },
+  {
+   "@id": "did:holo:sha256:83b17b9f934c3d94ff5b21ff9de39b753116d89a095f1724268341d22db9e34f",
+   "holo:root": "did:holo:sha256:83b17b9f934c3d94ff5b21ff9de39b753116d89a095f1724268341d22db9e34f",
+   "@type": [
+    "schema:SoftwareApplication",
+    "schema:WebApplication"
+   ],
+   "schema:name": "Carry",
+   "schema:description": "Seal your whole world into one file only you can open — back it up and restore it anywhere. No server.",
+   "schema:applicationCategory": "UtilitiesApplication",
+   "dcat:landingPage": "apps/carry/index.html",
+   "holo:entry": "index.html"
   }
  ]
 }
