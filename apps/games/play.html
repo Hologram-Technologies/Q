@@ -313,7 +313,7 @@
   async function resolveIpfs(fetchCid, verifyCid) {
     verifyCid = verifyCid || fetchCid;
     let bytes = await kGet(verifyCid);
-    if (bytes) return bytes;                                                     // returning user → instant, 0 network
+    if (bytes && await verifyBlock(verifyCid, bytes)) return bytes;              // cache hit, RE-VERIFIED (safe even if a pre-warmer filled it) → instant, 0 network
     const tryGw = (gw) => fetch(gw + fetchCid, { signal: AbortSignal.timeout(8000) }).then(async (r) => { if (!r.ok) throw 0; const b = new Uint8Array(await r.arrayBuffer()); if (!(await verifyBlock(verifyCid, b))) throw 0; return b; });
     try { bytes = await Promise.any(IPFS_GW.map(tryGw)); } catch (e) {}
     if (bytes) kPut(verifyCid, bytes);                                          // fill the κ-cache for next time
