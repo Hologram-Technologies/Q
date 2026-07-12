@@ -212,7 +212,7 @@ function renderReturning(panel, u) {
   // Desktop: the name IS the tap key. Touch: a slide-to-enter (a drag is intent that can't misfire).
   const control = COARSE
     ? slideHtml(u.label || "you")
-    : `<button class="hl-bio" id="hl-bio" aria-label="Sign in as ${esc(u.label || "you")}">${beamHtml()}${I.fp}<span>${label}</span></button>`;
+    : `<button class="hl-bio" id="hl-bio" aria-label="Sign in as ${esc(u.label || "you")}">${beamHtml()}${I.fp}<span class="hl-lbl">${label}</span></button>`;
   panel.innerHTML = `${avatarHtml(u)}
     <div class="hl-auth">${control}${guestBtnHtml()}<div class="status"></div></div>`;
   hydrateFace(panel, u);
@@ -221,7 +221,7 @@ function renderReturning(panel, u) {
 function renderFirstRun(panel) {
   // First run enrols this device's enclave — a deliberate one-time act, so it stays a tap on every device.
   panel.innerHTML = `${avatarHtml(null)}
-    <div class="hl-auth"><button class="hl-bio" id="hl-signin" title="One tap, nothing to set up">${beamHtml()}${I.fp}<span>Sign in</span></button>${guestBtnHtml()}<div class="status"></div></div>`;
+    <div class="hl-auth"><button class="hl-bio" id="hl-signin" title="One tap, nothing to set up">${beamHtml()}${I.fp}<span class="hl-lbl">Sign in</span></button>${guestBtnHtml()}<div class="status"></div></div>`;
   requestAnimationFrame(() => sizeBeam(panel));
 }
 function renderNoBio(panel, u, reason) {
@@ -304,8 +304,15 @@ export async function signIn({ root, params, app = "holospace", appName = "Holog
   try { import("./holo-manifesto.mjs?v=mark11").then((m) => m.mountManifesto(overlay)).catch(() => {}); } catch {}
   const panel = document.getElementById("holo-login-panel");
   const statusEl = () => panel.querySelector(".status");
-  const setStatus = (t, err) => { if (err) { try { plymouth && plymouth.calm(); } catch {} } const el = statusEl(); if (el) { el.className = "status" + (err ? " err" : ""); el.textContent = t || ""; } };
-  const setBusy = (m) => { try { plymouth && plymouth.verify(); } catch {} const el = statusEl(); if (el) { el.className = "status"; el.innerHTML = `<span class="spin"></span><span>${esc(m || "")}</span>`; } };
+  // BUSY-IN-CONTROL — while a control (the name key / the slide) is mid-ceremony it becomes the busy sink:
+  // the status text paints INSIDE it and the separate status line stays quiet (cleaner, more professional).
+  // Errors always drop back to the status line and hand the control back to the operator.
+  let busySink = null;
+  const bioLbl = (btn) => btn && btn.querySelector(".hl-lbl");
+  const enterBusy = (btn) => { if (!btn) return; const fp = btn.querySelector("svg:not(.hl-beam)"); if (fp) fp.style.display = "none"; busySink = bioLbl(btn); };
+  const exitBusy = (btn, label) => { busySink = null; if (!btn) return; const fp = btn.querySelector("svg:not(.hl-beam)"); if (fp) fp.style.display = ""; const s = bioLbl(btn); if (s && label != null) s.textContent = label; };
+  const setStatus = (t, err) => { if (err) { try { plymouth && plymouth.calm(); } catch {} } if (!err && busySink) { busySink.textContent = t || ""; return; } const el = statusEl(); if (el) { el.className = "status" + (err ? " err" : ""); el.textContent = t || ""; } };
+  const setBusy = (m) => { try { plymouth && plymouth.verify(); } catch {} if (busySink) { busySink.textContent = m || ""; return; } const el = statusEl(); if (el) { el.className = "status"; el.innerHTML = `<span class="spin"></span><span>${esc(m || "")}</span>`; } };
 
   return new Promise(async (resolve) => {
     // CEREMONY BEATS (HOLO-BOOT-CEREMONY-PROMPT B0) — fail-open, measurement only.
@@ -497,6 +504,7 @@ export async function signIn({ root, params, app = "holospace", appName = "Holog
       const si = panel.querySelector("#hl-signin");
       if (si) si.onclick = async () => {
         sizeBeam(panel);
+        enterBusy(si);
         si.disabled = true;
         try {
           setBusy("Setting up " + teeName() + "…");
@@ -504,7 +512,7 @@ export async function signIn({ root, params, app = "holospace", appName = "Holog
           const L = await import("./holo-login.mjs");
           const { principal } = await L.enroll({ label: "You", secret, cred: credentialId, credPub });
           await establish(principal, secret, false);
-        } catch (e) { si.disabled = false; setStatus(teeError(e), true); }
+        } catch (e) { si.disabled = false; exitBusy(si, "Sign in"); setStatus(teeError(e), true); }
       };
       wireGuest();
       setTimeout(() => { try { panel.querySelector("#hl-signin").focus(); } catch {} }, 40);
@@ -526,9 +534,9 @@ export async function signIn({ root, params, app = "holospace", appName = "Holog
       } catch (e) { try { fail && fail(); } catch {} setStatus(teeError(e), true); }
     };
     const bio = panel.querySelector("#hl-bio");
-    if (bio) { bio.onclick = () => { sizeBeam(panel); bio.disabled = true; doUnlock(() => { bio.disabled = false; }); }; addEventListener("resize", () => sizeBeam(panel)); }
+    if (bio) { bio.onclick = () => { sizeBeam(panel); enterBusy(bio); bio.disabled = true; doUnlock(() => { bio.disabled = false; exitBusy(bio, selected.label || "It’s me"); }); }; addEventListener("resize", () => sizeBeam(panel)); }
     const slide = panel.querySelector("#hl-slide");
-    if (slide) wireSlide(slide, () => doUnlock(() => resetSlide(slide)));
+    if (slide) wireSlide(slide, () => { busySink = slide.querySelector(".hl-track-lbl span:last-child"); doUnlock(() => { busySink = null; resetSlide(slide); }); });
     wireGuest();
     setTimeout(() => { try { (bio || slide).focus(); } catch {} }, 40);
   });
