@@ -619,6 +619,18 @@ Atomics.store(this.h,0,r);if(ur)Atomics.add(this.h,2,ur);return true;}}registerP
         return out;
       } catch (e) { runAhead = 0; return core.run(input); }
     }
+    // ── AUTHENTIC LCD GHOSTING (handhelds): the real DMG/GBC LCD is SLOW — it leaves a motion trail, and
+    //    games LEAN on it (flickered sprites read as semi-transparent). Blend a fraction of the previous
+    //    frames into each new one, per-pixel — a ~0.2ms CPU pass on the tiny GB framebuffer. dmg/lcd only
+    //    (CRTs are fast); ?ghost=0 disables. This makes fast motion look RIGHT, not flickery. ──
+    const ghosting = (displayFx === "dmg" || displayFx === "lcd") && q.get("ghost") !== "0";
+    let ghostAcc = null, ghostU8 = null;
+    function ghostFrame(v) {
+      if (!ghostAcc || ghostAcc.length !== v.length) { ghostAcc = new Float32Array(v.length); ghostU8 = new Uint8ClampedArray(v.length); for (let i = 0; i < v.length; i++) ghostAcc[i] = v[i]; }
+      const a = 0.62;   // current weight; ~38% of the previous frames persists (the LCD's slow response)
+      for (let i = 0; i < v.length; i++) { ghostAcc[i] = ghostAcc[i] * (1 - a) + v[i] * a; ghostU8[i] = ghostAcc[i]; }
+      return ghostU8;
+    }
     function loop() {
       if (!running) return;
       const now = performance.now(); const gap = now - prev; if (gap > rafGapMax) rafGapMax = gap;
@@ -650,7 +662,7 @@ Atomics.store(this.h,0,r);if(ur)Atomics.add(this.h,2,ur);return true;}}registerP
           acc -= STEP; ran++; frames++; if (ran >= 4) { acc = 0; break; }
         }
       }
-      if (video) { lastVideo = video; if (proj) st = proj.present(video); else if (video.length === img.data.length) { img.data.set(video); cx.putImageData(img, 0, 0); } hideCover(); }   /* first live frame dissolves the cover */
+      if (video) { lastVideo = video; const vv = ghosting ? ghostFrame(video) : video; if (proj) st = proj.present(vv); else if (vv.length === img.data.length) { img.data.set(vv); cx.putImageData(img, 0, 0); } hideCover(); }   /* first live frame dissolves the cover; LCD ghosting for handhelds */
       const t = performance.now();
       if (t - t0 >= 500) {
         const fps = Math.round(frames * 1000 / (t - t0));
