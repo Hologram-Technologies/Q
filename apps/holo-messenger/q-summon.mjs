@@ -200,6 +200,9 @@ try {
 
 // ── Q's summon voice (canonical core voice; HD warms once, floor voice means never mute) ──────────────────
 const voice = createVoice({ onLevel: (level) => { try { window.dispatchEvent(new CustomEvent("holo-q-state", { detail: { mode: "speaking", level } })); } catch {} } });
+// HOLO-Q-INSTANT-REAL: expose the drawer's ONE warmed voice so the embedded q-chat frame reuses it (no 2nd
+// Kokoro load) — same-origin, read-only. window.HoloVoice.speak() = the parent's beautiful neural voice.
+try { window.HoloVoice = { speak: (t) => { try { return voice.speak(String(t || "")); } catch (e) {} }, stop: () => { try { voice.stop && voice.stop(); } catch (e) {} }, ready: () => { try { return voice.ready ? !!voice.ready() : true; } catch (e) { return true; } } }; } catch (e) {}
 const TTS_URL = new URL("../../usr/lib/holo/voice/holo-voice-tts.mjs", import.meta.url).href;
 
 function firstName() {

@@ -462,7 +462,20 @@ async function generate(text, skipUser) {
     if (_embedded) {
       // ONE BRAIN: the drawer's already-loaded brain answers (no 2nd engine). While it's still warming, the instant
       // seed / on-device reasoning keeps the conversation alive — so the embedded frame is ALWAYS responsive.
-      if (_parentReady()) { let g = ""; try { g = (await reply.groundedContext(text)) || ""; } catch (e) {} try { out = String((await window.parent.HoloQ.generate((g ? g + "\n\n" : "") + text)) || "").trim(); } catch (e) { out = ""; } record({ ack: ackMs, warm: true, cold: false, ttft: 0, tokps: 0 }); }
+      if (_parentReady()) {
+        let g = ""; try { g = (await reply.groundedContext(text)) || ""; } catch (e) {}
+        const prompt = (g ? g + "\n\n" : "") + text; const hq = window.parent.HoloQ;
+        try {
+          if (hq.generateStream) {
+            // REAL-TIME: stream the drawer brain's tokens into a live bubble as it thinks
+            let live = null, liveTxt = null;
+            out = await hq.generateStream(prompt, (full) => { if (!full) return; if (!live) { try { think.parentNode && think.parentNode.remove(); } catch (e) {} live = bubble("a", ""); liveTxt = document.createTextNode(""); live.insertBefore(liveTxt, live.firstChild); _streamed = true; } liveTxt.nodeValue = full; log.scrollTop = log.scrollHeight; });
+            if (live) { const r = live.closest(".row"); if (r) r.remove(); }
+            out = String(out || "").trim();
+          } else { out = String((await hq.generate(prompt)) || "").trim(); }
+        } catch (e) { out = ""; }
+        record({ ack: ackMs, warm: true, cold: false, ttft: 0, tokps: 0 });
+      }
       if (!out) { await sleep(90); out = ((seedLookup && seedLookup(text)) || demoReply(text)); record({ ack: ackMs, cold: true, warm: false, ttft: 0, tokps: 0, seed: true }); }
     }
     else if (DEMO || _liteMode) { await sleep(_liteMode ? 90 : (560 + Math.random() * 420)); out = ((seedLookup && seedLookup(text)) || demoReply(text)); record({ ack: ackMs, cold: false, warm: false, ttft: 0, tokps: 0, seed: !!_liteMode }); }   // serverless brain: instant seed (real canonical) → on-device canned reasoning; ack is a real UI-latency measurement
@@ -577,7 +590,9 @@ function pickVoice() {
 // voice — never a regression, never a wait.
 let _kokoro = null, _kokoroTried = false, _qSpeaking = 0, _voiceErr = null;   // _qSpeaking > 0 while Q's voice is playing (gates the mic)
 async function warmKokoro() {
-  if (_kokoro || _kokoroTried) return; _kokoroTried = true;
+  if (_kokoro || _kokoroTried) return;
+  try { if (_embedded && window.parent.HoloVoice && window.parent.HoloVoice.speak) { _kokoroTried = true; return; } } catch (e) {}   // LEAN: reuse the drawer's voice — never load a 2nd Kokoro in the frame
+  _kokoroTried = true;
   try {
     const mod = await import("./core/voice-out.js");
     mod.loadVoice((p) => { if (p && p.status === "progress" && p.file) { try { console.debug("[Q voice] kokoro", p.file, Math.round(p.progress || 0) + "%"); } catch {} } })
@@ -596,6 +611,9 @@ const _OS_VOICE_OK = (() => { try { return /[?&]osvoice=1/.test(location.search)
 function _flushVoiceQ() { const t = _voiceQ; if (t && _kokoro && _kokoro.ready && _kokoro.ready()) { _voiceQ = null; speak(t); } }
 function speak(text) {
   if (!voiceOn || !text) return;
+  // ONE VOICE (HOLO-Q-INSTANT-REAL): embedded → speak through the DRAWER's already-warmed neural voice
+  // (window.parent.HoloVoice) — no 2nd Kokoro in the frame, and it's HQ from the very first word.
+  try { const pv = _embedded && window.parent.HoloVoice; if (pv && pv.speak) { qOrb("speaking"); _qSpeaking++; const done = () => { _qSpeaking = Math.max(0, _qSpeaking - 1); if (!_qSpeaking) qOrb("idle"); }; let r = null; try { r = pv.speak(text); } catch (e) {} if (r && typeof r.then === "function") r.then(done, done); else setTimeout(done, Math.min(7000, 500 + text.length * 45)); return; } } catch (e) {}
   if (_kokoro && _kokoro.ready && _kokoro.ready()) {   // beautiful neural voice
     qOrb("speaking"); _qSpeaking++;
     _kokoro.speak(text).then(() => { _qSpeaking = Math.max(0, _qSpeaking - 1); if (!_qSpeaking) qOrb("idle"); }).catch(() => { _qSpeaking = Math.max(0, _qSpeaking - 1); if (!_qSpeaking) qOrb("idle"); if (_OS_VOICE_OK) _osSpeak(text); });
