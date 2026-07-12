@@ -2,37 +2,42 @@
 
 # Q
 
-### The universal resolver
+### An operating system that unfolds from a seed.
 
-Paste any name and it opens. Drop any file and it becomes a link that carries the file itself.
-It runs entirely in your browser — no server, no account, nothing to install.
+Open one link. A few hundred bytes verify themselves, re-derive the next stage, and — with nothing
+installed, no server, no account — **unfold into a complete operating system, in your browser.**
 
-[**Open Q →**](https://hologram-technologies.github.io/Q)
+[ **▶ Boot it** ](https://hologram-technologies.github.io/Q)
+
+<sub>Paste that link into any chat or feed. It boots into existence for whoever opens it.</sub>
 
 </div>
 
 ---
 
-Q identifies everything by what it **is**, not where it lives. When you open something, Q streams it
-from wherever it can, checks it against its own fingerprint, and shows it only if the bytes match.
-Nothing loads unverified — so Q never has to trust any single server to be online, or honest.
+There is no download, and no backend. **The link is the software.**
 
-- **Open anything** — a name, a file, or a link resolves in place, in real time.
-- **Every app streams in** — nothing is installed; each app arrives on demand and runs in its own isolated space.
-- **Share without a host** — any file becomes a self-contained link that arrives, verified, on any device.
-- **Always current** — the engine lives upstream; every improvement reaches every experience the moment it ships, with nothing to update.
+From the very first byte, nothing is trusted by where it lives — only by what it **is**. Each stage is
+named by a fingerprint of its own bytes and refuses to run unless it re-derives to that fingerprint. The
+seed proves its own genesis; the runtime it unfolds re-derives everything after. Tamper is refused, not
+rendered.
 
-## How it fits together
+- **Self-declaring** — the first bytes read a signed record of what the OS is, and unfold it.
+- **Self-verifying** — every stage re-derives to its fingerprint, or nothing runs (from byte one).
+- **Serverless** — it runs entirely in the browser, mobile or desktop. Any host is just untrusted capacity.
+- **Portable** — one link carries it, anywhere. No install, no account, no origin it depends on.
 
-Three layers, one idea — **everything is a verifiable object:**
+## Everything is a verifiable object
+
+Three layers, one idea:
 
 | Layer | What it is | Where |
 |-------|-----------|-------|
-| **Resolver** | reads any name as an object, resolves, verifies, renders | this project · served from [`main`](https://github.com/Hologram-Technologies/Q/tree/main) |
-| **Apps** | the surfaces, streamed on demand as objects | [hologram-apps](https://github.com/Hologram-Technologies/hologram-apps) |
+| **Resolver** | reads any name as an object, resolves, verifies, unfolds | this project → [`main`](https://github.com/Hologram-Technologies/Q/tree/main) |
+| **Apps** | surfaces streamed on demand as objects | [hologram-apps](https://github.com/Hologram-Technologies/hologram-apps) |
 | **Engine** | the runtime that resolves and verifies, updated upstream | [holospaces](https://github.com/Hologram-Technologies/holospaces) |
 
-Read more in [`system/`](system/) — the [architecture](system/architecture.md), the [five laws](system/laws.md)
-it holds to, and [how it builds and ships](system/build.md).
+The story in [`system/`](system/): [**genesis**](system/genesis.md) — how a seed becomes an OS ·
+[**architecture**](system/architecture.md) · [**the five laws**](system/laws.md) · [**build**](system/build.md).
 
-<sub>MIT licensed · <a href="https://github.com/Hologram-Technologies/Q/tree/main"><code>main</code></a> is the running resolver.</sub>
+<sub>κ-addressable from the first byte · BLAKE3 · 100% serverless · MIT · the running resolver lives on <a href="https://github.com/Hologram-Technologies/Q/tree/main"><code>main</code></a></sub>
