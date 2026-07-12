@@ -1,7 +1,7 @@
 {
  "app": "player",
  "axis": "blake3",
- "mirror": "https://huggingface.co/HOLOGRAMTECH/holo-messenger-shell/resolve/main/b/",
+ "mirror": "https://hologram-technologies.github.io/hologram-apps/b/",
  "files": {
   "brands/appletvplus.svg": "ee2947d94ad1bfdba5f7d50541fb87adb290fd598ba22367a0efe5045a85e978",
   "brands/crunchyroll.svg": "37a53f9635d37c43c9cff03a30e51d91c058ab0ac6f86d82fe82fb379093bc60",
