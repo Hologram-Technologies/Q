@@ -601,6 +601,24 @@ Atomics.store(this.h,0,r);if(ur)Atomics.add(this.h,2,ur);return true;}}registerP
     // perf witness: emu step cost, worst rAF gap, audio underruns — shown in the status line + __holoPerf
     let stepMsAcc = 0, stepN = 0, rafGapMax = 0, urBase = 0;
     const TARGET_MS = 64;                                     // fixed audio buffer target (≈4 frames)
+    // ── κ-ROLLBACK RUN-AHEAD: erase input latency by living one frame in the future. Each logical frame we
+    //    snapshot the console's κ-state, run it AHEAD, keep the FUTURE frame's picture + sound, then rewind
+    //    to the snapshot — so your button shows up a frame before the game's own code would have drawn it
+    //    (the responsiveness of real hardware, often better). The snapshot IS the same content-addressed
+    //    save-state substrate. Costs (ra+1)× the tiny GB step; ?ra=0 off, ?ra=2 deeper. Auto-off if the
+    //    core can't round-trip its state. ──
+    let runAhead = Math.max(0, Math.min(3, +(q.get("ra") ?? 1)));
+    if (runAhead > 0) { try { const s0 = core.serialize(); core.unserialize(s0); } catch (e) { runAhead = 0; } }
+    let raSnap = null;
+    function step(input) {
+      if (runAhead <= 0) return core.run(input);
+      try {
+        let out = null;
+        for (let fr = 0; fr <= runAhead; fr++) { const r = core.run(input); if (fr === 0) raSnap = core.serialize(); if (fr === runAhead) out = r; }
+        core.unserialize(raSnap);
+        return out;
+      } catch (e) { runAhead = 0; return core.run(input); }
+    }
     function loop() {
       if (!running) return;
       const now = performance.now(); const gap = now - prev; if (gap > rafGapMax) rafGapMax = gap;
@@ -618,7 +636,7 @@ Atomics.store(this.h,0,r);if(ur)Atomics.add(this.h,2,ur);return true;}}registerP
         const target = Math.round(audio.ctx.sampleRate * TARGET_MS / 1000);
         while (audio.fill() < target && ran < 6) {
           const ts = performance.now();
-          const r = core.run(input); if (r.video) video = r.video;
+          const r = step(input); if (r.video) video = r.video;
           if (r.audio && r.audio.length) audio.write(r.audio, audio.coreRate, audio.ctx.sampleRate);
           stepMsAcc += performance.now() - ts; stepN++; ran++; frames++;
         }
@@ -626,7 +644,7 @@ Atomics.store(this.h,0,r);if(ur)Atomics.add(this.h,2,ur);return true;}}registerP
       } else {
         while (acc >= STEP) {
           const ts = performance.now();
-          const r = core.run(input); if (r.video) video = r.video;
+          const r = step(input); if (r.video) video = r.video;
           if (audio && r.audio && r.audio.length) audio.node.port.postMessage(resample(r.audio, audio.coreRate, audio.ctx.sampleRate));
           stepMsAcc += performance.now() - ts; stepN++;
           acc -= STEP; ran++; frames++; if (ran >= 4) { acc = 0; break; }
@@ -639,7 +657,7 @@ Atomics.store(this.h,0,r);if(ur)Atomics.add(this.h,2,ur);return true;}}registerP
         const stepMs = stepN ? (stepMsAcc / stepN) : 0;
         const ur = audio && audio.sab ? audio.underruns() - urBase : 0; if (audio && audio.sab) urBase = audio.underruns();
         const ringMs = audio && audio.sab ? Math.round(audio.fill() * 1000 / audio.ctx.sampleRate) : -1;
-        window.__holoPerf = { fps, stepMs: +stepMs.toFixed(2), rafGapMax: +rafGapMax.toFixed(1), ringMs, underruns: ur, paced: paceByAudio ? "audio" : "raf" };
+        window.__holoPerf = { fps, stepMs: +stepMs.toFixed(2), rafGapMax: +rafGapMax.toFixed(1), ringMs, underruns: ur, paced: paceByAudio ? "audio" : "raf", runAhead };
         setStatus(proj
           ? `WebGPU · ${st.outW}×${st.outH} · ${fps} fps · ${stepMs.toFixed(1)}ms/step${ringMs >= 0 ? ` · buf ${ringMs}ms` : ""}${ur ? ` · ⚠ ${ur} underrun` : ""}`
           : `2D · ${fps} fps · ${stepMs.toFixed(1)}ms/step${ur ? ` · ⚠ ${ur} underrun` : ""}`);
