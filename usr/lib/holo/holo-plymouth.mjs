@@ -834,7 +834,6 @@ function openGallery(overlay, current, onPick, host) {
         <div class="hlp-grid"></div>
       </div>
     </div>
-    <div class="hlp-foot">Animations by <a href="https://github.com/adi1090x/plymouth-themes" target="_blank" rel="noopener">adi1090x</a> · GPL 3.0</div>
   </div>`;
   const sheet = gal.querySelector(".hlp-sheet"), list = gal.querySelector(".hlp-list");
   const modes = gal.querySelector(".hlp-modes");
