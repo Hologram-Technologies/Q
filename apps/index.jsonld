@@ -542,8 +542,21 @@
    "holo:entry": "apps/arcade/index.html"
   },
   {
-   "@id": "did:holo:sha256:49a62d5feefe2c0a8a57c413ea527943b3c7c38b085c56cfa024b98cb8c0c828",
-   "holo:root": "did:holo:sha256:49a62d5feefe2c0a8a57c413ea527943b3c7c38b085c56cfa024b98cb8c0c828",
+   "@id": "did:holo:sha256:66c1ada5ac08a2d4f73851bbe7458ad5fb6e2226c5a131c3829abfe715900fed",
+   "holo:root": "did:holo:sha256:66c1ada5ac08a2d4f73851bbe7458ad5fb6e2226c5a131c3829abfe715900fed",
+   "@type": [
+    "schema:SoftwareApplication",
+    "schema:WebApplication"
+   ],
+   "schema:name": "Hello",
+   "schema:description": "An encoded experience — a folder became one verifiable address, streamed and re-derived before it paints.",
+   "schema:applicationCategory": "UtilitiesApplication",
+   "dcat:landingPage": "apps/hello/index.html",
+   "holo:entry": "index.html"
+  },
+  {
+   "@id": "did:holo:sha256:aedb3599fd5b300f6c67ede2dcd13786ddc587e3753ad1e7fe9692e2c000dab4",
+   "holo:root": "did:holo:sha256:aedb3599fd5b300f6c67ede2dcd13786ddc587e3753ad1e7fe9692e2c000dab4",
    "@type": [
     "schema:SoftwareApplication",
     "schema:WebApplication"
@@ -568,19 +581,6 @@
    "dcat:landingPage": "apps/games/index.html",
    "schema:image": "apps/games/index.html",
    "holo:entry": "apps/games/index.html"
-  },
-  {
-   "@id": "did:holo:sha256:66c1ada5ac08a2d4f73851bbe7458ad5fb6e2226c5a131c3829abfe715900fed",
-   "holo:root": "did:holo:sha256:66c1ada5ac08a2d4f73851bbe7458ad5fb6e2226c5a131c3829abfe715900fed",
-   "@type": [
-    "schema:SoftwareApplication",
-    "schema:WebApplication"
-   ],
-   "schema:name": "Hello",
-   "schema:description": "An encoded experience — a folder became one verifiable address, streamed and re-derived before it paints.",
-   "schema:applicationCategory": "UtilitiesApplication",
-   "dcat:landingPage": "apps/hello/index.html",
-   "holo:entry": "index.html"
   }
  ]
 }

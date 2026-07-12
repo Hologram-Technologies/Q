@@ -114,16 +114,21 @@ export class HoloProject {
     this.w = 0; this.h = 0; this.cols = 0; this.rows = 0; this.tileHash = null; this.scale = 1;
     this.stats = { frames: 0, dirtyTiles: 0, totalTiles: 0, dedupPct: 0, fps: 0, outW: 0, outH: 0, profile };
     this._last = 0;
+    this.onLost = null; this.lost = false;   // device-loss recovery hook (GPU reset / long background)
   }
 
   async init() {
     if (!navigator.gpu) throw new Error("WebGPU unavailable");
+    // ALWAYS the device's best GPU: high-performance first (discrete), then any, then the software fallback.
     let adapter = await navigator.gpu.requestAdapter({ powerPreference: "high-performance" });
     if (!adapter) adapter = await navigator.gpu.requestAdapter();
     if (!adapter) adapter = await navigator.gpu.requestAdapter({ forceFallbackAdapter: true });
     if (!adapter) throw new Error("WebGPU: no adapter");
     this.maxDim = Math.min(this.maxDim, adapter.limits.maxTextureDimension2D);
     this.device = await adapter.requestDevice();
+    // a lost device (GPU reset, driver hiccup, long background) would freeze the picture — signal for re-init.
+    this.lost = false;
+    this.device.lost.then((info) => { this.lost = true; if (info.reason !== "destroyed" && this.onLost) try { this.onLost(info); } catch (e) {} });
     this.ctx = this.canvas.getContext("webgpu");
     this.format = navigator.gpu.getPreferredCanvasFormat();
     this.ctx.configure({ device: this.device, format: this.format, alphaMode: "opaque" });

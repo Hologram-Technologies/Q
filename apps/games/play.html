@@ -581,6 +581,15 @@ Atomics.store(this.h,0,r);if(ur)Atomics.add(this.h,2,ur);return true;}}registerP
       proj.resizeToDisplay();
       projector = proj;                                          // the immersive transition re-fits this once it settles
       addEventListener("resize", refit); try { new ResizeObserver(refit).observe(cv); } catch (e) {}
+      // WebGPU device-loss recovery — if the GPU resets (or the tab was backgrounded long), rebuild the
+      // projector so the picture NEVER freezes. The device's best GPU is always re-acquired.
+      proj.onLost = async () => {
+        try { const np = await new HoloProject(cv, { profile: "pixelart", sharpen: 0, display: displayFx }).init();
+          np.setSource(g.width, g.height); np.resizeToDisplay(); np.onLost = proj.onLost; projector = np; proj = np; } catch (x) {}
+      };
+      // once layout settles, re-fit to the TRUE device resolution (full devicePixelRatio) — max sharpness,
+      // never stuck at the pre-layout fallback size.
+      requestAnimationFrame(() => setTimeout(refit, 60));
     } catch (e) {
       cv.width = g.width; cv.height = g.height; cv.style.imageRendering = "pixelated";
       cx = cv.getContext("2d"); img = cx.createImageData(g.width, g.height);
