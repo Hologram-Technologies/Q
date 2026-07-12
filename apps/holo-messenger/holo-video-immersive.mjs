@@ -7,6 +7,15 @@
 // immersive until you reach for it. It drives the cross-origin iframe purely over the YouTube postMessage
 // protocol (enablejsapi=1), so there is no extra script and nothing to load; COEP-safe.
 //
+// Two things YouTube does NOT let a URL param settle, so we settle them over the API instead:
+//   • Captions. cc_load_policy=0 only means "don't force them on" — a viewer's account default (or a track
+//     that loads mid-play) can still paint a caption band over the picture. We unloadModule('captions') on
+//     ready and re-assert it whenever a new track could appear, so the surface stays a bare moving image.
+//   • The preview's pre-roll. The link-card preview mounts on HOVER — no user gesture — so an UNMUTED
+//     autoplay is blocked by the browser, and YouTube falls back to its own full-chrome poster (title bar,
+//     big ▶, control bar, logo). We mute + playVideo the preview over the API: a muted autoplay is always
+//     allowed, so it plays chromeless from the first frame. (The click-opened viewer keeps its sound.)
+//
 // Additive + fail-soft: if no video embed is ever present it does nothing; if the postMessage time feed never
 // answers, play/pause + fullscreen + drag-to-seek still work (only the live progress readout degrades).
 (function () {
@@ -90,12 +99,29 @@
     host.__hviIframe = iframe;
     host.__hviCmd = cmd;
 
+    // Keep the picture bare: drop YouTube's caption renderer (a URL param can't guarantee this), and — for the
+    // hover PREVIEW, which mounts without a user gesture — mute + kick playback so a muted autoplay carries it
+    // past YouTube's own full-chrome pre-roll poster. The click-opened viewer is left audible on purpose.
+    const isPreview = iframe.classList.contains("holo-lc-embed");
+    host.__hviClean = () => {
+      cmd("unloadModule", ["captions"]);
+      cmd("unloadModule", ["cc"]);
+      try { cmd("setOption", ["captions", "track", {}]); } catch (e) {}
+      if (isPreview) { cmd("mute"); cmd("playVideo"); }
+    };
+
     // handshake: ask YouTube to stream infoDelivery back to us; retry until it answers or the iframe goes away
     let got = false, tries = 0;
     const ping = () => { try { iframe.contentWindow.postMessage(JSON.stringify({ event: "listening", id: iframe.id || "hvi", channel: "widget" }), "*"); } catch (e) {} };
     const iv = setInterval(() => { if (got || tries++ > 40 || !iframe.isConnected) { clearInterval(iv); return; } ping(); }, 250);
     host.__hviGot = () => { got = true; };
     ping();
+
+    // The caption module + any default track can load a beat AFTER the player is ready, so re-assert the clean
+    // surface a handful of times over the first few seconds rather than once. Fail-soft; stops with the iframe.
+    let cleans = 0;
+    const cv = setInterval(() => { if (cleans++ > 12 || !iframe.isConnected) { clearInterval(cv); return; } host.__hviClean(); }, 400);
+    host.__hviClean();
   }
 
   // ── ONE message listener — route YouTube's infoDelivery to the matching host ────────────────────────
@@ -117,6 +143,7 @@
         st.playing = playing;
         els.play.innerHTML = playing ? ICON.pause : ICON.play;
         host.classList.toggle("hvi-paused", info.playerState === 2);        // only PAUSED pins the bar open
+        if (playing && host.__hviClean) host.__hviClean();                  // a fresh track can re-arm captions
       }
       if (!st.dragging) {
         els.time.textContent = fmt(st.cur) + " / " + fmt(st.dur);
