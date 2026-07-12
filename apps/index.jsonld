@@ -555,8 +555,8 @@
    "holo:entry": "index.html"
   },
   {
-   "@id": "did:holo:sha256:070410a9bf19b91c95049c567b2fbbbd4bb8020f416bf32a61f41666b551f562",
-   "holo:root": "did:holo:sha256:070410a9bf19b91c95049c567b2fbbbd4bb8020f416bf32a61f41666b551f562",
+   "@id": "did:holo:sha256:d3c83e4dc5e0dc9373177e1b594e33b1ff796aa9cd734bce34d2bd0aaf8f8a87",
+   "holo:root": "did:holo:sha256:d3c83e4dc5e0dc9373177e1b594e33b1ff796aa9cd734bce34d2bd0aaf8f8a87",
    "@type": [
     "schema:SoftwareApplication",
     "schema:WebApplication"

@@ -452,6 +452,18 @@
   let core = null, romId = "", lastSaveKappa = "";
   const saveKey = (slot) => `holo-gbsave:${romId}:${slot}`;
   const opfsDir = async () => { try { return await navigator.storage.getDirectory(); } catch { return null; } };
+  // ── auto-RESUME: your progress survives, like a cartridge's battery. Every 15s + whenever you leave, we
+  //    snapshot the full κ-state (which INCLUDES the game's own SRAM/battery save) to a "resume" slot. On
+  //    the next open, a gentle Continue picks up exactly where you left off; ignore it for a fresh start. ──
+  async function persistResume() {
+    if (!core || !running) return;
+    try { const st = core.serialize(); await saveWrite("resume", st, { ts: Date.now() }); } catch (e) {}
+  }
+  // pick up exactly where you left off — auto-load the resume snapshot (skipped with ?fresh=1 for a clean start)
+  async function offerResume() {
+    if (q.get("fresh") === "1") return;
+    try { const rec = await saveRead("resume"); if (rec && rec.bytes && rec.bytes.length) { core.unserialize(rec.bytes); setTimeout(() => toast("▸ resumed where you left off"), 400); } } catch (e) {}
+  }
   async function saveWrite(slot, bytes, meta) {
     const d = await opfsDir();
     if (d) try {
@@ -596,6 +608,10 @@ Atomics.store(this.h,0,r);if(ur)Atomics.add(this.h,2,ur);return true;}}registerP
     }
     await initAudio(core.sampleRate);
     running = true; keepAwake(true);
+    // auto-save your progress — every 15s + whenever you leave — so nothing is ever lost
+    setInterval(() => { if (running) persistResume(); }, 15000);
+    addEventListener("visibilitychange", () => { if (document.hidden) persistResume(); });
+    addEventListener("pagehide", () => persistResume());
     const HZ = core.fps || 60, STEP = 1000 / HZ;
     let frames = 0, t0 = performance.now(), st = null, acc = 0, prev = performance.now(), lastVideo = null;
     // perf witness: emu step cost, worst rAF gap, audio underruns — shown in the status line + __holoPerf
@@ -678,6 +694,7 @@ Atomics.store(this.h,0,r);if(ur)Atomics.add(this.h,2,ur);return true;}}registerP
       requestAnimationFrame(loop);
     }
     setStatus("ready"); wakeChrome(); requestAnimationFrame(loop);
+    if (!warm) offerResume();   // gently offer to pick up where you left off (skipped for hidden warm-boots)
     window.__holoPlay = {
       get frame(){ return core.frame; }, get stats(){ return st; }, projected: !!proj,
       save: saveState, load: loadState, serKappa: async () => sha(core.serialize().buffer.slice(0), "SHA-256"),
@@ -686,6 +703,8 @@ Atomics.store(this.h,0,r);if(ur)Atomics.add(this.h,2,ur);return true;}}registerP
       resume: () => { if (!running) { running = true; prev = performance.now(); acc = 0; requestAnimationFrame(loop); } },
       step: (n) => { for (let i = 0; i < (n||1); i++) core.run(0); },
       frameKappa: async () => sha(core.run(0).video.buffer.slice(0), "SHA-256"),
+      resumeSave: () => persistResume(),
+      resumeInfo: async () => { try { const r = await saveRead("resume"); return r && r.bytes ? r.bytes.length : 0; } catch (e) { return "err"; } },
     };
     // warm boot: wait for the FIRST non-black frame (SNES/GBA boot black ~1-2s) before pausing, so the preview
     // shows real content not a black screen; cap at 3s so it never hangs. Play arriving first skips the pause.
