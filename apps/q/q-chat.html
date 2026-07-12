@@ -169,14 +169,20 @@ let _ledgerEl = null;
 function record(row) { _ledger.push(row); if (STATS) renderLedger(); perfPill(row); }
 // subtle always-on speed readout (header, right): last real turn's tok/s + time-to-first-token.
 // Quiet by design — tiny, dimmed, fades in after the first measured turn; seed/demo turns don't show.
+// the model name Q is actually running on: embedded → the DRAWER's brain (via the parent), else this frame's model.
+function _perfModel() {
+  try { const h = _embedded && window.parent.HoloQ; const inf = h && h.info && h.info(); const n = inf && (inf.name || inf.model); if (n) return String(n).split("·")[0].trim(); } catch (e) {}
+  if (_embedded) return "BitNet-2B";
+  return (params.get("kappa") ? params.get("kappa").replace(/\/+$/, "").split("/").pop() : ((m && m.name) || "").split("·")[0].trim());
+}
 function perfPill(row) {
-  if (!row || !(row.tokps > 0 || row.ttft > 0) || row.seed) return;
   const el = document.getElementById("perf"); if (!el) return;
-  // model label: ?kappa override → the κ-object dir name (the truth of what's running); else the
-  // catalog name's first segment ("BitNet-2B-4T · ternary" → "BitNet-2B-4T"). Concise + honest.
-  const label = (params.get("kappa") ? params.get("kappa").replace(/\/+$/, "").split("/").pop() : ((m && m.name) || "").split("·")[0].trim());
-  const t = row.ttft > 0 ? (row.ttft < 1000 ? Math.round(row.ttft) + "ms" : (row.ttft / 1000).toFixed(1) + "s") : null;
-  el.textContent = (label ? label + " · " : "") + (row.tokps > 0 ? Math.round(row.tokps) + " tok/s" : "") + (row.tokps > 0 && t ? " · " : "") + (t ? t + " TTFT" : "");
+  const label = (row && row.model) || _perfModel();
+  const t = (row && row.ttft > 0) ? (row.ttft < 1000 ? Math.round(row.ttft) + "ms" : (row.ttft / 1000).toFixed(1) + "s") : null;
+  const tps = (row && row.tokps > 0) ? Math.round(row.tokps) + " tok/s" : "";
+  const parts = [label, tps, t ? t + " TTFT" : ""].filter(Boolean);
+  if (!parts.length) return;
+  el.textContent = parts.join(" · ");   // subtle header readout: <model> · <tok/s> · <TTFT>
   el.classList.add("on");
 }
 function renderLedger() {
@@ -465,20 +471,22 @@ async function generate(text, skipUser) {
       if (_parentReady()) {
         let g = ""; try { g = (await reply.groundedContext(text)) || ""; } catch (e) {}
         const prompt = (g ? g + "\n\n" : "") + text; const hq = window.parent.HoloQ;
+        const _t0 = _perf(); let _tFirst = 0, _last = "";
         try {
           if (hq.generateStream) {
-            // REAL-TIME: stream the drawer brain's tokens into a live bubble as it thinks
+            // REAL-TIME: stream the drawer brain's tokens into a live bubble as it thinks (+ measure tok/s honestly)
             let live = null, liveTxt = null;
-            out = await hq.generateStream(prompt, (full) => { if (!full) return; if (!live) { try { think.parentNode && think.parentNode.remove(); } catch (e) {} live = bubble("a", ""); liveTxt = document.createTextNode(""); live.insertBefore(liveTxt, live.firstChild); _streamed = true; } liveTxt.nodeValue = full; log.scrollTop = log.scrollHeight; });
+            out = await hq.generateStream(prompt, (full) => { if (!full) return; if (!_tFirst) _tFirst = _perf(); _last = full; if (!live) { try { think.parentNode && think.parentNode.remove(); } catch (e) {} live = bubble("a", ""); liveTxt = document.createTextNode(""); live.insertBefore(liveTxt, live.firstChild); _streamed = true; } liveTxt.nodeValue = full; log.scrollTop = log.scrollHeight; });
             if (live) { const r = live.closest(".row"); if (r) r.remove(); }
             out = String(out || "").trim();
           } else { out = String((await hq.generate(prompt)) || "").trim(); }
         } catch (e) { out = ""; }
-        record({ ack: ackMs, warm: true, cold: false, ttft: 0, tokps: 0 });
+        const _gen = _tFirst ? (_perf() - _tFirst) : 0, _toks = Math.max(1, Math.round(((_last || out).length) / 4)), _tps = _gen > 60 ? (_toks / (_gen / 1000)) : 0;
+        record({ ack: ackMs, warm: true, cold: false, ttft: _tFirst ? Math.round(_tFirst - _t0) : 0, tokps: _tps, model: _perfModel() });
       }
-      if (!out) { await sleep(90); out = ((seedLookup && seedLookup(text)) || demoReply(text)); record({ ack: ackMs, cold: true, warm: false, ttft: 0, tokps: 0, seed: true }); }
+      if (!out) { await sleep(90); out = ((seedLookup && seedLookup(text)) || demoReply(text)); record({ ack: ackMs, cold: true, warm: false, ttft: 0, tokps: 0, seed: true, model: "on-device" }); }
     }
-    else if (DEMO || _liteMode) { await sleep(_liteMode ? 90 : (560 + Math.random() * 420)); out = ((seedLookup && seedLookup(text)) || demoReply(text)); record({ ack: ackMs, cold: false, warm: false, ttft: 0, tokps: 0, seed: !!_liteMode }); }   // serverless brain: instant seed (real canonical) → on-device canned reasoning; ack is a real UI-latency measurement
+    else if (DEMO || _liteMode) { await sleep(_liteMode ? 90 : (560 + Math.random() * 420)); out = ((seedLookup && seedLookup(text)) || demoReply(text)); record({ ack: ackMs, cold: false, warm: false, ttft: 0, tokps: 0, seed: !!_liteMode, model: "on-device" }); }   // serverless brain: instant seed (real canonical) → on-device canned reasoning; ack is a real UI-latency measurement
     else {
       if (primingPromise) { setStatus("loading", "settling in…"); try { await primingPromise; } catch {} typing(true); }   // wait out any background persona-prime, then reuse it
       const firstTurn = convIds.length === 0;
@@ -547,7 +555,7 @@ function onSend() {
     if (hit) {                                       // pre-sealed canonical answer — instant, real, honest
       seedTurns++;
       if (!window.__ttfw.seedMs) window.__ttfw.seedMs = Math.round(performance.now() - window.__ttfw.t0);
-      record({ ack: 0, cold: true, warm: false, ttft: 0, tokps: 0, seed: true });
+      record({ ack: 0, cold: true, warm: false, ttft: 0, tokps: 0, seed: true, model: "on-device" });
       bubble("a", hit); remember("a", hit); speak(hit);
       return;
     }
@@ -693,6 +701,19 @@ const INSTANT_HELLO = "Hey, I'm Q. I live right here on your device, so whatever
 const WELCOME_BACK = "Welcome back. I'm right here — what's on your mind?";
 if (!DEMO && !had && !params.get("q")) { bubble("a", INSTANT_HELLO); remember("a", INSTANT_HELLO); renderChips(); scheduleIdle(); greeted = true; armGreeting(INSTANT_HELLO); window.__ttfw.helloMs = Math.round(performance.now() - window.__ttfw.t0); }
 else { armGreeting(had ? WELCOME_BACK : INSTANT_HELLO); }   // returning / ?q / demo → still GREET ALOUD on first gesture (spoken only, no extra bubble)
+// RETURNING = PERSONAL (HOLO-Q-INSTANT-REAL): pull the name from the SHARED realm and greet BY NAME, instantly,
+// before any brain warms — "Welcome back, <name>." Async (memory hydrates in <1s); re-arms the spoken greeting and
+// drops ONE warm, ephemeral continuity line. Silent fallback to the generic welcome if there's no name yet.
+if (had && !DEMO) { (async () => { try {
+  let M = window.HoloMemory; for (let i = 0; i < 25 && !M; i++) { await new Promise((r) => setTimeout(r, 200)); M = window.HoloMemory; }   // wait for the realm to bind (it hydrates async at boot)
+  if (!M) return; if (M.ready) await M.ready();
+  const rows = M.recent ? M.recent({ kind: "profile", n: 20 }) : [];
+  const nm = (rows.map((r) => r["holmem:text"]).find((t) => /name is/i.test(String(t))) || "");
+  const name = nm ? String(nm).replace(/.*name is\s+/i, "").trim().split(/\s+/)[0] : "";
+  if (!name || _greetDone) return;
+  const g = "Welcome back, " + name + ". I'm right here — what have you been thinking about?";
+  armGreeting(g); bubble("a", g); log.scrollTop = log.scrollHeight;   // spoken by name on first gesture + one fresh continuity bubble (not persisted)
+} catch (e) {} })(); }
 if (DEMO) { armed = true; setStatus("online"); if (!had) greet(); else renderChips(); }
 else if (_embedded) (async () => {
   // ONE BRAIN + instant boot: embedded in the drawer → do NOT load a 2nd engine. The parent's brain answers (and
