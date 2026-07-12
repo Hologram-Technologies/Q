@@ -13,12 +13,16 @@ It runs entirely in your browser — no server, no account, nothing to install.
 
 ---
 
-Q addresses things by what they **are**, not where they live. When you open something, Q fetches it
-from wherever it can and checks it against its own fingerprint before showing you a single pixel.
-If the bytes don't match, nothing loads — so Q never depends on any one server being online, or honest.
+Q identifies everything by what it **is**, not where it lives. When you open something, Q streams it
+from wherever it can, checks it against its own fingerprint, and shows it only if the bytes match.
+Nothing loads unverified — so Q never has to trust any single server to be online, or honest.
 
-- **Open anything** — a name, a file, or a link resolves in place.
+- **Open anything** — a name, a file, or a link resolves in place, in real time.
+- **Every app streams in** — nothing is installed; each app arrives on demand and runs in its own isolated space.
 - **Share without a host** — any file becomes a self-contained link that arrives, verified, on any device.
-- **Verify everything** — every byte is checked before it is shown.
+- **Always current** — the engine lives upstream; every improvement reaches every experience the moment it ships, with nothing to update.
 
-<sub>Served from the <a href="https://github.com/Hologram-Technologies/Q/tree/main"><code>main</code></a> branch · apps stream from <a href="https://github.com/Hologram-Technologies/hologram-apps">hologram-apps</a> · MIT licensed</sub>
+<sub>Three layers, one idea — everything is a verifiable object:
+the resolver on <a href="https://github.com/Hologram-Technologies/Q/tree/main"><code>main</code></a> ·
+apps from <a href="https://github.com/Hologram-Technologies/hologram-apps">hologram-apps</a> ·
+the engine from <a href="https://github.com/Hologram-Technologies/holospaces">holospaces</a>. MIT licensed.</sub>
