@@ -297,6 +297,18 @@ const CSS = `
 #holo-login .hlp,#holo-login .hlp-sheet,#holo-login .hlp-scrim{-webkit-font-smoothing:antialiased}
 @media (max-width:560px){#holo-login .hlp-sheet{width:96vw;border-radius:16px}#holo-login .hlp-modes,#holo-login .hlp-list{margin-left:16px;margin-right:16px}}
 /* CLAUDE-DESK ⤴ */
+/* CLAUDE-READ ⤵ — Claude-premium panel content: softer segmented, calmer rows, muted footer link (appended) */
+#holo-login .hlp-modes{padding:5px;gap:5px;background:var(--field-bg,rgba(255,255,255,.05));border-color:var(--glass-border,rgba(255,255,255,.08))}
+#holo-login .hlp-modes button{font-weight:500;letter-spacing:-.005em;min-height:42px}
+#holo-login .hlp-modes button.on{background:#f5f5f2;color:#1a1a18;font-weight:600;box-shadow:0 1px 3px rgba(0,0,0,.22)}
+#holo-login .hlp-row{gap:14px;min-height:54px}
+#holo-login .hlp-row .val{color:var(--muted,#8b949e);font-weight:450}
+#holo-login .hlp-row .ic,#holo-login .hlp-row .chev{color:var(--muted,#8b949e)}
+#holo-login .hlp-list{border-color:var(--glass-border,rgba(255,255,255,.08))}
+#holo-login .hlp-thumb{border-radius:9px}
+#holo-login .hlp-foot{color:var(--muted,#8b949e);font-size:13px}
+#holo-login .hlp-foot a{color:var(--ink-dim,rgba(231,237,250,.7));text-decoration:underline;text-decoration-color:rgba(255,255,255,.2);text-underline-offset:2px}
+/* CLAUDE-READ ⤴ */
 `;
 function injectCss() {
   try { if (document.getElementById("holo-plymouth-css")) return; const s = document.createElement("style"); s.id = "holo-plymouth-css"; s.textContent = CSS; document.head.appendChild(s); } catch {}

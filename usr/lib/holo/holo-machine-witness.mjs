@@ -52,6 +52,21 @@ const CSS = `
 .hmw-caption.on{opacity:1}
 @media (max-width:560px){.hmw-specs{grid-template-columns:1fr}.hmw-canvas{height:140px}}
 @media (prefers-reduced-motion:reduce){.hmw{opacity:1;transform:none;transition:none}.hmw-caption{transition:none}}
+/* CLAUDE-READ ⤵ — Claude-premium stat card: softer tiles, calmer weights, serif head, tile hover (appended) */
+.hmw{border-radius:16px;padding:clamp(20px,2.8vw,32px);-webkit-font-smoothing:antialiased}
+.hmw-label{letter-spacing:.22em;margin-bottom:10px}
+.hmw-head{font-family:"Constantia","Iowan Old Style","Palatino Linotype",Georgia,serif;font-weight:600;letter-spacing:-.005em;font-size:clamp(22px,1.9vw,32px);margin-bottom:22px}
+.hmw-specs{gap:12px;margin-bottom:12px}
+.hmw-spec{border-radius:12px;padding:15px 16px;background:rgba(255,255,255,.022);transition:border-color .15s,background .15s}
+.hmw-spec:hover{border-color:var(--glass-border,rgba(255,255,255,.16));background:rgba(255,255,255,.04)}
+.hmw-spec .r{font-size:10px;letter-spacing:.15em}
+.hmw-spec .r svg{width:14px;height:14px}
+.hmw-spec .v{margin-top:9px;font-weight:600;letter-spacing:-.01em}
+.hmw-spec .s{font-size:12.5px;margin-top:2px}
+.hmw-live{border-radius:12px;padding:16px 18px 14px}
+.hmw-val b{font-weight:600;letter-spacing:-.015em}
+.hmw-chip{border-radius:999px;font-size:11px;padding:3px 10px}
+/* CLAUDE-READ ⤴ */
 `;
 
 function injectCss(doc) {

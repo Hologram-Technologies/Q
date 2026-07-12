@@ -133,6 +133,17 @@ const CSS = `
 #holo-login .hl-manifesto:hover{background:var(--field-bg,rgba(255,255,255,.08));color:var(--ink,#fff)}
 #holo-login .hlm-scrim,#holo-login .hlm-doc{-webkit-font-smoothing:antialiased}
 /* CLAUDE-DESK ⤴ */
+/* CLAUDE-READ ⤵ — editorial premium: serif display moments + calmer sans body, generous rhythm (appended) */
+#holo-login .hlm-doc{font-size:clamp(17px,1.15vw,19px)}
+#holo-login .hlm-doc h1{font-family:"Constantia","Iowan Old Style","Palatino Linotype",Georgia,"Times New Roman",serif;font-weight:600;letter-spacing:-.005em;font-size:clamp(34px,3.6vw,54px);line-height:1.08;margin-bottom:clamp(34px,5.5vh,58px)}
+#holo-login .hlm-doc h2{font-weight:600;font-size:1.16em;letter-spacing:0;margin-top:clamp(40px,6vh,58px)}
+#holo-login .hlm-doc p{line-height:1.78;color:var(--ink-dim,rgba(231,237,250,.82))}
+#holo-login .hlm-doc a{text-decoration-color:rgba(160,180,210,.35);text-underline-offset:4px}
+#holo-login .hlm-close{font-family:"Constantia","Iowan Old Style","Palatino Linotype",Georgia,serif;font-weight:600;letter-spacing:-.005em;font-size:clamp(28px,3.3vw,44px);margin-top:clamp(56px,9vh,88px)}
+#holo-login .hlm-top .w{font-weight:600;letter-spacing:.24em}
+#holo-login .hlm-note{color:var(--muted,#8b949e);font-size:13px;line-height:1.65}
+@media (max-width:560px){#holo-login .hlm-doc h1{font-size:32px}#holo-login .hlm-close{font-size:26px}}
+/* CLAUDE-READ ⤴ */
 `;
 
 function injectCss() { try { const old = document.getElementById("holo-manifesto-css"); if (old) old.remove(); const s = document.createElement("style"); s.id = "holo-manifesto-css"; s.textContent = CSS; document.head.appendChild(s); } catch {} }
