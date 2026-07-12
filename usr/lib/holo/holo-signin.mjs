@@ -37,7 +37,7 @@ const I = {
 // Touch devices get the slide-to-enter; fine-pointer (desktop) keeps the tap key. Resolved once.
 const COARSE = (() => { try { return matchMedia("(pointer:coarse)").matches; } catch { return false; } })();
 const beamHtml = () => `<svg class="hl-beam" preserveAspectRatio="none"><rect x="1" y="1" rx="11" ry="11" pathLength="100"></rect></svg>`;
-const enclaveHtml = () => { let n = "this device"; try { n = teeName() || n; } catch {} return `<div class="hl-enclave">${I.lock}<span>Secured by ${esc(n)} · this device</span></div>`; };
+const enclaveHtml = () => { let n = "this device"; try { n = teeName() || n; } catch {} return `<div class="hl-enclave">${I.lock}<span>Secured by ${esc(n)}</span></div>`; };
 const slideHtml = (label) => `<div class="hl-slide" id="hl-slide" role="button" tabindex="0" aria-label="Slide to sign in as ${esc(label)}"><div class="hl-fill"></div><div class="hl-track-lbl"><span>Slide to enter</span></div><div class="hl-knob">${I.arrow}</div></div>`;
 // size the beam SVG rect to the key's exact px so the mint comet rides an even rim on a wide button.
 function sizeBeam(panel) {
@@ -134,7 +134,7 @@ function prewarm(warmPaint) {
 // creates its own overlay (i.e. the host page did NOT pre-place + style #holo-login). A host that provides
 // #holo-login (the messenger's app.html) owns its own look and this is a no-op — never overrides it.
 const HL_CSS = `#holo-login{position:fixed;inset:0;z-index:2147483000;color:var(--ink);font-family:"Segoe UI",system-ui,-apple-system,sans-serif;
-  --u:clamp(16px,1.7vmin,19px);--g1:calc(var(--u)*1.618);--g2:calc(var(--u)*2.618);--avatar:clamp(96px,calc(var(--u)*6.854),128px);--field:min(86vw,calc(var(--avatar)*2.618));--accent:#7defc9;--accent-2:#34d3a6;
+  --u:clamp(17px,1.8vmin,20px);--g1:calc(var(--u)*1.618);--g2:calc(var(--u)*2.618);--avatar:clamp(96px,calc(var(--u)*6.854),128px);--field:min(86vw,calc(var(--avatar)*2.618));--accent:#7defc9;--accent-2:#34d3a6;
   --ink:#f4f7fc;--ink-dim:rgba(231,237,250,.82);--status:#c4f3e2;--shadow:0 2px 18px rgba(0,0,0,.45);--wall:var(--boot-ground,#1f1f1e);
   --glass:rgba(10,14,20,.42);--glass-border:rgba(255,255,255,.14);--glass-ink:rgba(231,237,250,.8);
   --sheet:rgba(8,12,18,.94);--muted:#8b949e;--link:#58a6ff;--field-bg:rgba(255,255,255,.09);--field-border:rgba(255,255,255,.22)}
@@ -163,8 +163,8 @@ const HL_CSS = `#holo-login{position:fixed;inset:0;z-index:2147483000;color:var(
 #holo-login .hl-bio:disabled .hl-beam{opacity:1}
 #holo-login .hl-bio:disabled .hl-beam rect{animation:hl-beam 1.3s linear infinite}
 @keyframes hl-beam{from{stroke-dashoffset:100}to{stroke-dashoffset:0}}
-#holo-login .hl-enclave{margin-top:calc(var(--u)*-.5);display:flex;align-items:center;justify-content:center;gap:calc(var(--u)*.35);font-size:calc(var(--u)*.72);color:var(--ink-dim);opacity:.72;text-shadow:var(--shadow)}
-#holo-login .hl-enclave svg{width:calc(var(--u)*.82);height:calc(var(--u)*.82);color:var(--accent);opacity:.9;flex:0 0 auto}
+#holo-login .hl-enclave{margin-top:calc(var(--u)*-.35);display:flex;align-items:center;justify-content:center;gap:calc(var(--u)*.42);font-size:var(--u);font-weight:450;color:var(--ink-dim);opacity:.66;text-shadow:var(--shadow)}
+#holo-login .hl-enclave svg{width:1em;height:1em;color:var(--accent);opacity:.9;flex:0 0 auto}
 #holo-login .hl-slide{position:relative;width:100%;min-height:max(var(--g2),56px);border-radius:12px;user-select:none;touch-action:none;overflow:hidden;background:linear-gradient(180deg,rgba(28,30,28,.94),rgba(12,13,12,.96));border:1px solid rgba(255,255,255,.16);box-shadow:inset 0 1px 3px rgba(0,0,0,.6)}
 #holo-login .hl-slide .hl-fill{position:absolute;top:0;bottom:0;left:0;width:0;border-radius:12px;background:linear-gradient(90deg,rgba(52,211,166,.34),rgba(52,211,166,.03))}
 #holo-login .hl-slide .hl-track-lbl{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;gap:calc(var(--u)*.45);pointer-events:none;color:var(--ink-dim);font-size:var(--u);font-weight:500;letter-spacing:.01em;text-shadow:var(--shadow)}
