@@ -396,7 +396,11 @@ function prettyStatus(s) {
 }
 
 // ── memory: persist + restore the visible conversation so Q feels continuous across reloads ──
-function remember(side, text) { try { const h = JSON.parse(localStorage.getItem(HKEY) || "[]"); h.push({ side, text, ts: Date.now() }); localStorage.setItem(HKEY, JSON.stringify(h.slice(-60))); } catch {} }
+// ONE Q THREAD (HOLO-Q-ONE-CONVERSATION): when embedded in the drawer, mirror each turn into the messenger's shared
+// c.isQ thread (via parent.HoloQThread) — so anything said in the drawer appears in the messenger Q chat and the two
+// stay ONE conversation. Read/write only, injection-immune (it stores what was shown; it never triggers a reply).
+function _shareTurn(side, text) { if (!_embedded) return; try { const T = window.parent.HoloQThread; if (T && T.append) T.append({ role: side === "u" ? "user" : "assistant", text: String(text || "") }); } catch (e) {} }
+function remember(side, text) { try { const h = JSON.parse(localStorage.getItem(HKEY) || "[]"); h.push({ side, text, ts: Date.now() }); localStorage.setItem(HKEY, JSON.stringify(h.slice(-60))); } catch {} _shareTurn(side, text); }
 // FRESH CONVERSATION EVERY OPEN: Q always opens on a clean greeting — never replay old history. Clear the stored
 // transcript so each open is a new conversation. (Q's real MEMORY still lives in the encrypted realm; only the
 // visible chat resets.)
@@ -698,7 +702,7 @@ const WELCOME_BACK = "Welcome back. I'm right here — what's on your mind?";
 // FRESH GREETING EVERY OPEN: Q opens on ONE clean greeting bubble, shown instantly. If the shared realm knows your
 // name, this SAME bubble is personalized to "Welcome back, <name>" (async, in place — never a second line).
 let _greetBubble = null;
-if (!DEMO && !params.get("q")) { _greetBubble = bubble("a", INSTANT_HELLO); renderChips(); scheduleIdle(); greeted = true; armGreeting(INSTANT_HELLO); window.__ttfw.helloMs = Math.round(performance.now() - window.__ttfw.t0); }
+if (!DEMO && !params.get("q") && !_embedded) { _greetBubble = bubble("a", INSTANT_HELLO); renderChips(); scheduleIdle(); greeted = true; armGreeting(INSTANT_HELLO); window.__ttfw.helloMs = Math.round(performance.now() - window.__ttfw.t0); }   // embedded → the drawer renders the SHARED c.isQ thread (or an instant hello if empty) in its own boot block below
 else { armGreeting(INSTANT_HELLO); }
 if (!DEMO) { (async () => { try {
   let M = window.HoloMemory; for (let i = 0; i < 25 && !M; i++) { await new Promise((r) => setTimeout(r, 200)); M = window.HoloMemory; }   // wait for the realm to bind (hydrates async)
@@ -716,8 +720,19 @@ else if (_embedded) (async () => {
   // ONE BRAIN + instant boot: embedded in the drawer → do NOT load a 2nd engine. The parent's brain answers (and
   // generate() auto-upgrades to it the moment it's warm); the instant seed keeps us responsive meanwhile. 0 model load.
   armed = true; setStatus("online", "on your device");
+  // ONE Q THREAD: the drawer shows the SAME conversation as the messenger Q chat. Render the shared c.isQ history
+  // (via parent.HoloQThread — buildQ binds it async, so wait briefly, fail-soft) so switching between the drawer and
+  // the messenger is seamless. Only when there's no shared thread yet do we open on a fresh instant greeting.
+  let _shared = false;
+  try {
+    let T = window.parent.HoloQThread;
+    for (let i = 0; i < 8 && !(T && T.history); i++) { await sleep(120); T = window.parent.HoloQThread; }
+    const hist = (T && T.history) ? (T.history(40) || []) : [];
+    if (hist.length) { for (const turn of hist) { bubble(turn.role === "assistant" ? "a" : "u", turn.text, { ts: turn.at ? Date.parse(turn.at) : undefined }); } greeted = true; _shared = true; try { log.scrollTop = log.scrollHeight; } catch (e) {} }
+  } catch (e) {}
+  if (!_shared && !greeted) { _greetBubble = bubble("a", INSTANT_HELLO); greeted = true; armGreeting(INSTANT_HELLO); scheduleIdle(); }   // fresh / bridge-absent → instant hello
+  try { renderChips(); } catch (x) {}
   if (pendingQ.length) { const q = pendingQ.slice(); pendingQ = []; for (const pq of q) { try { await generate(pq, true); } catch (x) {} } }
-  else if (!greeted) { try { renderChips(); } catch (x) {} }
 })();
 else (async () => {
   try {
