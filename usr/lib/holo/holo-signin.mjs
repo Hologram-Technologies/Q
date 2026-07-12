@@ -32,7 +32,44 @@ const I = {
   person: '<svg viewBox="0 0 24 24" fill="currentColor"><circle cx="12" cy="8.4" r="4.1"/><path d="M3.8 20.4a8.2 8.2 0 0 1 16.4 0z"/></svg>',
   ghost: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="3.4"/><path d="M5.5 19a6.5 6.5 0 0 1 13 0"/></svg>',
   arrow: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h13M12 6l6 6-6 6"/></svg>',
+  lock: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="11" width="14" height="9" rx="2"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/></svg>',
 };
+// Touch devices get the slide-to-enter; fine-pointer (desktop) keeps the tap key. Resolved once.
+const COARSE = (() => { try { return matchMedia("(pointer:coarse)").matches; } catch { return false; } })();
+const beamHtml = () => `<svg class="hl-beam" preserveAspectRatio="none"><rect x="1" y="1" rx="11" ry="11" pathLength="100"></rect></svg>`;
+const enclaveHtml = () => { let n = "this device"; try { n = teeName() || n; } catch {} return `<div class="hl-enclave">${I.lock}<span>Secured by ${esc(n)} · this device</span></div>`; };
+const slideHtml = (label) => `<div class="hl-slide" id="hl-slide" role="button" tabindex="0" aria-label="Slide to sign in as ${esc(label)}"><div class="hl-fill"></div><div class="hl-track-lbl"><span>Slide to enter</span></div><div class="hl-knob">${I.arrow}</div></div>`;
+// size the beam SVG rect to the key's exact px so the mint comet rides an even rim on a wide button.
+function sizeBeam(panel) {
+  try { const b = panel.querySelector(".hl-beam"); if (!b) return; const btn = b.closest(".hl-bio"); if (!btn) return;
+    const w = btn.clientWidth, h = btn.clientHeight; if (!w || !h) return;
+    b.setAttribute("viewBox", `0 0 ${w} ${h}`); const r = b.querySelector("rect"); r.setAttribute("width", w - 2); r.setAttribute("height", h - 2);
+  } catch {}
+}
+// SLIDE-TO-ENTER — a deliberate drag is intent (can't misfire); on release past ~85% it fires onComplete
+// (the SAME fail-closed biometric as the tap). fail() snaps the knob back with no penalty.
+function resetSlide(slide) {
+  const knob = slide.querySelector(".hl-knob"), fill = slide.querySelector(".hl-fill"), lbl = slide.querySelector(".hl-track-lbl");
+  slide.classList.remove("armed", "done"); slide.__done = false;
+  knob.style.transition = "left .3s cubic-bezier(.4,0,.2,1)"; fill.style.transition = "width .3s cubic-bezier(.4,0,.2,1)";
+  knob.style.left = "4px"; fill.style.width = "0"; if (lbl) lbl.innerHTML = "<span>Slide to enter</span>";
+}
+function wireSlide(slide, onComplete) {
+  const knob = slide.querySelector(".hl-knob"), fill = slide.querySelector(".hl-fill"), lbl = slide.querySelector(".hl-track-lbl");
+  let dragging = false, startX = 0, x = 0, max = 0;
+  const px = (e) => (e.clientX != null ? e.clientX : (e.touches && e.touches[0] ? e.touches[0].clientX : 0));
+  const bounds = () => { max = slide.clientWidth - knob.offsetWidth - 8; };
+  const set = (v) => { x = Math.max(0, Math.min(max, v)); knob.style.left = (4 + x) + "px"; fill.style.width = (knob.offsetWidth + x) + "px"; slide.classList.toggle("armed", x > max * 0.55); };
+  const down = (e) => { if (slide.__done) return; dragging = true; bounds(); startX = px(e) - x; knob.style.transition = "none"; fill.style.transition = "none"; try { knob.setPointerCapture && e.pointerId != null && knob.setPointerCapture(e.pointerId); } catch {} e.preventDefault(); };
+  const move = (e) => { if (!dragging) return; set(px(e) - startX); };
+  const up = () => { if (!dragging) return; dragging = false;
+    if (x >= max * 0.85) finish();
+    else { knob.style.transition = "left .28s cubic-bezier(.4,0,.2,1)"; fill.style.transition = "width .28s cubic-bezier(.4,0,.2,1)"; set(0); slide.classList.remove("armed"); } };
+  const finish = () => { slide.__done = true; bounds(); knob.style.transition = "left .2s"; fill.style.transition = "width .2s"; slide.classList.add("done"); set(max); if (lbl) lbl.innerHTML = `<span class="spin"></span><span>Verifying…</span>`; onComplete(); };
+  knob.addEventListener("pointerdown", down); addEventListener("pointermove", move); addEventListener("pointerup", up);
+  knob.addEventListener("touchstart", down, { passive: false }); addEventListener("touchmove", move, { passive: false }); addEventListener("touchend", up);
+  bounds();
+}
 
 function avatarHtml(u) {
   if (u && u.label) { const h = hueOf(u); return `<div class="hl-avatar" style="background:linear-gradient(140deg,hsl(${h} 52% 46%),hsl(${h + 26} 52% 46%))">${esc(initials(u.label))}</div>`; }
@@ -115,12 +152,27 @@ const HL_CSS = `#holo-login{position:fixed;inset:0;z-index:2147483000;color:var(
 #holo-login .hl-avatar svg{width:62%;height:62%;opacity:.92}
 #holo-login .hl-name{margin:var(--g1) 0 0;font-size:calc(var(--u)*1.12);font-weight:600;letter-spacing:.01em;line-height:1.15;text-shadow:var(--shadow)}
 #holo-login .hl-auth{margin-top:var(--g1);display:flex;flex-direction:column;align-items:center;gap:var(--u);width:100%}
-#holo-login .hl-bio{position:relative;overflow:hidden;width:100%;min-height:max(var(--g2),52px);border:0;border-radius:10px;cursor:pointer;display:inline-flex;align-items:center;justify-content:center;gap:calc(var(--u)*.55);font-size:var(--u);font-weight:600;letter-spacing:.01em;color:#062019;background:linear-gradient(180deg,#38d9ab,#2cc79b);box-shadow:inset 0 1px 0 rgba(255,255,255,.22),0 1px 2px rgba(0,0,0,.3),0 8px 24px rgba(0,0,0,.22);font-family:inherit;transition:transform .12s,box-shadow .18s,filter .18s}
-#holo-login .hl-bio:hover{transform:translateY(-1px);filter:brightness(1.04);box-shadow:inset 0 1px 0 rgba(255,255,255,.22),0 2px 4px rgba(0,0,0,.3),0 10px 28px rgba(0,0,0,.26)}
-#holo-login .hl-bio:disabled{cursor:progress;filter:saturate(.9)}
-#holo-login .hl-bio:disabled::after{content:"";position:absolute;inset:0;background:linear-gradient(105deg,transparent 32%,rgba(255,255,255,.55) 50%,transparent 68%);transform:translateX(-100%);animation:hl-scan 1.15s cubic-bezier(.4,0,.2,1) infinite}
-@keyframes hl-scan{to{transform:translateX(100%)}}
-#holo-login .hl-bio svg{width:1.3em;height:1.3em;flex:0 0 auto}
+#holo-login .hl-bio{position:relative;overflow:hidden;width:100%;min-height:max(var(--g2),52px);border-radius:12px;cursor:pointer;display:inline-flex;align-items:center;justify-content:center;gap:calc(var(--u)*.55);font-size:var(--u);font-weight:600;letter-spacing:.01em;color:#eef2f8;background:linear-gradient(180deg,rgba(28,30,28,.94),rgba(12,13,12,.96));border:1px solid rgba(255,255,255,.16);box-shadow:inset 0 1px 0 rgba(255,255,255,.06),0 12px 34px rgba(0,0,0,.5);font-family:inherit;transition:transform .12s,box-shadow .18s,border-color .3s}
+#holo-login .hl-bio:hover{transform:translateY(-1px);border-color:rgba(125,239,201,.45);box-shadow:inset 0 1px 0 rgba(255,255,255,.08),0 16px 40px rgba(0,0,0,.55),0 0 0 1px rgba(52,211,166,.1)}
+#holo-login .hl-bio:active{transform:translateY(0) scale(.99)}
+#holo-login .hl-bio:disabled{cursor:progress;border-color:rgba(125,239,201,.55)}
+#holo-login .hl-bio:disabled span{color:var(--accent)}
+#holo-login .hl-bio svg:not(.hl-beam){width:1.3em;height:1.3em;flex:0 0 auto;color:var(--accent)}
+#holo-login .hl-bio .hl-beam{position:absolute;inset:0;width:100%;height:100%;pointer-events:none;opacity:0;transition:opacity .2s}
+#holo-login .hl-bio .hl-beam rect{fill:none;stroke:var(--accent);stroke-width:1.6;stroke-dasharray:15 85;stroke-linecap:round;filter:drop-shadow(0 0 5px rgba(52,211,166,.7))}
+#holo-login .hl-bio:disabled .hl-beam{opacity:1}
+#holo-login .hl-bio:disabled .hl-beam rect{animation:hl-beam 1.3s linear infinite}
+@keyframes hl-beam{from{stroke-dashoffset:100}to{stroke-dashoffset:0}}
+#holo-login .hl-enclave{margin-top:calc(var(--u)*-.5);display:flex;align-items:center;justify-content:center;gap:calc(var(--u)*.35);font-size:calc(var(--u)*.72);color:var(--ink-dim);opacity:.72;text-shadow:var(--shadow)}
+#holo-login .hl-enclave svg{width:calc(var(--u)*.82);height:calc(var(--u)*.82);color:var(--accent);opacity:.9;flex:0 0 auto}
+#holo-login .hl-slide{position:relative;width:100%;min-height:max(var(--g2),56px);border-radius:12px;user-select:none;touch-action:none;overflow:hidden;background:linear-gradient(180deg,rgba(28,30,28,.94),rgba(12,13,12,.96));border:1px solid rgba(255,255,255,.16);box-shadow:inset 0 1px 3px rgba(0,0,0,.6)}
+#holo-login .hl-slide .hl-fill{position:absolute;top:0;bottom:0;left:0;width:0;border-radius:12px;background:linear-gradient(90deg,rgba(52,211,166,.34),rgba(52,211,166,.03))}
+#holo-login .hl-slide .hl-track-lbl{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;gap:calc(var(--u)*.45);pointer-events:none;color:var(--ink-dim);font-size:var(--u);font-weight:500;letter-spacing:.01em;text-shadow:var(--shadow)}
+#holo-login .hl-slide .hl-knob{position:absolute;top:4px;bottom:4px;left:4px;aspect-ratio:1;border-radius:9px;cursor:grab;display:grid;place-items:center;color:#062019;background:linear-gradient(180deg,#3ce0b0,#28c096);box-shadow:0 4px 12px rgba(0,0,0,.45),inset 0 1px 0 rgba(255,255,255,.42);touch-action:none}
+#holo-login .hl-slide .hl-knob:active{cursor:grabbing}
+#holo-login .hl-slide .hl-knob svg{width:1.3em;height:1.3em;color:#062019}
+#holo-login .hl-slide.armed{border-color:rgba(125,239,201,.5)}
+#holo-login .hl-slide.done .hl-fill{width:100%!important;background:linear-gradient(90deg,#34d3a6,#7defc9)}
 #holo-login .hl-alt{background:none;border:0;color:var(--ink-dim);opacity:.85;font-size:var(--u);font-weight:500;font-family:inherit;cursor:pointer;padding:calc(var(--u)*.3) calc(var(--u)*.55);border-radius:calc(var(--u)*.4);display:inline-flex;align-items:center;gap:calc(var(--u)*.4);min-height:44px;transition:color .15s,opacity .15s}
 #holo-login .hl-alt:hover{color:var(--ink);opacity:1}#holo-login .hl-alt svg{width:1.05em;height:1.05em}
 #holo-login .hl-more{opacity:.72}#holo-login .hl-more:hover{opacity:1}
@@ -156,13 +208,21 @@ function renderBusy(panel, msg) {
   panel.innerHTML = `${avatarHtml(null)}<div class="hl-auth"><div class="status"><span class="spin"></span><span>${esc(msg || "")}</span></div></div>`;
 }
 function renderReturning(panel, u) {
+  const label = esc(u.label || "It’s me");
+  // Desktop: the name IS the tap key. Touch: a slide-to-enter (a drag is intent that can't misfire).
+  const control = COARSE
+    ? slideHtml(u.label || "you")
+    : `<button class="hl-bio" id="hl-bio" aria-label="Sign in as ${esc(u.label || "you")}">${beamHtml()}${I.fp}<span>${label}</span></button>`;
   panel.innerHTML = `${avatarHtml(u)}
-    <div class="hl-auth"><button class="hl-bio" id="hl-bio" aria-label="Sign in as ${esc(u.label || "you")}">${I.fp}<span>${esc(u.label || "It’s me")}</span></button>${guestBtnHtml()}<div class="status"></div></div>`;
+    <div class="hl-auth">${control}${enclaveHtml()}${guestBtnHtml()}<div class="status"></div></div>`;
   hydrateFace(panel, u);
+  if (!COARSE) requestAnimationFrame(() => sizeBeam(panel));
 }
 function renderFirstRun(panel) {
+  // First run enrols this device's enclave — a deliberate one-time act, so it stays a tap on every device.
   panel.innerHTML = `${avatarHtml(null)}
-    <div class="hl-auth"><button class="hl-bio" id="hl-signin" title="One tap, nothing to set up">${I.fp}<span>Sign in</span></button>${guestBtnHtml()}<div class="status"></div></div>`;
+    <div class="hl-auth"><button class="hl-bio" id="hl-signin" title="One tap, nothing to set up">${beamHtml()}${I.fp}<span>Sign in</span></button>${enclaveHtml()}${guestBtnHtml()}<div class="status"></div></div>`;
+  requestAnimationFrame(() => sizeBeam(panel));
 }
 function renderNoBio(panel, u, reason) {
   panel.innerHTML = `${avatarHtml(u)}
@@ -432,9 +492,11 @@ export async function signIn({ root, params, app = "holospace", appName = "Holog
     // FIRST RUN — one tap enrols a κ bound to this device's enclave.
     if (!selected || !selected.cred) {
       renderFirstRun(panel);
+      addEventListener("resize", () => sizeBeam(panel));
       prewarm(warmPaint);
       const si = panel.querySelector("#hl-signin");
       if (si) si.onclick = async () => {
+        sizeBeam(panel);
         si.disabled = true;
         try {
           setBusy("Setting up " + teeName() + "…");
@@ -449,12 +511,11 @@ export async function signIn({ root, params, app = "holospace", appName = "Holog
       return;
     }
 
-    // RETURNING OPERATOR — name above one biometric tap; unlock re-derives κ (Law L5).
+    // RETURNING OPERATOR — your name IS the key; unlock re-derives κ (Law L5). Desktop taps, touch slides;
+    // both call the SAME fail-closed ceremony (doUnlock). fail() only restores the control — never opens.
     renderReturning(panel, selected);
     prewarm(warmPaint);
-    const bio = panel.querySelector("#hl-bio");
-    if (bio) bio.onclick = async () => {
-      bio.disabled = true;
+    const doUnlock = async (fail) => {
       try {
         setBusy("Verifying with " + teeName() + "…");
         const { secret, credentialId } = await teeAssert({ allowCredentials: known.map((k) => k.cred) });
@@ -462,10 +523,14 @@ export async function signIn({ root, params, app = "holospace", appName = "Holog
         const L = await import("./holo-login.mjs");
         const principal = await L.unlock(op.kappa, secret);
         await establish(principal, secret, false);
-      } catch (e) { bio.disabled = false; setStatus(teeError(e), true); }
+      } catch (e) { try { fail && fail(); } catch {} setStatus(teeError(e), true); }
     };
+    const bio = panel.querySelector("#hl-bio");
+    if (bio) { bio.onclick = () => { sizeBeam(panel); bio.disabled = true; doUnlock(() => { bio.disabled = false; }); }; addEventListener("resize", () => sizeBeam(panel)); }
+    const slide = panel.querySelector("#hl-slide");
+    if (slide) wireSlide(slide, () => doUnlock(() => resetSlide(slide)));
     wireGuest();
-    setTimeout(() => { try { bio.focus(); } catch {} }, 40);
+    setTimeout(() => { try { (bio || slide).focus(); } catch {} }, 40);
   });
 }
 
