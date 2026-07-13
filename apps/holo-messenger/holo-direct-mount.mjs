@@ -62,8 +62,11 @@ async function _boot() {
       const voznOn = (() => { try { const q = new URLSearchParams(location.search).get("e2e"); return !(q === "off" || localStorage.getItem("holo.e2e") === "off"); } catch { return true; } })();
       if (voznOn && store && store.getMeta) {
         const vbase = new URL("./_vendor/vodozemac/", import.meta.url);
-        const voz = await import(new URL("holo_vodozemac.js", vbase));
-        await voz.default({ module_or_path: new URL("holo_vodozemac_bg.wasm", vbase) });
+        // CONTENT-ADDRESSED filenames (.v2 = the Megolm build): a new path can never be served stale by a SW
+        // that cached the pre-Megolm glue/wasm at the old names (the M4 rooms deploy trap — the old glue lacks
+        // HoloGroupSession, so groupCreate threw live). The 1:1 door works on either build; rooms need .v2.
+        const voz = await import(new URL("holo_vodozemac.v2.js", vbase));
+        await voz.default({ module_or_path: new URL("holo_vodozemac_bg.v2.wasm", vbase) });
         let pickleKey = await store.getMeta("voz:pk").catch(() => null);
         if (!pickleKey) { const a = new Uint8Array(32); crypto.getRandomValues(a); pickleKey = btoa(String.fromCharCode(...a)); await store.setMeta("voz:pk", pickleKey); }
         const { makeSeal2 } = await import("./holo-seal2.mjs");
