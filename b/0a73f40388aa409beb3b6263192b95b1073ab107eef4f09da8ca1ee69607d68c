@@ -14,7 +14,7 @@
   },
   "apps": {
    "files": 2907,
-   "bytes": 1047670,
+   "bytes": 1049495,
    "hf": 2864
   },
   "heavy": {
@@ -4240,8 +4240,8 @@
    "source": "hf"
   },
   "apps/player/holo-evicted.json": {
-   "sha256": "5cbfa2150192b85c1890487c444785e8c3c686b8a43cd5fc7c2dbf9a72a66aff",
-   "blake3": "c66b798eb385b0ef5366fa7e20c6e28a07bfefd5b153dc9352425a36421edd74",
+   "sha256": "7ae6733a22eee08737cd30e5fa7db347f9246174d359d6df4a0a25a5218531cc",
+   "blake3": "2d52c89af2fdb3d143869f3850e6723cb2c6261de58f35d8b3449b273207bb3c",
    "bytes": 10901,
    "tier": "apps",
    "source": "origin"
@@ -4652,7 +4652,7 @@
    "source": "hf"
   },
   "apps/player/index.html": {
-   "blake3": "3644b1e5a40a9d98471d5c9ea228b0a57f64d7fbf8957912f435d72cd8371088",
+   "blake3": "ccf09b432ec2d01afda758f50353d0d2d7137589fc654664d10dcaf283b1c4ea",
    "tier": "apps",
    "source": "hf"
   },
@@ -4931,9 +4931,9 @@
    "source": "hf"
   },
   "apps/q/core/voice-out.js": {
-   "sha256": "991a3702282af4c102ae77efc8d9401f9c66bd40e27c7ccbd0ca8c64de6bedfa",
-   "blake3": "abd51a083d64b5fbb87c123644d6300aa94b22f46699a5c2760f5a389f8e8c55",
-   "bytes": 10171,
+   "sha256": "4f413d4deab54856a2c766d7fc0479695acf3fd081bd95326713bff83caf5bb8",
+   "blake3": "80dea388b12468eb746f1c71510056bc7b85ba2ba139d3ab5f719a72b041d350",
+   "bytes": 11267,
    "tier": "apps",
    "source": "origin"
   },
@@ -7117,9 +7117,9 @@
    "source": "hf"
   },
   "apps/q/q-chat.html": {
-   "sha256": "1e1ebe80f1e57400df1654df74dbc99499ef423f16b8e76d4a224116ec5ca5ff",
-   "blake3": "f9f195f076332523ec41eeada23227d7a7e2451ea452fdd3ee6333c20d9a1053",
-   "bytes": 76501,
+   "sha256": "d276601e42804845399477599ed6828834b5802bef84d2fcc3465f40c06151f0",
+   "blake3": "4a58326be16777d0dca359d1fbe60eefea38395bb4e5ef70565526b4c25084b3",
+   "bytes": 77230,
    "tier": "apps",
    "source": "origin"
   },

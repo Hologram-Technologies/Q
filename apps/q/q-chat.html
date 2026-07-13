@@ -11,6 +11,11 @@
 } }
 </script>
 <script>/* EMBEDDED detection BEFORE any paint → zero wallpaper flash. */try{if(window.self!==window.top&&typeof window.parent.location.href==="string")document.documentElement.classList.add("qembed");}catch(e){}</script>
+<script>/* HOLO-Q-LIVE-VOICE V1: opened TOP-LEVEL (the voice/call surface), Q wants crossOriginIsolated so Kokoro +
+  Whisper get wasm threads. The root-sw injects COOP/COEP for this page; if we arrived before the SW controlled
+  us (first visit after an update), reload ONCE so the injected headers land. NEVER in the drawer iframe (a
+  same-origin child of the non-isolated desktop can't isolate), never in a loop (sessionStorage guard). */
+try{if(window.self===window.top){if(self.crossOriginIsolated){try{sessionStorage.removeItem("qcoi");}catch(e){}}else if(navigator.serviceWorker&&navigator.serviceWorker.controller&&!sessionStorage.getItem("qcoi")){sessionStorage.setItem("qcoi","1");location.reload();}}}catch(e){}</script>
 <style>
   :root{
     --ink:#f4f7fa; --dim:#cdd6de; --q:#8b7bff; --tick:#7fd0ff;
@@ -176,11 +181,12 @@ function _perfModel() {
 function perfPill(row) {
   const el = document.getElementById("perf"); if (!el) return;
   const label = (row && row.model) || _perfModel();
-  const t = (row && row.ttft > 0) ? (row.ttft < 1000 ? Math.round(row.ttft) + "ms" : (row.ttft / 1000).toFixed(1) + "s") : null;
   const tps = (row && row.tokps > 0) ? Math.round(row.tokps) + " tok/s" : "";
-  const parts = [label, tps, t ? t + " TTFT" : ""].filter(Boolean);
+  // header readout is intentionally just <model> · <tok/s> — TTFT is a warm-up detail, not something to
+  // put in front of a person mid-conversation (it still lives in the ?stats dev ledger below).
+  const parts = [label, tps].filter(Boolean);
   if (!parts.length) return;
-  el.textContent = parts.join(" · ");   // subtle header readout: <model> · <tok/s> · <TTFT>
+  el.textContent = parts.join(" · ");
   el.classList.add("on");
 }
 function renderLedger() {

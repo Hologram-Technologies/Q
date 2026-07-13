@@ -108,7 +108,13 @@ export function createVoice(opts = {}) {
       const gpu = typeof navigator !== "undefined" && !!navigator.gpu;
       // Plan A — vendored createTTS (holo-voice-tts.mjs), fully local
       try {
-        const mod = await import(/* @vite-ignore */ o.ttsUrl || "/usr/lib/holo/voice/holo-voice-tts.mjs");
+        // subpath-robust import: the web deploy serves this module under /Q/… so a ROOT-absolute
+        // /usr/…/holo-voice-tts.mjs resolves to a stub — try the root path AND one resolved RELATIVE to this
+        // module (…/apps/q/core → /usr/…), so the fully-local GPU-tiered engine is reachable off-root too.
+        const _ttsUrls = [o.ttsUrl, "/usr/lib/holo/voice/holo-voice-tts.mjs"].filter(Boolean);
+        try { _ttsUrls.push(new URL("../../../usr/lib/holo/voice/holo-voice-tts.mjs", import.meta.url).href); } catch (e) {}
+        let mod = null;
+        for (const u of _ttsUrls) { try { const m = await import(/* @vite-ignore */ u); if (m && m.createTTS) { mod = m; break; } } catch (e) {} }
         if (mod && mod.createTTS) {
           const plans = gpu ? [{ device: "webgpu", dtype: "fp16", preferWebGPU: true }, { device: "wasm", dtype: "q8" }] : [{ device: "wasm", dtype: "q8" }];
           for (const p of plans) {
@@ -133,8 +139,15 @@ export function createVoice(opts = {}) {
         const env = tf.env, KokoroTTS = ko.KokoroTTS;
         env.allowRemoteModels = true; env.allowLocalModels = false;
         try { const wasm = new URL("/_shared/voice/vendor/kokoro/transformers/", import.meta.url).href; if (env.backends && env.backends.onnx && env.backends.onnx.wasm) { env.backends.onnx.wasm.wasmPaths = wasm; env.backends.onnx.wasm.proxy = true; } } catch (e) {}
-        const tts = await KokoroTTS.from_pretrained("onnx-community/Kokoro-82M-v1.0-ONNX", { dtype: "q8", device: "wasm", progress_callback: o.onProgress });
-        hd = { synth: (text) => tts.generate(String(text), { voice: "af_heart" }) };
+        // HIGHER-QUALITY VOICE: on a WebGPU device stream the fp16 weights and synth on the GPU — far warmer
+        // and more natural than the q8/wasm floor, and quicker to speak. Fall back to q8/wasm without WebGPU,
+        // or if the GPU load fails, so higher quality never costs reliability.
+        const _mk = async (dtype, device) => {
+          const t = await KokoroTTS.from_pretrained("onnx-community/Kokoro-82M-v1.0-ONNX", { dtype, device, progress_callback: o.onProgress });
+          return { synth: (text) => t.generate(String(text), { voice: "af_heart" }) };
+        };
+        try { hd = gpu ? await _mk("fp16", "webgpu") : await _mk("q8", "wasm"); }
+        catch (e3) { hd = await _mk("q8", "wasm"); }
         return true;
       } catch (e) {}
       return false;
