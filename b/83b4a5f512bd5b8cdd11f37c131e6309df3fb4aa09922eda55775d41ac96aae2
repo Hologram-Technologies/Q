@@ -9,12 +9,12 @@
  "tiers": {
   "core": {
    "files": 631,
-   "bytes": 12652924,
+   "bytes": 12652500,
    "hf": 0
   },
   "apps": {
    "files": 2958,
-   "bytes": 1705854,
+   "bytes": 1707783,
    "hf": 2901
   },
   "heavy": {
@@ -46,9 +46,9 @@
    "source": "origin"
   },
   "README.md": {
-   "sha256": "8f656a44d3f632a9cd79f4676207288b76d69b936e8bcd4166280644d325c795",
-   "blake3": "1a7a0d5851176253377e94c926c4f93cfb420b362d4b67ed6af13870d3185341",
-   "bytes": 2039,
+   "sha256": "fd6e076a6f51115dd73653eeaaf61fb26404cde48c8f86424790708986a2b998",
+   "blake3": "e49548867f651d23266632b54636b33382114be25b9a12f3518c83bffe833efe",
+   "bytes": 1615,
    "tier": "core",
    "source": "origin"
   },
@@ -4173,9 +4173,9 @@
    "source": "origin"
   },
   "apps/jellyfin/holo-jellyfin-sw.js": {
-   "sha256": "1ec94f171d3d2adf13e183d66f7c637d814480c9c19116ceeb4cfcb4c6633625",
-   "blake3": "e20750915e09b8b6e2a101d66eb05a65226e035d6af9b0b85d02a0093afa2e4a",
-   "bytes": 97996,
+   "sha256": "518022f72a97c8fd6728ddd3466ff51def24d851659685d93a99b316215bd9e3",
+   "blake3": "66a5dd3205387a38ea9cddcf69ac2f4a03be9ae17ff2d805ae1ae6ed79b18635",
+   "bytes": 99925,
    "tier": "apps",
    "source": "origin"
   },

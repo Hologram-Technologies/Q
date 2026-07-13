@@ -1273,12 +1273,38 @@ const cachingFetch = async (url, opts) => {
   return res;
 };
 
+// ── player-app DATA resolver — the library shards / media-index / music shard live in the sibling PLAYER
+// app, which is EVICTED (its files are not real bytes; a fetch from INSIDE this SW bypasses the player's
+// rescue SW and 404s). So resolve player data through the player's evicted manifest → the mirror,
+// verify-or-refuse (blake3). Direct-first keeps the harness (real files) working unchanged. ──
+let playerManifest = null, pmLoading = null;
+const ensurePlayerManifest = () => {
+  if (playerManifest !== null) return Promise.resolve(playerManifest);
+  if (!pmLoading) pmLoading = fetch(LIVE_EVICTED).then((r) => r.ok ? r.json() : false).catch(() => false).then((m) => (playerManifest = m || false));
+  return pmLoading;
+};
+const relOf = (u) => { let s = String(u); const o = self.location.origin; if (s.startsWith(o)) s = s.slice(o.length); return s.startsWith(PLAYER_SCOPE) ? s.slice(PLAYER_SCOPE.length) : s.replace(/^\//, ""); };
+async function playerFetch(rel) {
+  const direct = await fetch(PLAYER_SCOPE + rel).catch(() => null);
+  if (direct && direct.ok) return direct;                              // harness (real file) or a non-evicted path
+  const m = await ensurePlayerManifest();
+  const hex = m && m.files && m.files[rel];
+  if (hex) {
+    const cached = await cacheGet("holo-jf-player", hex);
+    if (cached) return new Response(cached, { headers: { "content-type": mimeOf(rel) } });
+    const res = await fetch((m.mirror || APPS_MIRROR) + hex).catch(() => null);
+    if (res && res.ok) { const bytes = new Uint8Array(await res.arrayBuffer()); if (blake3hex(bytes) === hex) { await cachePut("holo-jf-player", hex, bytes); return new Response(bytes, { headers: { "content-type": mimeOf(rel) } }); } }
+  }
+  return direct || new Response("", { status: 404 });
+}
+const playerDataFetch = (u, opts) => playerFetch(relOf(u));            // for holo-library (rootUrl + shards, all player-scope)
+
 // ── the library plane (verify-or-refuse shards, J0-proven inside the SW) ─────────────────────────────────
 let lib = null, libLoading = null;
 const ensureLib = () => {
   if (lib) return Promise.resolve(lib);
   if (!libLoading) libLoading = (async () => {
-    const L = createLibrary({ fetch: fetch.bind(self), cacheGet: (k) => cacheGet("holo-jf-lib", k), cachePut: (k, b) => cachePut("holo-jf-lib", k, b), sha256hex, rootUrl: PLAYER_SCOPE + "feed/library-index.json" });
+    const L = createLibrary({ fetch: playerDataFetch, cacheGet: (k) => cacheGet("holo-jf-lib", k), cachePut: (k, b) => cachePut("holo-jf-lib", k, b), sha256hex, rootUrl: PLAYER_SCOPE + "feed/library-index.json" });
     await L.load();
     return (lib = L);
   })();
@@ -1311,7 +1337,7 @@ const ud = {
 // ── κ media-index source — live evicted manifest → mirror pointer → HF b-store objects, all CORS-clean ──
 const kappaSource = {
   async pointer() {
-    const local = await fetch(PLAYER_SCOPE + "media-index.json").then((r) => r.ok ? r.json() : null).catch(() => null);
+    const local = await playerFetch("media-index.json").then((r) => r.ok ? r.json() : null).catch(() => null);
     if (local && local.kappa) {
       const hex = String(local.kappa).replace(/^sha256:/, "");
       if (await this.object(hex)) return local;
@@ -1343,7 +1369,7 @@ function ensureMusic() {
   if (!musicLoading) musicLoading = (async () => {
     try {
       let bytes = await cacheGet("holo-jf-music", "shard");
-      if (!bytes) { const r = await fetch(MUSIC_SHARD_URL).catch(() => null); if (r && r.ok) { bytes = new Uint8Array(await r.arrayBuffer()); await cachePut("holo-jf-music", "shard", bytes); } }
+      if (!bytes) { const r = await playerFetch("music-universe.json").catch(() => null); if (r && r.ok) { bytes = new Uint8Array(await r.arrayBuffer()); await cachePut("holo-jf-music", "shard", bytes); } }
       if (bytes) musicProvider = createMusicProvider(JSON.parse(new TextDecoder().decode(bytes)));
     } catch { /* no shard → the server lives without a Music library (guarded, like the κ folders) */ }
     return musicProvider;
