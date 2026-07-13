@@ -1259,12 +1259,13 @@ const { createJellyfinServer, synthRange } = __m_core;
 const { createMusicProvider } = __m_music;
 const TMDB_KEY = "45f791c5f6a6940a50403bb3890c7b86";   // the player's built-in key (holo-tmdb.mjs BUILTIN_KEY)
 const HF_B = "https://huggingface.co/HOLOGRAMTECH/holo-messenger-shell/resolve/main/b/";
-const LIVE_EVICTED = "https://hologram-technologies.github.io/Q/apps/player/holo-evicted.json";
 const APPS_MIRROR = "https://hologram-technologies.github.io/hologram-apps/b/";
-const SCOPE = new URL(self.registration.scope).pathname;              // "/" in the harness · "/Q/apps/jellyfin/" live
+const SCOPE = new URL(self.registration.scope).pathname;              // "/" in the harness · "/hologram-os/apps/jellyfin/" live
 // The DATA planes (18k library shards · κ media-index · music universe shard) live in the sibling PLAYER app,
-// already live + evicted at /Q/apps/player/ — reuse them, never duplicate. (Harness: "/" → "/" → player routes.)
+// already live + evicted at <scope>/apps/player/ — reuse them, never duplicate. (Harness: "/" → "/" → player routes.)
 const PLAYER_SCOPE = SCOPE.replace(/apps\/jellyfin\/$/, "apps/player/");
+// DERIVED from our own scope (same-origin path) so it survives repo renames (Q → hologram-os …) — never hardcode.
+const LIVE_EVICTED = PLAYER_SCOPE + "holo-evicted.json";
 
 const sha256hex = async (u8) => [...new Uint8Array(await crypto.subtle.digest("SHA-256", u8))].map((b) => b.toString(16).padStart(2, "0")).join("");
 const cacheGet = async (name, k) => { const c = await caches.open(name); const r = await c.match("/x/" + k); return r ? new Uint8Array(await r.arrayBuffer()) : null; };
@@ -1469,9 +1470,12 @@ async function dispatch(req) {
     if (rel === "/__holo/trace") return new Response(JSON.stringify(trace), { headers: { "content-type": "application/json" } });
     if (/^\/web\/serviceworker\.js$/.test(rel)) return new Response("", { status: 404 });   // the PWA hijacker stays dead
     const net = await fetch(req).catch(() => null);
-    if (net && net.ok) return net;
-    const rescued = await rescue(rel.slice(1) || "index.html");       // evicted app bytes re-derive from the mirror
-    return rescued || net || new Response("", { status: 504 });
+    let out = (net && net.ok) ? net : (await rescue(rel.slice(1) || "index.html")) || net;   // evicted app bytes re-derive from the mirror
+    if (rel === "/web/config.json" && out && out.ok) {                // DYNAMIC server pin = THIS origin+scope (rename-proof; no hardcoded /Q or /hologram-os)
+      try { const c = JSON.parse(await out.clone().text()); c.servers = [self.location.origin + SCOPE.replace(/\/$/, "")]; c.multiserver = false;
+        return new Response(JSON.stringify(c), { headers: { "content-type": "application/json", "cache-control": "no-cache" } }); } catch {}
+    }
+    return out || new Response("", { status: 504 });
   }
   let body = null;
   if (req.method === "POST") { try { body = await req.clone().json(); } catch {} }

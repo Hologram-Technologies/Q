@@ -9,12 +9,12 @@
  "tiers": {
   "core": {
    "files": 632,
-   "bytes": 12666632,
+   "bytes": 12667710,
    "hf": 0
   },
   "apps": {
    "files": 5281,
-   "bytes": 1536490,
+   "bytes": 1537017,
    "hf": 5236
   },
   "heavy": {
@@ -46,9 +46,9 @@
    "source": "origin"
   },
   "README.md": {
-   "sha256": "fd6e076a6f51115dd73653eeaaf61fb26404cde48c8f86424790708986a2b998",
-   "blake3": "e49548867f651d23266632b54636b33382114be25b9a12f3518c83bffe833efe",
-   "bytes": 1615,
+   "sha256": "4531bd38d9a63375a4885f17caf37dd25002fb0ea88a0f59470debd9b6d49815",
+   "blake3": "40b74353d4aad86e46961ccd7ee12e38a5fbf339c647b4d405a5ab58f58926c5",
+   "bytes": 1812,
    "tier": "core",
    "source": "origin"
   },
@@ -2935,9 +2935,9 @@
    "source": "hf"
   },
   "apps/holo-messenger/_vendor/ui/chat-ui.bundle.css": {
-   "sha256": "666d1006637bafed144d18b689fe1ce31cb414fca02ce0b866afb9f8a505fa6c",
-   "blake3": "541e5cbc650f15d5cd08c7193accc712497599049b38168f463aa6ec51b209ae",
-   "bytes": 203380,
+   "sha256": "543f372b4fffa7fb10f9daca3f52f737efaea8c84906758e6cd5ba2c5f1a7ab5",
+   "blake3": "c8dfcdf0b9f6c1b20c76926c7ddbfdb42e50f6899ef5d137bcb8f324eda1803e",
+   "bytes": 204261,
    "tier": "core",
    "source": "origin"
   },
@@ -3607,8 +3607,8 @@
    "source": "origin"
   },
   "apps/holo-messenger/holo-sw.js": {
-   "sha256": "dbd34a7a558a09460cdfbca4f16034c29bacdf817ab80fce179edff8308827d9",
-   "blake3": "2b2dcfb5ed0a35b396549bb0bde2dc45898d19dd909a7ee195b13b9011fe2f3f",
+   "sha256": "1ffb7425821b6cda3ad38e6a5a052b0833250e03de5b144ec4247d767e987cc6",
+   "blake3": "bf05fd605717849dd497961850135628bc407a79260b6813ba913d3dd5af9ff9",
    "bytes": 24665,
    "tier": "core",
    "source": "origin"
@@ -4027,8 +4027,8 @@
    "source": "origin"
   },
   "apps/holo-messenger/shell-manifest.json": {
-   "sha256": "8bd00282804b748cc852f8ad5fc7a583144ecbbcd715b333421445ed1d6fe3cc",
-   "blake3": "6919e3ea025977dff28d244dd501e8bb012faf3ee0a02c4588ca53421d0637ad",
+   "sha256": "845af45e5697804b4e02622d5a20d6ef9bc075575653abad6801061cca7c83f2",
+   "blake3": "a7c05950d1dd913fa9c7d4449842ab73f386e68f0bea23c523013d9caa672838",
    "bytes": 8507,
    "tier": "core",
    "source": "origin"
@@ -4173,9 +4173,9 @@
    "source": "origin"
   },
   "apps/jellyfin/holo-jellyfin-sw.js": {
-   "sha256": "89aff16d5f151db99d14327d7660a62d3c724e38d25bd89c96e2c750fafc5035",
-   "blake3": "4cbf37f3faf11e0ee84accd86b4508ecb1e936e53c450d2773529138570745ad",
-   "bytes": 102088,
+   "sha256": "c6b33a4a22c95cd1cde7ec955c3cca63e4122c6072cc2030873a0f4196c2a985",
+   "blake3": "75633e3a5bed114eb29f80dd994a46f5a6832faaab72d259dc31b8cce6c0fb47",
+   "bytes": 102615,
    "tier": "apps",
    "source": "origin"
   },
