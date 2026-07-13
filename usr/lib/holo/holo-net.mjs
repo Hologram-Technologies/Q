@@ -77,6 +77,16 @@ if (typeof window !== "undefined" && !window.HoloNet) {
   window.HoloNet = makeLocalNet();                  // safe default until the WASM loads
   (async () => {
     try {
+      // holowhat/ is an EVICTED tree on lean mounts — only the root-sw rescue serves it. On a slow cold
+      // boot this import can BEAT the SW's first controller and 404, silently downgrading the whole
+      // session to the local net. Wait (bounded) for control before importing; contexts without a SW
+      // (native/dev serve the path directly) proceed immediately.
+      if (typeof navigator !== "undefined" && navigator.serviceWorker && !navigator.serviceWorker.controller) {
+        await Promise.race([
+          new Promise((res) => { navigator.serviceWorker.addEventListener("controllerchange", res, { once: true }); navigator.serviceWorker.ready.then(() => setTimeout(res, 250)); }),
+          new Promise((res) => setTimeout(res, 10000)),
+        ]).catch(() => {});
+      }
       const hw = await import("./holowhat/holospaces_web.js");
       // wasm-bindgen ≥0.2.93 wants a single options object ({module_or_path}); older builds took the URL positionally.
       // Pass the object and fall back to positional so it's correct on both without the deprecation warning.

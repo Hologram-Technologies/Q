@@ -15,7 +15,7 @@
 // It never loads inside the native shell (which already owns these keys) or inside an embedded frame.
 
 import { createKeymap } from "/usr/lib/holo/holo-keys.js";
-import { classifyIntent, fuzzyScore } from "/usr/lib/holo/holo-intent-classify.mjs";
+import { classifyIntent, fuzzyScore } from "../../usr/lib/holo/holo-intent-classify.mjs";   // mount-relative: a root-absolute specifier escapes /Q at the origin root and 404s pre-SW on a cold boot
 // holo-names' classify is the ONE naming-universe classifier (κ/did/CID/SRI/ENS/nostr/…); reused, not rebuilt.
 // Loaded lazily + fail-soft so a hiccup degrades the resolve lane to a plain web hand-off, never breaks the bar.
 let classifyName = null;
