@@ -8,8 +8,8 @@
  "mirror": "https://huggingface.co/HOLOGRAMTECH/holo-messenger-shell/resolve/main/b/",
  "tiers": {
   "core": {
-   "files": 608,
-   "bytes": 12285761,
+   "files": 613,
+   "bytes": 12461172,
    "hf": 0
   },
   "apps": {
@@ -3201,9 +3201,9 @@
    "source": "origin"
   },
   "apps/holo-messenger/app.html": {
-   "sha256": "deae500a5d6976db3bdbf9d84cdb97560864949231776d74fa6f6af2679d957b",
-   "blake3": "d223105f18cc7380f01a930cb8d8d5641baedcb13ce99e2b2406d612e7ac121d",
-   "bytes": 67695,
+   "sha256": "0c10a6ba9ce80bd376f8b738abe6cd826c877cc2635bbbc2f9b081390317b426",
+   "blake3": "4f1e3409d969f5f062c986b523919250ae15b9479399baa01fff2fa3d8efb386",
+   "bytes": 67713,
    "tier": "core",
    "source": "origin"
   },
@@ -3586,8 +3586,8 @@
    "source": "origin"
   },
   "apps/holo-messenger/holo-sw.js": {
-   "sha256": "2fb2af7947f8870bc7b0587489d51e1b16b506a87fc8fc3612a4bf38be077317",
-   "blake3": "35dfe0d4956070a88c576eb81d99cbd6bf64196cecf085da1ec5619dccb956e1",
+   "sha256": "7db1b6b9331c87a3c85eb684b60e61db6dc9350eb74ca3739d30f92b1ab6eb0a",
+   "blake3": "2d63fd4faf0b511b6ef5e499359f51bed386451159be0513bb6e6fc154027fcb",
    "bytes": 24665,
    "tier": "core",
    "source": "origin"
@@ -3680,6 +3680,41 @@
    "sha256": "793e22942c59ec9a4349874c459619ea230f89cfe807eff5bc58a73407c5ffb9",
    "blake3": "948427886d876fb3c4a85e592aa58e7daa8c298d33826c22e0d94c2478b716c3",
    "bytes": 694,
+   "tier": "core",
+   "source": "origin"
+  },
+  "apps/holo-messenger/icons/apple-touch-icon.png": {
+   "sha256": "a0e16de5a6e2f9412e5b5aae1858a7e9c73910122008999868c751652c947c98",
+   "blake3": "c8c32c76b2a16c9b976938ad8f16fd4ad5be957aabdff4a1a53686d85b6fd079",
+   "bytes": 11778,
+   "tier": "core",
+   "source": "origin"
+  },
+  "apps/holo-messenger/icons/icon-192.png": {
+   "sha256": "8d3ec706659ef338d2f033c86e5460cdc4692ea74a9df63caf45e9237793ef07",
+   "blake3": "43f7b1daa2ba36b4509ca60c50ce66836f45fd5cacfb14b0a9ca5d748afff856",
+   "bytes": 13213,
+   "tier": "core",
+   "source": "origin"
+  },
+  "apps/holo-messenger/icons/icon-512.png": {
+   "sha256": "9e185bfb0f9b16ddc38f5c111ffefab89278e585340e48df2b5b3af6a6812911",
+   "blake3": "aa6a5865d8684b80d85ad0e0d5b83442fc8b4f404db3c664c7723a3a0df59961",
+   "bytes": 72056,
+   "tier": "core",
+   "source": "origin"
+  },
+  "apps/holo-messenger/icons/icon-maskable-192.png": {
+   "sha256": "ed2ed584e30c37cccfcc8fdebf66b070527e65a242bdeaafea8293f73bce7523",
+   "blake3": "1b117d36c871301b3da42a2c10c76ba4631c0dbd792f2a5fd1bc908ecfaf5c2f",
+   "bytes": 11549,
+   "tier": "core",
+   "source": "origin"
+  },
+  "apps/holo-messenger/icons/icon-maskable-512.png": {
+   "sha256": "b43c38d0fae35136456f4fba5dcf5ee55795606ea334c86e7681c5a6685d20ea",
+   "blake3": "69c7ff023a1fb44d78964f644b245ff6bb4dcd321dfab505a7721c11137bc85b",
+   "bytes": 66034,
    "tier": "core",
    "source": "origin"
   },
@@ -3894,9 +3929,9 @@
    "source": "origin"
   },
   "apps/holo-messenger/manifest.webmanifest": {
-   "sha256": "8ffd8459e14b44754bc988d25d3a20069dcc41515aa4dbec8e4cd1aafdd1ca97",
-   "blake3": "0c40bec68bdcd17722b61cda733ab7f1b22147cc4ce743e4f33258dcf0808e8e",
-   "bytes": 820,
+   "sha256": "1920379959df894da6ae3b54ed9c5c75395812618b0d40a7f504f949834cef84",
+   "blake3": "0557fc307f8528a95855170be3edfc771568bc1000178155d439f81bc509b573",
+   "bytes": 1147,
    "tier": "core",
    "source": "origin"
   },
@@ -3971,8 +4006,8 @@
    "source": "origin"
   },
   "apps/holo-messenger/shell-manifest.json": {
-   "sha256": "73eaed6c1e9198ee38139b3e9367a563b46f29a6d038af88eb83cba684ae9048",
-   "blake3": "0d6c13966340a00e82f5086d44d207b71336e9d743cdf3cb46fc2eb02540b710",
+   "sha256": "3c9af4694cecd032e95547b8f709a50f98ee7b5b3a91f0b576a77a0915a99731",
+   "blake3": "b33b9bbbeb954232b53c31b19d0a07a7c4d42bf9c316eb2f8eb885d450a546b5",
    "bytes": 8507,
    "tier": "core",
    "source": "origin"
@@ -17312,9 +17347,9 @@
    "source": "origin"
   },
   "root-sw.js": {
-   "sha256": "63f5f6ae0d8ed116a061c9235aaad2c4477638abacd86832d50fb1a1b2de8ac7",
-   "blake3": "348e712fbb108e89bfa350e5f516af3ed3ab934642850661d86a274503a84435",
-   "bytes": 20551,
+   "sha256": "505ebd27381b093e76117da6213e03d9048bbd73adc8598c758bb2eec374b13b",
+   "blake3": "cec9c5fe2a00cf56a87460eae079f8f1360d0499b92f8bf03151c5ef52742449",
+   "bytes": 20987,
    "tier": "core",
    "source": "origin"
   },
