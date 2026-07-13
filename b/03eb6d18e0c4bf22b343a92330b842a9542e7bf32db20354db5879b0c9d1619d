@@ -14,8 +14,8 @@
   },
   "apps": {
    "files": 5281,
-   "bytes": 1437879,
-   "hf": 5240
+   "bytes": 1535069,
+   "hf": 5236
   },
   "heavy": {
    "files": 20,
@@ -4159,31 +4159,39 @@
    "source": "origin"
   },
   "apps/jellyfin/LICENSE-NOTE.md": {
+   "sha256": "f2aafb012d25caf12d78c3953c32e307cc16245ae0bdb51a988c5d3545a51d48",
    "blake3": "c01e71a0be710f0d8437f7a77853f9ad329071b17cf84d563f73fef13f87bf1a",
+   "bytes": 1212,
    "tier": "apps",
-   "source": "hf"
+   "source": "origin"
   },
   "apps/jellyfin/holo-evicted.json": {
-   "sha256": "3f890c81bf004e877362e38c07bef2c48dfebc646d5a2179bc25d7e386c91c1a",
-   "blake3": "d945bd4891f64c3aa094fe1356f6a2ecdd20d883cddbcae5f5f662b2c49bcbe5",
-   "bytes": 285356,
+   "sha256": "40dfd9146d5223e75645a959932020bda660740f41ac3a09d35fa71551f70f5d",
+   "blake3": "fc6a5fbdc7c2d186efe19847c7f5014b4c5002c6d5bb02cfa2e55221290aee25",
+   "bytes": 275807,
    "tier": "apps",
    "source": "origin"
   },
   "apps/jellyfin/holo-jellyfin-sw.js": {
+   "sha256": "89aff16d5f151db99d14327d7660a62d3c724e38d25bd89c96e2c750fafc5035",
    "blake3": "4cbf37f3faf11e0ee84accd86b4508ecb1e936e53c450d2773529138570745ad",
+   "bytes": 102088,
    "tier": "apps",
-   "source": "hf"
+   "source": "origin"
   },
   "apps/jellyfin/icon.svg": {
+   "sha256": "e6efb28c85af67091b5bc75b74c8e2ca80ac9b9c4cb2503676ee083164ee627b",
    "blake3": "40614f627f260bdd6cdea6e36a2d00c97e774cddd802ca696551223310649fbd",
+   "bytes": 793,
    "tier": "apps",
-   "source": "hf"
+   "source": "origin"
   },
   "apps/jellyfin/index.html": {
+   "sha256": "3fd2a00105ad0e8f01109dce52ff4c7a0cc6c9444532b0453ed9d770cce2d3a4",
    "blake3": "11355930a6449c742340397c6f14c7734061961b85b430ffd03cf83cb98bba51",
+   "bytes": 2646,
    "tier": "apps",
-   "source": "hf"
+   "source": "origin"
   },
   "apps/jellyfin/web/10092.c37bcafcc8eb7c5c080e.chunk.js": {
    "blake3": "c3db01efaa1e8f26e1d7366a2a21204ac0f913d1b85c910d0f5813f7cbfa81df",
@@ -18876,8 +18884,8 @@
    "source": "hf"
   },
   "apps/q/holo-evicted.json": {
-   "sha256": "282109fcca5ef7033c14937fe5ae5c9e5487def8ebadacd266ee0f0f281cb84a",
-   "blake3": "434fdd026efcb2afc28380020343b612e7a0d68f54cd1770a7113eb1c1ce1d66",
+   "sha256": "b16382288785c51c50c55c906eb5315b978d196d8cb1523e99987f3efe865651",
+   "blake3": "21e2969ce8d2841cd0deeaef6b54ebaaa560a23c2edbe644e807d1770e38e26e",
    "bytes": 56894,
    "tier": "apps",
    "source": "origin"
