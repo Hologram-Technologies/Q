@@ -639,6 +639,11 @@
     }).catch(function () {});
   }
   function resolveSet(url) {
+    // /sc/resolve is the NATIVE host's SoundCloud bridge (holo:// or a dev localhost). On a static
+    // hosted origin (github.io) there is no bridge — the fetch would 404 at the ORIGIN ROOT every
+    // open. Skip it there: the seeded playlist + CDN art already carry the experience.
+    var isStaticHost = /^https?:$/.test(location.protocol) && !/^(127\.0\.0\.1|localhost|\[::1\])$/.test(location.hostname);
+    if (isStaticHost) return Promise.reject(new Error("no /sc bridge on a static origin"));
     return fetch("/sc/resolve?url=" + encodeURIComponent(url), { cache: "no-store" }).then(function (r) { return r.json(); }).then(function (j) {
       if (!j || j.error) throw new Error(j && j.error || "resolve failed");
       var entries = (j.entries || []).filter(function (e) { return e && (e.webpage_url || e.url); });
