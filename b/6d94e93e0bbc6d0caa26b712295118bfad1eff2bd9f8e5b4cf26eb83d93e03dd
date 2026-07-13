@@ -8,8 +8,8 @@
  "mirror": "https://huggingface.co/HOLOGRAMTECH/holo-messenger-shell/resolve/main/b/",
  "tiers": {
   "core": {
-   "files": 616,
-   "bytes": 12503092,
+   "files": 631,
+   "bytes": 12649792,
    "hf": 0
   },
   "apps": {
@@ -7269,8 +7269,8 @@
    "source": "hf"
   },
   "apps/q/holo-evicted.json": {
-   "sha256": "fe543aecfe3efe5f4daebfd4b712d08e94e516672a4b642eb0de2c586bddb953",
-   "blake3": "3eb006d71b78f603903b80d46b0117c828701535b4ab7149bf98847cc1f0245e",
+   "sha256": "af34ef3188c396880e7e48b395c603b79372d06ae40897fbf736f5d3affa5e19",
+   "blake3": "a1b32b6b18f41b89b1374802601b91627f3c6b6d68abf4a7f415de793fe13b29",
    "bytes": 56894,
    "tier": "apps",
    "source": "origin"
@@ -17406,6 +17406,111 @@
    "sha256": "dc39a62d58ab1e09de6040a319ddfaac6da82b112de64b3e08f9e46c4d952bc7",
    "blake3": "5dde5cd5fd32514d5f7531a48c87ff6b84f7ff779b42d4032efd6fcaa74d243d",
    "bytes": 2795,
+   "tier": "core",
+   "source": "origin"
+  },
+  "stream/_shared/holo-blake3.mjs": {
+   "sha256": "6fd2624ff77857d9ddd4a7cf8fb129829f2b7aeb172e49c203c16c0017193936",
+   "blake3": "e6201a82be15cf856eb6ceb7f48bb806f06013e6a0b7f92d22ddb5b8d03dcbfe",
+   "bytes": 7443,
+   "tier": "core",
+   "source": "origin"
+  },
+  "stream/_shared/holo-kappa.mjs": {
+   "sha256": "7bde7fa12d3baa1763e9c9db9fd950b2dcfc4c6b8a3440d1aac98299caf61835",
+   "blake3": "ef48f906023faf0a72ffded045ed2cc0f4e8dac46bae4d2bfcf61871e80d3032",
+   "bytes": 2697,
+   "tier": "core",
+   "source": "origin"
+  },
+  "stream/index.html": {
+   "sha256": "417efb1dd2dbd148148960f7d422b48258e9fdda7e0fe07c7b52c0045ed3a10b",
+   "blake3": "ee04b5ee0367a076a3ef1bf4eff0f04ddff327964e96892970f4f6a213cdf320",
+   "bytes": 9300,
+   "tier": "core",
+   "source": "origin"
+  },
+  "stream/lib/holo-media-resolver.mjs": {
+   "sha256": "50ce2483a1e7dda0010196b4166eebe15c971e146182f55a4850a26dd57c969a",
+   "blake3": "ea869d4d81e806e8bc13f5cfc99b23e228c6d209e6ed7f69c1877abcf46d935b",
+   "bytes": 7474,
+   "tier": "core",
+   "source": "origin"
+  },
+  "stream/lib/holo-stremio.mjs": {
+   "sha256": "2e0700aeb0e5e50d4ee1fd86de98d31e7e6694ba4a2ccc0299932ffa4dd5ce6e",
+   "blake3": "ea3c39d55947be2f041aff4c23c0d6731e82a5e4f87fc6f99e9648b14f6d6ab3",
+   "bytes": 6430,
+   "tier": "core",
+   "source": "origin"
+  },
+  "stream/lib/holo-torrent-health.mjs": {
+   "sha256": "a61610b7c3d1630fdcec791258a16b07e961d904e3ac6ac0237f58f966add5d3",
+   "blake3": "f5a03efe241ada84973351a488ebc3266e668e028f8cb4f47f122c7faab30d6a",
+   "bytes": 3807,
+   "tier": "core",
+   "source": "origin"
+  },
+  "stream/lib/holo-torrent-index.mjs": {
+   "sha256": "755b2a0c7ed6ad656d3c104b0503c61871c41d12c19a97ccdb7867a10476f868",
+   "blake3": "b141d3e292509487e0dff57cbcb65da6a70c445e6041f6e409198b758e0f17d5",
+   "bytes": 7130,
+   "tier": "core",
+   "source": "origin"
+  },
+  "stream/lib/holo-torrent-kappa.mjs": {
+   "sha256": "267c9eb7720743a87d724f31ee416fcb18accdc3bd14fdc72c3c11ddce4ebb9c",
+   "blake3": "d394e0cd83561e4ea0c6ff5f0a0ff339e21ed292c74a6ce03ce4eaf08131c2d3",
+   "bytes": 17888,
+   "tier": "core",
+   "source": "origin"
+  },
+  "stream/lib/holo-torrent-shards.mjs": {
+   "sha256": "d24b91f2c9f231d569b21bfb8e045a2087b6a84ea44d0aa7fca12e172928eda3",
+   "blake3": "c30d600a7d8e5a22ba0578e721ec31e795a66448f130caac4e7ddc1c5ac570ae",
+   "bytes": 3523,
+   "tier": "core",
+   "source": "origin"
+  },
+  "stream/lib/holo-torrent-stream.mjs": {
+   "sha256": "e7b5111617b0795642855bc390946570a2734f1ea28de3a089643dc4f610ec26",
+   "blake3": "7f9cdda41b15c71425a1e4fd220a5182906b57759d32d6668623c085d3e4f179",
+   "bytes": 12818,
+   "tier": "core",
+   "source": "origin"
+  },
+  "stream/seed/catalog.json": {
+   "sha256": "83cb60c195cc2951d9941a8cf42d0a74b3c1e4ece51bb3dce2b5ae1ba2a6a5b8",
+   "blake3": "34ffcd581487748e521675515bcf1cefe824bba3dbeef379ad66ffa515a91b28",
+   "bytes": 2148,
+   "tier": "core",
+   "source": "origin"
+  },
+  "stream/seed/manifest.json": {
+   "sha256": "3bb71d622086ff921ad3938da7d03eeb85d0dcce63fb3a62fbedb479d9855231",
+   "blake3": "a7f512d376130fc270e2d74d20a4b04f3677b296102577445c76ba05e6582205",
+   "bytes": 262,
+   "tier": "core",
+   "source": "origin"
+  },
+  "stream/seed/shards/71387e8aa4e8737544c559e9619452332b988a46df55fa9f3c211f9c88904d4d.json": {
+   "sha256": "73ed258f95efc5025b0f37c1be79ad7b6f166bd97be859331555cc474ba8b3ae",
+   "blake3": "71387e8aa4e8737544c559e9619452332b988a46df55fa9f3c211f9c88904d4d",
+   "bytes": 28016,
+   "tier": "core",
+   "source": "origin"
+  },
+  "stream/seed/shards/d021d94d1a9be081592c33496d35a633f1e76b1716239e9b7c0c237ff9702b20.json": {
+   "sha256": "47fca816a41792697b558e774a46b2810c816a3638bbf2acb7495e292dab3615",
+   "blake3": "d021d94d1a9be081592c33496d35a633f1e76b1716239e9b7c0c237ff9702b20",
+   "bytes": 13210,
+   "tier": "core",
+   "source": "origin"
+  },
+  "stream/seed/shards/d1b4d78f75b75a15e6f7b849fbf5d646698b8a0759671724ebd625fc28620a66.json": {
+   "sha256": "7ed3ef0ca02b032241d292fad8d71632d8ee9ab0ae5f5c802f4803c475525d90",
+   "blake3": "d1b4d78f75b75a15e6f7b849fbf5d646698b8a0759671724ebd625fc28620a66",
+   "bytes": 24554,
    "tier": "core",
    "source": "origin"
   },
