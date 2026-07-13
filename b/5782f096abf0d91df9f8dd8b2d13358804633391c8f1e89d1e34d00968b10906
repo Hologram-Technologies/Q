@@ -9,12 +9,12 @@
  "tiers": {
   "core": {
    "files": 632,
-   "bytes": 12666632,
+   "bytes": 12667710,
    "hf": 0
   },
   "apps": {
    "files": 5281,
-   "bytes": 1535069,
+   "bytes": 1536490,
    "hf": 5236
   },
   "heavy": {
@@ -46,9 +46,9 @@
    "source": "origin"
   },
   "README.md": {
-   "sha256": "fd6e076a6f51115dd73653eeaaf61fb26404cde48c8f86424790708986a2b998",
-   "blake3": "e49548867f651d23266632b54636b33382114be25b9a12f3518c83bffe833efe",
-   "bytes": 1615,
+   "sha256": "4531bd38d9a63375a4885f17caf37dd25002fb0ea88a0f59470debd9b6d49815",
+   "blake3": "40b74353d4aad86e46961ccd7ee12e38a5fbf339c647b4d405a5ab58f58926c5",
+   "bytes": 1812,
    "tier": "core",
    "source": "origin"
   },
@@ -2935,9 +2935,9 @@
    "source": "hf"
   },
   "apps/holo-messenger/_vendor/ui/chat-ui.bundle.css": {
-   "sha256": "666d1006637bafed144d18b689fe1ce31cb414fca02ce0b866afb9f8a505fa6c",
-   "blake3": "541e5cbc650f15d5cd08c7193accc712497599049b38168f463aa6ec51b209ae",
-   "bytes": 203380,
+   "sha256": "543f372b4fffa7fb10f9daca3f52f737efaea8c84906758e6cd5ba2c5f1a7ab5",
+   "blake3": "c8dfcdf0b9f6c1b20c76926c7ddbfdb42e50f6899ef5d137bcb8f324eda1803e",
+   "bytes": 204261,
    "tier": "core",
    "source": "origin"
   },
@@ -3607,8 +3607,8 @@
    "source": "origin"
   },
   "apps/holo-messenger/holo-sw.js": {
-   "sha256": "dbd34a7a558a09460cdfbca4f16034c29bacdf817ab80fce179edff8308827d9",
-   "blake3": "2b2dcfb5ed0a35b396549bb0bde2dc45898d19dd909a7ee195b13b9011fe2f3f",
+   "sha256": "1ffb7425821b6cda3ad38e6a5a052b0833250e03de5b144ec4247d767e987cc6",
+   "blake3": "bf05fd605717849dd497961850135628bc407a79260b6813ba913d3dd5af9ff9",
    "bytes": 24665,
    "tier": "core",
    "source": "origin"
@@ -4027,8 +4027,8 @@
    "source": "origin"
   },
   "apps/holo-messenger/shell-manifest.json": {
-   "sha256": "8bd00282804b748cc852f8ad5fc7a583144ecbbcd715b333421445ed1d6fe3cc",
-   "blake3": "6919e3ea025977dff28d244dd501e8bb012faf3ee0a02c4588ca53421d0637ad",
+   "sha256": "845af45e5697804b4e02622d5a20d6ef9bc075575653abad6801061cca7c83f2",
+   "blake3": "a7c05950d1dd913fa9c7d4449842ab73f386e68f0bea23c523013d9caa672838",
    "bytes": 8507,
    "tier": "core",
    "source": "origin"
@@ -28831,9 +28831,9 @@
    "source": "hf"
   },
   "apps/yourspace/elon.html": {
-   "sha256": "e77ce36d314de7cced74ef0132ef0d0ba8b457db17b9c30d180dd8330783925e",
-   "blake3": "ae9dc39e50c621d71f0a44389edcc9b1963fbd3fc47ad59032020acc1aa3feb7",
-   "bytes": 1669,
+   "sha256": "429896c1be13d5fcd7581956f57165aa7462f00ec1aae2371643679dd46c5ce8",
+   "blake3": "9790bb5bc0802054ebf8013d986b6189c6e5039e8b4b55b6dfa7e086c5b9ba68",
+   "bytes": 1699,
    "tier": "apps",
    "source": "origin"
   },
@@ -28865,16 +28865,16 @@
    "source": "hf"
   },
   "apps/yourspace/index.html": {
-   "sha256": "88cd2938c9bc0b712fb84193bee36b4b37a273662862247d2516953171ac6082",
-   "blake3": "b13aed52f9010eb535422dc6146d78f80d0a1eeb778e33d912276b97ba013cee",
-   "bytes": 136768,
+   "sha256": "23be88eedd27eccf4b34b5eeacf0ddac54bd5420a983865b794a24a015f19e0b",
+   "blake3": "fa6eea441c63c80a796a4207c7d86fc1a6217adc3acb4295ccfd759483c5622b",
+   "bytes": 138099,
    "tier": "apps",
    "source": "origin"
   },
   "apps/yourspace/jensen.html": {
-   "sha256": "70b117698e4d84dc6520555b4f6e23e7ac50aa84f10ad4bbe227832dda75c625",
-   "blake3": "0613f54dc660390642458b2977e486dc49249d743b45f9e822a37e24674768ac",
-   "bytes": 1824,
+   "sha256": "09f630713fa2f0f95c66dac6897478ff7f3e324260fbcc051e96b7e0689c7be2",
+   "blake3": "2c7f00a5b7e2c428d09fac1ac7a905e758635c168bcde4754e3d2e6433efeb8b",
+   "bytes": 1854,
    "tier": "apps",
    "source": "origin"
   },
@@ -28910,9 +28910,9 @@
    "source": "hf"
   },
   "apps/yourspace/sam.html": {
-   "sha256": "a5b38f07516a5f00f9ebb10cc1217f88186f945e9bfdc1f7a9f513c2cded289d",
-   "blake3": "9693da581944d72f8fe4ccc121711c1a114c230850cd38b031dedb7243594b44",
-   "bytes": 1674,
+   "sha256": "925f31bf24ca9b43905ea4ff1756a7d2ed6a9d1236059e107a94d84e0a89fdd4",
+   "blake3": "ca1b8576a20de7df6b702e76adaba9eda6a30cf80c96a49a5f308d54c9437dd6",
+   "bytes": 1704,
    "tier": "apps",
    "source": "origin"
   },
