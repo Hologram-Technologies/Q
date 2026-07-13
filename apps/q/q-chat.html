@@ -124,6 +124,14 @@ try{if(window.self===window.top){if(self.crossOriginIsolated){try{sessionStorage
   #mic.rec{color:#fff;background:linear-gradient(135deg,#ff5b7b,#e0245e);border-color:transparent;animation:micpulse 1.2s ease-out infinite}
   #mic.busy{opacity:.55;pointer-events:none}
   @keyframes micpulse{0%{box-shadow:0 0 0 0 rgba(224,36,94,.5)}100%{box-shadow:0 0 0 15px rgba(224,36,94,0)}}
+  /* HOLO-Q-CLEAN-EMBED: the drawer is ONE flat plane = the left-nav chrome (#1f1f1e). Composer, chips and send all
+     flatten into it — no off-colour boxes, no borders, no divider lines. Standalone (no .qembed) is untouched. */
+  html.qembed header{border-bottom-color:transparent!important}
+  html.qembed #in{background:rgba(255,255,255,.055)!important;box-shadow:none!important}
+  html.qembed .chip{background:rgba(255,255,255,.05)!important;border-color:transparent!important;box-shadow:none!important;backdrop-filter:none!important;-webkit-backdrop-filter:none!important}
+  html.qembed .chip:hover{border-color:transparent!important;background:rgba(255,255,255,.09)!important}
+  html.qembed #send{background:rgba(255,255,255,.09)!important;box-shadow:none!important}
+  html.qembed #send:hover{background:rgba(139,123,255,.85)!important;box-shadow:none!important;color:#fff!important}
 </style></head><body>
 <div id=wall></div>
 <header>

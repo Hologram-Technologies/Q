@@ -13,8 +13,8 @@
    "hf": 0
   },
   "apps": {
-   "files": 2944,
-   "bytes": 1049495,
+   "files": 2949,
+   "bytes": 1101187,
    "hf": 2901
   },
   "heavy": {
@@ -7302,9 +7302,9 @@
    "source": "hf"
   },
   "apps/q/q-chat.html": {
-   "sha256": "d276601e42804845399477599ed6828834b5802bef84d2fcc3465f40c06151f0",
-   "blake3": "4a58326be16777d0dca359d1fbe60eefea38395bb4e5ef70565526b4c25084b3",
-   "bytes": 77230,
+   "sha256": "3ad307f9774a11aa56537df1f3afb85344f412bbc92f87471d64c71f09133a0a",
+   "blake3": "c72f3456e7eb1ac8b2b7812608640c84df9c0a42f85947d70a7320a05a0f8751",
+   "bytes": 78123,
    "tier": "apps",
    "source": "origin"
   },
@@ -17170,6 +17170,41 @@
    "blake3": "c5cdfcf52969255ff6003ae3b7733df05130dfff81e9fbdc47162d47b7a1263d",
    "tier": "apps",
    "source": "hf"
+  },
+  "apps/yourspace/holo-blake3.mjs": {
+   "sha256": "6fd2624ff77857d9ddd4a7cf8fb129829f2b7aeb172e49c203c16c0017193936",
+   "blake3": "e6201a82be15cf856eb6ceb7f48bb806f06013e6a0b7f92d22ddb5b8d03dcbfe",
+   "bytes": 7443,
+   "tier": "apps",
+   "source": "origin"
+  },
+  "apps/yourspace/holo-yourspace.mjs": {
+   "sha256": "bcfbd6f58fac41fcf644394765095f4e62c1da3824781f88f0b3aed4d15d4be1",
+   "blake3": "3fe5fd3287150a29648f376bca08010013c51538c5fc9abd02d821097a8ab3b9",
+   "bytes": 8980,
+   "tier": "apps",
+   "source": "origin"
+  },
+  "apps/yourspace/holospace.json": {
+   "sha256": "ac7b82ac031efd2a5a9608268433853f9df77230c68e5c1012c58402c41ba160",
+   "blake3": "20517f5f6383144d24dc17d62802b52b79037fc475ee79f6d070ae18e567846c",
+   "bytes": 2786,
+   "tier": "apps",
+   "source": "origin"
+  },
+  "apps/yourspace/icon.svg": {
+   "sha256": "f2c13cb7ae0a83862b98f71932a182823609ce3c7786017dc5ec45975b23f020",
+   "blake3": "b12723a1264e59c8809bece8fa2adaf75a96985e068793ff5456cb97a26ad4e2",
+   "bytes": 421,
+   "tier": "apps",
+   "source": "origin"
+  },
+  "apps/yourspace/index.html": {
+   "sha256": "c224b1941a746ba15fc62cd82299cc66751b5b4b3d8148972fa9b18b34792cfc",
+   "blake3": "00b8aae078d29fceac6be9d6a3806218f4b91a26f01a74c083876dcea2707ff0",
+   "bytes": 31169,
+   "tier": "apps",
+   "source": "origin"
   },
   "evicted.json": {
    "sha256": "5c844d4a4cb72efeb3ded34e93cb2a91c9e60cf20c702b9c2f396af7a5a83994",
