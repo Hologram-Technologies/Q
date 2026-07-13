@@ -2,8 +2,15 @@
 // styles → zero React conflict). Shows the 🔒 end-to-end state, a tap-to-verify SAFETY NUMBER (emoji strip + 60 digits),
 // a KEY-CHANGE warning banner (anti-MITM), message bubbles (with a per-message unverified flag), and a composer. The app
 // wires it to the holo-direct engine (onSend → engine.send; engine "message"/"keychange" → addMessage/showKeyChange).
+//
+// KEYS: handing a live power is as native here as sending a photo — a 🗝 composer button mints a Key (holo-key.mjs,
+// the SAME framework-free core the React bridged-chat card uses) and sends it as a message; a received/sent key link
+// renders as a live control CARD in the thread (holder taps drive the issuer's device over this very sealed channel;
+// the sender can Take it back). No card render = no card here; the whole surface is OWN DOM, so the card is too.
 
-export function openDirectChat({ name = "Contact", onSend = () => {}, onVerify = () => {}, onClose = () => {}, onTyping = () => {}, onAttach = null, onRename = null } = {}) {
+import { keyLinkInText, mintKey, invoke as keyInvoke, revokeKey, keyring as keyRing, buildKeyLink, keyMessageText, onKeyRevoked, keyRevoked, VERBS as KEY_VERBS } from "./holo-key.mjs?v=k1";
+
+export function openDirectChat({ name = "Contact", onSend = () => {}, onVerify = () => {}, onClose = () => {}, onTyping = () => {}, onAttach = null, onRename = null, myPub = null } = {}) {
   if (typeof document === "undefined") return { addMessage() {}, addMedia() {}, setMedia() {}, notice() {}, setName() {}, setSafety() {}, showKeyChange() {}, setVerified() {}, setTick() {}, setTyping() {}, close() {} };
   const el = (t, css, html) => { const n = document.createElement(t); if (css) n.style.cssText = css; if (html != null) n.innerHTML = html; return n; };
   const _esc = (s) => String(s == null ? "" : s).replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
@@ -61,6 +68,11 @@ export function openDirectChat({ name = "Contact", onSend = () => {}, onVerify =
   attach.onclick = () => fileIn.click();
   fileIn.onchange = () => { const f = fileIn.files && fileIn.files[0]; fileIn.value = ""; if (f && onAttach) onAttach(f); };
   if (onAttach) composer.append(attach);
+  // 🗝 KEYS: hand a live power over your device — as native as 📎. Needs myPub (to mint on your own identity).
+  const keyBtn = el("button", "background:transparent;border:0;color:#8696a0;padding:0 4px;font-size:19px;cursor:pointer;flex:0 0 auto", "🗝");
+  keyBtn.className = "hd-key"; keyBtn.title = "Hand a key — a live power on your device, revocable any time";
+  keyBtn.onclick = () => openKeySheet();
+  if (myPub) composer.append(keyBtn);
   composer.append(input, sendBtn, fileIn);
 
   // safety sheet (tap 🛡)
@@ -97,6 +109,10 @@ export function openDirectChat({ name = "Contact", onSend = () => {}, onVerify =
   function bubble(m) {
     const mine = m.from === "me";
     const row = el("div", `display:flex;${mine ? "justify-content:flex-end" : "justify-content:flex-start"}`);
+    // 🗝 KEYS: a message carrying a key link renders as the live control card, not raw text (parity with the
+    // React bridged-chat bubble). The card IS the message. Everything else falls through to a normal bubble.
+    const kc = keyLinkInText(m.text);
+    if (kc) { const kcard = keyCardDom(kc, mine); if (m.kappa) kcard.dataset.kappa = m.kappa; row.append(kcard); return row; }
     const b = el("div", _bubbleCss(mine));
     b.className = "hd-bubble";
     if (m.kappa) b.dataset.kappa = m.kappa;
@@ -137,6 +153,115 @@ export function openDirectChat({ name = "Contact", onSend = () => {}, onVerify =
     b.append(_mediaContent(m));
     if (mine) _addTick(b, m);
     row.append(b); return row;
+  }
+
+  // ── 🗝 KEYS ────────────────────────────────────────────────────────────────────────────────────────────────
+  // openKeySheet(): the mint form, in the same modal `sheet` the safety number uses. P0 verb = music.control
+  // (one power done well). Mint on MY identity (myPub), send the key as a message → it renders as the card below.
+  function openKeySheet() {
+    const verb = KEY_VERBS["music.control"];
+    let ttl = 7 * 24 * 3600e3;   // default: this week
+    sheetBody.innerHTML = "";
+    const wrap = el("div", "width:min(340px,86vw);text-align:left");
+    wrap.append(el("div", "font-size:15px;font-weight:700;margin-bottom:2px", "🗝 Hand a key"));
+    wrap.append(el("div", "color:#8aa0ad;font-size:12.5px;margin-bottom:12px", "A live power on your device — sealed, serverless, revocable any time."));
+    const verbRow = el("div", "display:flex;gap:10px;align-items:center;background:#0e1a16;border:1px solid #1f3a30;border-radius:12px;padding:10px 12px;margin-bottom:10px");
+    verbRow.append(el("span", "font-size:22px", verb.glyph), el("div", null, `<b style="font-size:13.5px">${_esc(verb.label)}</b><div style="color:#8aa0ad;font-size:11.5px">${_esc(verb.blurb || "")}</div>`));
+    wrap.append(verbRow);
+    const noteIn = el("input", "width:100%;box-sizing:border-box;background:#2a3942;border:0;border-radius:10px;padding:9px 12px;color:#e9edef;outline:none;font-size:13px;margin-bottom:10px");
+    noteIn.placeholder = "A note with it (optional)"; noteIn.maxLength = 120;
+    wrap.append(noteIn);
+    const ttlRow = el("div", "display:flex;gap:6px;margin-bottom:12px");
+    const ttls = [["1 hour", 3600e3], ["today", 24 * 3600e3], ["this week", 7 * 24 * 3600e3]];
+    const ttlBtns = ttls.map(([lbl, ms]) => {
+      const b = el("button", `flex:1;background:${ms === ttl ? "#00a884" : "#1f2c33"};color:${ms === ttl ? "#04110d" : "#cfe"};border:0;border-radius:9px;padding:8px 0;font-size:12px;font-weight:600;cursor:pointer`, lbl);
+      b.onclick = () => { ttl = ms; ttlBtns.forEach(([bb, mms]) => { bb.style.background = mms === ttl ? "#00a884" : "#1f2c33"; bb.style.color = mms === ttl ? "#04110d" : "#cfe"; }); };
+      return [b, ms];
+    });
+    ttlBtns.forEach(([b]) => ttlRow.append(b)); wrap.append(ttlRow);
+    const err = el("div", "display:none;color:#ffb0b0;font-size:12px;margin-bottom:8px");
+    const go = el("button", "width:100%;background:linear-gradient(90deg,#00d09c,#1fd6ac);color:#04110d;border:0;border-radius:12px;padding:11px;font-weight:700;cursor:pointer", "Hand this key");
+    go.onclick = async () => {
+      go.disabled = true; go.textContent = "Minting…"; err.style.display = "none";
+      try {
+        const issName = (localStorage.getItem("holo.direct.name") || "").trim() || null;
+        const grant = await mintKey({ verb: "music.control", note: noteIn.value.trim() || null, ttlMs: ttl, myPub, issName });
+        onSend(keyMessageText(grant, buildKeyLink(grant)));   // sends into the thread → renders as the card below
+        sheet.style.display = "none";
+      } catch (e) { err.style.display = "block"; err.textContent = String((e && e.message) || e); go.disabled = false; go.textContent = "Hand this key"; }
+    };
+    const cancel = el("button", "width:100%;margin-top:8px;background:transparent;border:0;color:#8aa0ad;cursor:pointer", "Cancel");
+    cancel.className = "hd-sheet-close"; cancel.onclick = () => { sheet.style.display = "none"; };
+    wrap.append(err, go, cancel);
+    sheetBody.append(wrap); sheet.style.display = "flex";
+  }
+
+  // keyCardDom(kc, mine): the live control card, OWN DOM (mirrors the React KeyCard, shares holo-key.mjs). Holder:
+  // "Use key" → invoke("now") over THIS sealed channel → controls + now-playing, honest states (asleep/revoked/
+  // expired). Sender (mine): "You handed this key" + Take it back → revokeKey flips the issuer-local ring → the
+  // very next holder tap is refused at the door.
+  function keyCardDom(kc, mine) {
+    const g = kc.grant, verb = KEY_VERBS[g.verb] || { glyph: "🗝", label: g.verb, blurb: "", methods: [] };
+    const expired = !!(g.expires && Date.now() > g.expires);
+    const card = el("div", `max-width:300px;background:#0e1a16;border:1px solid #1f3a30;border-radius:14px;padding:12px 13px;font-size:13px;color:#e9edef;${mine ? "margin-left:auto" : ""}`);
+    card.className = "hd-key-card";
+    const top = el("div", "display:flex;align-items:center;gap:8px;margin-bottom:3px");
+    top.append(el("span", "font-size:18px", verb.glyph), el("b", "font-size:13.5px", _esc(g.name || "Key")));
+    card.append(top);
+    const foot = el("div", "font-size:11px;color:#7f97a0;margin-top:8px");
+    if (mine) {
+      let row = keyRing().find((r) => r.id === g.id) || null;
+      const revoked = row && row.status === "revoked";
+      card.append(el("div", "color:#9fdac8;font-size:12px", revoked ? "You took this key back" : "You handed this key" + (expired ? " · expired" : "")));
+      if (g.note) card.append(el("div", "color:#8aa0ad;font-size:12px;font-style:italic;margin-top:2px", "“" + _esc(g.note) + "”"));
+      const uses = el("div", "font-size:11px;color:#8aa0ad;margin-top:4px");
+      if (row && row.uses) uses.textContent = "used " + row.uses + "×"; card.append(uses);
+      if (!revoked && !expired) {
+        const rv = el("button", "margin-top:8px;background:rgba(233,111,111,.14);border:1px solid rgba(233,111,111,.4);color:#ffd7d7;border-radius:9px;padding:7px 12px;font-size:12px;font-weight:600;cursor:pointer", "Take it back");
+        rv.onclick = () => { revokeKey(g.id); card.style.opacity = ".55"; rv.remove(); card.querySelector(".hd-key-lbl2") || card.insertBefore(el("div", "color:#ffb0b0;font-size:12px;margin-top:6px", "◌ taken back"), foot); };
+        card.append(rv);
+      }
+      foot.textContent = "Holo Keys · a live power on your device · revocable any time"; card.append(foot);
+      return card;
+    }
+    // holder side
+    card.append(el("div", "color:#cfe;font-size:12.5px", _esc(g.issName || "Someone") + " handed you a key — " + _esc(verb.blurb || verb.label)));
+    if (g.note) card.append(el("div", "color:#8aa0ad;font-size:12px;font-style:italic;margin-top:2px", "“" + _esc(g.note) + "”"));
+    const now = el("div", "display:none;font-size:12px;color:#9fdac8;margin-top:6px");
+    const ctl = el("div", "display:none;gap:6px;align-items:center;margin-top:9px");
+    const errL = el("div", "display:none;color:#ffb0b0;font-size:12px;margin-top:6px");
+    const use = el("button", "margin-top:9px;background:#00a884;color:#04110d;border:0;border-radius:9px;padding:8px 14px;font-size:12.5px;font-weight:700;cursor:pointer", "Use key");
+    const setState = (s) => { foot.textContent = s === "live" ? "● live — their device answered" : s === "busy" ? "dialing their device…" : s === "revoked" ? "◌ taken back" : s === "expired" ? "◌ expired" : s === "asleep" ? "◌ asleep" : "◈ self-verifying · κ " + (g.id || "").slice(0, 8); };
+    const paint = (n) => { if (n && n.name) { now.style.display = "block"; now.textContent = "♪ " + n.name + (n.artist ? " — " + n.artist : "") + (n.playing === false ? " (paused)" : ""); } };
+    const invoke = async (method, args = []) => {
+      errL.style.display = "none"; setState("busy"); use.disabled = true; use.textContent = "Dialing…";
+      try {
+        const v = await keyInvoke(g, method, args);
+        setState("live"); use.style.display = "none"; ctl.style.display = "flex";
+        if (method === "now") paint(v && typeof v === "object" ? v : null);
+        else keyInvoke(g, "now").then((n) => paint(n)).catch(() => {});
+      } catch (e) {
+        const msg = String((e && e.message) || e), st = /revoked|unknown-key/.test(msg) ? "revoked" : /expired/.test(msg) ? "expired" : "asleep";
+        setState(st); use.disabled = false; use.textContent = "Use key"; errL.style.display = "block";
+        errL.textContent = st === "revoked" ? "This key was taken back." : st === "expired" ? "This key has expired." : /music isn't open/.test(msg) ? "Their music isn't playing right now." : "Their device is asleep — the key wakes when they're back.";
+        if (st === "revoked" || st === "expired") { ctl.style.display = "none"; card.style.opacity = ".6"; }
+      }
+    };
+    use.onclick = () => invoke("now");
+    // L2 — the issuer took it back: fold the surface the MOMENT the push lands (the door refuses regardless).
+    const foldRevoked = () => { setState("revoked"); use.style.display = "none"; ctl.style.display = "none"; now.style.display = "none"; card.style.opacity = ".6"; errL.style.display = "block"; errL.textContent = "This key was taken back."; };
+    if (keyRevoked(g.id)) foldRevoked();
+    else { const off = onKeyRevoked((rid) => { if (rid === g.id) foldRevoked(); }); const mo = new MutationObserver(() => { if (!document.body.contains(card)) { off(); mo.disconnect(); } }); mo.observe(document.body, { childList: true, subtree: true }); }
+    const cbtn = (label, title, fn) => { const b = el("button", "background:#1f2c33;border:0;color:#cfe;border-radius:8px;width:34px;height:30px;font-size:14px;cursor:pointer", label); b.title = title; b.onclick = fn; return b; };
+    let playing = true;
+    const playBtn = cbtn("⏸", "Play/Pause", () => { invoke(playing ? "pause" : "resume"); playing = !playing; playBtn.textContent = playing ? "⏸" : "▶"; });
+    const vol = el("input", "flex:1;accent-color:#00a884"); vol.type = "range"; vol.min = 0; vol.max = 100; vol.value = 70; vol.title = "Volume on their device";
+    vol.onchange = () => invoke("volume", [Number(vol.value)]);
+    ctl.append(cbtn("⏮", "Previous", () => invoke("prev")), playBtn, cbtn("⏭", "Next", () => invoke("next")), vol);
+    if (!expired) card.append(use);
+    card.append(now, ctl, errL); setState(expired ? "expired" : "idle"); card.append(foot);
+    if (expired) { errL.style.display = "block"; errL.textContent = "This key has expired."; }
+    return card;
   }
 
   function close() { try { overlay.remove(); } catch {} }

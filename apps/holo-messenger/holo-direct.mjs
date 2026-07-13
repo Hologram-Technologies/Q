@@ -286,7 +286,7 @@ export async function makeDirect({ identity = null, mailboxBase = null, trustSto
     // authority is issuer-local (holo-keys checks MY keyring; unknown/revoked/expired refuse at the door). A
     // key-invoke may arrive from a first-contact holder (the grant introduced us, like a Direct link): the
     // frame's _intro() box key upgrades them to answerable, so the key-result can travel back. Never persisted.
-    if (payload.t === "key-invoke" || payload.t === "key-result") {
+    if (payload.t === "key-invoke" || payload.t === "key-result" || payload.t === "key-revoked") {
       const cid = contactId || (_nameFor(payload, r.from) || "direct:" + (r.from || "").slice(0, 12));
       _upgradeFrom(cid, r.from, payload);
       try {

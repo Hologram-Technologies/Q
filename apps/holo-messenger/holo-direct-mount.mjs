@@ -78,7 +78,8 @@ async function _boot() {
         olm = makeSeal2({ voz, pickleKey, getState: (k) => store.getMeta("voz:" + k).catch(() => null), putState: (k, v) => store.setMeta("voz:" + k, v).catch(() => {}) });
       }
     } catch (e) { console.warn("[direct] Olm ratchet unavailable — holo-seal default:", String(e)); olm = null; }
-    direct = await makeDirect({ identity, spine, store, displayName, olm });   // drop-box: origin /mbox, or relays on a static origin (holo-dm gate)
+    direct = await makeDirect({ identity, spine, store, displayName, olm });
+    try { const Keys = await import("./holo-key.mjs?v=k1"); Keys.attachDirect(direct); } catch {}   // drop-box: origin /mbox, or relays on a static origin (holo-dm gate)
     direct.on("message", (m) => {
       const p = panels.get(m.contactId);
       if (p) p.addMessage({ from: m.from, text: m.text, verified: m.verified, kappa: m.kappa });
@@ -159,9 +160,10 @@ export async function open(peerPub, { name = null } = {}) {
   const cid = name || "direct:" + (peerPub.sign || "").slice(0, 12);
   if (peerPub && peerPub.box) direct.addContact(cid, peerPub);    // a stub contact (inbound-only) has no pub to add
   direct.warm(cid);                                               // the cold dial happens while the human reads (D2)
-  const { openDirectChat } = await import("./holo-direct-ui.mjs?v=n9");
+  const { openDirectChat } = await import("./holo-direct-ui.mjs?v=n9k");
   const panel = openDirectChat({
     name: _label(cid),
+    myPub: direct.myPub,   // 🗝 KEYS
     onSend: (t) => direct.send(cid, t).then((r) => { if (r.ok) panel.addMessage({ from: "me", text: t, kappa: r.kappa, status: "sent" }); else if (r.keychange) panel.showKeyChange(true); }),
     onVerify: () => { direct.markVerified(cid); _refreshSafety(cid, panel); },
     onRename: (nm) => { _setAlias(cid, nm); _renderSection(); },   // WhatsApp: tap the name → set who it is (local label)
