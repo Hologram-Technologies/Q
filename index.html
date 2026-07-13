@@ -1,5 +1,5 @@
-<!doctype html>
-<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<!doctype html><html lang="en">
+<head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <meta name="theme-color" content="#1f1f1e">
 <title>Hologram — an operating system that unfolds from a seed</title>
 <meta name="description" content="Open one link. It verifies itself into existence and unfolds a complete operating system in your browser — no server, no install, no account, on any device.">
@@ -52,4 +52,44 @@ const refuse = (why) => { document.body.innerHTML =
   } catch (e) { refuse(String(e && e.message || e)); }
 })();
 </script>
-</head><body></body></html>
+</head>
+<body></body>
+<!-- THE PORTAL SEED. Fast path: boot from the genesis pack — the whole static boot in ONE object, proven
+     by the browser's native SHA-256 against the signed pack κ (L5), no module graph, no service worker.
+     Fallback: the signed-pin boot, byte-for-byte today's. A stale/missing/tampered pack never breaks boot. -->
+<script type="module">
+const PACK_KAPPA = "faa0540f2a6979f57a9a8031ba4a9f48e37afd01cc35356bc2598a3baca5ad4b";
+const FALLBACK = "holo-portal.mjs";
+const okEntry = (e) => /^[a-z0-9._/-]+$/i.test(e) && !e.includes("..");
+const hex = (b) => [...new Uint8Array(b)].map(x => x.toString(16).padStart(2, "0")).join("");
+const refuse = (why) => { document.body.innerHTML =
+  '<main style="max-width:640px;margin:12vh auto;padding:0 22px;color:#e9edef;font:15px/1.6 system-ui,sans-serif">'
+  + '<h1 style="font-size:19px;font-weight:600;margin:0 0 .5em">Hologram refused to boot</h1>'
+  + '<p style="color:#8696a0;margin:0">The first stage did not re-derive to its fingerprint. Reload — if it '
+  + 'persists, the source you reached is tampered or corrupt.</p></main>'; console.error("seed:", why); };
+(async () => {
+  // FAST PATH — the verified genesis pack (the pack lives same-origin next to this seed, so it is as
+  // available as this document itself; a byte that does not re-derive to the signed κ is refused → fallback).
+  try {
+    const r = await fetch(new URL("genesis-pack.mjs", location.href), { cache: "no-store" });
+    if (r.ok) { const b = await r.arrayBuffer();
+      if (hex(await crypto.subtle.digest("SHA-256", b)) === PACK_KAPPA) {
+        await import(URL.createObjectURL(new Blob([b], { type: "text/javascript" }))); return; } }
+  } catch (e) {}
+  // FALLBACK — the signed-pin boot (unchanged): read the boot pin from the SIGNED release, re-derive the
+  // first stage against it (L5), and unfold. Network-resilient; a missing pin boots the default entry.
+  let entry = FALLBACK, pin = null;
+  try {
+    const rel = await (await fetch(new URL("release.json", location.href), { cache: "no-cache" })).json();
+    const boot = rel && rel["holstr:payload"] && rel["holstr:payload"].boot;
+    if (boot && okEntry(String(boot.entry || "")) && /^[0-9a-f]{64}$/.test(boot.sha256 || "")) { entry = boot.entry; pin = boot.sha256; }
+  } catch {}
+  try {
+    const url = new URL(entry, location.href);
+    if (pin) { const bytes = await (await fetch(url, { cache: "no-cache" })).arrayBuffer();
+      if (hex(await crypto.subtle.digest("SHA-256", bytes)) !== pin) return refuse("fallback re-derive ≠ signed boot pin"); }
+    await import(url.href);
+  } catch (e) { refuse(String(e && e.message || e)); }
+})();
+</script>
+</html>
