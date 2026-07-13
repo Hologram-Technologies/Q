@@ -47,7 +47,7 @@
   "core/state.js": "46c8fdb200ec21899ecc12c80b6d2887ff68ba30c278661db35e81709ddb0611",
   "core/store.js": "f166fe29c5dd06256fdd3f95cc44fc9a0e1301257b31cb6df24dde66246e7d57",
   "core/tools.js": "96b6db73821baabbcac2c1dbfdeb47a9caf4362c927e3724952156c4f816970b",
-  "core/voice-out.js": "80dea388b12468eb746f1c71510056bc7b85ba2ba139d3ab5f719a72b041d350",
+  "core/voice-out.js": "1621683c34ee6db07ddaa10551a0ea69b3e80cd01f943ea853aba815ca163274",
   "core/voice-out.js.pre-converge.bak": "26853d938c60c9671f13abdba81a89309c1d50f5c97a48caca73dad22304ae3d",
   "e8-atlas.mjs": "8d5303041c73df13aa6cf19a50475d8fae0a3d6167152e21e4f40bd1364de46e",
   "e8-codec.mjs": "cacee6a60ce1df5ee5b5cc2d44422ed4fce134615858583366b702fd9760c05b",

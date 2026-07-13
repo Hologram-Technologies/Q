@@ -9,7 +9,7 @@
  "tiers": {
   "core": {
    "files": 604,
-   "bytes": 12199617,
+   "bytes": 12201779,
    "hf": 0
   },
   "apps": {
@@ -2935,9 +2935,9 @@
    "source": "hf"
   },
   "apps/holo-messenger/_vendor/ui/chat-ui.bundle.css": {
-   "sha256": "dbd7afcf558a7a79f0e47632cb3db9c972efd1f60d45e42a9bfc6bd42f16b4d8",
-   "blake3": "59805e33e729fbeab361e8af4ce1d031b9847e7e0d3184f1cada5dc462e79be3",
-   "bytes": 200391,
+   "sha256": "c7e9a2bffa5e238512dc51b08e348dc9596b3cd70e45f4e494973265e37439f0",
+   "blake3": "831ff0dd1bcccc05472643543b8e174e4fb58529aa4f6bc170cd67f0132cea0b",
+   "bytes": 202553,
    "tier": "core",
    "source": "origin"
   },
@@ -3586,8 +3586,8 @@
    "source": "origin"
   },
   "apps/holo-messenger/holo-sw.js": {
-   "sha256": "75d43d63651f8eb2e405ca1c12611f35b907e620b82d935c2f46d3ee6dee07c8",
-   "blake3": "10cf6b3901a38a7f7f1d5f8d4fbf195416a228db61376459c5117ae36e7807ad",
+   "sha256": "2aabc7f5ec3dd526ba6dd5367862054f16524fa4d731fd7975a370804557fb31",
+   "blake3": "aec7fc9e11e9afa5d46a61890a99e0023f8590f40ce4071dff01bef156e9e5f9",
    "bytes": 24162,
    "tier": "core",
    "source": "origin"
@@ -3971,8 +3971,8 @@
    "source": "origin"
   },
   "apps/holo-messenger/shell-manifest.json": {
-   "sha256": "4d6d0cb800c89c63eec9ea7c57f9e258652e5c20c9ff273e09ab43efc0176504",
-   "blake3": "fb95ebb1f63e6e883a3dc986c7d7765d6ed63cc3efe9e81d5ce1c8a8d10d7d37",
+   "sha256": "9f31646ccd6e70b456ae99477b0f15a043fd0d5a57eaaa2f7272c528e545c2db",
+   "blake3": "000c7f4e1b726b338d6a7d990328a09f9110b36de9b43364f9307897793f24ae",
    "bytes": 8507,
    "tier": "core",
    "source": "origin"
@@ -7213,8 +7213,8 @@
    "source": "hf"
   },
   "apps/q/holo-evicted.json": {
-   "sha256": "50ed083dc136d81f1bbdd69b842ddc796a18d208ba0397fad4b154e9acc4f6e2",
-   "blake3": "1e07d46a69826ffb0b16e171a60dd20a144c039e9374e630d4f9af2ae5ad45f6",
+   "sha256": "8236d6c5045d1facf6a21526b03dfa15055d50fbf4470f8e79bea31a5d735997",
+   "blake3": "daee97824ad9353756bec61bbfa20386c3ab26e3144c6df0caf58b3ef62c55fa",
    "bytes": 56894,
    "tier": "apps",
    "source": "origin"
