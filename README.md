@@ -1,36 +1,30 @@
-# Q
+# Q — the universal resolver
 
-**The universal resolver.** &nbsp; [Open it →](https://hologram-technologies.github.io/Q)
+**[Open it →](https://hologram-technologies.github.io/Q)** · one link verifies itself into a whole
+operating system, in any browser, no server, no install, no account.
 
-This branch *is* the resolver — the whole tree GitHub Pages serves. Everything here is identified by
-**what it is** (a fingerprint of its bytes), never **where it lives**. Ask for something and Q streams it
-from wherever it can, checks it against its fingerprint, and shows it only if the bytes match. Nothing
-loads unverified — so Q never has to trust any single server to be online, or honest.
+## One law
 
-## What's in the tree
+**A thing's name is the hash of its bytes.** Nothing is fetched by location — everything by identity,
+and re-derived on arrival. A byte that doesn't equal its name doesn't exist. Everything else — leanness,
+security, offline, portability — follows from that.
 
-| Path | What it is |
-|------|------------|
-| `index.html` | the front door — reads any name or link as an object and resolves it |
-| `apps/` | the surfaces (messenger, files, games…) — most stream on demand from [hologram-apps](https://github.com/Hologram-Technologies/hologram-apps) |
-| `b/` | the content store — every file named by its own fingerprint |
-| `usr/` · `_shared/` · `sbin/` | the runtime that resolves and verifies |
-| `vendor/` | third-party libraries |
-| `release.json` · `os-closure.json` | the signed record of exactly what this release contains |
+Ask Q for something and it streams the bytes from wherever it can reach them (this origin, a mirror, the
+IPFS network, a peer), checks each against its fingerprint, and shows them only if they match. So Q never
+has to trust any single host to be online, or honest. Take every host away but one, and it still resolves.
 
-## How it holds together
+## What this branch is
 
-- **Content, not location.** The URL names an object; the resolver opens it. No server is trusted.
-- **Verify by re-derivation.** Every byte — an app, the runtime, a file you drop — is refused unless it
-  re-derives to the fingerprint asked for. Untrusted infrastructure is therefore free capacity.
-- **Nothing to install.** Runs in any modern browser, mobile or desktop — no backend, no account.
+The whole tree GitHub Pages serves. The front door is `index.html`; it reads a name or link as an object
+and unfolds it. The apps, the runtime, and the history mostly **aren't here as bytes** — they stream on
+demand, verified, from the [content store](https://github.com/Hologram-Technologies/hologram-apps) and the
+open web. What stays is the seed and the machinery that resolves and proves.
 
 ## Run it
 
-Serve this tree from any static host (GitHub Pages works as-is, root or subpath). The front door is
-`index.html`; the default surface is `apps/holo-messenger/`. Try it without signing in: `?guest=1`.
+Serve this tree from any static host — GitHub Pages as-is, root or subpath, or copy it anywhere and it
+boots byte-identically. No backend. Try it without signing in: `?guest=1`. The engine updates upstream
+from [holospaces](https://github.com/Hologram-Technologies/holospaces) — improvements arrive with nothing
+to install.
 
-The engine underneath updates upstream from [holospaces](https://github.com/Hologram-Technologies/holospaces) —
-improvements arrive with nothing to update.
-
-<sub>MIT licensed · the canonical entry point lives on the <a href="https://github.com/Hologram-Technologies/Q">home</a> branch.</sub>
+<sub>MIT · verify by re-derivation, or refuse.</sub>

@@ -9,12 +9,12 @@
  "tiers": {
   "core": {
    "files": 631,
-   "bytes": 12649792,
+   "bytes": 12652500,
    "hf": 0
   },
   "apps": {
-   "files": 2953,
-   "bytes": 1327612,
+   "files": 2958,
+   "bytes": 1705854,
    "hf": 2901
   },
   "heavy": {
@@ -46,9 +46,9 @@
    "source": "origin"
   },
   "README.md": {
-   "sha256": "8f656a44d3f632a9cd79f4676207288b76d69b936e8bcd4166280644d325c795",
-   "blake3": "1a7a0d5851176253377e94c926c4f93cfb420b362d4b67ed6af13870d3185341",
-   "bytes": 2039,
+   "sha256": "fd6e076a6f51115dd73653eeaaf61fb26404cde48c8f86424790708986a2b998",
+   "blake3": "e49548867f651d23266632b54636b33382114be25b9a12f3518c83bffe833efe",
+   "bytes": 1615,
    "tier": "core",
    "source": "origin"
   },
@@ -4152,10 +4152,45 @@
    "source": "hf"
   },
   "apps/index.jsonld": {
-   "sha256": "abbdf2ecbc43b6deb792653998c9a058b6023b1ef9707a9e216e0f9058335705",
-   "blake3": "a6b83ccdc4f1b7349a1c485618e7b4444d9644632e66fea496f0f537e7aadeb5",
-   "bytes": 19514,
+   "sha256": "efea535f2d45df79b0d63b132dff24c9e0b5a118c9e4695c01286c5b7017c602",
+   "blake3": "a846cccd1fd33966cdc93cb01480adec05a75c338507502dc27c65ca147be3b6",
+   "bytes": 22646,
    "tier": "core",
+   "source": "origin"
+  },
+  "apps/jellyfin/LICENSE-NOTE.md": {
+   "sha256": "f2aafb012d25caf12d78c3953c32e307cc16245ae0bdb51a988c5d3545a51d48",
+   "blake3": "c01e71a0be710f0d8437f7a77853f9ad329071b17cf84d563f73fef13f87bf1a",
+   "bytes": 1212,
+   "tier": "apps",
+   "source": "origin"
+  },
+  "apps/jellyfin/holo-evicted.json": {
+   "sha256": "98c55141273f0e3680e25cac139828f3402b5275e631318901b4c5f0a520fd00",
+   "blake3": "f26ba22553ba687c880b1af45f4a5d40db1f82ea658d370610cb38b5b0f69853",
+   "bytes": 275729,
+   "tier": "apps",
+   "source": "origin"
+  },
+  "apps/jellyfin/holo-jellyfin-sw.js": {
+   "sha256": "1ec94f171d3d2adf13e183d66f7c637d814480c9c19116ceeb4cfcb4c6633625",
+   "blake3": "e20750915e09b8b6e2a101d66eb05a65226e035d6af9b0b85d02a0093afa2e4a",
+   "bytes": 97996,
+   "tier": "apps",
+   "source": "origin"
+  },
+  "apps/jellyfin/icon.svg": {
+   "sha256": "cf0f96252abe4e395be5948f4571427254535b98c05be8184c04706307a96294",
+   "blake3": "bcb70dbfc5c575dfbb8f7d9ddc7cf17508c5632bf62b3a81ee11d85934a52620",
+   "bytes": 621,
+   "tier": "apps",
+   "source": "origin"
+  },
+  "apps/jellyfin/index.html": {
+   "sha256": "f5e5604c1c08be8d5833fbf61d4ff2fd563b411443f10fef13ca346df44af1ab",
+   "blake3": "574b3aa327fe8c958e2123a83b1a438713e8f1331502f57fbc6481709eee73de",
+   "bytes": 2684,
+   "tier": "apps",
    "source": "origin"
   },
   "apps/music/feed/kappa/kappa-sessions/01/chunk-0000.bin": {
