@@ -30,7 +30,6 @@ async function _boot() {
   if (direct) return direct;
   if (bootP) return bootP;
   bootP = (async () => {
-    const { makeSpine } = await import("./holo-net.mjs");        // ← the 3 MB spine loads HERE, first use only
     const { makeDirect } = await import("./holo-direct.mjs?v=aim1");   // aim1: presence + away (A1/A3)
     const { getIdentity } = await import("./holo-direct-id.mjs");
     // the operator namespace: the signed-in identity's stable id when the gate resolved one, else "guest"
@@ -49,7 +48,13 @@ async function _boot() {
       const { openStore } = await import("./holo-direct-store.mjs");
       store = await openStore({ ns, vaultKey: await getVaultKey({ ns }) });
     } catch (e) { console.warn("[direct] store unavailable — session-only conversations:", String(e)); }
-    spine = await makeSpine();
+    // THE SPINE IS OPTIONAL (the engine's own contract: no spine = mailbox/relay-only, everything still
+    // works — rooms, ratchet, media offline-path). The p2p wasm lives in an EVICTED tree served by the
+    // root SW's rescue; on a first visit racing SW install (or any SW-less context) its import 404s —
+    // that must DEGRADE the fast path, never kill the boot (the door was dying exactly here, live).
+    spine = null;
+    try { const { makeSpine } = await import("./holo-net.mjs"); spine = await makeSpine(); }   // ← the 3 MB spine loads HERE, first use only
+    catch (e) { console.warn("[direct] p2p spine unavailable — relay-only (words still cross):", String(e && e.message || e)); }
     const displayName = (localStorage.getItem("holo.direct.name") || "").trim() || null;   // rides sealed payloads (N8 two-way door)
     // R5 — the audited Olm/Megolm ratchet is now the DEFAULT seal (forward secrecy + PCS). Opt-OUT with
     // ?e2e=off (or localStorage holo.e2e=off). Interop is automatic: a peer with no ratchet just never sends a
