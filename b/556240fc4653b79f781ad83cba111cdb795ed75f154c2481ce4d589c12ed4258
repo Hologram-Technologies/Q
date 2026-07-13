@@ -14,7 +14,7 @@
   },
   "apps": {
    "files": 2899,
-   "bytes": 1038448,
+   "bytes": 1040926,
    "hf": 2856
   },
   "heavy": {
@@ -4199,8 +4199,8 @@
    "source": "hf"
   },
   "apps/player/holo-evicted.json": {
-   "sha256": "e553c22676dbc7b9784689286b6f73ea9a6e6026e5a60f0085f4a882df36fdc6",
-   "blake3": "113528a00dcc536a625be243fab513b6acd60904092b2bfc9f5dd328365ca9db",
+   "sha256": "515fba8d933423159b9c907e4a75df8ca641f2d53a96f551412a502879f21d28",
+   "blake3": "dd448ada9860f9a8a4fa4d6527e648aee45a376306286d33e06689f3ca08fb79",
    "bytes": 10722,
    "tier": "apps",
    "source": "origin"
@@ -4231,7 +4231,7 @@
    "source": "hf"
   },
   "apps/player/holo-imusic.mjs": {
-   "blake3": "b71d89c893c93938f8d9cc439435f359d1dbcfe5c1b56efdeb0862f98b7e73d9",
+   "blake3": "c4f9b4492d34fae204408166cd82ca6980a865f4bcb26a8a4ad5b94a03fd0d35",
    "tier": "apps",
    "source": "hf"
   },
@@ -4606,7 +4606,7 @@
    "source": "hf"
   },
   "apps/player/index.html": {
-   "blake3": "87984bd17ab0c8336f54998c2c81e3534bc9d17d813ad10f61dec4bafa4e13ce",
+   "blake3": "03a4e6479911f61723d3b21b39ab06fe89f9f6bf04a0bf0678f13ccf87ae7816",
    "tier": "apps",
    "source": "hf"
   },
@@ -4880,9 +4880,9 @@
    "source": "hf"
   },
   "apps/q/core/voice-out.js": {
-   "sha256": "ccbec86b10e0e94fd6ea6131cf6b24f664e12a905cae4e659cb2d4f12292360d",
-   "blake3": "c39cf0cb578591399a9ca286b4e83d01ad23525dbc5bf19cffba38170d76360a",
-   "bytes": 9039,
+   "sha256": "991a3702282af4c102ae77efc8d9401f9c66bd40e27c7ccbd0ca8c64de6bedfa",
+   "blake3": "abd51a083d64b5fbb87c123644d6300aa94b22f46699a5c2760f5a389f8e8c55",
+   "bytes": 10171,
    "tier": "apps",
    "source": "origin"
   },
@@ -6977,8 +6977,8 @@
    "source": "hf"
   },
   "apps/q/holo-evicted.json": {
-   "sha256": "dd54ff055ec042eb9d79d2347f840a92f6ba687868ea49df143479dfbae9c009",
-   "blake3": "28e6edc9f083704767f21d9551aa10629a3667fe64424ae991f9576bf060dd43",
+   "sha256": "2d685c497c192cfa1f136f20442afb00bd6b0bb88b8b83b5392d8e798d603ae8",
+   "blake3": "6349bea9441dee8c60e88154b2e6b1050271e681e500713817c7264bab1173a8",
    "bytes": 56894,
    "tier": "apps",
    "source": "origin"
@@ -7066,9 +7066,9 @@
    "source": "hf"
   },
   "apps/q/q-chat.html": {
-   "sha256": "7091fa948d21de56cb6e5221214d223a29356681a44afba8d11c7600c65d1d96",
-   "blake3": "bacf293a28a00f27d9cdaa04df40bac04a636e9bddda8bd31d04a14260e511e4",
-   "bytes": 68906,
+   "sha256": "ac9fe0e6c3978127c8a6ba27dfc5821f95ae7fcfe745fb0172ccc4773ec28599",
+   "blake3": "0051aa22750ed309f355cab863aec239b4ccc0a3bff9ddd134b39b22db3ab623",
+   "bytes": 70252,
    "tier": "apps",
    "source": "origin"
   },
