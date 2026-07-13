@@ -9,7 +9,7 @@
  "tiers": {
   "core": {
    "files": 602,
-   "bytes": 18225547,
+   "bytes": 18226779,
    "hf": 0
   },
   "apps": {
@@ -3417,9 +3417,9 @@
    "source": "origin"
   },
   "apps/holo-messenger/holo-sw.js": {
-   "sha256": "a568f98d9250604e037bdcbe9f31d97515d8229cdf0d6279689ebc7072ec282c",
-   "blake3": "9a2861424bb26bcef148fbfe745260c4e88d57b4bc934be2293d67b472692a0a",
-   "bytes": 19135,
+   "sha256": "fa796621040779df7608c35c0c29a77669caed2183ea8114c9ad32e3e554c02a",
+   "blake3": "5b311c65b7c29713a8f107b0406c93a15d9636d87453743b0c1d24c111ece6ee",
+   "bytes": 20367,
    "tier": "core",
    "source": "origin"
   },

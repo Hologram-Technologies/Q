@@ -22,6 +22,10 @@ import { makeEvictRescue } from "../../usr/lib/holo/holo-evict-rescue.mjs";
 // non-manifested statics by the signed closure's path→blake3 map. Static import = cached with the
 // registration (available with the radio dead); any trouble is caught → today's 502/504 exactly.
 import { makeStoreRung } from "../../usr/lib/holo/holo-store-rung.mjs";
+// N0 (HOLO-NOTHING-GROWS): THE rung ladder — desktop clients are controlled by THIS worker, which
+// never carried the κ-route, so /.holo/<axis>/<hex> only resolved for root-scope clients. One ladder
+// call closes the gap: same fail-closed verify, same rung table (data), as root-sw.
+import { makeLadder } from "../../usr/lib/holo/holo-rungs.mjs";
 const _RUNG = (() => { try { return makeStoreRung(); } catch { return null; } })();
 
 const CACHE = "holo-msgr-shell-37510bf579a6";                     // bump → old (unverified) caches are purged on activate
@@ -33,6 +37,7 @@ const BASE = self.location.pathname.replace(/\/apps\/holo-messenger\/holo-sw\.js
 const canon = (p) => (BASE && p.startsWith(BASE)) ? p.slice(BASE.length) : p;
 const SCOPE = BASE + "/apps/holo-messenger/";
 const RESCUER = makeEvictRescue({ base: BASE });
+const LADDER = makeLadder({ base: BASE, rung: async () => _RUNG });
 const MANIFEST_URL = BASE + "/apps/holo-messenger/shell-manifest.json";
 // content-addressed κ-store sources: an asset's exact bytes live at <base> + <sha256>. Tried in order — the
 // same-origin mirror first (fast, but dies with the app origin), then the CROSS-ORIGIN HF κ-mirror, which gives
@@ -204,6 +209,19 @@ self.addEventListener("fetch", (e) => {
   if (self.location.port === "8472" || self.location.port === "8474") return;   // DEV-ITERATE PORTS: never cache/verify — always serve live (edits appear instantly; no stale shell, no integrity brick)
   const p = url.pathname;
   if (p === MANIFEST_URL || p.startsWith(BASE + "/b/")) return;     // the integrity index + same-origin κ-store: never intercept (avoid loops)
+  // κ-ROUTE (N0): serve an object BY ITS CONTENT ADDRESS through THE ladder — device store → origin b/ →
+  // mirror rungs, fail-closed verified, a poisoned rung's bytes refused and the next rung tried. Network
+  // throws (radio dead) answer 504, never reject the respondWith.
+  const kap = p.match(/\/\.holo\/(sha256|blake3)\/([0-9a-f]{64})(?:\.([a-z0-9]+))?$/i);
+  if (kap) {
+    e.respondWith((async () => {
+      try {
+        const r = await LADDER.resolve(kap[1].toLowerCase(), kap[2].toLowerCase(), { ext: (kap[3] || "").toLowerCase() });
+        return r || new Response("unresolvable offline — not in the device store", { status: 504 });
+      } catch { return new Response("unresolvable offline — not in the device store", { status: 504 }); }
+    })());
+    return;
+  }
   // EVICTED rescue (U2): a messenger-page request under an evicted app/tree is served from the κ-mirror,
   // verified fail-closed, then CACHED — the offline/warm contract holds for evicted closures (ui, q).
   // Runs BEFORE root-rescue/cacheFirst so an evicted path never falls through to an origin 404.
