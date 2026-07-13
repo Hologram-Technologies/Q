@@ -1,6 +1,0 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 48 48" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round">
-  <!-- Your Space: a person inside their own orbit — the profile IS a world -->
-  <circle cx="24" cy="19" r="6.5"/>
-  <path d="M13.5 36c1.8-5.4 5.8-8 10.5-8s8.7 2.6 10.5 8"/>
-  <ellipse cx="24" cy="24" rx="19" ry="8.5" transform="rotate(-18 24 24)"/>
-</svg>

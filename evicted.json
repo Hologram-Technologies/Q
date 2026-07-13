@@ -13,7 +13,11 @@
   "games",
   "holo-money",
   "files",
-  "arcade"
+  "arcade",
+  "jellyfin",
+  "yourspace",
+  "spaces",
+  "self"
  ],
  "trees": [
   {
