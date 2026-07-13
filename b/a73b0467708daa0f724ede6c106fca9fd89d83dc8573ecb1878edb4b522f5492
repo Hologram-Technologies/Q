@@ -14,8 +14,8 @@
   },
   "apps": {
    "files": 5281,
-   "bytes": 1437879,
-   "hf": 5240
+   "bytes": 1536490,
+   "hf": 5236
   },
   "heavy": {
    "files": 20,
@@ -4159,31 +4159,39 @@
    "source": "origin"
   },
   "apps/jellyfin/LICENSE-NOTE.md": {
+   "sha256": "f2aafb012d25caf12d78c3953c32e307cc16245ae0bdb51a988c5d3545a51d48",
    "blake3": "c01e71a0be710f0d8437f7a77853f9ad329071b17cf84d563f73fef13f87bf1a",
+   "bytes": 1212,
    "tier": "apps",
-   "source": "hf"
+   "source": "origin"
   },
   "apps/jellyfin/holo-evicted.json": {
-   "sha256": "3f890c81bf004e877362e38c07bef2c48dfebc646d5a2179bc25d7e386c91c1a",
-   "blake3": "d945bd4891f64c3aa094fe1356f6a2ecdd20d883cddbcae5f5f662b2c49bcbe5",
-   "bytes": 285356,
+   "sha256": "40dfd9146d5223e75645a959932020bda660740f41ac3a09d35fa71551f70f5d",
+   "blake3": "fc6a5fbdc7c2d186efe19847c7f5014b4c5002c6d5bb02cfa2e55221290aee25",
+   "bytes": 275807,
    "tier": "apps",
    "source": "origin"
   },
   "apps/jellyfin/holo-jellyfin-sw.js": {
+   "sha256": "89aff16d5f151db99d14327d7660a62d3c724e38d25bd89c96e2c750fafc5035",
    "blake3": "4cbf37f3faf11e0ee84accd86b4508ecb1e936e53c450d2773529138570745ad",
+   "bytes": 102088,
    "tier": "apps",
-   "source": "hf"
+   "source": "origin"
   },
   "apps/jellyfin/icon.svg": {
+   "sha256": "e6efb28c85af67091b5bc75b74c8e2ca80ac9b9c4cb2503676ee083164ee627b",
    "blake3": "40614f627f260bdd6cdea6e36a2d00c97e774cddd802ca696551223310649fbd",
+   "bytes": 793,
    "tier": "apps",
-   "source": "hf"
+   "source": "origin"
   },
   "apps/jellyfin/index.html": {
+   "sha256": "3fd2a00105ad0e8f01109dce52ff4c7a0cc6c9444532b0453ed9d770cce2d3a4",
    "blake3": "11355930a6449c742340397c6f14c7734061961b85b430ffd03cf83cb98bba51",
+   "bytes": 2646,
    "tier": "apps",
-   "source": "hf"
+   "source": "origin"
   },
   "apps/jellyfin/web/10092.c37bcafcc8eb7c5c080e.chunk.js": {
    "blake3": "c3db01efaa1e8f26e1d7366a2a21204ac0f913d1b85c910d0f5813f7cbfa81df",
@@ -28823,9 +28831,9 @@
    "source": "hf"
   },
   "apps/yourspace/elon.html": {
-   "sha256": "e77ce36d314de7cced74ef0132ef0d0ba8b457db17b9c30d180dd8330783925e",
-   "blake3": "ae9dc39e50c621d71f0a44389edcc9b1963fbd3fc47ad59032020acc1aa3feb7",
-   "bytes": 1669,
+   "sha256": "429896c1be13d5fcd7581956f57165aa7462f00ec1aae2371643679dd46c5ce8",
+   "blake3": "9790bb5bc0802054ebf8013d986b6189c6e5039e8b4b55b6dfa7e086c5b9ba68",
+   "bytes": 1699,
    "tier": "apps",
    "source": "origin"
   },
@@ -28857,16 +28865,16 @@
    "source": "hf"
   },
   "apps/yourspace/index.html": {
-   "sha256": "88cd2938c9bc0b712fb84193bee36b4b37a273662862247d2516953171ac6082",
-   "blake3": "b13aed52f9010eb535422dc6146d78f80d0a1eeb778e33d912276b97ba013cee",
-   "bytes": 136768,
+   "sha256": "23be88eedd27eccf4b34b5eeacf0ddac54bd5420a983865b794a24a015f19e0b",
+   "blake3": "fa6eea441c63c80a796a4207c7d86fc1a6217adc3acb4295ccfd759483c5622b",
+   "bytes": 138099,
    "tier": "apps",
    "source": "origin"
   },
   "apps/yourspace/jensen.html": {
-   "sha256": "70b117698e4d84dc6520555b4f6e23e7ac50aa84f10ad4bbe227832dda75c625",
-   "blake3": "0613f54dc660390642458b2977e486dc49249d743b45f9e822a37e24674768ac",
-   "bytes": 1824,
+   "sha256": "09f630713fa2f0f95c66dac6897478ff7f3e324260fbcc051e96b7e0689c7be2",
+   "blake3": "2c7f00a5b7e2c428d09fac1ac7a905e758635c168bcde4754e3d2e6433efeb8b",
+   "bytes": 1854,
    "tier": "apps",
    "source": "origin"
   },
@@ -28902,9 +28910,9 @@
    "source": "hf"
   },
   "apps/yourspace/sam.html": {
-   "sha256": "a5b38f07516a5f00f9ebb10cc1217f88186f945e9bfdc1f7a9f513c2cded289d",
-   "blake3": "9693da581944d72f8fe4ccc121711c1a114c230850cd38b031dedb7243594b44",
-   "bytes": 1674,
+   "sha256": "925f31bf24ca9b43905ea4ff1756a7d2ed6a9d1236059e107a94d84e0a89fdd4",
+   "blake3": "ca1b8576a20de7df6b702e76adaba9eda6a30cf80c96a49a5f308d54c9437dd6",
+   "bytes": 1704,
    "tier": "apps",
    "source": "origin"
   },
