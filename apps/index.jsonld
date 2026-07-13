@@ -596,13 +596,13 @@
       "holo:entry": "index.html"
     },
     {
-      "@id": "did:holo:sha256:f5e5604c1c08be8d5833fbf61d4ff2fd563b411443f10fef13ca346df44af1ab",
-      "holo:root": "did:holo:sha256:f5e5604c1c08be8d5833fbf61d4ff2fd563b411443f10fef13ca346df44af1ab",
+      "@id": "did:holo:sha256:3fd2a00105ad0e8f01109dce52ff4c7a0cc6c9444532b0453ed9d770cce2d3a4",
+      "holo:root": "did:holo:sha256:3fd2a00105ad0e8f01109dce52ff4c7a0cc6c9444532b0453ed9d770cce2d3a4",
       "@type": [
         "schema:SoftwareApplication",
         "schema:WebApplication"
       ],
-      "schema:name": "Hologram κ",
+      "schema:name": "HOLOGRAM",
       "schema:identifier": "org.hologram.HoloJellyfin",
       "schema:description": "A media server with no server — the Jellyfin experience over the κ substrate: movies, shows, music, games and books, every object content-addressed and verified on read.",
       "schema:applicationCategory": "MultimediaApplication",
@@ -623,7 +623,7 @@
       ],
       "dcat:landingPage": "apps/jellyfin/index.html",
       "schema:image": "apps/jellyfin/icon.svg",
-      "holo:entry": "sha256:f5e5604c1c08be8d5833fbf61d4ff2fd563b411443f10fef13ca346df44af1ab"
+      "holo:entry": "sha256:3fd2a00105ad0e8f01109dce52ff4c7a0cc6c9444532b0453ed9d770cce2d3a4"
     }
   ]
 }

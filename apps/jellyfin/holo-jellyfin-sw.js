@@ -662,6 +662,15 @@ const __m_core = (() => {
 //   04 episode: 04 + tmdbSeries(20) + season(6) + episode(4)
 //   05 season:  05 + tmdbSeries(20) + season(6) + 0000
 
+// HOLOGRAM-native branding (HG-1): the wordmark data-URI + jellyfin-web CustomCss hook (a supported deploy
+// mechanism, not a fork). Replaces the header logo + splash; the server name is "HOLOGRAM" (see sysInfo).
+const HG_LOGO = 'data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20viewBox%3D%220%200%20560%20120%22%3E%3Cg%20fill%3D%22rgb(228%2C230%2C234)%22%3E%3Ccircle%20cx%3D%2251%22%20cy%3D%2236%22%20r%3D%224%22%2F%3E%3Ccircle%20cx%3D%2265%22%20cy%3D%2236%22%20r%3D%224%22%2F%3E%3Ccircle%20cx%3D%2279%22%20cy%3D%2236%22%20r%3D%224%22%2F%3E%3Ccircle%20cx%3D%2244%22%20cy%3D%2248%22%20r%3D%224%22%2F%3E%3Ccircle%20cx%3D%2258%22%20cy%3D%2248%22%20r%3D%224%22%2F%3E%3Ccircle%20cx%3D%2272%22%20cy%3D%2248%22%20r%3D%224%22%2F%3E%3Ccircle%20cx%3D%2286%22%20cy%3D%2248%22%20r%3D%224%22%2F%3E%3Ccircle%20cx%3D%2237%22%20cy%3D%2260%22%20r%3D%224%22%2F%3E%3Ccircle%20cx%3D%2251%22%20cy%3D%2260%22%20r%3D%224%22%2F%3E%3Ccircle%20cx%3D%2265%22%20cy%3D%2260%22%20r%3D%224%22%2F%3E%3Ccircle%20cx%3D%2279%22%20cy%3D%2260%22%20r%3D%224%22%2F%3E%3Ccircle%20cx%3D%2293%22%20cy%3D%2260%22%20r%3D%224%22%2F%3E%3Ccircle%20cx%3D%2244%22%20cy%3D%2272%22%20r%3D%224%22%2F%3E%3Ccircle%20cx%3D%2258%22%20cy%3D%2272%22%20r%3D%224%22%2F%3E%3Ccircle%20cx%3D%2272%22%20cy%3D%2272%22%20r%3D%224%22%2F%3E%3Ccircle%20cx%3D%2286%22%20cy%3D%2272%22%20r%3D%224%22%2F%3E%3Ccircle%20cx%3D%2251%22%20cy%3D%2284%22%20r%3D%224%22%2F%3E%3Ccircle%20cx%3D%2265%22%20cy%3D%2284%22%20r%3D%224%22%2F%3E%3Ccircle%20cx%3D%2279%22%20cy%3D%2284%22%20r%3D%224%22%2F%3E%3C%2Fg%3E%3Ctext%20x%3D%22132%22%20y%3D%2280%22%20font-family%3D%22Arial%2CHelvetica%2Csans-serif%22%20font-size%3D%2260%22%20font-weight%3D%22700%22%20letter-spacing%3D%229%22%20fill%3D%22rgb(224%2C227%2C232)%22%3EHOLOGRAM%3C%2Ftext%3E%3C%2Fsvg%3E';
+const HG_BRAND_CSS = [
+  ".pageTitleWithLogo{background-image:url('" + HG_LOGO + "')!important;background-position:0 center!important;width:14em!important}",
+  ".pageTitleWithDefaultLogo{background-image:url('" + HG_LOGO + "')!important;background-position:0 center!important}",
+  ".splashLogo{background-image:url('" + HG_LOGO + "')!important}",
+].join("");
+
 const SID = "cafe0000000000000000000000000001";
 const UID = "beef0000000000000000000000000001";
 const F_MOVIES = "f0000000000000000000000000000001";
@@ -870,7 +879,7 @@ function createJellyfinServer({ ensureLib, tmdb = null, ud, kappaSource = null, 
     Configuration: { PlayDefaultAudioTrack: true, SubtitleLanguagePreference: "", DisplayMissingEpisodes: false, GroupedFolders: [], SubtitleMode: "Default", DisplayCollectionsView: false, EnableLocalPassword: false, OrderedViews: [], LatestItemsExcludes: [], MyMediaExcludes: [], HidePlayedInLatest: true, RememberAudioSelections: true, RememberSubtitleSelections: true, EnableNextEpisodeAutoPlay: true, CastReceiverId: "" },
     Policy: { IsAdministrator: false, IsHidden: false, IsDisabled: false, BlockedTags: [], AllowedTags: [], EnableUserPreferenceAccess: true, AccessSchedules: [], BlockUnratedItems: [], EnableRemoteControlOfOtherUsers: false, EnableSharedDeviceControl: true, EnableRemoteAccess: true, EnableLiveTvManagement: false, EnableLiveTvAccess: true, EnableMediaPlayback: true, EnableAudioPlaybackTranscoding: false, EnableVideoPlaybackTranscoding: false, EnablePlaybackRemuxing: false, ForceRemoteSourceTranscoding: false, EnableContentDeletion: false, EnableContentDeletionFromFolders: [], EnableContentDownloading: true, EnableSyncTranscoding: false, EnableMediaConversion: false, EnabledDevices: [], EnableAllDevices: true, EnabledChannels: [], EnableAllChannels: true, EnabledFolders: [], EnableAllFolders: true, InvalidLoginAttemptCount: 0, LoginAttemptsBeforeLockout: -1, MaxActiveSessions: 0, EnablePublicSharing: false, BlockedMediaFolders: [], BlockedChannels: [], RemoteClientBitrateLimit: 0, AuthenticationProviderId: "Jellyfin.Server.Implementations.Users.DefaultAuthenticationProvider", PasswordResetProviderId: "Jellyfin.Server.Implementations.Users.DefaultPasswordResetProvider", SyncPlayAccess: "CreateAndJoinGroups" },
   });
-  const sysInfo = (origin) => ({ Id: SID, ServerName: "Hologram κ", Version: "10.11.11", ProductName: "Jellyfin Server", OperatingSystem: "", LocalAddress: origin, StartupWizardCompleted: true });
+  const sysInfo = (origin) => ({ Id: SID, ServerName: "HOLOGRAM", Version: "10.11.11", ProductName: "HOLOGRAM", OperatingSystem: "", LocalAddress: origin, StartupWizardCompleted: true });
   const folder = (Id, Name, CollectionType) => ({ Name, ServerId: SID, Id, Type: "CollectionFolder", CollectionType, IsFolder: true, ImageTags: {}, BackdropImageTags: [], UserData: udDefaults() });
   async function views() {
     await ensureKappa();
@@ -1027,7 +1036,7 @@ function createJellyfinServer({ ensureLib, tmdb = null, ud, kappaSource = null, 
     if (/^\/System\/Info\/Public$/i.test(p)) return J(sysInfo(u.origin));
     if (/^\/System\/Info$/i.test(p)) return J({ ...sysInfo(u.origin), WebSocketPortNumber: 0, SupportsLibraryMonitor: false, CanSelfRestart: false, CanLaunchWebBrowser: false, HasPendingRestart: false, IsShuttingDown: false });
     if (/^\/System\/Endpoint$/i.test(p)) return J({ IsLocal: true, IsInNetwork: true });
-    if (/^\/Branding\/Configuration$/i.test(p)) return J({ LoginDisclaimer: "", CustomCss: "", SplashscreenEnabled: false });
+    if (/^\/Branding\/Configuration$/i.test(p)) return J({ LoginDisclaimer: "", CustomCss: HG_BRAND_CSS, SplashscreenEnabled: false });
     if (/^\/Branding\/Css(\.css)?$/i.test(p)) return { status: 200, css: "" };
     if (/^\/QuickConnect\/Enabled$/i.test(p)) return J(false);
     if (/^\/Users\/Public$/i.test(p)) return J([user()]);
