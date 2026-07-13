@@ -215,6 +215,7 @@ let m = MODELS[defaultModelIndex()];
     const bit = cands[0] || MODELS.find((x) => (x.fam || "").toLowerCase() === "bitnet") || m;
     m = { ...bit, kappaUrl: base, name: bit.name, manifestKappa: kappa ? undefined : bit.manifestKappa }; } }
 let engine = null, convIds = [], busy = false, armed = false, idleT = null, _liteMode = false;   // _liteMode = no-WebGPU serverless brain (M2: NEVER dead-end — instant seed + on-device canned reasoning, any browser)
+let swapLock = null, _genActive = 0, tier = "seed";   // HOLO-Q-INSTANT-MIND ladder: seed → bridge (Falcon-E-1B, real answers while canon streams) → canon (BitNet)
 // ── THE ONE REPLY-SPINE, instantiated with q-chat's OWN capabilities (the messenger injects its own). generate =
 // this surface's brain (engine.js); open/call route through the parent bridge when embedded (P3), else an honest
 // redirect; mem/corpus/evolve default to the shared window globals. The spine carries every faculty identically. ──
@@ -400,7 +401,8 @@ function prettyStatus(s) {
 // c.isQ thread (via parent.HoloQThread) — so anything said in the drawer appears in the messenger Q chat and the two
 // stay ONE conversation. Read/write only, injection-immune (it stores what was shown; it never triggers a reply).
 function _shareTurn(side, text) { if (!_embedded) return; try { const T = window.parent.HoloQThread; if (T && T.append) T.append({ role: side === "u" ? "user" : "assistant", text: String(text || "") }); } catch (e) {} }
-function remember(side, text) { try { const h = JSON.parse(localStorage.getItem(HKEY) || "[]"); h.push({ side, text, ts: Date.now() }); localStorage.setItem(HKEY, JSON.stringify(h.slice(-60))); } catch {} _shareTurn(side, text); }
+const liveTurns = [];   // this OPEN's visible turns, in order — the canon tier re-frames these on swap (tokenizers don't share ids)
+function remember(side, text) { try { liveTurns.push({ side, text: String(text || "") }); if (liveTurns.length > 24) liveTurns.shift(); } catch {} try { const h = JSON.parse(localStorage.getItem(HKEY) || "[]"); h.push({ side, text, ts: Date.now() }); localStorage.setItem(HKEY, JSON.stringify(h.slice(-60))); } catch {} _shareTurn(side, text); }
 // FRESH CONVERSATION EVERY OPEN: Q always opens on a clean greeting — never replay old history. Clear the stored
 // transcript so each open is a new conversation. (Q's real MEMORY still lives in the encrypted realm; only the
 // visible chat resets.)
@@ -493,6 +495,13 @@ async function generate(text, skipUser) {
     }
     else if (DEMO || _liteMode) { await sleep(_liteMode ? 90 : (560 + Math.random() * 420)); out = ((seedLookup && seedLookup(text)) || demoReply(text)); record({ ack: ackMs, cold: false, warm: false, ttft: 0, tokps: 0, seed: !!_liteMode, model: "on-device" }); }   // serverless brain: instant seed (real canonical) → on-device canned reasoning; ack is a real UI-latency measurement
     else {
+      // TIER-SWAP GATE (W3, _bridge_witness): the wasm tokenizer is a SINGLETON — while the canon build
+      // window is open (its header re-entering wasm), NO generation may tokenize. New turns wait here
+      // (~6s, OPFS-warm build); `_genActive` below keeps the build from opening mid-generation. No deadlock:
+      // the check-then-increment is synchronous, and the build never waits on a turn that is waiting on it.
+      if (swapLock) { setStatus("loading", "getting smarter…"); try { await swapLock; } catch {} typing(true); }
+      _genActive++;
+      try {
       if (primingPromise) { setStatus("loading", "settling in…"); try { await primingPromise; } catch {} typing(true); }   // wait out any background persona-prime, then reuse it
       const firstTurn = convIds.length === 0;
       // GROUNDED: weave the user's OWN private world into THIS turn (injection-defense · system health · on-device
@@ -519,7 +528,8 @@ async function generate(text, skipUser) {
       const ttft = Math.round((res.stats && res.stats.ttft) || 0);
       if (!window.__ttfw.firstBrainTtft) window.__ttfw.firstBrainTtft = ttft;
       const _warm = (reused > 0) || commonsRestored || !firstTurn;   // reused persona pin, restored commons, or a running-conversation turn
-      record({ warm: _warm, cold: !_warm, ttft, tokps: (res.stats && res.stats.tokps) || 0, ack: ackMs, spec: (res.stats && res.stats.spec) || null });   // metrics go to the ?stats ledger only — the chat stays clean, just like WhatsApp
+      record({ warm: _warm, cold: !_warm, ttft, tokps: (res.stats && res.stats.tokps) || 0, ack: ackMs, spec: (res.stats && res.stats.spec) || null, model: (m && m.name || "").split("·")[0].trim() });   // metrics go to the ?stats ledger only — the chat stays clean, just like WhatsApp
+      } finally { _genActive--; }
     }
     out = (reply.finalize(out).text) || "…";   // ★ the ONE finalize: identity guard → humanize → record the self-evolution signal (same as every surface)
     think.parentNode && think.parentNode.remove();
@@ -739,8 +749,20 @@ else (async () => {
   // deadline — a stalled/blocked HuggingFace fetch never resolves AND never throws, so `armed` stays false, the
   // queue is never drained, and the header sits on "getting ready…" indefinitely (the 17-hour dead chat). Fix:
   // the whole load races a hard deadline. Miss it → drop to the instant LITE brain so Q answers NOW, and keep the
-  // real download alive in the BACKGROUND; the moment the full mind lands it upgrades in place. No path can hang.
+  // real download alive in the BACKGROUND; the moment a real mind lands it upgrades in place. No path can hang.
+  //
+  // THE MIND LADDER (HOLO-Q-INSTANT-MIND, P0-witnessed in _bridge_witness.html): seed → bridge → canon.
+  // On a COLD device the canon stream is minutes — so the deadline-miss path arms Falcon-E-1B (0.37 GB,
+  // REAL generation) as a BRIDGE while canon streams underneath. Witness facts the flow obeys:
+  //   W2 canon's network stream is wasm-free → safe to overlap with bridge generation;
+  //   W3 the wasm TOKENIZER is a singleton → any canon header load poisons the live tokenizer, so the canon
+  //      ENGINE BUILD (~6s, OPFS-warm) is serialized behind swapLock at a turn boundary, and after ANY bridge
+  //      header load the first canon load's engine is DISCARDED (bytes kept) and rebuilt fresh;
+  //   W5 each engine owns its GPUDevice → bridge.destroy() after the swap is isolated.
   let _lit = false;                                   // once we've dropped to lite, background load-status writes must not re-flip the header
+  const CANON_M = m;                                  // the catalog/override canon entry (BitNet) — `m` swaps per tier so framing follows the ACTIVE brain
+  const BRIDGE_M = (() => { const f = MODELS.find((x) => x.floor && x.kappaUrl && x.manifestKappa && !x.disabled); return f ? { ...f } : null; })();   // the pinned floor tier (Falcon-E-1B κ-object) — null means no bridge, lite carries alone
+  let bridgeGpu = null, _bridgeTainted = false;       // _bridgeTainted: a bridge header entered wasm → canon must rebuild fresh (W3)
   function enterLite(detail) {
     if (_lit) return; _lit = true;
     _liteMode = true; armed = true; setStatus("online", detail || "on your device");
@@ -748,24 +770,74 @@ else (async () => {
     if (pendingQ.length) { const q = pendingQ.slice(); pendingQ = []; for (const pq of q) { generate(pq, true).catch(() => {}); } }   // answer everything that queued, in order — never dropped
     else if (!greeted && !had) { try { bubble("a", INSTANT_HELLO); remember("a", INSTANT_HELLO); renderChips(); greeted = true; } catch (x) {} }
   }
-  // the full mind arrived (possibly AFTER we already went lite) → wire it in and, if we were on the lite brain,
-  // upgrade seamlessly so the NEXT turn thinks with the real BitNet. Idempotent + fail-soft.
+  // re-frame this open's visible turns for the canon tokenizer (ids never carry across tokenizers) — the
+  // name-carry guarantee: what you told the bridge, canon knows. BitNet is llama3-framed; cap the tail.
+  function reframeForCanon(ce) {
+    try {
+      const turns = liveTurns.filter((t) => t.text && t.text.length < 900).slice(-12);
+      if (!turns.length || !CANON_M.llama3) return [];
+      let s = frameSystem();
+      for (const t of turns) s += `<|start_header_id|>${t.side === "u" ? "user" : "assistant"}<|end_header_id|>\n\n${t.text}<|eot_id|>`;
+      let ids = ce.tokenize(s);
+      if (CANON_M.bos && ce.bosId != null) ids = [ce.bosId, ...ids];
+      return ids;
+    } catch (e) { return []; }
+  }
+  // arm the BRIDGE mind (Falcon-E-1B): real answers NOW while canon keeps streaming. Fail-soft: any miss stays lite.
+  async function armBridge(bl) {
+    if (tier !== "seed" || engine || !bl || !bl.gpu) { if (bl && bl.gpu && tier === "canon") { try { bl.gpu.destroy(); } catch (e) {} } return false; }
+    const be = await createEngine(BRIDGE_M, bl);
+    bridgeGpu = bl.gpu; engine = be; m = BRIDGE_M; convIds = []; tier = "bridge";
+    const wasLite = _liteMode; _liteMode = false; armed = true; setStatus("online", "quick mind · deeper one loading");
+    window.__ttfw.bridgeArmedMs = Math.round(performance.now() - window.__ttfw.t0);
+    try { for (const tb of [...log.querySelectorAll(".msg.think")]) { const r = tb.closest(".row"); if (r) r.remove(); } } catch (x) {}
+    if (pendingQ.length) { const q = pendingQ.slice(); pendingQ = []; for (const p of q) await generate(p, true); }
+    else if (wasLite || seedTurns > 0) { const up = "Okay — I'm properly awake now. The deeper part of me is still loading, but ask away."; bubble("a", up); remember("a", up); speak(up); }   // honest seam, once
+    return true;
+  }
+  // the canon mind arrived → wire it in (W3: if a bridge ever touched wasm, rebuild the engine fresh from the
+  // now-warm bytes inside swapLock at a turn boundary; the poisoned first engine is destroyed, its bytes kept).
   async function armFullMind(loaded) {
-    if (engine || !loaded || !loaded.gpu) return false;
-    setStatus("loading", "waking Q up…"); engine = await createEngine(m, loaded);
-    try { window.__engine = engine; } catch {}
-    if (!NOPIN && engine.kvCommonsAvailable) { try { const n = await engine.kvCommonsLoad(personaPrefixIds()); if (n > 0) { commonsRestored = true; commonsSaved = true; personaReady = true; } } catch {} }
+    if (tier === "canon") return false;
+    if (_bridgeTainted) {
+      if (loaded && loaded.gpu) { try { loaded.gpu.destroy(); } catch (e) {} }   // W3: engine poisoned (bridge header after canon's) — bytes are OPFS-warm, rebuild is ~6s
+      if (swapLock) return false;
+      swapLock = (async () => {
+        try {
+          while (_genActive > 0) await sleep(150);                      // turn boundary — never mid-generation
+          setStatus("loading", "getting smarter…");
+          const fresh = await loadModel(CANON_M, { onStatus: () => {}, onProgress: () => {} });
+          if (!fresh || !fresh.gpu) return;                             // stay on bridge — still a real mind
+          await _bindCanon(fresh);
+        } catch (e) {} finally { swapLock = null; }                     // tier === "canon" now guards re-entry
+      })();
+      await swapLock;
+      return tier === "canon";
+    }
+    if (!loaded || !loaded.gpu) return false;
+    await _bindCanon(loaded);
+    return true;
+  }
+  async function _bindCanon(loaded) {
+    setStatus("loading", "waking Q up…");
+    const ce = await createEngine(CANON_M, loaded);
+    const wasBridge = tier === "bridge", wasLite = _liteMode;
+    m = CANON_M; engine = ce; tier = "canon"; _liteMode = false; armed = true;
+    convIds = wasBridge ? reframeForCanon(ce) : [];                     // carry the conversation across the tokenizer boundary
+    personaIds = null;                                                  // persona ids were (possibly) bridge-tokenized — recompute lazily with canon's tokenizer
+    if (bridgeGpu) { try { bridgeGpu.destroy(); } catch (e) {} bridgeGpu = null; }   // W5: isolated teardown
+    try { window.__engine = ce; } catch {}
+    if (!NOPIN && ce.kvCommonsAvailable && !wasBridge) { try { const n = await ce.kvCommonsLoad(personaPrefixIds()); if (n > 0) { commonsRestored = true; commonsSaved = true; personaReady = true; } } catch {} }
     window.__ttfw.armedMs = Math.round(performance.now() - window.__ttfw.t0);
-    const wasLite = _liteMode; _liteMode = false; armed = true; setStatus("online");
-    if (pendingQ.length) {                            // queued while loading (non-lite path) → answer EVERYTHING, in order
+    setStatus("online");
+    if (pendingQ.length) {
       for (const tb of [...log.querySelectorAll(".msg.think")]) { const r = tb.closest(".row"); if (r) r.remove(); }
       const q = pendingQ.slice(); pendingQ = [];
       for (const p of q) await generate(p, true);
     }
-    else if (wasLite || seedTurns > 0) { const up = "My full mind just came online — ask me anything."; bubble("a", up); remember("a", up); }   // honest seam, narrated once
+    else if (wasBridge || wasLite || seedTurns > 0) { const up = "My full mind just came online — ask me anything."; bubble("a", up); remember("a", up); }   // honest seam, narrated once
     else if (!greeted && !had) greet();
     else { if (!greeted) renderChips(); if (!personaReady && !commonsRestored) primePersona(); }
-    return true;
   }
   try {
     setStatus("connecting");
@@ -779,18 +851,24 @@ else (async () => {
     // normal catalog load if the κ isn't resolvable here.
     const qk = params.get("q");
     let loaded = qk ? await loadFromQ(qk, { onStatus: (s) => s && !_lit && setStatus("loading", prettyStatus(s)) }) : null;
-    if (loaded && loaded.config) m = loaded.config;   // reconstructed model entry → framing (frameSystem/frameTurn) uses it
+    if (loaded && loaded.config) { m = loaded.config; }   // reconstructed model entry → framing (frameSystem/frameTurn) uses it
     if (!loaded) {
       // race the real load against a hard deadline. `?load=<ms>` overrides (0 = wait forever, for measurement).
+      // WARM devices win this race (~6s OPFS) → straight to canon, no bridge, exactly the seq-199 fast path.
       const _dl = (() => { const q = parseInt(params.get("load") || "", 10); return Number.isFinite(q) ? q : 18000; })();
       const loadP = loadModel(m, {
         onStatus: (s) => { if (s && !_lit) setStatus("loading", prettyStatus(s)); },
         onProgress: (d, t, w) => { if (_lit) return; const pct = t ? Math.round(100 * d / t) : 0; setStatus("loading", pct ? `warming up… ${pct}%` : "warming up…"); } });
       loaded = _dl > 0 ? await Promise.race([loadP, new Promise((r) => setTimeout(() => r("__deadline__"), _dl))]) : await loadP;
       if (loaded === "__deadline__") {
-        // still downloading past the deadline → answer NOW on the lite brain; upgrade the instant the real mind lands.
+        // COLD: the canon stream will take minutes. Answer NOW (lite), arm the BRIDGE mind (real answers in
+        // ~download-time of 0.37 GB), and upgrade to canon when its bytes land. ?nobridge disables for A/B.
         enterLite("bringing my full mind online…");
-        loadP.then((real) => armFullMind(real)).catch(() => {});   // background: never leaves lite if it fails
+        if (!params.has("nobridge") && BRIDGE_M && BRIDGE_M.kappaUrl) {
+          _bridgeTainted = true;                       // the bridge header WILL enter wasm → canon must rebuild fresh (W3)
+          loadModel(BRIDGE_M, { onStatus: () => {}, onProgress: () => {} }).then((bl) => armBridge(bl)).catch(() => {});
+        }
+        loadP.then((real) => armFullMind(real)).catch(() => {});   // background byte-warmer + upgrade; never leaves bridge/lite if it fails
         return;
       }
     }

@@ -14,7 +14,7 @@
   },
   "apps": {
    "files": 2899,
-   "bytes": 1040926,
+   "bytes": 1047491,
    "hf": 2856
   },
   "heavy": {
@@ -4199,8 +4199,8 @@
    "source": "hf"
   },
   "apps/player/holo-evicted.json": {
-   "sha256": "f4a621467af875bd8cc50d9089c9a556f255bebfa2996375782840c5d67c0d55",
-   "blake3": "b9b675d662a2b9fb4bd9604239705ca01ca1879e212f8d60bcfa8b0460d42d56",
+   "sha256": "b37d14185641365ce18f47bcd9aec85e75e82815a6a31c788aa7f2fbd96fd7f3",
+   "blake3": "a2b311e06804d764bb06c7965c5fc7c03e11c11c80ff9a686eb8b1aa482d0673",
    "bytes": 10722,
    "tier": "apps",
    "source": "origin"
@@ -4606,7 +4606,7 @@
    "source": "hf"
   },
   "apps/player/index.html": {
-   "blake3": "409e848b4316d76fde4cafc4d090d8156f5f458e7030e1e71e0943b251324e43",
+   "blake3": "ce8fa462eab7c1d5de0a86b2738fe2ceacafc80e7d15644324d6d2759d0e8a04",
    "tier": "apps",
    "source": "hf"
   },
@@ -4794,9 +4794,9 @@
    "source": "hf"
   },
   "apps/q/core/loader.js": {
-   "sha256": "b76c635f12a827c92bdc8e57bbb2ce4414ac1353c6f932924d27421f30bf86e0",
-   "blake3": "78ecae0cf3b5aa4ade85c09447c04f5705e29d08df75273c356f4062ea432289",
-   "bytes": 24466,
+   "sha256": "fdb72d1debcd1edf7c4bfcb9cff8fb633d9290a67ecade5a05e6347b7d07c108",
+   "blake3": "5dad7f8c8f1b675c8918678842d5f2d072b23fc39c3e0fe6fd7cdc4eeeaf10ee",
+   "bytes": 24782,
    "tier": "apps",
    "source": "origin"
   },
@@ -6977,8 +6977,8 @@
    "source": "hf"
   },
   "apps/q/holo-evicted.json": {
-   "sha256": "2d685c497c192cfa1f136f20442afb00bd6b0bb88b8b83b5392d8e798d603ae8",
-   "blake3": "6349bea9441dee8c60e88154b2e6b1050271e681e500713817c7264bab1173a8",
+   "sha256": "5de997b955dda0226dbcaae0544fd33af96a26f51c5c0f26e6d635d0a89e57da",
+   "blake3": "2a8d44386cbebcd1fd3299860b8412a633550fddd762ec1027192efd1f31af7f",
    "bytes": 56894,
    "tier": "apps",
    "source": "origin"
@@ -7066,9 +7066,9 @@
    "source": "hf"
   },
   "apps/q/q-chat.html": {
-   "sha256": "ac9fe0e6c3978127c8a6ba27dfc5821f95ae7fcfe745fb0172ccc4773ec28599",
-   "blake3": "0051aa22750ed309f355cab863aec239b4ccc0a3bff9ddd134b39b22db3ab623",
-   "bytes": 70252,
+   "sha256": "1e1ebe80f1e57400df1654df74dbc99499ef423f16b8e76d4a224116ec5ca5ff",
+   "blake3": "f9f195f076332523ec41eeada23227d7a7e2451ea452fdd3ee6333c20d9a1053",
+   "bytes": 76501,
    "tier": "apps",
    "source": "origin"
   },

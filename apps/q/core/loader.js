@@ -31,7 +31,9 @@ export const MODELS = [
   // FLOOR TIER (HOLO-ANY-BROWSER-500): Falcon-E-1B-Instruct — natively-ternary, chat-tuned, ~475 MB
   // resident. On integrated GPUs (where a normal browser lands) it decodes ~140 tok/s vs BitNet-2B's
   // ~40. Its OWN template is ChatML (<|im_start|>) — NOT the word-frame the 3B uses — eos <|end_of_text|>.
-  { fam: "Falcon-E-1B", name: "Falcon-E-1B · fast", kappaUrl: "https://huggingface.co/tiiuae/Falcon-E-1B-Instruct-GGUF/resolve/main", size: "0.37 GB", fmt: "t2 ternary κ", cap: 90, ctx: 3000, kv4: true, gpu: true, gpuOnly: true, chat: true, userWord: true, asstLabel: "Assistant", stopText: "\nUser:", floor: true, eosText: "<|end_of_text|>", rep: 1.3, kappa: true },
+  // Published κ-object (2026-07-13, compiled from tiiuae Q8 by compile2bit): the old tiiuae kappaUrl had NO
+  // manifest (404 — the floor tier was dead as a catalog entry); now pinned + loadable like every other tier.
+  { fam: "Falcon-E-1B", name: "Falcon-E-1B · fast", kappaUrl: "https://huggingface.co/HOLOGRAMTECH/q-falcon-e-1b/resolve/main", manifestKappa: "did:holo:sha256:7f90fdbf86802782de84b4d4b35e7048b1239e941da224a56db22335cdc7b8d9", size: "0.37 GB", fmt: "t2 ternary κ", cap: 90, ctx: 3000, kv4: true, gpu: true, gpuOnly: true, chat: true, userWord: true, asstLabel: "Assistant", stopText: "\nUser:", floor: true, eosText: "<|end_of_text|>", rep: 1.3, kappa: true },
   // TriLM: the LARGEST natively-ternary-trained model (Spectra 3.9B, ICLR'25); per-row/channel
   // scale structure → t2r (trit codes + per-256-block scales, exact). BASE model → QA frame + stop.
   { fam: "TriLM", name: "TriLM-3.9B · ternary", kappaUrl: "https://huggingface.co/HOLOGRAMTECH/q-trilm-3.9b/resolve/main", manifestKappa: "did:holo:sha256:499032ceb19c0476345a72cf5fea6caec83054c98486c91a5891dfad0d25ea30", size: "0.87 GB", fmt: "t2r 2.1-bit κ", cap: 200, ctx: 3000, kv4: true, gpu: true, gpuOnly: true, chat: true, stopText: "\nQuestion:", tools: false, rep: 1.18, kappa: true },
