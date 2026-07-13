@@ -43,7 +43,71 @@ async function blake3hex(bytes) {
 export const MOODS = ["cosmic", "vaporwave", "cozy", "neon", "noir", "sunset", "forest", "ocean", "chaos"];
 export const TOP_MAX = 8;
 
+// ── v3 — the 2004 fields (HOLO-MYSPACE-AUTHENTIC A1). v2 is FROZEN (live links must keep
+// resolving); v3 EXTENDS: decode() reads both, upgrade() lifts v2 → v3 losslessly. Volatile
+// things (last login, online-now, counts) are PRESENTATION and never enter this tuple.
+export const V3_INTERESTS = ["general", "music", "movies", "television", "books", "heroes"];
+export const V3_DETAILS = ["status", "hereFor", "hometown", "zodiac", "smokeDrink", "children", "education", "occupation"];
+export const BLOG_MAX = 5;
+
+const str = (s) => String(s || "");
+const strMap = (obj, keys) => { const o = {}; for (const k of keys) o[k] = str(obj && obj[k]); return o; };
+
+function identity3(p = {}) {
+  const song = p.song && (p.song.title || p.song.query) ? {
+    title: str(p.song.title), artist: str(p.song.artist),
+    art: httpsOrEmpty(p.song.art), query: str(p.song.query), preview: httpsOrEmpty(p.song.preview),
+  } : null;
+  const via = p.via && (hexOf(p.via.k) || p.via.name) ? { k: hexOf(p.via.k), name: str(p.via.name) } : null;
+  return {
+    v: 3,
+    kind: "profile",
+    name: str(p.name),
+    headline: str(p.headline),                            // the quote beside the photo (":-)")
+    avatar: str(p.avatar),
+    accent: /^#[0-9a-f]{3,8}$/i.test(p.accent || "") ? p.accent.toLowerCase() : "",
+    mood: { emo: str(p.mood && p.mood.emo), word: str(p.mood && p.mood.word) },
+    demog: strMap(p.demog, ["gender", "age", "city", "region", "country"]),
+    interests: strMap(p.interests, V3_INTERESTS),
+    details: strMap(p.details, V3_DETAILS),
+    blurbs: { aboutMe: str(p.blurbs && p.blurbs.aboutMe), meet: str(p.blurbs && p.blurbs.meet) },
+    blog: (p.blog || []).slice(0, BLOG_MAX)
+      .map((b) => ({ title: str(b && b.title), link: str(b && b.link) })).filter((b) => b.title || b.link),
+    wallpaper: str(p.wallpaper),
+    song,
+    top: (p.top || []).slice(0, TOP_MAX)
+      .map((d) => ({ name: str(d && d.name), link: str(d && d.link), photo: str(d && d.photo) }))
+      .filter((d) => d.link),
+    wall: str(p.wall),
+    layout: str(p.layout),                                // κ-link of a Layout object (A4) or ""
+    customCss: sanitizeCss(p.customCss),                  // the sacred field — CSS-only, fail-closed
+    via,
+  };
+}
+
+// upgrade(v2) → v3, lossless: bio → blurbs.aboutMe, mood word carries over, doors gain photo:"".
+export function upgrade(p) {
+  const id = identity(p);
+  if (id.v === 3) return id;
+  return identity3({
+    ...id, headline: "", mood: { emo: "", word: id.mood }, blurbs: { aboutMe: id.bio, meet: "" },
+    top: id.top.map((d) => ({ ...d, photo: "" })),
+  });
+}
+
+// sanitizeCss — the 2004 paste-your-layout-code hack, made lawful. CSS ONLY, fail-closed:
+// any breakout vector (element close, @import, expression, non-data/https url, behavior) →
+// "" (the default skin), never a partial strip that might recombine. 32KB cap.
+export function sanitizeCss(css) {
+  const s = str(css);
+  if (!s) return "";
+  if (s.length > 32768) return "";
+  if (/[<]|@import|expression\s*\(|behavior\s*:|javascript\s*:|url\(\s*['"]?\s*(?!data:|https:)[a-z]/i.test(s)) return "";
+  return s;
+}
+
 export function identity(p = {}) {
+  if (p && (p.v === 3 || p.headline !== undefined || p.blurbs !== undefined || p.interests !== undefined)) return identity3(p);
   const song = p.song && (p.song.title || p.song.query) ? {
     title: String(p.song.title || ""), artist: String(p.song.artist || ""),
     art: httpsOrEmpty(p.song.art), query: String(p.song.query || ""), preview: httpsOrEmpty(p.song.preview),
@@ -117,18 +181,19 @@ export function encode(p) { return b64urlEnc(canonicalBytes(p)); }
 export function decode(payload) {
   try {
     const p = JSON.parse(new TextDecoder().decode(b64urlDec(payload)));
-    return p && p.v === 2 && p.kind === "profile" ? identity(p) : null;
+    return p && (p.v === 2 || p.v === 3) && p.kind === "profile" ? identity(p) : null;
   } catch (e) { return null; }
 }
 
 export function link(p, base) {
   const b = String(base || (typeof location !== "undefined" ? location.origin + location.pathname : ""));
-  return b + "#p=v2." + encode(p);
+  const id = identity(p);
+  return b + "#p=v" + id.v + "." + encode(id);
 }
 
-// parseLink(str) → payload | "" — accepts a full url, a bare fragment, or a bare payload.
+// parseLink(str) → payload | "" — accepts a full url, a bare fragment, or a bare payload (v2 or v3).
 export function parseLink(str) {
-  const m = String(str || "").match(/#p=v2\.([A-Za-z0-9_-]+)/);
+  const m = String(str || "").match(/#p=v[23]\.([A-Za-z0-9_-]+)/);
   if (m) return m[1];
   const bare = String(str || "").trim();
   return /^[A-Za-z0-9_-]{20,}$/.test(bare) && decode(bare) ? bare : "";
@@ -140,12 +205,16 @@ export function parseLink(str) {
 // clear, lineage records who you forked ("via <name>"), and the parent becomes your first
 // door — every fork adds a road BACK up the chain, so attention flows to creators.
 export async function fork(parent, parentLink) {
-  const id = identity(parent);
-  const k = await kappa(id);
-  const doorBack = { name: id.name || "a space", link: String(parentLink || "") };
-  return identity({
+  const id = upgrade(parent);                             // forks are always minted on the newest tuple
+  const k = await kappa(identity(parent));                // lineage records the parent's REAL κ (its own version)
+  const doorBack = { name: id.name || "a space", link: String(parentLink || ""), photo: id.avatar };
+  return identity3({
     ...id,
-    name: "", bio: "", avatar: "", wall: "",
+    // the LOOK survives (accent · wallpaper · song · layout · customCss — MAYA: start from what you loved);
+    // IDENTITY clears — these are yours to write.
+    name: "", headline: "", avatar: "", wall: "",
+    mood: { emo: "", word: "" }, demog: {}, interests: {}, details: {},
+    blurbs: { aboutMe: "", meet: "" }, blog: [],
     via: { k: hexOf(k), name: id.name },
     top: [doorBack, ...id.top].filter((d) => d.link).slice(0, TOP_MAX),
   });
