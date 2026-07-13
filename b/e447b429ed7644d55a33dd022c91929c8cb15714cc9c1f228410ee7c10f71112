@@ -8,14 +8,14 @@
  "mirror": "https://huggingface.co/HOLOGRAMTECH/holo-messenger-shell/resolve/main/b/",
  "tiers": {
   "core": {
-   "files": 602,
-   "bytes": 18226779,
+   "files": 599,
+   "bytes": 14183079,
    "hf": 0
   },
   "apps": {
-   "files": 2899,
-   "bytes": 1040926,
-   "hf": 2856
+   "files": 2905,
+   "bytes": 1047491,
+   "hf": 2862
   },
   "heavy": {
    "files": 20,
@@ -2738,9 +2738,14 @@
    "source": "hf"
   },
   "apps/holo-messenger/_vendor/discord/embedded-app-sdk.mjs": {
-   "sha256": "4ed122e47e39d478bcf55c66268e14682069299f07fc2c6ca72afa9eac81be05",
    "blake3": "3bfbe4be10fa54732ebc60aef0f018b52f838abb573ac42a3b6de81ecd4562b6",
-   "bytes": 322182,
+   "tier": "apps",
+   "source": "hf"
+  },
+  "apps/holo-messenger/_vendor/discord/holo-evicted.json": {
+   "sha256": "50c8e210be7991e8cb224b1454999d60dddfbbd2fa960530bda97bf0d2294da7",
+   "blake3": "8d46d5faaf8d80dd7df439ab8cbf8f3a237f69fc4062fd86b44d55a24c72588b",
+   "bytes": 217,
    "tier": "core",
    "source": "origin"
   },
@@ -2772,26 +2777,27 @@
    "tier": "core",
    "source": "origin"
   },
-  "apps/holo-messenger/_vendor/native-net/holospaces_web.js": {
-   "sha256": "6afce40a88c22cfecaf38ad9ae8fa5d7e11d9578d87d96b88bb861deb0349c0f",
-   "blake3": "450f3b7f122531404ab7e38a37b982e3872026966f739a9a243f7feee7d991bd",
-   "bytes": 149066,
+  "apps/holo-messenger/_vendor/native-net/holo-evicted.json": {
+   "sha256": "97406a22264839738803a8ca2a2563500a58df6730f8be9acca8d6910920044b",
+   "blake3": "f86b33f527d94ee8b780b0c62f997f882fbc482650acf074ae789109f03f742b",
+   "bytes": 397,
    "tier": "core",
    "source": "origin"
+  },
+  "apps/holo-messenger/_vendor/native-net/holospaces_web.js": {
+   "blake3": "450f3b7f122531404ab7e38a37b982e3872026966f739a9a243f7feee7d991bd",
+   "tier": "apps",
+   "source": "hf"
   },
   "apps/holo-messenger/_vendor/native-net/holospaces_web_bg.wasm": {
-   "sha256": "b2ba4bd09a8f3d0d418e7e70a5d079715dd8be9bc809ece84e72a3c50adad9b0",
    "blake3": "690d0385dbf0d265a8c1f298b95367599f726b91bc2cc4b83b59274c81668b52",
-   "bytes": 3157408,
-   "tier": "core",
-   "source": "origin"
+   "tier": "apps",
+   "source": "hf"
   },
   "apps/holo-messenger/_vendor/native-net/manifest.json": {
-   "sha256": "247c35d081edaadc6bd814be85de003a78ecb368c12ce5c6f1134c9418b0feb1",
    "blake3": "a954a0f19fd7564835714e7d76152f0dbcf82b3fc4dcb5c154d3a67df66188b7",
-   "bytes": 765,
-   "tier": "core",
-   "source": "origin"
+   "tier": "apps",
+   "source": "hf"
   },
   "apps/holo-messenger/_vendor/ui/chat-ui.bundle.css": {
    "sha256": "f2cf413f5ae89168be65306ab20beab0b7feee07ad29aeb3698124b86590bd88",
@@ -3003,19 +3009,22 @@
    "tier": "core",
    "source": "origin"
   },
-  "apps/holo-messenger/_vendor/vodozemac/holo_vodozemac.js": {
-   "sha256": "a97efb523a9557d59a1ed26c15b4defd92ae8509c776809289692b7cd727ffff",
-   "blake3": "3e5be0b55bc22efc86f72eb213a4ff44bf730f4ac78782d3fa83ae220492fb1f",
-   "bytes": 22410,
+  "apps/holo-messenger/_vendor/vodozemac/holo-evicted.json": {
+   "sha256": "e28d37a96e6a18b5b3d80261d708d42f3d0f2d7151798ae2021126fd3bcf6636",
+   "blake3": "6dc90c897581ca8d6649376434e0b0036d9859def6614109e6301a4081f06266",
+   "bytes": 310,
    "tier": "core",
    "source": "origin"
   },
+  "apps/holo-messenger/_vendor/vodozemac/holo_vodozemac.js": {
+   "blake3": "3e5be0b55bc22efc86f72eb213a4ff44bf730f4ac78782d3fa83ae220492fb1f",
+   "tier": "apps",
+   "source": "hf"
+  },
   "apps/holo-messenger/_vendor/vodozemac/holo_vodozemac_bg.wasm": {
-   "sha256": "61e837124a363061d65110369998d8eec40f2dbb6e4d7fea9a65b0a5c1e1a419",
    "blake3": "03577f82b488fe12ff7b4c3eda8cb6cfded5201cd5d53e8c4700831a7c6d9101",
-   "bytes": 393199,
-   "tier": "core",
-   "source": "origin"
+   "tier": "apps",
+   "source": "hf"
   },
   "apps/holo-messenger/_vendor/wallpaper-default.jpg": {
    "sha256": "f6caa9eeead2c99deeb2cdb70b7e25bbaa2cf5c60555f5b4030ecf6b6d9efa51",
@@ -4794,9 +4803,9 @@
    "source": "hf"
   },
   "apps/q/core/loader.js": {
-   "sha256": "b76c635f12a827c92bdc8e57bbb2ce4414ac1353c6f932924d27421f30bf86e0",
-   "blake3": "78ecae0cf3b5aa4ade85c09447c04f5705e29d08df75273c356f4062ea432289",
-   "bytes": 24466,
+   "sha256": "fdb72d1debcd1edf7c4bfcb9cff8fb633d9290a67ecade5a05e6347b7d07c108",
+   "blake3": "5dad7f8c8f1b675c8918678842d5f2d072b23fc39c3e0fe6fd7cdc4eeeaf10ee",
+   "bytes": 24782,
    "tier": "apps",
    "source": "origin"
   },
@@ -6977,8 +6986,8 @@
    "source": "hf"
   },
   "apps/q/holo-evicted.json": {
-   "sha256": "2d685c497c192cfa1f136f20442afb00bd6b0bb88b8b83b5392d8e798d603ae8",
-   "blake3": "6349bea9441dee8c60e88154b2e6b1050271e681e500713817c7264bab1173a8",
+   "sha256": "5de997b955dda0226dbcaae0544fd33af96a26f51c5c0f26e6d635d0a89e57da",
+   "blake3": "2a8d44386cbebcd1fd3299860b8412a633550fddd762ec1027192efd1f31af7f",
    "bytes": 56894,
    "tier": "apps",
    "source": "origin"
@@ -7066,9 +7075,9 @@
    "source": "hf"
   },
   "apps/q/q-chat.html": {
-   "sha256": "ac9fe0e6c3978127c8a6ba27dfc5821f95ae7fcfe745fb0172ccc4773ec28599",
-   "blake3": "0051aa22750ed309f355cab863aec239b4ccc0a3bff9ddd134b39b22db3ab623",
-   "bytes": 70252,
+   "sha256": "1e1ebe80f1e57400df1654df74dbc99499ef423f16b8e76d4a224116ec5ca5ff",
+   "blake3": "f9f195f076332523ec41eeada23227d7a7e2451ea452fdd3ee6333c20d9a1053",
+   "bytes": 76501,
    "tier": "apps",
    "source": "origin"
   },
@@ -16936,9 +16945,9 @@
    "source": "hf"
   },
   "evicted.json": {
-   "sha256": "fd47044d6885b5cbaed77763263b749cc0fccd5459470e1f0a852a509060edc2",
-   "blake3": "1b61297352187dd33ea2fc9360268481d2ff9e3a0567ff2474597ab60356cd8a",
-   "bytes": 362,
+   "sha256": "a68146bb6a64b94f2fe16e4b9714ba522f63cc431d28bb0d5bdeeb6a5fec925c",
+   "blake3": "4118dab20176c741ebc6bc53a50b2accf059a64471225476a439a37a56de990d",
+   "bytes": 768,
    "tier": "core",
    "source": "origin"
   },

@@ -20,6 +20,18 @@
   {
    "prefix": "usr/share/wallpapers/",
    "closure": "usr/share/wallpapers/holo-evicted.json"
+  },
+  {
+   "prefix": "apps/holo-messenger/_vendor/native-net/",
+   "closure": "apps/holo-messenger/_vendor/native-net/holo-evicted.json"
+  },
+  {
+   "prefix": "apps/holo-messenger/_vendor/vodozemac/",
+   "closure": "apps/holo-messenger/_vendor/vodozemac/holo-evicted.json"
+  },
+  {
+   "prefix": "apps/holo-messenger/_vendor/discord/",
+   "closure": "apps/holo-messenger/_vendor/discord/holo-evicted.json"
   }
  ]
 }
