@@ -32,9 +32,34 @@ export const BUILTIN_RUNGS = {
   sha256: [
     "https://huggingface.co/HOLOGRAMTECH/holo-messenger-shell/resolve/main/sha256/",
   ],
+  // IPFS — the PERMISSIONLESS rung. A BLAKE3 κ IS natively an IPFS CIDv1 (raw codec 0x55, blake3-256
+  // multihash 0x1e): no index, no translation — the same content-address, CID-encoded. These gateways
+  // address by CID (not raw hex), so the ladder transforms hex→CID below and appends "/ipfs/<cid>".
+  // Tried LAST (after the origin + the shell mirrors), so zero hot-path cost; it heals when the
+  // centralized rungs miss/censor AND any peer on the decentralized web holds the object. Bounded to
+  // single raw blocks (≤ ~1 MiB); larger objects are UnixFS-chunked on IPFS (root CID ≠ κ) and simply
+  // miss here → the caller falls through, exactly as before.
+  ipfs: [
+    "https://ipfs.io",
+    "https://dweb.link",
+    "https://cloudflare-ipfs.com",
+  ],
 };
 
+// blake3-hex (32-byte digest) → IPFS CIDv1(raw, blake3-256) → multibase-base32 "b…". Deterministic,
+// index-free: this IS the κ, wearing a CID. (varint of 0x01/0x55/0x1e/0x20 is one byte each.)
+const B32 = "abcdefghijklmnopqrstuvwxyz234567";
+export function blake3ToCid(hex) {
+  const digest = []; for (let i = 0; i < 64; i += 2) digest.push(parseInt(hex.slice(i, i + 2), 16));
+  const bytes = [0x01, 0x55, 0x1e, 0x20, ...digest];   // cidv1 · raw · blake3-256 · len 32 · digest
+  let bits = 0, val = 0, out = "b";
+  for (const b of bytes) { val = (val << 8) | b; bits += 8; while (bits >= 5) { out += B32[(val >>> (bits - 5)) & 31]; bits -= 5; } }
+  if (bits > 0) out += B32[(val << (5 - bits)) & 31];
+  return out;
+}
+
 const CAP = 64 * 1024 * 1024;   // buffered-verify ceiling — everything in today's closures fits
+const IPFS_TIMEOUT = 4000;      // a decentralized-web gateway is best-effort — never hang the ladder on it
 
 export function makeLadder({ base = "", rung = null } = {}) {
   let _rungs = null, _rungsP = null;
@@ -72,28 +97,57 @@ export function makeLadder({ base = "", rung = null } = {}) {
     const table = await rungs();
     const bases = [...(skipOrigin ? [] : [base + "/b/"]), ...extraMirrors, ...(table[axis] || [])];
     let miss = null;
+
+    // buffer + re-derive + serve one rung response. Returns a verified Response, or null (miss/poisoned/
+    // giant-unverifiable) so the caller tries the next rung. `origin` = same-origin trust class.
+    const serveVerified = async (r, srcLabel, origin) => {
+      const len = Number(r.headers.get("content-length") || 0);
+      const headers = { ...headersFor(ext, r), "x-holo-kappa": axis + ":" + hex, "x-holo-source": srcLabel };
+      if (len > CAP || !r.body) {                              // the rare giant — pre-G0 semantics
+        if (axis === "blake3" && r.body) return new Response(r.body.pipeThrough(verifierFor(hex)), { status: 200, headers });
+        if (origin) return new Response(r.body, { status: 200, headers });   // origin sha256 giant: streamed, origin trust class
+        store && store.witness && store.witness("kappa-rung-oversize", { axis, hex, rung: srcLabel });
+        return null;                                           // mirror sha256 giant: unverifiable → next rung
+      }
+      let u8;
+      try { u8 = new Uint8Array(await r.arrayBuffer()); } catch { return null; }
+      if (u8.length > CAP) { if (origin && axis !== "blake3") return new Response(u8, { status: 200, headers }); return null; }
+      if ((await derive(axis, u8)) !== hex) {                  // poisoned rung: refuse ITS bytes, try the next
+        store && store.witness && store.witness("kappa-route-mismatch", { axis, want: hex, source: srcLabel });
+        return null;
+      }
+      if (store) { try { store.put(axis, hex, u8); } catch {} }
+      return new Response(u8, { status: 200, headers });
+    };
+
     for (let i = 0; i < bases.length; i++) {
       const origin = !skipOrigin && i === 0;
       let r = null;
       try { r = await fetch(bases[i] + hex); } catch { continue; }
       if (!r.ok) { miss = miss || r; continue; }
-      const len = Number(r.headers.get("content-length") || 0);
-      const headers = { ...headersFor(ext, r), "x-holo-kappa": axis + ":" + hex, "x-holo-source": origin ? "origin-b" : "rung-" + i };
-      if (len > CAP || !r.body) {                              // the rare giant — pre-G0 semantics
-        if (axis === "blake3" && r.body) return new Response(r.body.pipeThrough(verifierFor(hex)), { status: 200, headers });
-        if (origin) return new Response(r.body, { status: 200, headers });   // origin sha256 giant: streamed, origin trust class
-        store && store.witness && store.witness("kappa-rung-oversize", { axis, hex, rung: bases[i] });
-        continue;                                              // mirror sha256 giant: unverifiable → next rung
+      const served = await serveVerified(r, origin ? "origin-b" : "rung-" + i, origin);
+      if (served) return served;
+    }
+
+    // IPFS — the permissionless, decentralized-web rung (blake3 only: κ IS a CIDv1). Tried LAST, so it
+    // costs nothing on the hot path; it heals when the centralized rungs miss AND any peer holds the κ.
+    if (axis === "blake3") {
+      const gws = table.ipfs || [];
+      if (gws.length) {
+        const cid = blake3ToCid(hex);
+        for (const gw of gws) {
+          let r = null;
+          try {
+            const ac = typeof AbortController !== "undefined" ? new AbortController() : null;
+            const t = ac && setTimeout(() => ac.abort(), IPFS_TIMEOUT);
+            r = await fetch(gw.replace(/\/$/, "") + "/ipfs/" + cid, ac ? { signal: ac.signal } : {});
+            if (t) clearTimeout(t);
+          } catch { continue; }
+          if (!r || !r.ok) { if (r) miss = miss || r; continue; }
+          const served = await serveVerified(r, "ipfs:" + gw.replace(/^https?:\/\//, "").replace(/\/.*/, ""), false);
+          if (served) return served;
+        }
       }
-      let u8;
-      try { u8 = new Uint8Array(await r.arrayBuffer()); } catch { continue; }
-      if (u8.length > CAP) { if (origin && axis !== "blake3") return new Response(u8, { status: 200, headers }); continue; }
-      if ((await derive(axis, u8)) !== hex) {                  // poisoned rung: refuse ITS bytes, try the next
-        store && store.witness && store.witness("kappa-route-mismatch", { axis, want: hex, source: headers["x-holo-source"] });
-        continue;
-      }
-      if (store) { try { store.put(axis, hex, u8); } catch {} }
-      return new Response(u8, { status: 200, headers });
     }
     return miss;
   }
