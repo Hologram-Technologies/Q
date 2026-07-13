@@ -78,8 +78,10 @@ async function _boot() {
         olm = makeSeal2({ voz, pickleKey, getState: (k) => store.getMeta("voz:" + k).catch(() => null), putState: (k, v) => store.setMeta("voz:" + k, v).catch(() => {}) });
       }
     } catch (e) { console.warn("[direct] Olm ratchet unavailable — holo-seal default:", String(e)); olm = null; }
-    direct = await makeDirect({ identity, spine, store, displayName, olm });
-    try { const Keys = await import("./holo-key.mjs?v=k1"); Keys.attachDirect(direct); } catch {}   // drop-box: origin /mbox, or relays on a static origin (holo-dm gate)
+    direct = await makeDirect({ identity, spine, store, displayName, olm });   // drop-box: origin /mbox, or relays on a static origin (holo-dm gate)
+    // 🗝 KEYS: hand the engine to holo-key so BOTH invoke (holder) and the instant-revoke push (issuer) reach the
+    // wire — without waiting for a first invoke to lazily set it. One shared handle, fail-soft if the module isn't loaded.
+    try { const Keys = await import("./holo-key.mjs?v=k1"); Keys.attachDirect(direct); } catch {}
     direct.on("message", (m) => {
       const p = panels.get(m.contactId);
       if (p) p.addMessage({ from: m.from, text: m.text, verified: m.verified, kappa: m.kappa });
@@ -163,7 +165,8 @@ export async function open(peerPub, { name = null } = {}) {
   const { openDirectChat } = await import("./holo-direct-ui.mjs?v=n9k");
   const panel = openDirectChat({
     name: _label(cid),
-    myPub: direct.myPub,   // 🗝 KEYS
+    myPub: direct.myPub,   // 🗝 KEYS: mint on MY identity → the 🗝 composer button + live key cards go native here
+
     onSend: (t) => direct.send(cid, t).then((r) => { if (r.ok) panel.addMessage({ from: "me", text: t, kappa: r.kappa, status: "sent" }); else if (r.keychange) panel.showKeyChange(true); }),
     onVerify: () => { direct.markVerified(cid); _refreshSafety(cid, panel); },
     onRename: (nm) => { _setAlias(cid, nm); _renderSection(); },   // WhatsApp: tap the name → set who it is (local label)
@@ -340,6 +343,7 @@ function start() {
     roomView: async (id) => { await _boot(); return direct.roomView(id); },
     roomHistory: async (id) => { await _boot(); return direct.history(id); },   // the sealed vault's room thread (records carry {text,dir,ts,name})
     roomLive: async (id, info) => { await _boot(); return direct.roomLive(id, info); },   // ephemeral "I'm inside <holospace>" presence
+    roomCo: async (id, url, data) => { await _boot(); return direct.roomCo(id, url, data); },   // together-frames (cursors / playback sync) for a shared pane
     onRoom: (cb) => { _boot().then(() => direct.on("room", cb)); },
     onRoomEvent: (cb) => { _boot().then(() => direct.on("roomevent", cb)); },
     // ── PRESENCE (AIM A1/A3) — buddy state over the same sealed door; TTL-honest, contacts only.

@@ -605,6 +605,19 @@ export async function makeDirect({ identity = null, mailboxBase = null, trustSto
     return { ok: true };
   }
 
+  // TOGETHER frames — the co-presence plane for a shared experience (cursors, playback sync). Same shape
+  // as room-live: ephemeral, sealed pairwise, membership-gated, never persisted. `url` scopes the session
+  // (a room can host several experiences at once); `data` is the copresence protocol payload, opaque here.
+  async function roomCo(roomId, url, data) {
+    const room = rooms.get(roomId); if (!room) return { ok: false, error: "unknown room" };
+    for (const m of _roomMembersArr(room)) {
+      if (m.sign === myPub.sign) continue;
+      const cid = _findBySign(m.sign); if (!cid) continue;
+      _sendControl(cid, { t: "room-co", room: roomId, url, data, name: displayName || null, ts: Date.now() });
+    }
+    return { ok: true };
+  }
+
   // KICK (admin): remove the member, ROTATE my outbound (PCS) and re-key only the REMAINING members. Tell the
   // remaining members to remove + rotate too, so EVERY surviving member's stream is fresh — the kicked key
   // receives nothing after the cut and its old inbound views can't read the new session ids.
@@ -710,6 +723,14 @@ export async function makeDirect({ identity = null, mailboxBase = null, trustSto
       return;
     }
 
+    if (payload.t === "room-co") {                             // ephemeral together-frames (cursors / playback sync)
+      if (!room || !room.members.has(r.from)) return;          // members only; nothing persists, nothing replays
+      const sender = room.members.get(r.from) || {};
+      emit("roomevent", { room: roomId, kind: "co", member: r.from, name: payload.name || sender.name || null,
+        url: payload.url || null, data: payload.data ?? null, ts: payload.ts || Date.now() });
+      return;
+    }
+
     if (payload.t === "room-msg") {                            // a Megolm room word
       if (!room || !room.members.has(r.from)) return;          // sender must be a current member
       // SELF-HEAL over a lossy relay: if I hold no inbound for this sender (their room-key frame was dropped),
@@ -732,7 +753,7 @@ export async function makeDirect({ identity = null, mailboxBase = null, trustSto
     myPub,
     addContact,
     // rooms (M4)
-    createRoom, joinRoom, roomSend, roomKick, roomLink, roomLive,
+    createRoom, joinRoom, roomSend, roomKick, roomLink, roomLive, roomCo,
     rooms: () => [...rooms.values()].map(_roomView),
     roomView: (id) => { const r = rooms.get(id); return r ? _roomView(r) : null; },
     roomMembers: (id) => { const r = rooms.get(id); return r ? _roomMembersArr(r).map((m) => ({ sign: m.sign, name: m.name, admin: m.admin })) : []; },
