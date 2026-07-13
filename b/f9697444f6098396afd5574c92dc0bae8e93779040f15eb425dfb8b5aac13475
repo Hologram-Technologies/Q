@@ -14,7 +14,7 @@
   },
   "apps": {
    "files": 5281,
-   "bytes": 1536490,
+   "bytes": 1537017,
    "hf": 5236
   },
   "heavy": {
@@ -4173,9 +4173,9 @@
    "source": "origin"
   },
   "apps/jellyfin/holo-jellyfin-sw.js": {
-   "sha256": "89aff16d5f151db99d14327d7660a62d3c724e38d25bd89c96e2c750fafc5035",
-   "blake3": "4cbf37f3faf11e0ee84accd86b4508ecb1e936e53c450d2773529138570745ad",
-   "bytes": 102088,
+   "sha256": "c6b33a4a22c95cd1cde7ec955c3cca63e4122c6072cc2030873a0f4196c2a985",
+   "blake3": "75633e3a5bed114eb29f80dd994a46f5a6832faaab72d259dc31b8cce6c0fb47",
+   "bytes": 102615,
    "tier": "apps",
    "source": "origin"
   },
@@ -18884,8 +18884,8 @@
    "source": "hf"
   },
   "apps/q/holo-evicted.json": {
-   "sha256": "b16382288785c51c50c55c906eb5315b978d196d8cb1523e99987f3efe865651",
-   "blake3": "21e2969ce8d2841cd0deeaef6b54ebaaa560a23c2edbe644e807d1770e38e26e",
+   "sha256": "8457baa497c6695cc2e8676b6ee1e11f5e4d536c832ef068d49192b8dd9b5332",
+   "blake3": "412031b4280c820f223e17024c5ff850fb73e3b4e39cfd5eaa2f75264cc9334f",
    "bytes": 56894,
    "tier": "apps",
    "source": "origin"
