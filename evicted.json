@@ -32,6 +32,10 @@
   {
    "prefix": "apps/holo-messenger/_vendor/discord/",
    "closure": "apps/holo-messenger/_vendor/discord/holo-evicted.json"
+  },
+  {
+   "prefix": "usr/lib/holo/holowhat/",
+   "closure": "usr/lib/holo/holowhat/holo-evicted.json"
   }
  ]
 }

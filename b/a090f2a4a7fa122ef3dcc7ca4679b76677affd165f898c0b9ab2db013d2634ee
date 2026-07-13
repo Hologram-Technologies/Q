@@ -8,14 +8,14 @@
  "mirror": "https://huggingface.co/HOLOGRAMTECH/holo-messenger-shell/resolve/main/b/",
  "tiers": {
   "core": {
-   "files": 603,
-   "bytes": 14732488,
+   "files": 602,
+   "bytes": 11687691,
    "hf": 0
   },
   "apps": {
-   "files": 2903,
+   "files": 2905,
    "bytes": 1047491,
-   "hf": 2860
+   "hf": 2862
   },
   "heavy": {
    "files": 20,
@@ -3822,9 +3822,9 @@
    "source": "origin"
   },
   "apps/holo-messenger/shell-manifest.json": {
-   "sha256": "4a0762518f130878c97841b8d82ac29094446565c81affcd632310981bc98f8c",
-   "blake3": "dbee964df20979be61fb04dd7d9d181086d17ed54f72a9b4f45963ebe090ff45",
-   "bytes": 8507,
+   "sha256": "1750b840a25af74ff918e8f32adf4c17935c343e5c59624dfde4b9f537814cc2",
+   "blake3": "0044733baa68c74a219b73e7e00696da1c0a10f5dccfd6ee6010d5e338b8308f",
+   "bytes": 7436,
    "tier": "core",
    "source": "origin"
   },
@@ -16963,9 +16963,9 @@
    "source": "hf"
   },
   "evicted.json": {
-   "sha256": "a68146bb6a64b94f2fe16e4b9714ba522f63cc431d28bb0d5bdeeb6a5fec925c",
-   "blake3": "4118dab20176c741ebc6bc53a50b2accf059a64471225476a439a37a56de990d",
-   "bytes": 768,
+   "sha256": "ac377282c46e3c30965cf9e562889b3e1b24e924f9d6c92d586e0697d2bfa0ab",
+   "blake3": "46024a47bcaee8cc868b47277112f23f8d96b74c363f321d31be3fff5a0e095f",
+   "bytes": 872,
    "tier": "core",
    "source": "origin"
   },
@@ -18103,19 +18103,22 @@
    "tier": "core",
    "source": "origin"
   },
-  "usr/lib/holo/holowhat/holospaces_web.js": {
-   "sha256": "a5b5d9c559a1d2812c33e9d7a4b1c24bb03059482503a23356e4c9c32d4d8b88",
-   "blake3": "8993d93001da373dd4acd2d75b93e4ecf80000cbac4a78d492db440e4c7f883f",
-   "bytes": 118072,
+  "usr/lib/holo/holowhat/holo-evicted.json": {
+   "sha256": "5735217295b97a2f6f4a92ae615bb29d327bf7f215c1518d48c299b3fb57bae8",
+   "blake3": "d6383b0a82bb73c8d0b6d9cb39202256b5d2eaf4703a0eef0dbd71991d97bc4d",
+   "bytes": 310,
    "tier": "core",
    "source": "origin"
   },
+  "usr/lib/holo/holowhat/holospaces_web.js": {
+   "blake3": "8993d93001da373dd4acd2d75b93e4ecf80000cbac4a78d492db440e4c7f883f",
+   "tier": "apps",
+   "source": "hf"
+  },
   "usr/lib/holo/holowhat/holospaces_web_bg.wasm": {
-   "sha256": "00cfa4960b319ba1ba7291cddb20dea130a407ce8b42426218854f4f68f4dcd7",
    "blake3": "4faa4eed56ecb1fb7ad22e1a35bc55fff12569124e59631dc0edb445c17ac72a",
-   "bytes": 2926068,
-   "tier": "core",
-   "source": "origin"
+   "tier": "apps",
+   "source": "hf"
   },
   "usr/lib/holo/machine-compositor.mjs": {
    "sha256": "da990c73a4e88d00704a895a44e3d282f871acc0c5d47286990f6690299a031f",
