@@ -1,13 +1,13 @@
 <div align="center">
 
-# Q
+# Hologram OS
 
-### An operating system that unfolds from a seed.
+### A whole computer that unfolds from a link.
 
 Open one link. A few hundred bytes verify themselves, re-derive the next stage, and — with nothing
-installed, no server, no account — **unfold into a complete operating system, in your browser.**
+installed, no server, no account — **unfold into a complete operating system, right in your browser.**
 
-[ **▶ Boot it** ](https://hologram-technologies.github.io/Q)
+[ **▶ Boot it** ](https://hologram-technologies.github.io/hologram-os)
 
 <sub>Paste that link into any chat or feed. It boots into existence for whoever opens it.</sub>
 
@@ -15,29 +15,31 @@ installed, no server, no account — **unfold into a complete operating system, 
 
 ---
 
-There is no download, and no backend. **The link is the software.**
+Most computing is borrowed. The real machine lives in someone else's building, and you get a small
+window into it. Hologram OS is the opposite — a computer that is wholly yours, held in a single browser
+tab. There is no download and no backend. **The link is the software.**
 
-From the very first byte, nothing is trusted by where it lives — only by what it **is**. Each stage is
-named by a fingerprint of its own bytes and refuses to run unless it re-derives to that fingerprint. The
-seed proves its own genesis; the runtime it unfolds re-derives everything after. Tamper is refused, not
-rendered.
+Nothing here is trusted for where it lives, only for what it **is**. Every part carries a name computed
+from its own bytes: resolve the name, recompute it, and if the two match you have checked that part
+yourself, with no server standing in between. Change one byte and the name changes and the part refuses
+to run. You never have to trust it — you can watch it prove itself, live, in front of you.
 
-- **Self-declaring** — the first bytes read a signed record of what the OS is, and unfold it.
-- **Self-verifying** — every stage re-derives to its fingerprint, or nothing runs (from byte one).
-- **Serverless** — it runs entirely in the browser, mobile or desktop. Any host is just untrusted capacity.
-- **Portable** — one link carries it, anywhere. No install, no account, no origin it depends on.
+- **Self-verifying** — every stage recomputes to its own name, or nothing runs, from the first byte.
+- **Serverless** — it runs entirely in your browser, mobile or desktop. Any host is just untrusted capacity.
+- **Sovereign** — it is yours. Nothing to sign into, nothing watching, nothing you can't take back.
+- **Portable** — one link carries it anywhere. No install, no account, no origin it depends on.
 
-## Everything is a verifiable object
+Everything inside is one kind of thing — a verifiable object. Three layers compose them into the OS:
 
-Three layers, one idea:
+| Layer | What it is | Where it lives |
+|-------|-----------|----------------|
+| **Resolver** | reads any name as an object — resolves it, verifies it, unfolds it | this repo → [`main`](https://github.com/Hologram-Technologies/hologram-os/tree/main) |
+| **Apps** | surfaces streamed on demand, each its own verifiable object | [hologram-apps](https://github.com/Hologram-Technologies/hologram-apps) |
+| **Engine** | the browser-native runtime that resolves and verifies, updated upstream | [holospaces](https://github.com/Hologram-Technologies/holospaces) |
 
-| Layer | What it is | Where |
-|-------|-----------|-------|
-| **Resolver** | reads any name as an object, resolves, verifies, unfolds | this project → [`main`](https://github.com/Hologram-Technologies/Q/tree/main) |
-| **Apps** | surfaces streamed on demand as objects | [hologram-apps](https://github.com/Hologram-Technologies/hologram-apps) |
-| **Engine** | the runtime that resolves and verifies, updated upstream | [holospaces](https://github.com/Hologram-Technologies/holospaces) |
+The full story lives in [`system/`](system/): [**genesis**](system/genesis.md) — how a seed becomes an
+OS · [**architecture**](system/architecture.md) · [**the five laws**](system/laws.md) ·
+[**build**](system/build.md).
 
-The story in [`system/`](system/): [**genesis**](system/genesis.md) — how a seed becomes an OS ·
-[**architecture**](system/architecture.md) · [**the five laws**](system/laws.md) · [**build**](system/build.md).
-
-<sub>κ-addressable from the first byte · BLAKE3 · 100% serverless · MIT · the running resolver lives on <a href="https://github.com/Hologram-Technologies/Q/tree/main"><code>main</code></a></sub>
+<sub>Content-addressed from the first byte · BLAKE3 · 100% serverless · MIT · the running resolver lives
+on <a href="https://github.com/Hologram-Technologies/hologram-os/tree/main"><code>main</code></a></sub>
