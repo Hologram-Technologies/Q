@@ -73,8 +73,8 @@ export async function openStore({ ns = "guest", vaultKey } = {}) {
       }
       return out;
     },
-    async putMsg({ kappa, contactId, ts, dir, text, status = null, media = null }) {
-      const rec = await _seal({ dir, text, status, ...(media ? { media } : {}) });   // media = the sealed descriptor {kappa,key,iv,name,mime,size} (N7)
+    async putMsg({ kappa, contactId, ts, dir, text, status = null, media = null, name = null }) {
+      const rec = await _seal({ dir, text, status, ...(name ? { name } : {}), ...(media ? { media } : {}) });   // media = sealed descriptor (N7) · name = room sender (ONE ROOM history keeps who said it)
       rec.nsContact = K(contactId); rec.ts = ts || Date.now(); rec.kappa = kappa;
       await _tx(db, "msgs", "readwrite", (s) => s.put(rec, K(kappa)));
     },

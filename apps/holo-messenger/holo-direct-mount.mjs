@@ -31,7 +31,7 @@ async function _boot() {
   if (bootP) return bootP;
   bootP = (async () => {
     const { makeSpine } = await import("./holo-net.mjs");        // ← the 3 MB spine loads HERE, first use only
-    const { makeDirect } = await import("./holo-direct.mjs?v=n8");
+    const { makeDirect } = await import("./holo-direct.mjs?v=aim1");   // aim1: presence + away (A1/A3)
     const { getIdentity } = await import("./holo-direct-id.mjs");
     // the operator namespace: the signed-in identity's stable id when the gate resolved one, else "guest"
     // (ONE stable identity per device+origin — never per session). 3 s race: Direct must not hang on auth.
@@ -107,6 +107,17 @@ async function _boot() {
     // immediacy instead of the 4 s cadence. No-op on the HTTP transport (returns null). κ-dedup makes
     // the extra poll free.
     import("./holo-dm.mjs?v=n8").then((DM) => DM.mailboxLive(direct.myPub.box, _poll)).catch(() => {});
+    // AIM presence (A1): announce my state (away survived the reload inside the engine), then keep it
+    // honest — 10 min without input → idle, input returns online. Away only changes by hand.
+    try {
+      direct.setPresence(direct.myPresence()).catch(() => {});
+      const IDLE_MS = 10 * 60 * 1000;
+      let idleT = null, lastArm = 0;
+      const arm = () => { clearTimeout(idleT); idleT = setTimeout(() => { if (direct.myPresence().state === "online") direct.setPresence({ state: "idle" }).catch(() => {}); }, IDLE_MS); };
+      const wake = () => { if (direct.myPresence().state === "idle") direct.setPresence({ state: "online" }).catch(() => {}); const n = Date.now(); if (n - lastArm > 5000) { lastArm = n; arm(); } };
+      for (const ev of ["pointerdown", "keydown", "pointermove"]) window.addEventListener(ev, wake, { passive: true });
+      arm();
+    } catch {}
     return direct;
   })();
   return bootP;
@@ -321,8 +332,20 @@ function start() {
     roomMembers: async (id) => { await _boot(); return direct.roomMembers(id); },
     roomView: async (id) => { await _boot(); return direct.roomView(id); },
     roomHistory: async (id) => { await _boot(); return direct.history(id); },   // the sealed vault's room thread (records carry {text,dir,ts,name})
+    roomLive: async (id, info) => { await _boot(); return direct.roomLive(id, info); },   // ephemeral "I'm inside <holospace>" presence
     onRoom: (cb) => { _boot().then(() => direct.on("room", cb)); },
     onRoomEvent: (cb) => { _boot().then(() => direct.on("roomevent", cb)); },
+    // ── PRESENCE (AIM A1/A3) — buddy state over the same sealed door; TTL-honest, contacts only.
+    setPresence: async (o) => { await _boot(); return direct.setPresence(o); },
+    myPresence: () => (direct ? direct.myPresence() : { state: "offline", msg: null, profile: null }),
+    presenceOf: (cid) => (direct ? direct.presenceOf(cid) : { state: "offline", msg: null, profile: null, ts: 0 }),
+    presences: async () => { await _boot(); return direct.presences(); },
+    onPresence: (cb) => { _boot().then(() => direct.on("presence", cb)); },
+    verifyStatus: (cid) => (direct ? direct.verifyStatus(cid) : { status: "unknown" }),
+    onMessage: (cb) => { _boot().then(() => direct.on("message", cb)); },
+    conversations: async () => { await _boot(); return direct.conversations(); },
+    getMeta: async (k) => { await _boot(); return direct.getMeta(k); },
+    setMeta: async (k, v) => { await _boot(); return direct.setMeta(k, v); },
     // if opened from a #room invite, auto-join once booted (fail-soft). Returns the parsed room or null.
     joinFromFragment: async () => { await _boot(); const m = /[#&]room=v1\.([A-Za-z0-9_-]+)/.exec(location.hash || ""); if (!m) return null;
       try { const p = JSON.parse(decodeURIComponent(escape(atob(m[1].replace(/-/g, "+").replace(/_/g, "/"))))); const r = await direct.joinRoom(p); return { ...r, invite: p }; } catch { return null; } } };

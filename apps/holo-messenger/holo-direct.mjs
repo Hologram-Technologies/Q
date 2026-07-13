@@ -29,7 +29,8 @@ const DEFAULT_ICE = [
 ];
 
 export async function makeDirect({ identity = null, mailboxBase = null, trustStore = null, load = null, save = null,
-                                   spine = null, stun = null, ice = DEFAULT_ICE, store = null, displayName = null, olm = null } = {}) {
+                                   spine = null, stun = null, ice = DEFAULT_ICE, store = null, displayName = null, olm = null,
+                                   presenceBeatMs = 60000, presenceTtlMs = 180000 } = {}) {
   const id = identity || await Seal.generateIdentity();
   const myPub = await Seal.exportPublic(id);
   // ── THE SEAL WAIST (R1-R3) — one interface so the door never knows which cipher sealed a message. Default
@@ -119,7 +120,7 @@ export async function makeDirect({ identity = null, mailboxBase = null, trustSto
     save: save || ((c) => { try { if (typeof localStorage !== "undefined") localStorage.setItem(nsKey, JSON.stringify(c)); } catch {} }),
   });
   const book = new Map();     // contactId → pub {sign,box}
-  const listeners = { message: [], keychange: [], tick: [], typing: [], media: [], room: [], roomevent: [] };
+  const listeners = { message: [], keychange: [], tick: [], typing: [], media: [], room: [], roomevent: [], presence: [] };
   const emit = (ev, x) => (listeners[ev] || []).forEach((f) => { try { f(x); } catch {} });
 
   // the durable store (holo-direct-store, optional): contacts + messages survive reload, sealed at rest.
@@ -145,7 +146,7 @@ export async function makeDirect({ identity = null, mailboxBase = null, trustSto
   // payload — so the one-link door is TWO-WAY from the first word: the inviter's inbound-only stub
   // upgrades to a full, answerable contact (TOFU, tied to the signature that sealed it). WhatsApp feel.
   const _intro = () => ({ fromBox: myPub.box, ...(displayName ? { fromName: String(displayName).slice(0, 48) } : {}) });
-  const _wrap = (text) => JSON.stringify({ t: "msg", text, ..._intro() });
+  const _wrap = (text, auto) => JSON.stringify({ t: "msg", text, ...(auto ? { auto: true } : {}), ..._intro() });
   const _parse = (plaintext) => {
     try { const p = JSON.parse(plaintext); if (p && p.t) return p; } catch {}
     return { t: "msg", text: plaintext };                     // legacy bare string
@@ -188,15 +189,48 @@ export async function makeDirect({ identity = null, mailboxBase = null, trustSto
 
   // a tiny sealed control frame back to a KNOWN contact — over the open link when up, the mailbox when not.
   // (An unknown sender can't be acked: we know their sign key from the envelope, not their box key.)
-  async function _sendControl(contactId, frame) {
+  // linkOnly: for ephemeral chatter (typing, presence keepalives) that is never worth a drop-box round-trip.
+  async function _sendControl(contactId, frame, { linkOnly = false } = {}) {
     const pub = book.get(contactId); if (!pub) return false;
     const env = await sealer.seal(contactId, JSON.stringify(frame), pub);
     const link = links.get(contactId);
     if (link && link.open) { try { link.send(wireEncode(env)); return true; } catch { links.delete(contactId); } }
-    if (frame.t === "typing") return false;                  // a typing hint is never worth a drop-box round-trip
+    if (linkOnly || frame.t === "typing") return false;      // ephemeral hints never take the mailbox
     await DM.mailboxDrop(pub.box, sealer.toWire(env), { mailboxBase }).catch(() => {});
     return true;
   }
+
+  // ── PRESENCE (AIM, A1/A3) — buddy state is PEER GOSSIP with a TTL, never a server's opinion. A state
+  // CHANGE fans dual-path (the mailbox reaches offline buddies); the keepalive rides warm links ONLY
+  // (the typing rule — ephemeral chatter never spams the drop-box). Receivers hold it in memory and let
+  // it LAPSE to offline: presence is only what a peer actually announced, expiry renders sign-off, and
+  // "online" is never invented. Away survives a reload (vault meta); one auto-reply per buddy per
+  // away-session rides the normal msg path, flagged so an auto-reply is never itself answered.
+  const PRESENCE_STATES = ["online", "idle", "away"];
+  const _peerPresence = new Map();   // contactId → {state,msg,profile,ts,expires}
+  let _myPresence = { state: "online", msg: null, profile: null };
+  const _autoReplied = new Set();    // contactIds answered this away-session
+  if (store && store.getMeta) { try { const v = JSON.parse((await store.getMeta("presence:self")) || "null"); if (v && v.state === "away") _myPresence = { state: "away", msg: v.msg || null, profile: v.profile || null }; } catch {} }
+  const _presenceFrame = () => ({ t: "presence", state: _myPresence.state, ...(_myPresence.msg ? { msg: _myPresence.msg } : {}), ...(_myPresence.profile ? { profile: _myPresence.profile } : {}), ts: Date.now() });
+  async function _fanPresence({ beat = false } = {}) {
+    const f = _presenceFrame();
+    for (const [cid, pub] of book) { if (!pub || !pub.box) continue; await _sendControl(cid, f, { linkOnly: beat }).catch(() => {}); }
+  }
+  async function setPresence({ state = "online", msg = null, profile = null } = {}) {
+    if (!PRESENCE_STATES.includes(state)) return { ok: false, error: "state must be online|idle|away" };
+    const was = _myPresence.state;
+    _myPresence = { state, msg: msg ? String(msg).replace(/\s+/g, " ").trim().slice(0, 240) || null : null,
+                    profile: profile ? String(profile).trim().slice(0, 400) || null : null };
+    if (was !== state) _autoReplied.clear();                 // a NEW away-session answers each buddy once again
+    if (store && store.setMeta) store.setMeta("presence:self", JSON.stringify(_myPresence)).catch(() => {});
+    await _fanPresence();                                    // state change → dual-path
+    return { ok: true, ..._myPresence };
+  }
+  const _beatT = setInterval(() => { _fanPresence({ beat: true }).catch(() => {}); }, Math.max(1000, presenceBeatMs));
+  const _sweepT = setInterval(() => {
+    const now = Date.now();
+    for (const [cid, p] of _peerPresence) if (p.expires <= now) { _peerPresence.delete(cid); emit("presence", { contactId: cid, state: "offline", msg: null, profile: null, ts: now }); }
+  }, Math.max(200, Math.floor(presenceTtlMs / 3)));
 
   // ---- the ONE receive gate: both carriers (p2p frame, mailbox blob) end here ----
   async function _deliver(env, ts) {
@@ -231,6 +265,22 @@ export async function makeDirect({ identity = null, mailboxBase = null, trustSto
       return null;
     }
     if (payload.t === "typing") { if (verified) emit("typing", { contactId }); return null; }
+
+    // presence beacon: CONTACTS ONLY (verified = sig-valid AND known) — a stranger's beacon is refused at
+    // the door. Emit only on a real transition so a keepalive can never re-ring the doorbell (door sounds,
+    // A2); every beacon refreshes the TTL, and lapse — not a frame — renders offline.
+    if (payload.t === "presence") {
+      if (!verified) return null;
+      if (!PRESENCE_STATES.includes(payload.state)) return null;
+      const prev = _peerPresence.get(contactId);
+      const p = { state: payload.state,
+                  msg: typeof payload.msg === "string" ? payload.msg.slice(0, 240) : null,
+                  profile: typeof payload.profile === "string" ? payload.profile.slice(0, 400) : null,
+                  ts: payload.ts || Date.now(), expires: Date.now() + presenceTtlMs };
+      _peerPresence.set(contactId, p);
+      if (!prev || prev.state !== p.state || prev.msg !== p.msg) emit("presence", { contactId, state: p.state, msg: p.msg, profile: p.profile, ts: p.ts });
+      return null;
+    }
 
     // ── KEY frames (Holo Keys): a live power, redeemed over this same sealed door. The engine only CARRIES —
     // authority is issuer-local (holo-keys checks MY keyring; unknown/revoked/expired refuse at the door). A
@@ -286,13 +336,19 @@ export async function makeDirect({ identity = null, mailboxBase = null, trustSto
       store.putMsg({ kappa: env.kappa, contactId: cid, ts: ts || env.ts, dir: "in", text: payload.text }).catch(() => {});
       if (!known && !payload.fromBox) store.putContact(cid, { pub: { sign: r.from, box: null }, addedTs: Date.now() }).catch(() => {});   // stub: listed, unanswerable until they share their link
     }
-    const msg = { contactId: cid, from: r.from, text: payload.text, verified, known, ts: ts || env.ts, kappa: env.kappa };
+    const msg = { contactId: cid, from: r.from, text: payload.text, auto: !!payload.auto, verified, known, ts: ts || env.ts, kappa: env.kappa };
     emit("message", msg);
     // ✓✓ on their side — fire and forget. The upgrade above may have JUST made a first-word stranger
     // answerable (their box key rode the sealed payload) — ack whoever we can now reach, not only
     // contacts we knew before this message.
     const ackTo = book.get(cid);
     if (ackTo && ackTo.box) _sendControl(cid, { t: "ack", kappa: env.kappa });
+    // AIM away (A3): answer each buddy ONCE per away-session. An auto-reply is flagged in the sealed
+    // payload and is NEVER itself answered — the classic two-away-buddies loop is impossible by contract.
+    if (_myPresence.state === "away" && !payload.auto && !_autoReplied.has(cid) && ackTo && ackTo.box) {
+      _autoReplied.add(cid);
+      send(cid, "Auto response from " + (displayName || "me") + ": " + (_myPresence.msg || "I am away from my computer right now."), { auto: true }).catch(() => {});
+    }
     return msg;
   }
 
@@ -364,11 +420,11 @@ export async function makeDirect({ identity = null, mailboxBase = null, trustSto
   }
 
   // ---- send: seal once, then the fastest honest carrier ----
-  async function send(contactId, text) {
+  async function send(contactId, text, { auto = false } = {}) {
     const pub = book.get(contactId); if (!pub) return { ok: false, error: "unknown contact" };
     if (!pub.box) return { ok: false, error: "no box key — they must share their link first" };   // inbound-only stub
     if (trust.check(contactId, pub).status === "changed") { emit("keychange", { contactId, pub }); return { ok: false, error: "key-changed", keychange: true }; }
-    const env = await sealer.seal(contactId, _wrap(text), pub);
+    const env = await sealer.seal(contactId, _wrap(text, auto), pub);
     // persist BEFORE transport (✓ = it exists durably and was handed to a carrier; ✓✓ = the ack came back)
     if (store) await store.putMsg({ kappa: env.kappa, contactId, ts: env.ts, dir: "out", text, status: "sent" }).catch(() => {});
     const link = links.get(contactId);
@@ -536,6 +592,19 @@ export async function makeDirect({ identity = null, mailboxBase = null, trustSto
     return { ok: true, mid, ts };
   }
 
+  // LIVE PRESENCE — "who's inside a holospace right now". Ephemeral (never persisted, receivers expire it
+  // locally): fan one sealed control frame to the roster. This is the room's real-time multiplayer plane —
+  // "join them" just opens the same κ/url, and the experience itself streams from the substrate.
+  async function roomLive(roomId, { url = null, title = null, on = true } = {}) {
+    const room = rooms.get(roomId); if (!room) return { ok: false, error: "unknown room" };
+    for (const m of _roomMembersArr(room)) {
+      if (m.sign === myPub.sign) continue;
+      const cid = _findBySign(m.sign); if (!cid) continue;
+      _sendControl(cid, { t: "room-live", room: roomId, url, title, on: !!on, name: displayName || null, ts: Date.now() });
+    }
+    return { ok: true };
+  }
+
   // KICK (admin): remove the member, ROTATE my outbound (PCS) and re-key only the REMAINING members. Tell the
   // remaining members to remove + rotate too, so EVERY surviving member's stream is fresh — the kicked key
   // receives nothing after the cut and its old inbound views can't read the new session ids.
@@ -633,6 +702,14 @@ export async function makeDirect({ identity = null, mailboxBase = null, trustSto
       return;
     }
 
+    if (payload.t === "room-live") {                           // ephemeral presence: a member is inside a holospace
+      if (!room || !room.members.has(r.from)) return;          // members only; nothing persists, nothing replays
+      const sender = room.members.get(r.from) || {};
+      emit("roomevent", { room: roomId, kind: "live", member: r.from, name: payload.name || sender.name || null,
+        url: payload.url || null, title: payload.title || null, on: payload.on !== false, ts: payload.ts || Date.now() });
+      return;
+    }
+
     if (payload.t === "room-msg") {                            // a Megolm room word
       if (!room || !room.members.has(r.from)) return;          // sender must be a current member
       // SELF-HEAL over a lossy relay: if I hold no inbound for this sender (their room-key frame was dropped),
@@ -655,12 +732,20 @@ export async function makeDirect({ identity = null, mailboxBase = null, trustSto
     myPub,
     addContact,
     // rooms (M4)
-    createRoom, joinRoom, roomSend, roomKick, roomLink,
+    createRoom, joinRoom, roomSend, roomKick, roomLink, roomLive,
     rooms: () => [...rooms.values()].map(_roomView),
     roomView: (id) => { const r = rooms.get(id); return r ? _roomView(r) : null; },
     roomMembers: (id) => { const r = rooms.get(id); return r ? _roomMembersArr(r).map((m) => ({ sign: m.sign, name: m.name, admin: m.admin })) : []; },
     contacts: () => [...book.keys()],
     send, poll, warm, sendTyping, sendMedia,
+    // presence (AIM A1/A3): my state is what I announced; a buddy's state is what they announced, TTL-honest.
+    setPresence,
+    myPresence: () => ({ ..._myPresence }),
+    presenceOf: (cid) => { const p = _peerPresence.get(cid); return p && p.expires > Date.now() ? { state: p.state, msg: p.msg, profile: p.profile, ts: p.ts } : { state: "offline", msg: null, profile: null, ts: 0 }; },
+    presences: () => { const now = Date.now(), o = {}; for (const [cid, p] of _peerPresence) if (p.expires > now) o[cid] = { state: p.state, msg: p.msg, profile: p.profile, ts: p.ts }; return o; },
+    // vault meta passthrough (AIM buddy groups etc.) — state lives sealed in the store, not localStorage
+    getMeta: (k) => (store && store.getMeta ? store.getMeta(k) : Promise.resolve(null)),
+    setMeta: (k, v) => (store && store.setMeta ? store.setMeta(k, v) : Promise.resolve()),
     // Holo Keys carrier: one sealed control frame to a contact (dual-path like every control frame). The
     // _intro() box key rides inside so a first-contact issuer can answer — the N8 two-way door, reused.
     keySend: (cid, frame) => _sendControl(cid, { ...frame, ..._intro() }),
@@ -681,6 +766,6 @@ export async function makeDirect({ identity = null, mailboxBase = null, trustSto
     verifyStatus: (contactId) => { const p = book.get(contactId); return p ? trust.check(contactId, p) : { status: "unknown" }; },
     markVerified: (contactId) => trust.markVerified(contactId),
     on: (ev, cb) => { (listeners[ev] || (listeners[ev] = [])).push(cb); },
-    close: () => { if (stopListen) stopListen(); for (const l of links.values()) { try { l.close(); } catch {} } links.clear(); },
+    close: () => { if (stopListen) stopListen(); clearInterval(_beatT); clearInterval(_sweepT); for (const l of links.values()) { try { l.close(); } catch {} } links.clear(); },
   };
 }
