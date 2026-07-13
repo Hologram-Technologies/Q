@@ -40,7 +40,7 @@ html.q-drawer .holo-hero{
   inset:0 0 0 auto!important; width:var(--q-drawer-w)!important; overflow:hidden!important;
   background:var(--holo-chrome,#1f1f1e)!important;
   padding-top:0!important; align-items:stretch!important; justify-content:flex-start!important;
-  border-left:0!important; box-shadow:-26px 0 64px -22px rgba(0,0,0,.62)!important;
+  border-left:0!important; box-shadow:none!important;
   animation:q-drawer-in .26s var(--holo-ease,ease) both!important; touch-action:auto!important;
 }
 /* opacity-only (NO transform on .holo-hero): a transform would make its position:fixed composer hero-relative.
@@ -578,7 +578,7 @@ function mountQChat() {
   f.addEventListener("load", () => { try {
     const d = f.contentDocument; if (!d) return;                       // same-origin → we can style it plain
     const st = d.createElement("style"); st.id = "q-embed";
-    st.textContent = "#wall,.wall,[class*=wall]{display:none!important}html,body,header,#log,main,[class*=thread],footer{background:#1f1f1e!important;background-image:none!important;backdrop-filter:none!important;border:0!important}body::before,body::after{display:none!important}";
+    st.textContent = "#wall,.wall,[class*=wall]{display:none!important}html,body,header,#log,main,[class*=thread],footer{background:#1f1f1e!important;background-image:none!important;backdrop-filter:none!important;border:0!important}body::before,body::after{display:none!important}/*HOLO-Q-SEAMLESS*/#in{background:rgba(255,255,255,.055)!important;box-shadow:none!important;border:0!important}.inwrap::before,.inwrap::after{display:none!important}.chip{background:rgba(255,255,255,.05)!important;border-color:transparent!important;box-shadow:none!important;backdrop-filter:none!important;-webkit-backdrop-filter:none!important}#send{background:rgba(255,255,255,.09)!important;box-shadow:none!important}header{border-bottom-color:transparent!important}";
     d.head.appendChild(st);
     // ONE clean greeting: drop q-chat's idle "No rush…" nudge (it persists in history → reads as a 2nd greeting)
     try {
