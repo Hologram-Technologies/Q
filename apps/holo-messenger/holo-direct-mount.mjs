@@ -203,7 +203,15 @@ async function _renderSection() {
   _secBusy = true;
   try {
     const wrap = $(".holo-convlist-wrap"); if (!wrap) return;
-    const convs = await direct.conversations().catch(() => []);
+    let convs = await direct.conversations().catch(() => []);
+    // ONE ROOM hygiene: joining a room binds each member as a pairwise TRANSPORT contact — but a member
+    // you've never messaged 1:1 is not a conversation. Hide room-only contacts (no words yet + they sit in
+    // a room roster) so the group row is the ONE surface for them; the moment a 1:1 word crosses, they appear.
+    try {
+      const roomSigns = new Set();
+      for (const r of (direct.rooms() || [])) for (const m of (r.members || [])) roomSigns.add(m.sign);
+      convs = convs.filter((c) => c.last || !(c.pub && roomSigns.has(c.pub.sign)));
+    } catch {}
     let sec = wrap.querySelector(".holo-direct-section");
     if (!convs.length) { if (sec) sec.remove(); return; }
     if (!sec) {
@@ -312,6 +320,7 @@ function start() {
     rooms: async () => { await _boot(); return direct.rooms(); },
     roomMembers: async (id) => { await _boot(); return direct.roomMembers(id); },
     roomView: async (id) => { await _boot(); return direct.roomView(id); },
+    roomHistory: async (id) => { await _boot(); return direct.history(id); },   // the sealed vault's room thread (records carry {text,dir,ts,name})
     onRoom: (cb) => { _boot().then(() => direct.on("room", cb)); },
     onRoomEvent: (cb) => { _boot().then(() => direct.on("roomevent", cb)); },
     // if opened from a #room invite, auto-join once booted (fail-soft). Returns the parsed room or null.

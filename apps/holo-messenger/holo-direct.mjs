@@ -495,7 +495,10 @@ export async function makeDirect({ identity = null, mailboxBase = null, trustSto
     // card on social platforms; the #fragment (keys) still travels only to the human's browser. Derive the
     // messenger dir from this page's path (…/apps/holo-messenger/app.html → …/apps/holo-messenger/join/).
     if (typeof location === "undefined") return "#room=v1." + b64;
-    const dir = location.pathname.replace(/[^/]*$/, "");        // strip the filename → the app dir (trailing /)
+    // anchor to THIS MODULE's real URL, not the page's — the live shell URL-normalizes the page path to the
+    // site root, which would point the link at a nonexistent root /join/ (caught by the ship-clone gate).
+    try { return new URL("join/", import.meta.url).href + "#room=v1." + b64; } catch {}
+    const dir = location.pathname.replace(/[^/]*$/, "");        // fallback: strip the filename → the app dir
     return location.origin + dir + "join/#room=v1." + b64;
   }
 
@@ -523,7 +526,7 @@ export async function makeDirect({ identity = null, mailboxBase = null, trustSto
     _stats.megolmSealed++;
     // echo locally so the sender sees their own word (Megolm can't self-decrypt an outbound session)
     const mine = { room: roomId, from: myPub.sign, name: displayName || null, text, ts, mid, me: true };
-    if (store) store.putMsg({ kappa: mid, contactId: roomId, ts, dir: "out", text, room: roomId, status: "sent" }).catch(() => {});
+    if (store) store.putMsg({ kappa: mid, contactId: roomId, ts, dir: "out", text, room: roomId, status: "sent", name: displayName || null }).catch(() => {});
     emit("room", mine);
     for (const m of _roomMembersArr(room)) {
       if (m.sign === myPub.sign) continue;
@@ -642,7 +645,7 @@ export async function makeDirect({ identity = null, mailboxBase = null, trustSto
       _stats.megolmOpened++;
       const sender = room.members.get(r.from) || {};
       if (name && !sender.name) { sender.name = name; room.members.set(r.from, sender); }
-      if (store) store.putMsg({ kappa: payload.mid, contactId: roomId, ts: payload.ts || Date.now(), dir: "in", text, room: roomId }).catch(() => {});
+      if (store) store.putMsg({ kappa: payload.mid, contactId: roomId, ts: payload.ts || Date.now(), dir: "in", text, room: roomId, name: sender.name || name || null }).catch(() => {});
       emit("room", { room: roomId, from: r.from, name: sender.name || name, text, ts: payload.ts || Date.now(), mid: payload.mid, index: d.i });
       return;
     }
