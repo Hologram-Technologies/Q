@@ -60,6 +60,33 @@ export function historyFrom(view, { persona = Q_PERSONA, max = 16 } = {}) {
 // mentionsQ(text) — is Q addressed? "@Q" / "@q" as its own token (not inside an email/handle). Pure.
 export function mentionsQ(text) { return /(^|[^A-Za-z0-9_@])@q\b/i.test(String(text || "")); }
 
+// ── stripScaffold(raw): the tiny cold-start models (seed.onnx first-responder, and any small brain before
+//    it warms) can echo their instruction-template SHELL verbatim instead of just the answer — e.g.
+//    "Explanation:\nContext: The user is …\nResponse: <answer>" — or leak ChatML role tokens. That shell must
+//    never reach a bubble: it reads as a broken chatbot, not a friend. This removes it so ONLY the human answer
+//    paints. It is the single sanitize seam for EVERY tier (seed κ-memo, ONNX seed, full brain, groups) because
+//    all of them funnel their text through onDelta + finalizeQ below. Design constraints:
+//      • Pure + idempotent  → safe to run on every streamed delta AND again at finalize (stable fixpoint).
+//      • Conservative       → the meta-label strip fires ONLY when the text LEADS with a known scaffold label,
+//                             so ordinary prose (which may contain "Note:", a colon, etc.) is never touched.
+//      • Answer-preserving   → when a "Response:/Answer:/Reply:" label is present after the meta preamble, we keep
+//                             everything after the LAST such label (the real answer), dropping the preamble.
+export function stripScaffold(raw) {
+  let t = String(raw == null ? "" : raw);
+  if (!t) return t;
+  t = t.replace(/<\|\/?(?:im_start|im_end|endoftext|system|user|assistant)\|>/gi, "");   // ChatML control tokens a small model may echo
+  const LEAD_META = /^\s*(?:Explanation|Context|Reasoning|Analysis|Instruction|Task|Input|Output|System|Prompt|Scenario|Situation)\s*:/i;
+  if (LEAD_META.test(t)) {
+    const re = /(?:^|\n)[ \t]*(?:Response|Answer|Reply)[ \t]*:[ \t]*/gi;   // answer label, LAST wins (models nest)
+    let m, cut = -1;
+    while ((m = re.exec(t))) cut = m.index + m[0].length;
+    if (cut >= 0) t = t.slice(cut);                                        // keep only the answer body
+    else t = t.replace(/^(?:[ \t]*(?:Explanation|Context|Reasoning|Analysis|Instruction|Task|Input|Output|System|Prompt|Scenario|Situation)[ \t]*:[^\n]*(?:\n|$))+/i, "");   // preamble still streaming → drop the meta lines
+  }
+  t = t.replace(/^[ \t]*(?:Response|Answer|Reply|Assistant|AI|Bot|Q)[ \t]*:[ \t]*/i, "");   // a lone leading answer/role label ("Response: hi" → "hi")
+  return t.replace(/^\n+/, "");
+}
+
 // ── makeQGroupResponder({ brain, now, persona, classify }) — M7: Q as a PARTICIPANT in a human group thread.
 // respondInGroup(thread, { publish, mintFn, ... }) reads the shared thread, replies ONLY when the latest message
 // @-mentions Q (and isn't Q's own), and PUBLISHES the reply over the group's transport so every peer sees it
@@ -89,10 +116,10 @@ export function makeQGroupResponder({ brain, now = () => new Date().toISOString(
     if (brain && brain.setSkill) { try { await brain.setSkill(classify(last.text)); } catch (e) {} }
     onTyping(true);
     let text = "";
-    try { for await (const d of brain.generate(groupHistory(view), { signal })) { if (signal && signal.aborted) break; text += d; try { onDelta(d, text); } catch (e) {} } }
+    try { for await (const d of brain.generate(groupHistory(view), { signal })) { if (signal && signal.aborted) break; text += d; try { onDelta(d, stripScaffold(text)); } catch (e) {} } }
     catch (e) {} finally { onTyping(false); }
     if (signal && signal.aborted) return { aborted: true };
-    text = text.trim();
+    text = stripScaffold(text).trim();
     if (!text) return { skipped: "empty-gen" };
     // Q's group replies go out in the SAME voice as its 1:1 chat: the deterministic identity guard (no cloud-identity
     // claim) + humanize (strip every LLM tell) run here before publish, so an @Q answer in a group is warm human prose,
@@ -126,6 +153,7 @@ export function makeQResponder({ thread, brain, now = () => new Date().toISOStri
   // finalize ONE immutable κ authored as Q (+ optional voice media + Agent-Passport signature). Shared by the
   // instant seed path and the full-brain path.
   async function finalizeQ(text, media = []) {
+    text = stripScaffold(text);   // never persist instruction-template scaffolding — one seam, every tier
     if (polish) { try { const p = await polish(text); if (p && typeof p === "string") text = p; } catch (e) {} }   // flawless-grammar seam: Q's own replies go out tidy too (on-device, fail-open)
     // M15 D1 — MULTI-BUBBLE: split the finalized reply into natural human beats and ingest EACH as its own κ, with a
     // typing beat between, so Q talks like a person instead of dropping one wall. Backward-compatible: no `split` fn,
@@ -158,12 +186,13 @@ export function makeQResponder({ thread, brain, now = () => new Date().toISOStri
     if (seed && !brainIsReady()) {
       let ans = null; try { ans = seed(intentText); } catch (e) { ans = null; }
       if (ans) {
+        const disp = stripScaffold(ans);
         await setTyping(true, onTyping);
-        try { onDelta(ans, ans); } catch (e) {}
+        try { onDelta(disp, disp); } catch (e) {}
         await setTyping(false, onTyping);
-        if (signal && signal.aborted) return { aborted: true, skill: "respond", text: ans, kappa: null };
+        if (signal && signal.aborted) return { aborted: true, skill: "respond", text: disp, kappa: null };
         const res = await finalizeQ(ans);
-        return { aborted: false, skill: "respond", text: ans, kappa: res.kappa, seq: res.seq, media: [], authored: !!passport, seed: true };
+        return { aborted: false, skill: "respond", text: disp, kappa: res.kappa, seq: res.seq, media: [], authored: !!passport, seed: true };
       }
     }
 
@@ -172,10 +201,10 @@ export function makeQResponder({ thread, brain, now = () => new Date().toISOStri
     if (onnxSeed && onnxSeed.respond && !brainIsReady()) {
       await setTyping(true, onTyping);
       let stext = "";
-      try { for await (const tok of onnxSeed.respond(historyFrom(view, { persona }))) { if (signal && signal.aborted) break; stext += tok; try { onDelta(tok, stext); } catch (e) {} } }
+      try { for await (const tok of onnxSeed.respond(historyFrom(view, { persona }))) { if (signal && signal.aborted) break; stext += tok; try { onDelta(tok, stripScaffold(stext)); } catch (e) {} } }
       catch (e) {} finally { await setTyping(false, onTyping); }
-      if (signal && signal.aborted) return { aborted: true, skill: "respond", text: stext, kappa: null };
-      stext = stext.trim();
+      if (signal && signal.aborted) return { aborted: true, skill: "respond", text: stripScaffold(stext), kappa: null };
+      stext = stripScaffold(stext).trim();   // a scaffold-ONLY draft strips to empty → falls through to the full brain (honest)
       if (stext) { const res = await finalizeQ(stext); return { aborted: false, skill: "respond", text: stext, kappa: res.kappa, seq: res.seq, media: [], authored: !!passport, seedOnnx: true }; }
       // empty seed draft → fall through to the full brain (honest)
     }
@@ -195,7 +224,7 @@ export function makeQResponder({ thread, brain, now = () => new Date().toISOStri
       for await (const delta of brain.generate(history, { signal })) {
         if (signal && signal.aborted) break;
         text += delta;
-        try { onDelta(delta, text); } catch (e) {}
+        try { onDelta(delta, stripScaffold(text)); } catch (e) {}
       }
     } catch (e) { /* a load/stream failure leaves text as-is; honest partial, finalized below only if non-empty */ }
     finally { await setTyping(false, onTyping); }
@@ -251,7 +280,7 @@ export function makeSpeculator({ brain, persona = Q_PERSONA, classify = classify
     if (current && current.key === key) {
       const rec = current; current = null;
       await rec.promise;
-      return { hit: true, text: rec.text.trim() };
+      return { hit: true, text: stripScaffold(rec.text).trim() };
     }
     if (current) { try { current.controller.abort(); } catch (e) {} current = null; }
     return { hit: false };
@@ -268,7 +297,7 @@ export function makeSpeculator({ brain, persona = Q_PERSONA, classify = classify
 // with an always-online dot. Speculation: makeSpeculator({ brain }); input 'pause' → start(draft, view);
 // send → commit(text) (hit ⇒ ingest the text as Q; miss ⇒ q.respond). All on-device; no egress.
 if (typeof window !== "undefined" && !window.HoloQContact) {
-  window.HoloQContact = { Q_IDENTITY, Q_PERSONA, qGenesis, classifySkill, historyFrom, makeQResponder, makeSpeculator };
+  window.HoloQContact = { Q_IDENTITY, Q_PERSONA, qGenesis, classifySkill, historyFrom, makeQResponder, makeSpeculator, stripScaffold };
 }
 
-export default { Q_IDENTITY, Q_PERSONA, qGenesis, classifySkill, historyFrom, makeQResponder, makeSpeculator };
+export default { Q_IDENTITY, Q_PERSONA, qGenesis, classifySkill, historyFrom, makeQResponder, makeSpeculator, stripScaffold };
