@@ -207,9 +207,12 @@ export async function makeDirect({ identity = null, mailboxBase = null, trustSto
   // "online" is never invented. Away survives a reload (vault meta); one auto-reply per buddy per
   // away-session rides the normal msg path, flagged so an auto-reply is never itself answered.
   const PRESENCE_STATES = ["online", "idle", "away"];
-  const _peerPresence = new Map();   // contactId → {state,msg,profile,ts,expires}
+  // keyed by SIGN key, not contactId: one human may sit in the book under SEVERAL ids (a room-transport
+  // stub "direct:<hex>" AND a link-opened name) — presence belongs to the HUMAN, so any of their ids
+  // resolves to the same state. Each entry remembers the best-label cid for the event payload.
+  const _peerPresence = new Map();   // sign → {cid,state,msg,profile,ts,expires}
   let _myPresence = { state: "online", msg: null, profile: null };
-  const _autoReplied = new Set();    // contactIds answered this away-session
+  const _autoReplied = new Set();    // sign keys answered this away-session (id-aliasing can't double-reply)
   if (store && store.getMeta) { try { const v = JSON.parse((await store.getMeta("presence:self")) || "null"); if (v && v.state === "away") _myPresence = { state: "away", msg: v.msg || null, profile: v.profile || null }; } catch {} }
   const _presenceFrame = () => ({ t: "presence", state: _myPresence.state, ...(_myPresence.msg ? { msg: _myPresence.msg } : {}), ...(_myPresence.profile ? { profile: _myPresence.profile } : {}), ts: Date.now() });
   async function _fanPresence({ beat = false } = {}) {
@@ -229,8 +232,14 @@ export async function makeDirect({ identity = null, mailboxBase = null, trustSto
   const _beatT = setInterval(() => { _fanPresence({ beat: true }).catch(() => {}); }, Math.max(1000, presenceBeatMs));
   const _sweepT = setInterval(() => {
     const now = Date.now();
-    for (const [cid, p] of _peerPresence) if (p.expires <= now) { _peerPresence.delete(cid); emit("presence", { contactId: cid, state: "offline", msg: null, profile: null, ts: now }); }
+    for (const [sign, p] of _peerPresence) if (p.expires <= now) { _peerPresence.delete(sign); emit("presence", { contactId: p.cid, sign, state: "offline", msg: null, profile: null, ts: now }); }
   }, Math.max(200, Math.floor(presenceTtlMs / 3)));
+  // any of a human's contact ids (or their raw sign) → their one presence record
+  const _presenceFor = (cidOrSign) => {
+    const pub = book.get(cidOrSign);
+    const p = _peerPresence.get(pub ? pub.sign : cidOrSign);
+    return p && p.expires > Date.now() ? p : null;
+  };
 
   // ---- the ONE receive gate: both carriers (p2p frame, mailbox blob) end here ----
   async function _deliver(env, ts) {
@@ -272,13 +281,13 @@ export async function makeDirect({ identity = null, mailboxBase = null, trustSto
     if (payload.t === "presence") {
       if (!verified) return null;
       if (!PRESENCE_STATES.includes(payload.state)) return null;
-      const prev = _peerPresence.get(contactId);
-      const p = { state: payload.state,
+      const prev = _peerPresence.get(r.from);
+      const p = { cid: contactId, state: payload.state,
                   msg: typeof payload.msg === "string" ? payload.msg.slice(0, 240) : null,
                   profile: typeof payload.profile === "string" ? payload.profile.slice(0, 400) : null,
                   ts: payload.ts || Date.now(), expires: Date.now() + presenceTtlMs };
-      _peerPresence.set(contactId, p);
-      if (!prev || prev.state !== p.state || prev.msg !== p.msg) emit("presence", { contactId, state: p.state, msg: p.msg, profile: p.profile, ts: p.ts });
+      _peerPresence.set(r.from, p);
+      if (!prev || prev.state !== p.state || prev.msg !== p.msg) emit("presence", { contactId, sign: r.from, state: p.state, msg: p.msg, profile: p.profile, ts: p.ts });
       return null;
     }
 
@@ -345,8 +354,8 @@ export async function makeDirect({ identity = null, mailboxBase = null, trustSto
     if (ackTo && ackTo.box) _sendControl(cid, { t: "ack", kappa: env.kappa });
     // AIM away (A3): answer each buddy ONCE per away-session. An auto-reply is flagged in the sealed
     // payload and is NEVER itself answered — the classic two-away-buddies loop is impossible by contract.
-    if (_myPresence.state === "away" && !payload.auto && !_autoReplied.has(cid) && ackTo && ackTo.box) {
-      _autoReplied.add(cid);
+    if (_myPresence.state === "away" && !payload.auto && !_autoReplied.has(r.from) && ackTo && ackTo.box) {
+      _autoReplied.add(r.from);                              // by SIGN — a human under two ids is answered once
       send(cid, "Auto response from " + (displayName || "me") + ": " + (_myPresence.msg || "I am away from my computer right now."), { auto: true }).catch(() => {});
     }
     return msg;
@@ -762,8 +771,8 @@ export async function makeDirect({ identity = null, mailboxBase = null, trustSto
     // presence (AIM A1/A3): my state is what I announced; a buddy's state is what they announced, TTL-honest.
     setPresence,
     myPresence: () => ({ ..._myPresence }),
-    presenceOf: (cid) => { const p = _peerPresence.get(cid); return p && p.expires > Date.now() ? { state: p.state, msg: p.msg, profile: p.profile, ts: p.ts } : { state: "offline", msg: null, profile: null, ts: 0 }; },
-    presences: () => { const now = Date.now(), o = {}; for (const [cid, p] of _peerPresence) if (p.expires > now) o[cid] = { state: p.state, msg: p.msg, profile: p.profile, ts: p.ts }; return o; },
+    presenceOf: (cidOrSign) => { const p = _presenceFor(cidOrSign); return p ? { state: p.state, msg: p.msg, profile: p.profile, ts: p.ts } : { state: "offline", msg: null, profile: null, ts: 0 }; },
+    presences: () => { const now = Date.now(), o = {}; for (const [sign, p] of _peerPresence) if (p.expires > now) o[sign] = { cid: p.cid, state: p.state, msg: p.msg, profile: p.profile, ts: p.ts }; return o; },
     // vault meta passthrough (AIM buddy groups etc.) — state lives sealed in the store, not localStorage
     getMeta: (k) => (store && store.getMeta ? store.getMeta(k) : Promise.resolve(null)),
     setMeta: (k, v) => (store && store.setMeta ? store.setMeta(k, v) : Promise.resolve()),
