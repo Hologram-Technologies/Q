@@ -26,6 +26,9 @@ import { makeStoreRung } from "../../usr/lib/holo/holo-store-rung.mjs";
 // never carried the κ-route, so /.holo/<axis>/<hex> only resolved for root-scope clients. One ladder
 // call closes the gap: same fail-closed verify, same rung table (data), as root-sw.
 import { makeLadder } from "../../usr/lib/holo/holo-rungs.mjs";
+// K2 (HOLO-SELF-LAWFUL): verify-at-ingest for closure-listed statics needs blake3 in-worker.
+// STATIC import (SWs disallow dynamic import); holo-rungs itself imports this same module.
+import { createBlake3 } from "../../usr/lib/holo/holo-blake3.mjs";
 const _RUNG = (() => { try { return makeStoreRung(); } catch { return null; } })();
 
 const CACHE = "holo-msgr-shell-c6d6bc5c96e2";                     // bump → old (unverified) caches are purged on activate
@@ -128,13 +131,18 @@ const MIME_EXT = { js: "text/javascript", mjs: "text/javascript", css: "text/css
 // O3/O5: the pinned closure as this worker's offline path→κ map. holo-pin.mjs verified os-closure.json
 // against the SIGNED head and handed it over through the "holo-pin" cache; we re-derive it here against
 // payload.closure from the sealed release pointer before trusting it. Memoized; no pin yet → null.
-let _cl = null, _clP = null;
+let _cl = null, _clP = null, _clAt = 0;
 function pinnedClosure() {
+  // K2: ABSENCE is retried (holo-pin mints the pin AFTER the first fetch events — memoizing "no pin
+  // yet" for the worker's whole life would keep the first session unlawful); a verified MISMATCH or a
+  // parsed closure stays memoized as before.
+  if (_cl === false && _clAt && Date.now() - _clAt > 5000) { _cl = null; _clP = null; }
   if (_cl !== null) return Promise.resolve(_cl);
   return (_clP ||= (async () => {
     try {
       const hit = await caches.match(BASE + "/os-closure.json");
-      if (!hit) return (_cl = false);
+      if (!hit) { _clAt = Date.now(); _clP = null; return (_cl = false); }
+      _clAt = 0;
       const bytes = new Uint8Array(await hit.arrayBuffer());
       let want = null;
       try { const rr = await caches.match(BASE + "/release.json", { ignoreSearch: true }); if (rr) want = (JSON.parse(await rr.clone().text())["holstr:payload"] || {}).closure; } catch {}
@@ -159,9 +167,32 @@ async function storeFallback(pathname, kappa) {
   } catch {}
   return null;
 }
-function storeResponse(pathname, u8) {
+function storeResponse(pathname, u8, kx) {
   const ext = (pathname.split(".").pop() || "").toLowerCase();
-  return new Response(u8, { status: 200, headers: { "content-type": MIME_EXT[ext] || "application/octet-stream", "x-holo-source": "device-store" } });
+  const headers = { "content-type": MIME_EXT[ext] || "application/octet-stream", "x-holo-source": "device-store" };
+  if (kx) headers["x-holo-kappa"] = "blake3:" + kx;
+  return new Response(u8, { status: 200, headers });
+}
+// K2 (HOLO-SELF-LAWFUL) hot-path helpers — SYNC and opportunistic: the closure κ of a path when the
+// pin is already in memory (first call kicks the load and returns null — serving NEVER waits on this).
+function closureKappaSync(pathname) {
+  if (!_cl) { pinnedClosure(); return null; }   // null OR retriable-absent: kick the load, never wait
+  if (!_cl.files) return null;
+  try {
+    const e = _cl.files[canon(pathname).replace(/^\//, "").split("?")[0]];
+    return e && e.blake3 ? e.blake3 : null;
+  } catch { return null; }
+}
+// stamp a 200 with its governing κ (x-holo-kappa) — an honesty label, not a serving mechanism: the
+// shell cache admits only verified bytes, and the closure is verified against the signed head.
+function stamp(resp, kx, src) {
+  if (!kx || !resp || resp.status !== 200 || resp.headers.get("x-holo-kappa")) return resp;
+  try {
+    const h = new Headers(resp.headers);
+    h.set("x-holo-kappa", "blake3:" + kx);
+    if (src && !h.get("x-holo-source")) h.set("x-holo-source", src);
+    return new Response(resp.body, { status: resp.status, statusText: resp.statusText, headers: h });
+  } catch { return resp; }
 }
 
 // cache-first, with κ-verified refill. A cached hit was verified when stored → served directly (0 net). A miss on a
@@ -175,8 +206,9 @@ async function cacheFirst(req, pathname) {
   // A ?query is an explicit version intent (e.g. q-summon.mjs?v=9) — it MUST bust the cache. ignoreSearch
   // would serve a stale ?v=8 entry for a ?v=9 request (the bug that froze the Q drawer on old bytes), so
   // only fall back to the query-insensitive match for queryless requests (plain static assets, unchanged).
+  const kx = closureKappaSync(pathname);   // K2: opportunistic, sync — never awaited on the hot path
   const hit = (await cache.match(req)) || (req.url.includes("?") ? null : (await cache.match(req, { ignoreSearch: true })));
-  if (hit) return hit;
+  if (hit) return stamp(hit, kx, "shell-cache");
   const cpath = canon(pathname);   // κ lookups use the canonical id, wherever the shell is mounted
   let kappa = expectedKappa(cpath);
   if (kappa) {
@@ -184,7 +216,7 @@ async function cacheFirst(req, pathname) {
     // A rebuilt shell rotates every asset's κ. A long-lived worker's IN-MEMORY manifest goes stale and would
     // reject the fresh bytes — so on a miss, RE-PULL the manifest (no-store) and retry once against the new κ.
     if (!v) { await loadManifest(); const k2 = expectedKappa(cpath); if (k2 && k2 !== kappa) { kappa = k2; v = await fetchVerified(req, kappa, mimeFor(pathname)); } }
-    if (v) { try { await cache.put(req, v.clone()); } catch {} return v; }
+    if (v) { try { await cache.put(req, v.clone()); } catch {} return stamp(v, kx, "origin-manifest-verified"); }
     // Never BRICK the shell on an integrity miss: fall back to the plain network response (manifest lag / drift).
     // The bytes still came from the origin over TLS; failing closed to a blank 502 is strictly worse for the user.
     try { const res = await fetch(req, { cache: "reload" }); if (res && res.ok) return res; } catch {}
@@ -192,8 +224,36 @@ async function cacheFirst(req, pathname) {
     const fromStore = await storeFallback(pathname, kappa); if (fromStore) { try { await cache.put(req, fromStore.clone()); } catch {} return fromStore; }
     return new Response("shell integrity check failed", { status: 502, headers: { "content-type": "text/plain" } });
   }
+  // K2 (SL-6): a closure-listed static answers from the DEVICE STORE before the network — a warm boot
+  // needs zero network for it even before the shell cache holds it. Read is rung-verified (store policy).
+  if (kx && _RUNG) {
+    try { const u8 = await _RUNG.get("blake3", kx); if (u8) { const r = storeResponse(pathname, u8, kx); try { await cache.put(req, r.clone()); } catch {} return r; } } catch {}
+  }
   // non-manifested static: refill from network, cache basic 200s.
-  try { const res = await fetch(req); try { if (res && res.ok && res.type === "basic") cache.put(req, res.clone()); } catch {} return res; }
+  // K2 verify-at-ingest (L5 at the trust boundary — ADR-019): a closure-listed body re-derives against
+  // its pinned blake3 κ; verified bytes enter the device store (the next boot is lawful and local). A
+  // mismatch is witnessed and the sealed κ wins via the ladder; if no rung holds it, the network bytes
+  // still serve (availability preserved — breach on record).
+  try {
+    const res = await fetch(req);
+    if (kx && res && res.ok && res.type === "basic" && Number(res.headers.get("content-length") || 0) <= 8 * 1024 * 1024) {
+      try {
+        const u8 = new Uint8Array(await res.clone().arrayBuffer());
+        if (u8.length <= 8 * 1024 * 1024) {
+          const h = createBlake3(); h.update(u8);
+          if (h.hex() === kx) {
+            if (_RUNG) { try { _RUNG.put("blake3", kx, u8); } catch {} }
+            const v2 = stamp(res, kx, "origin-path-verified");
+            try { await cache.put(req, v2.clone()); } catch {}
+            return v2;
+          }
+          _RUNG && _RUNG.witness && _RUNG.witness("lawful-ingest-mismatch", { path: cpath, want: kx });
+          try { const healed = await LADDER.resolve("blake3", kx, { ext: (pathname.split(".").pop() || "").toLowerCase() }); if (healed && healed.ok) return healed; } catch {}
+        }
+      } catch {}
+    }
+    try { if (res && res.ok && res.type === "basic") cache.put(req, res.clone()); } catch {} return res;
+  }
   catch {
     // O3/O5: offline — resolve the static from the pinned closure → device store before giving up (504).
     const fromStore = await storeFallback(pathname, null); if (fromStore) { try { await cache.put(req, fromStore.clone()); } catch {} return fromStore; }

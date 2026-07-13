@@ -33,6 +33,10 @@ import { makeStoreRung } from "./usr/lib/holo/holo-store-rung.mjs";
 // G0 (HOLO-GENESIS-SEED): THE rung ladder — device store → origin b/ → mirror rungs (data), every
 // byte re-derived before it ships. STATIC import (SWs disallow dynamic import); ships same-commit.
 import { makeLadder, MIME } from "./usr/lib/holo/holo-rungs.mjs";
+// K2 (HOLO-SELF-LAWFUL): verify-at-ingest for closure-listed boot paths needs blake3 in-worker.
+// STATIC import (SWs disallow dynamic import); holo-rungs itself imports this same module, so it is
+// guaranteed present in the same tree — no new ship surface.
+import { createBlake3 } from "./usr/lib/holo/holo-blake3.mjs";
 let _rung = null;
 const rung = async () => { try { return (_rung ||= makeStoreRung()); } catch { return null; } };
 const LADDER = makeLadder({ base: BASE, rung });
@@ -69,14 +73,19 @@ self.addEventListener("activate", (e) => e.waitUntil(RESCUER.registry().then(() 
 // "holo-pin" cache. Before trusting it we re-derive its sha256 against payload.closure from the sealed
 // release pointer (network-first tier keeps that honest; offline, the sealed copy answers). Memoized per
 // worker life; a restarted worker re-loads once. No pin yet → null → today's behavior exactly.
-let _cl = null, _clP = null;
+let _cl = null, _clP = null, _clAt = 0;
 function pinnedClosure() {
+  // K2: ABSENCE is retried (holo-pin mints the pin AFTER the first fetch events — memoizing "no pin
+  // yet" for the worker's whole life would keep the first session unlawful); a verified MISMATCH or a
+  // parsed closure stays memoized as before.
+  if (_cl === false && _clAt && Date.now() - _clAt > 5000) { _cl = null; _clP = null; }
   if (_cl !== null) return Promise.resolve(_cl);
   return (_clP ||= (async () => {
     try {
       const c = await caches.open("holo-pin");
       const hit = await c.match(BASE + "/os-closure.json");
-      if (!hit) return (_cl = false);
+      if (!hit) { _clAt = Date.now(); _clP = null; return (_cl = false); }
+      _clAt = 0;
       const bytes = new Uint8Array(await hit.arrayBuffer());
       let want = null;
       try { const rr = await caches.match(BASE + "/release.json", { ignoreSearch: true }); if (rr) want = (JSON.parse(await rr.clone().text())["holstr:payload"] || {}).closure; } catch {}
@@ -89,7 +98,11 @@ function pinnedClosure() {
     } catch { return (_cl = false); }
   })());
 }
-// serve a mount path from the pinned closure → device store (verified by the rung). null = not ours.
+// serve a mount path from the pinned closure. null = not ours / not resolvable.
+// K2 (HOLO-SELF-LAWFUL): resolves through THE ladder (device store → origin b/ → mirrors) instead of
+// the bare store rung — offline the network rungs simply fail and the store answers exactly as before;
+// online a pinned-but-unstored body heals from origin b/ (κ-addressed, verified), and the ladder's
+// put-back makes the next boot local. One ladder for every resolve (Law L4).
 async function pathFallback(p) {
   try {
     const cl = await pinnedClosure();
@@ -99,13 +112,30 @@ async function pathFallback(p) {
     let e = cl.files[rel];
     if (!e && !/\.[a-z0-9]{2,8}$/i.test(rel)) e = cl.files[rel + "/index.html"] || cl.files[rel + ".html"];
     if (!e || !e.blake3) return null;
-    const R = await rung();
-    if (!R) return null;
-    const u8 = await R.get("blake3", e.blake3);
-    if (!u8) return null;
-    const ext = (rel.split(".").pop() || "").toLowerCase();
-    return new Response(u8, { status: 200, headers: { "content-type": MIME[ext] || "application/octet-stream", "x-holo-source": "device-store", "x-holo-kappa": "blake3:" + e.blake3 } });
+    const r = await LADDER.resolve("blake3", e.blake3, { ext: (rel.split(".").pop() || "").toLowerCase() });
+    return r && r.ok ? r : null;
   } catch { return null; }
+}
+// K2 hot-path helpers — SYNC and opportunistic: the closure κ of a boot path when the pin is already
+// in memory (first call kicks the load and returns null — the hot path NEVER waits on lawfulness).
+function closureKappaSync(p) {
+  if (!_cl) { pinnedClosure(); return null; }   // null OR retriable-absent: kick the load, never wait
+  if (!_cl.files) return null;
+  try {
+    const e = _cl.files[decodeURIComponent(p.slice(BASE.length)).replace(/^\//, "").split("?")[0]];
+    return e && e.blake3 ? e.blake3 : null;
+  } catch { return null; }
+}
+// stamp a 200 with its governing κ (x-holo-kappa) — an honesty label, not a serving mechanism: the
+// boot cache's consistency is governed by the signed release pointer, the closure by the signed head.
+function stamp(resp, kx, src) {
+  if (!kx || !resp || resp.status !== 200 || resp.headers.get("x-holo-kappa")) return resp;
+  try {
+    const h = new Headers(resp.headers);
+    h.set("x-holo-kappa", "blake3:" + kx);
+    if (src && !h.get("x-holo-source")) h.set("x-holo-source", src);
+    return new Response(resp.body, { status: resp.status, statusText: resp.statusText, headers: h });
+  } catch { return resp; }
 }
 
 self.addEventListener("fetch", (e) => {
@@ -181,19 +211,81 @@ self.addEventListener("fetch", (e) => {
     return;
   }
 
+  // ── HOLO-Q-LIVE-VOICE V1: serve the Q voice/CALL surface crossOriginIsolated (COOP + COEP) so Kokoro +
+  // Whisper get wasm threads (SharedArrayBuffer → threaded onnxruntime). SCOPED to the q-chat page
+  // navigation ONLY — the desktop and its cross-origin media embeds (youtube/drive/producthunt) are left
+  // untouched, so nothing else can regress. COEP=credentialless (NOT require-corp): cross-origin weight
+  // rungs (HF, the κ-mirror) keep resolving (fetched credentialless, no CORP needed) — witnessed green.
+  // The page's own reload-to-isolate guard lands the headers on the first controlled load.
+  if (req.mode === "navigate" && /\/apps\/q\/q-chat\.html$/.test(p)) {
+    e.respondWith((async () => {
+      let resp = null;
+      try {
+        resp = await caches.match(req, { ignoreSearch: true });
+        if (!resp) { const bn = (await caches.keys()).find((k) => k.indexOf("holo-boot-") === 0); if (bn) resp = await (await caches.open(bn)).match(req, { ignoreSearch: true }); }
+      } catch {}
+      if (!resp) { try { resp = await fetch(req); } catch { resp = (await pathFallback(p)) || Response.error(); } }
+      try {
+        const h = new Headers(resp.headers);
+        h.set("Cross-Origin-Opener-Policy", "same-origin");
+        h.set("Cross-Origin-Embedder-Policy", "credentialless");
+        return new Response(resp.body, { status: resp.status, statusText: resp.statusText, headers: h });
+      } catch { return resp; }
+    })());
+    return;
+  }
+
   if (req.mode === "navigate" || BOOT_FILES[p.slice(BASE.length)] || BOOT_DIRS.some((d) => p.startsWith(BASE + d))) {
     e.respondWith((async () => {
+      // K2 (HOLO-SELF-LAWFUL): navigations are untouched; for boot MODULES the sealed path is a NAME —
+      // κ known sync from the pinned closure (never awaited on the hot path).
+      const kx = req.mode === "navigate" ? null : closureKappaSync(p);
       try {
         const hit = await caches.match(req, { ignoreSearch: req.mode === "navigate" });
-        if (hit) return hit;
+        if (hit) return stamp(hit, kx, "boot-cache");
         // a module cache-buster (?v=markN) must never miss the sealed set: match SEARCH-BLIND inside the
         // release-stamped boot cache only — its consistency is governed by the release pointer, not the query.
         const bn = (await caches.keys()).find((k) => k.indexOf("holo-boot-") === 0);
-        if (bn) { const h2 = await (await caches.open(bn)).match(req, { ignoreSearch: true }); if (h2) return h2; }
+        if (bn) { const h2 = await (await caches.open(bn)).match(req, { ignoreSearch: true }); if (h2) return stamp(h2, kx, "boot-cache"); }
       } catch {}
-      // O3/O5: network gone AND not sealed → the pinned closure serves the path from the device store
-      // (this is what makes a cold offline deeplink into ANY pinned app entry paint, not 404).
-      return fetch(req).catch(async () => (await pathFallback(p)) || Response.error());
+      // K2 (SL-6): on a cache miss the device store answers BEFORE the network — a warm boot needs
+      // zero network even before the page reseals the boot cache.
+      if (kx) {
+        try {
+          const R = await rung();
+          if (R) {
+            const u8 = await R.get("blake3", kx);
+            if (u8) return new Response(u8, { status: 200, headers: { "content-type": MIME[(p.split(".").pop() || "").toLowerCase()] || "application/octet-stream", "x-holo-source": "device-store", "x-holo-kappa": "blake3:" + kx } });
+          }
+        } catch {}
+      }
+      try {
+        const resp = await fetch(req);
+        // K2 verify-at-ingest (L5 at the trust boundary — ADR-019): a closure-listed body from the
+        // network re-derives against its pinned κ; verified bytes enter the device store, so the NEXT
+        // boot is lawful and local. A mismatch is witnessed and the sealed κ wins via the ladder; if
+        // no rung holds it, the network bytes still serve (availability preserved — breach on record).
+        if (kx && resp && resp.ok && Number(resp.headers.get("content-length") || 0) <= 8 * 1024 * 1024) {
+          try {
+            const u8 = new Uint8Array(await resp.clone().arrayBuffer());
+            if (u8.length <= 8 * 1024 * 1024) {
+              const h = createBlake3(); h.update(u8);
+              if (h.hex() === kx) {
+                const R = await rung(); if (R) { try { R.put("blake3", kx, u8); } catch {} }
+                return stamp(resp, kx, "origin-path-verified");
+              }
+              const R = await rung(); R && R.witness && R.witness("lawful-ingest-mismatch", { path: p, want: kx });
+              const healed = await pathFallback(p);
+              if (healed) return healed;
+            }
+          } catch {}
+        }
+        return resp;
+      } catch {
+        // O3/O5: network gone AND not sealed → the pinned closure serves the path from the device store
+        // (this is what makes a cold offline deeplink into ANY pinned app entry paint, not 404).
+        return (await pathFallback(p)) || Response.error();
+      }
     })());
     return;
   }
