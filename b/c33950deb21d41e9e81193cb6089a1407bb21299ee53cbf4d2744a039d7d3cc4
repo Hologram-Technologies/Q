@@ -7304,8 +7304,8 @@
    "source": "hf"
   },
   "apps/q/holo-evicted.json": {
-   "sha256": "37b14a8bf24815e606df9fff0c7a7a8abf665069c6c5568288b96c75001e90f8",
-   "blake3": "f604d190309336bb7ac2dd337db00d0a7b96116178e92c7664e386242542d67c",
+   "sha256": "178b2a25e58b5e13e84341961c864d1b3417393ee8b12a0c7b92f6d77d112572",
+   "blake3": "c8209e84aa78ff92007b62dc65c0545e19923692eb8b49f61faf6536c46e2eca",
    "bytes": 56894,
    "tier": "apps",
    "source": "origin"
