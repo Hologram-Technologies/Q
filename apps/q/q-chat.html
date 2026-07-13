@@ -735,6 +735,38 @@ else if (_embedded) (async () => {
   if (pendingQ.length) { const q = pendingQ.slice(); pendingQ = []; for (const pq of q) { try { await generate(pq, true); } catch (x) {} } }
 })();
 else (async () => {
+  // NEVER-STUCK GUARANTEE (HOLO-Q-INSTANT, hard): the ONE way Q could hang forever was `await loadModel` with no
+  // deadline — a stalled/blocked HuggingFace fetch never resolves AND never throws, so `armed` stays false, the
+  // queue is never drained, and the header sits on "getting ready…" indefinitely (the 17-hour dead chat). Fix:
+  // the whole load races a hard deadline. Miss it → drop to the instant LITE brain so Q answers NOW, and keep the
+  // real download alive in the BACKGROUND; the moment the full mind lands it upgrades in place. No path can hang.
+  let _lit = false;                                   // once we've dropped to lite, background load-status writes must not re-flip the header
+  function enterLite(detail) {
+    if (_lit) return; _lit = true;
+    _liteMode = true; armed = true; setStatus("online", detail || "on your device");
+    try { for (const tb of [...log.querySelectorAll(".msg.think")]) { const r = tb.closest(".row"); if (r) r.remove(); } } catch (x) {}
+    if (pendingQ.length) { const q = pendingQ.slice(); pendingQ = []; for (const pq of q) { generate(pq, true).catch(() => {}); } }   // answer everything that queued, in order — never dropped
+    else if (!greeted && !had) { try { bubble("a", INSTANT_HELLO); remember("a", INSTANT_HELLO); renderChips(); greeted = true; } catch (x) {} }
+  }
+  // the full mind arrived (possibly AFTER we already went lite) → wire it in and, if we were on the lite brain,
+  // upgrade seamlessly so the NEXT turn thinks with the real BitNet. Idempotent + fail-soft.
+  async function armFullMind(loaded) {
+    if (engine || !loaded || !loaded.gpu) return false;
+    setStatus("loading", "waking Q up…"); engine = await createEngine(m, loaded);
+    try { window.__engine = engine; } catch {}
+    if (!NOPIN && engine.kvCommonsAvailable) { try { const n = await engine.kvCommonsLoad(personaPrefixIds()); if (n > 0) { commonsRestored = true; commonsSaved = true; personaReady = true; } } catch {} }
+    window.__ttfw.armedMs = Math.round(performance.now() - window.__ttfw.t0);
+    const wasLite = _liteMode; _liteMode = false; armed = true; setStatus("online");
+    if (pendingQ.length) {                            // queued while loading (non-lite path) → answer EVERYTHING, in order
+      for (const tb of [...log.querySelectorAll(".msg.think")]) { const r = tb.closest(".row"); if (r) r.remove(); }
+      const q = pendingQ.slice(); pendingQ = [];
+      for (const p of q) await generate(p, true);
+    }
+    else if (wasLite || seedTurns > 0) { const up = "My full mind just came online — ask me anything."; bubble("a", up); remember("a", up); }   // honest seam, narrated once
+    else if (!greeted && !had) greet();
+    else { if (!greeted) renderChips(); if (!personaReady && !commonsRestored) primePersona(); }
+    return true;
+  }
   try {
     setStatus("connecting");
     // FAST no-WebGPU detection (≤1.8s): probe for a real GPU adapter BEFORE the multi-second model fetch. Brave
@@ -746,36 +778,29 @@ else (async () => {
     // reconstructed from the local store with no catalog + 0 network. The literal front door; falls back to the
     // normal catalog load if the κ isn't resolvable here.
     const qk = params.get("q");
-    let loaded = qk ? await loadFromQ(qk, { onStatus: (s) => s && setStatus("loading", prettyStatus(s)) }) : null;
+    let loaded = qk ? await loadFromQ(qk, { onStatus: (s) => s && !_lit && setStatus("loading", prettyStatus(s)) }) : null;
     if (loaded && loaded.config) m = loaded.config;   // reconstructed model entry → framing (frameSystem/frameTurn) uses it
-    if (!loaded) loaded = await loadModel(m, {
-      onStatus: (s) => { if (s) setStatus("loading", prettyStatus(s)); },
-      onProgress: (d, t, w) => { const pct = t ? Math.round(100 * d / t) : 0; setStatus("loading", pct ? `warming up… ${pct}%` : "warming up…"); } });
-    if (!loaded || !loaded.gpu) throw new Error("model load failed");
-    setStatus("loading", "waking Q up…"); engine = await createEngine(m, loaded); armed = true; setStatus("online");
-    try { window.__engine = engine; } catch {}   // dev probe (Q0 audits): raw engine access beside window.__gpu
-    // KV-COMMONS: try to RESTORE the persona K/V from the durable store (2nd visit onward / shared blob) —
-    // ~tens of ms + a verify, vs re-prefilling the whole persona. Verified: a mismatch just re-prefills.
-    if (!NOPIN && engine.kvCommonsAvailable) { try { const n = await engine.kvCommonsLoad(personaPrefixIds()); if (n > 0) { commonsRestored = true; commonsSaved = true; personaReady = true; } } catch {} }
-    window.__ttfw.armedMs = Math.round(performance.now() - window.__ttfw.t0);
-    if (pendingQ.length) {                            // full mind landed → answer EVERYTHING queued, in order
-      for (const tb of [...log.querySelectorAll(".msg.think")]) { const r = tb.closest(".row"); if (r) r.remove(); }
-      const q = pendingQ.slice(); pendingQ = [];
-      for (const p of q) await generate(p, true);     // user bubbles already shown → skip re-bubbling
+    if (!loaded) {
+      // race the real load against a hard deadline. `?load=<ms>` overrides (0 = wait forever, for measurement).
+      const _dl = (() => { const q = parseInt(params.get("load") || "", 10); return Number.isFinite(q) ? q : 18000; })();
+      const loadP = loadModel(m, {
+        onStatus: (s) => { if (s && !_lit) setStatus("loading", prettyStatus(s)); },
+        onProgress: (d, t, w) => { if (_lit) return; const pct = t ? Math.round(100 * d / t) : 0; setStatus("loading", pct ? `warming up… ${pct}%` : "warming up…"); } });
+      loaded = _dl > 0 ? await Promise.race([loadP, new Promise((r) => setTimeout(() => r("__deadline__"), _dl))]) : await loadP;
+      if (loaded === "__deadline__") {
+        // still downloading past the deadline → answer NOW on the lite brain; upgrade the instant the real mind lands.
+        enterLite("bringing my full mind online…");
+        loadP.then((real) => armFullMind(real)).catch(() => {});   // background: never leaves lite if it fails
+        return;
+      }
     }
-    else if (seedTurns > 0) { const up = "My full mind just came online — ask me anything."; bubble("a", up); remember("a", up); }   // honest seam: the upgrade is narrated, once
-    else if (!greeted && !had) greet();   // only the ?q boot path skips the instant hello → fall back to a model-authored greeting
-    // instant-greeted OR reloaded: prime + pin the persona in the BACKGROUND. This also compiles the prefill
-    // pipeline (warmup) as a side effect, so the FIRST real turn is ⚡ warm, not a cold prefill.
-    else { if (!greeted) renderChips(); if (!personaReady && !commonsRestored) primePersona(); }
+    if (!loaded || !loaded.gpu) throw new Error("model load failed");
+    await armFullMind(loaded);
   } catch (e) {
     // M2 — NEVER DEAD-END: no WebGPU (Brave default) or the model load failed → drop to the SERVERLESS LITE brain
     // (instant seed + on-device canned reasoning), so Q still answers in ANY browser, super low latency, 0 network.
     // We do NOT tell the user to "open me elsewhere"; the conversation keeps going right here.
-    _liteMode = true; armed = true; setStatus("online", "on your device");
-    try { for (const tb of [...log.querySelectorAll(".msg.think")]) { const r = tb.closest(".row"); if (r) r.remove(); } } catch (x) {}
-    if (pendingQ.length) { const q = pendingQ.slice(); pendingQ = []; for (const pq of q) { try { await generate(pq, true); } catch (x) {} } }   // answer everything that queued while we tried the GPU brain
-    else if (!greeted && !had) { try { bubble("a", INSTANT_HELLO); remember("a", INSTANT_HELLO); renderChips(); greeted = true; } catch (x) {} }
+    enterLite();
   }
 })();
 </script></body></html>

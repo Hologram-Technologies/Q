@@ -116,9 +116,20 @@ export function createVoice(opts = {}) {
           }
         }
       } catch (e) {}
-      // Plan B — original kokoro-js (needs @huggingface/transformers import map; works in apps/q)
+      // Plan B — original kokoro-js (needs @huggingface/transformers import map; works in apps/q).
+      // RESILIENT IMPORT: the vendored kokoro.js is served by the shell service worker, whose first-hit
+      // resolution can race (a cold `import()` 404s with ERR_ABORTED while a warm fetch of the SAME url is
+      // 200). So we try a small set of candidate urls — root-absolute (the published location) plus one
+      // resolved RELATIVE to this module (covers a /Q subpath deploy) — and RETRY once after a short warm
+      // delay. Any failure still falls through to the speechSynthesis floor; this can only add reachability.
       try {
-        const [tf, ko] = await Promise.all([import(/* @vite-ignore */ "@huggingface/transformers"), import(/* @vite-ignore */ "/_shared/voice/vendor/kokoro/kokoro.js")]);
+        const _koUrls = ["/_shared/voice/vendor/kokoro/kokoro.js"];   // published location first (live + native host)
+        try { _koUrls.push(new URL("../../../_shared/voice/vendor/kokoro/kokoro.js", import.meta.url).href); } catch (e) {}   // subpath co-publish fallback
+        const _importKo = async () => { for (const u of _koUrls) { try { const mod = await import(/* @vite-ignore */ u); if (mod && mod.KokoroTTS) return mod; } catch (e) {} } return null; };
+        let ko = await _importKo();
+        if (!ko) { await new Promise((r) => setTimeout(r, 500)); ko = await _importKo(); }   // warm the SW, retry once
+        if (!ko) throw new Error("kokoro.js unresolved");
+        const tf = await import(/* @vite-ignore */ "@huggingface/transformers");
         const env = tf.env, KokoroTTS = ko.KokoroTTS;
         env.allowRemoteModels = true; env.allowLocalModels = false;
         try { const wasm = new URL("/_shared/voice/vendor/kokoro/transformers/", import.meta.url).href; if (env.backends && env.backends.onnx && env.backends.onnx.wasm) { env.backends.onnx.wasm.wasmPaths = wasm; env.backends.onnx.wasm.proxy = true; } } catch (e) {}
