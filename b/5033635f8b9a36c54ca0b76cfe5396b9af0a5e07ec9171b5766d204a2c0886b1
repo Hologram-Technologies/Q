@@ -9,13 +9,13 @@
  "tiers": {
   "core": {
    "files": 604,
-   "bytes": 12183638,
+   "bytes": 12186765,
    "hf": 0
   },
   "apps": {
-   "files": 2907,
+   "files": 2944,
    "bytes": 1049495,
-   "hf": 2864
+   "hf": 2901
   },
   "heavy": {
    "files": 20,
@@ -1366,12 +1366,132 @@
    "tier": "apps",
    "source": "hf"
   },
+  "apps/arcade/arcade.json": {
+   "blake3": "ba4a88a4627c155e6ca6a88c7d5b1f1999bd10672f2db606fa5e0b68d2ae4421",
+   "tier": "apps",
+   "source": "hf"
+  },
+  "apps/arcade/consoles.mjs": {
+   "blake3": "7780812f0fc5c0af30ebf2ce0cb4ef44a619339053066eef2149bf6c202bd316",
+   "tier": "apps",
+   "source": "hf"
+  },
+  "apps/arcade/gambatte.mjs": {
+   "blake3": "c22a7ba5eef473d68d9e58b03f7fb6c224fd9f2013843e320be3245273a43d9b",
+   "tier": "apps",
+   "source": "hf"
+  },
+  "apps/arcade/gambatte.wasm": {
+   "blake3": "bdd88349176eb46434e9b3d48ab2680a4f874312fc8c83954957ef3fea480f35",
+   "tier": "apps",
+   "source": "hf"
+  },
   "apps/arcade/holo-evicted.json": {
    "sha256": "89d77be1a986903740c2bf3820b9460a148d60777eca901c1a542a339bb7d214",
    "blake3": "54929cc1ad074e34e0f8fb6fba6956bff323fddaf36e70c59c8dcc7816fab71d",
    "bytes": 2320,
    "tier": "apps",
    "source": "origin"
+  },
+  "apps/arcade/holo-libretro.js": {
+   "blake3": "e494305e9d9c24faea176fa2bc0e8b51be1790636b8c413e19c548c0578c02a3",
+   "tier": "apps",
+   "source": "hf"
+  },
+  "apps/arcade/holo-project.mjs": {
+   "blake3": "933b3afa562f944abdb7c123c319c23ff7d554632e70aabe48d183fc66072e34",
+   "tier": "apps",
+   "source": "hf"
+  },
+  "apps/arcade/holo-stream.mjs": {
+   "blake3": "b2e2bea4eb895df26d8d7aaa98cadead0ed11f8051e137dde9e71afc3de6b14e",
+   "tier": "apps",
+   "source": "hf"
+  },
+  "apps/arcade/index.html": {
+   "blake3": "6bd18d73a5f68833e9a73adfcd87ceac5fa531569866148ae65a0ae393c55ad6",
+   "tier": "apps",
+   "source": "hf"
+  },
+  "apps/arcade/lib/holo-7z.mjs": {
+   "blake3": "e9f49a8814467e43cefb232dfc59a7ad02b75d03930d3dafa6c81cab63a9bbc2",
+   "tier": "apps",
+   "source": "hf"
+  },
+  "apps/arcade/lib/libarchive/libarchive.js": {
+   "blake3": "53f45dc27f31e5982d022694f815aeedbd694a0680d95670e1858387b00ec250",
+   "tier": "apps",
+   "source": "hf"
+  },
+  "apps/arcade/lib/libarchive/libarchive.wasm": {
+   "blake3": "c82ad0198e0ee8d79df5a7d02ec959ceb8a0ba59f79bb124d03839a1968d3463",
+   "tier": "apps",
+   "source": "hf"
+  },
+  "apps/arcade/lib/libarchive/worker-bundle.js": {
+   "blake3": "18b51917777ad84f0cb8cd0bbe2dc65d9ea7e4d0181fc15369c92e619b7dab06",
+   "tier": "apps",
+   "source": "hf"
+  },
+  "apps/arcade/play.html": {
+   "blake3": "34da512e296bac452866d7e90dc27b4ca07a14803fdac4c5f2e9cdebb091a1ce",
+   "tier": "apps",
+   "source": "hf"
+  },
+  "apps/arcade/roms/black-castle.gb": {
+   "blake3": "4fc541f263cb1ab4914e415ae789452f1303a1c3eb2609e3d65e63003491c2ae",
+   "tier": "apps",
+   "source": "hf"
+  },
+  "apps/arcade/roms/cavern-mvm-9.gb": {
+   "blake3": "667555275933ccc71481fc26435c2e067370ab46109f909448c98ae4b5aa4166",
+   "tier": "apps",
+   "source": "hf"
+  },
+  "apps/arcade/roms/into-the-blue.gb": {
+   "blake3": "689bf9bc6b42120f8f86a3569ba92f153d71b47fe10b2db47f6a948b842df3ff",
+   "tier": "apps",
+   "source": "hf"
+  },
+  "apps/arcade/roms/libbet.gb": {
+   "blake3": "b81cd0fce335c7b0b3af03eb15b1be3beb08184ee6902ef8c5a292d7002301ee",
+   "tier": "apps",
+   "source": "hf"
+  },
+  "apps/arcade/roms/petris.gbc": {
+   "blake3": "b28b53c3f09f8da0a1628864ad99fc88925b9ec476fcf01a7f84959d50cf0a57",
+   "tier": "apps",
+   "source": "hf"
+  },
+  "apps/arcade/roms/shock-lobster.gb": {
+   "blake3": "db9375980ac8a4934fcab24d169b9ab17f36b070267250771da05769903e88c5",
+   "tier": "apps",
+   "source": "hf"
+  },
+  "apps/arcade/roms/super-princess-2092.gb": {
+   "blake3": "9ace330d2286df22b3dab13f67a4b0ac2cd515f5499299f345ce925af45b87e2",
+   "tier": "apps",
+   "source": "hf"
+  },
+  "apps/arcade/roms/the-bouncing-ball.gb": {
+   "blake3": "d1a37b1b3c4b7468b9fd533d9b6dfb6da29dccc07c48af902d3cf36815397a8d",
+   "tier": "apps",
+   "source": "hf"
+  },
+  "apps/arcade/roms/tuff.gb": {
+   "blake3": "157d52621fc8baf6382a9db320183753206ab258ee2d595ac0cfe26aeb73d2c9",
+   "tier": "apps",
+   "source": "hf"
+  },
+  "apps/arcade/roms/ucity.gbc": {
+   "blake3": "ea80d0b889e2c29c2d5a216f50f05c8d575e2e285751c8f4393a9f4c06173dcf",
+   "tier": "apps",
+   "source": "hf"
+  },
+  "apps/arcade/sources.mjs": {
+   "blake3": "348bc9bd3780a4ade81906d4bcd8bc2307ec816b3b20e11b330a578dfa377d54",
+   "tier": "apps",
+   "source": "hf"
   },
   "apps/browser/_shared/arti-pkg/holo_arti_rt.js": {
    "blake3": "c25276f9b2b67f1394aed43d0ddbc41ed01a8ac656f340028ce4c3e8db569532",
@@ -1673,6 +1793,21 @@
    "bytes": 379,
    "tier": "apps",
    "source": "origin"
+  },
+  "apps/files/holo-splash.js": {
+   "blake3": "69e9bfc55ac61137f83090028126b4484b19bd3075a74e9cd0c77aaf1e489bc3",
+   "tier": "apps",
+   "source": "hf"
+  },
+  "apps/files/icon.svg": {
+   "blake3": "f56eeee5fc2b08ea4a2141e1fac41970777250bd855ef135dfe3139632c92d57",
+   "tier": "apps",
+   "source": "hf"
+  },
+  "apps/files/index.html": {
+   "blake3": "d10baeb7093d610b442f6a9f31eadfc617c7b08325a76753d480b14dc9989095",
+   "tier": "apps",
+   "source": "hf"
   },
   "apps/games/_dev/kappa-compile.mjs": {
    "blake3": "c9ab958ee1ee4168fa8c56fb68c7ed9447977395568e951164df77967778e767",
@@ -3283,9 +3418,9 @@
    "source": "origin"
   },
   "apps/holo-messenger/holo-messenger-keys.mjs": {
-   "sha256": "72176b99712c575418555bdaca7f63880ee29f6e4aafc55bd12e91eeea17de2d",
-   "blake3": "a2109c8654e1d0623dfc4946760e000922a551dd168137964bfbdf2b83f06fbd",
-   "bytes": 45228,
+   "sha256": "b8e7fcf1bbd3e227428613d0ffee2c4ed86fcdd56070851848e7bc4731ed6552",
+   "blake3": "e1fc4e104a0d1d8917bf5c19191a435186f674a422ac5978512d423b729dd598",
+   "bytes": 45604,
    "tier": "core",
    "source": "origin"
   },
@@ -3849,12 +3984,62 @@
    "tier": "core",
    "source": "origin"
   },
+  "apps/holo-money/app.mjs": {
+   "blake3": "17fcad81a43424428f5517e3ad68dcd3d2353955b3a26c68bd769b5c718ad0fc",
+   "tier": "apps",
+   "source": "hf"
+  },
+  "apps/holo-money/cards.mjs": {
+   "blake3": "b621b687ee59165bb60845be08f6ab7c362f85a8d75854e30ea12cbba001cf01",
+   "tier": "apps",
+   "source": "hf"
+  },
   "apps/holo-money/holo-evicted.json": {
    "sha256": "c899ee918fe319e83693e794031e276ce107c35302bcb0ee6b46b90060b9fa1d",
    "blake3": "e8934cca9b7468df061518dd46656914f2c32cc619e22175e1331bc1ab2d84ef",
    "bytes": 1009,
    "tier": "apps",
    "source": "origin"
+  },
+  "apps/holo-money/holo-money-e2e.result.json": {
+   "blake3": "0b01e62e0d022e93a5f7a7f3fbbe0beecc8116613fbfc345e30cbc155f2e3014",
+   "tier": "apps",
+   "source": "hf"
+  },
+  "apps/holo-money/holo-money-look.result.json": {
+   "blake3": "9a2edee7fb3f8e53fc5392d1c06a9ac64310fe8179fd03bdeeb16f039989e734",
+   "tier": "apps",
+   "source": "hf"
+  },
+  "apps/holo-money/holospace.json": {
+   "blake3": "f3c12129cdcaa049527b91dacb91ac30c38e85b70a6819de71a7d314d5a94095",
+   "tier": "apps",
+   "source": "hf"
+  },
+  "apps/holo-money/holospace.lock.json": {
+   "blake3": "074ee936533cfb4a5479bc21fa704e3e5e5cd356e7151b669c3364ca345b49f8",
+   "tier": "apps",
+   "source": "hf"
+  },
+  "apps/holo-money/icon.svg": {
+   "blake3": "01108f7313742627e935a52217d59d2e8a8ce28b111bfd5dcac62234a3760f37",
+   "tier": "apps",
+   "source": "hf"
+  },
+  "apps/holo-money/index.html": {
+   "blake3": "a29409626dd165ddfe51960af5a024f378388227e706609f8b2d0a9f71856173",
+   "tier": "apps",
+   "source": "hf"
+  },
+  "apps/holo-money/keypad.mjs": {
+   "blake3": "a6e3be32ec70dfd1f677633df34f298ff9da4c666ec7fbeb4bfd9b2242990128",
+   "tier": "apps",
+   "source": "hf"
+  },
+  "apps/holo-money/style.css": {
+   "blake3": "731bb423b4c611d245a4e976b073fa7ba502cdd1d30b231b8902a85ab2d72730",
+   "tier": "apps",
+   "source": "hf"
   },
   "apps/holospaces.jsonld": {
    "sha256": "6628db3b4102daf670990b0dbb2ba0e98f6571b446a14d516f7bc446fbb6d441",
@@ -16987,9 +17172,9 @@
    "source": "hf"
   },
   "evicted.json": {
-   "sha256": "ac377282c46e3c30965cf9e562889b3e1b24e924f9d6c92d586e0697d2bfa0ab",
-   "blake3": "46024a47bcaee8cc868b47277112f23f8d96b74c363f321d31be3fff5a0e095f",
-   "bytes": 872,
+   "sha256": "5c844d4a4cb72efeb3ded34e93cb2a91c9e60cf20c702b9c2f396af7a5a83994",
+   "blake3": "0c31878516500cd07dc5251a3e3679db075869f96db5942133d71168f6bdbbee",
+   "bytes": 912,
    "tier": "core",
    "source": "origin"
   },
@@ -18180,9 +18365,9 @@
    "source": "origin"
   },
   "usr/lib/holo/q/holo-q-contact.mjs": {
-   "sha256": "d93dfba9c161fa7aeb66b74ea8bd5e1d9990bff2b361891b2c1a330868390d2b",
-   "blake3": "02ece06e675d6a42aa6e957fc092c7e148fbdb1e41cf773c17fa61df3ed03ddd",
-   "bytes": 19870,
+   "sha256": "a05ed85189c0795bb24a153fff1994b88b8b16cc699ef4ce560fc202497bf10a",
+   "blake3": "8b3259d7a7f1754edfc3b1c9338533a7ff8b594ee58857a4ed1e8f392bbc410d",
+   "bytes": 22581,
    "tier": "core",
    "source": "origin"
   },

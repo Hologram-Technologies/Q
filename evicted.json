@@ -10,7 +10,10 @@
   "hub",
   "ui",
   "q",
-  "games"
+  "games",
+  "holo-money",
+  "files",
+  "arcade"
  ],
  "trees": [
   {

@@ -14,12 +14,12 @@
 //
 // It never loads inside the native shell (which already owns these keys) or inside an embedded frame.
 
-import { createKeymap } from "../../usr/lib/holo/holo-keys.js";
-import { classifyIntent, fuzzyScore } from "../../usr/lib/holo/holo-intent-classify.mjs";
+import { createKeymap } from "/usr/lib/holo/holo-keys.js";
+import { classifyIntent, fuzzyScore } from "/usr/lib/holo/holo-intent-classify.mjs";
 // holo-names' classify is the ONE naming-universe classifier (κ/did/CID/SRI/ENS/nostr/…); reused, not rebuilt.
 // Loaded lazily + fail-soft so a hiccup degrades the resolve lane to a plain web hand-off, never breaks the bar.
 let classifyName = null;
-import("../../usr/lib/holo/holo-names.mjs").then((m) => { classifyName = m.classify || (m.default && m.default.classify) || null; }).catch(() => {});
+import("/usr/lib/holo/holo-names.mjs").then((m) => { classifyName = m.classify || (m.default && m.default.classify) || null; }).catch(() => {});
 
 (function () {
   "use strict";
@@ -168,7 +168,11 @@ import("../../usr/lib/holo/holo-names.mjs").then((m) => { classifyName = m.class
 
   // deploy-status of each app (probed lazily so the launcher lists only what actually streams) + prefetch cache
   const appStatus = new Map();
-  const appUrl = (app) => app.url || (app.dir ? new URL("../" + app.dir + "/", location.href).href : "");
+  // Sibling apps live UNDER a different base depending on the mount: inside /apps/holo-messenger/* the
+  // parent dir holds them; mounted AS the shell document (the live /Q/) apps/ is a child. Resolve once,
+  // deterministically — a parent-relative "../" from /Q/ escapes to the origin root and 404s every boot.
+  const appsRoot = /\/apps\/holo-messenger\//.test(location.pathname) ? new URL("../", location.href) : new URL("apps/", location.href);
+  const appUrl = (app) => app.url || (app.dir ? new URL(app.dir + "/", appsRoot).href : "");
   function prefetchApp(app) {   // warm the app's bytes AND learn if it's deployed — so Enter is instant + honest
     const url = appUrl(app); if (!url || appStatus.has(url)) return;
     appStatus.set(url, "probing");
@@ -232,7 +236,7 @@ import("../../usr/lib/holo/holo-names.mjs").then((m) => { classifyName = m.class
   const signOut = () => { try { if (W.holo && W.holo.signOut) { W.holo.signOut(); return true; } } catch {} return false; };
   // open a sibling Hologram app — "../<dir>/" from /apps/holo-messenger/app.html resolves to /apps/<dir>/,
   // correct whether the bundle is served at the origin root or a subpath (e.g. /Q/).
-  const openApp = (dir) => { try { W.open(new URL("../" + dir + "/", location.href).href, "_blank", "noopener"); return true; } catch { return false; } };
+  const openApp = (dir) => { try { W.open(new URL(dir + "/", appsRoot).href, "_blank", "noopener"); return true; } catch { return false; } };
   // resolve ANY name through the proven /apps/resolve surface — it classifies + VERIFIES bytes (Law L5) and
   // renders the shared <holo-card>. Resolution is UNIFIED at the root now (github.io/Q/#<name>) — the root
   // door mounts the resolver inline — so a full-view hand-off opens the root, not a sub-app.
@@ -275,19 +279,19 @@ import("../../usr/lib/holo/holo-names.mjs").then((m) => { classifyName = m.class
   let catalog = staticApps.slice();                                          // replaced by the real catalog once loaded
   (async () => {
     try {
-      const root = new URL("../../", location.href);                          // /apps/holo-messenger/app.html → bundle root
-      const j = await (await fetch(new URL("../index.jsonld", location.href), { cache: "no-store" })).json();
+      const root = new URL("../", appsRoot);                                  // the dir that CONTAINS apps/ — the bundle root
+      const j = await (await fetch(new URL("index.jsonld", appsRoot), { cache: "no-store" })).json();
       const ds = j["dcat:dataset"] || j["@graph"] || [];
       const apps = ds.map((d) => {
         const entry = String(d["dcat:landingPage"] || ""), dir = entry.split("/")[1] || "";
         const img = d["schema:image"] ? new URL(String(d["schema:image"]), root).href : "";
         return { name: String(d["schema:name"] || dir), dir, words: String(d["holo:words"] || d["schema:alternateName"] || ""), img,
-          url: entry ? new URL(entry, root).href : (dir ? new URL("../" + dir + "/", location.href).href : "") };
+          url: entry ? new URL(entry, root).href : (dir ? new URL(dir + "/", appsRoot).href : "") };
       }).filter((a) => a.dir && a.name).sort((a, b) => a.name.localeCompare(b.name));
       if (apps.length) { catalog = apps; try { if (scrim.classList.contains("open")) render(sInput.value); } catch {} }
     } catch {}
   })();
-  const openAppRow = (a) => { try { W.open(a.url || new URL("../" + a.dir + "/", location.href).href, "_blank", "noopener"); return true; } catch { return false; } };
+  const openAppRow = (a) => { try { W.open(a.url || new URL(a.dir + "/", appsRoot).href, "_blank", "noopener"); return true; } catch { return false; } };
   // also expose each app as a command (palette + cheat legend), like the native shell
   for (const a of staticApps) km.bind([], () => openApp(a.dir), { id: "app:" + a.dir, title: "Open " + a.name, group: "Open", icon: a.ic });
   km.bind([], () => signOut(), { id: "sign-out", title: "Lock & sign out", group: "Session" });
@@ -364,7 +368,7 @@ import("../../usr/lib/holo/holo-names.mjs").then((m) => { classifyName = m.class
   //    full inspector). The card self-resolves against the bundle root, so it is correct on any mount.
   //    Fail-soft: if the card module hiccups, the bar silently keeps the hand-off row it already shows. ───
   let _cardReady = false, _prevQ = "", _prevT = 0;
-  import("../../usr/lib/holo/holo-card.mjs").then(() => { _cardReady = true; if (scrim.classList.contains("open")) updatePreview(sInput.value); }).catch(() => {});
+  import("/usr/lib/holo/holo-card.mjs").then(() => { _cardReady = true; if (scrim.classList.contains("open")) updatePreview(sInput.value); }).catch(() => {});
   function updatePreview(term) {
     const it = classifyIntent(term || "", classifyName), q = it.q;
     const show = _cardReady && it.lane === "resolve" && q.length > 1;
