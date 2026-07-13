@@ -165,6 +165,32 @@ self.addEventListener("fetch", (e) => {
     return;
   }
 
+  // ── HOLO-Q-LIVE-VOICE V1: serve the Q voice/CALL surface crossOriginIsolated (COOP + COEP) so Kokoro +
+  // Whisper get wasm threads (SharedArrayBuffer → threaded onnxruntime). SCOPED to the q-chat page nav ONLY
+  // — the desktop and its cross-origin media embeds (youtube/drive/producthunt) are untouched, nothing else
+  // regresses. COEP=credentialless (NOT require-corp) keeps every cross-origin weight rung resolving.
+  // MUST run BEFORE the evicted rescue below: q-chat.html is an EVICTED-PIN file, so the rescuer would
+  // otherwise serve it (device-store / κ-mirror) and return before any header injection could happen — the
+  // header-less response is exactly why the first cut of this shipped isolated-false. Resolve q-chat through
+  // the SAME tiers the rescuer/cache/network would, then add the isolation headers to whatever comes back.
+  if (req.mode === "navigate" && /\/apps\/q\/q-chat\.html$/.test(p)) {
+    e.respondWith((async () => {
+      let resp = null;
+      try { const cand = RESCUER.matchSync(p); if (cand) resp = await RESCUER.rescue(req, cand); } catch {}
+      if (!resp || !(resp.ok || resp.status === 200)) {
+        try { const c = await caches.match(req, { ignoreSearch: true }); if (c) resp = c; else { const bn = (await caches.keys()).find((k) => k.indexOf("holo-boot-") === 0); if (bn) { const h2 = await (await caches.open(bn)).match(req, { ignoreSearch: true }); if (h2) resp = h2; } } } catch {}
+      }
+      if (!resp) { try { resp = await fetch(req); } catch { resp = (await pathFallback(p)) || Response.error(); } }
+      try {
+        const h = new Headers(resp.headers);
+        h.set("Cross-Origin-Opener-Policy", "same-origin");
+        h.set("Cross-Origin-Embedder-Policy", "credentialless");
+        return new Response(resp.body, { status: resp.status, statusText: resp.statusText, headers: h });
+      } catch { return resp; }
+    })());
+    return;
+  }
+
   // evicted rescue (apps + trees): bytes on the kappa-mirror still resolve, verified (M3/U1).
   // O3: with the radio dead the rescue's network fallbacks reject — the pinned closure answers instead.
   {
@@ -213,30 +239,6 @@ self.addEventListener("fetch", (e) => {
   // resolves the messenger by its signed κ with the radio dead).
   if (p === BASE + "/release.json") {
     e.respondWith(fetch(req).catch(async () => (await caches.match(req, { ignoreSearch: true })) || Response.error()));
-    return;
-  }
-
-  // ── HOLO-Q-LIVE-VOICE V1: serve the Q voice/CALL surface crossOriginIsolated (COOP + COEP) so Kokoro +
-  // Whisper get wasm threads (SharedArrayBuffer → threaded onnxruntime). SCOPED to the q-chat page
-  // navigation ONLY — the desktop and its cross-origin media embeds (youtube/drive/producthunt) are left
-  // untouched, so nothing else can regress. COEP=credentialless (NOT require-corp): cross-origin weight
-  // rungs (HF, the κ-mirror) keep resolving (fetched credentialless, no CORP needed) — witnessed green.
-  // The page's own reload-to-isolate guard lands the headers on the first controlled load.
-  if (req.mode === "navigate" && /\/apps\/q\/q-chat\.html$/.test(p)) {
-    e.respondWith((async () => {
-      let resp = null;
-      try {
-        resp = await caches.match(req, { ignoreSearch: true });
-        if (!resp) { const bn = (await caches.keys()).find((k) => k.indexOf("holo-boot-") === 0); if (bn) resp = await (await caches.open(bn)).match(req, { ignoreSearch: true }); }
-      } catch {}
-      if (!resp) { try { resp = await fetch(req); } catch { resp = (await pathFallback(p)) || Response.error(); } }
-      try {
-        const h = new Headers(resp.headers);
-        h.set("Cross-Origin-Opener-Policy", "same-origin");
-        h.set("Cross-Origin-Embedder-Policy", "credentialless");
-        return new Response(resp.body, { status: resp.status, statusText: resp.statusText, headers: h });
-      } catch { return resp; }
-    })());
     return;
   }
 
