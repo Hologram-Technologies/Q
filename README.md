@@ -1,7 +1,10 @@
-# Q — the universal resolver
+# Hologram OS — the universal resolver
 
-**[Open it →](https://hologram-technologies.github.io/Q)** · one link verifies itself into a whole
+**[Open it →](https://hologram-technologies.github.io/hologram-os)** · one link verifies itself into a whole
 operating system, in any browser, no server, no install, no account.
+
+> This is the `main` branch — the tree GitHub Pages serves. For the human introduction, see the
+> [**cover on `home`**](https://github.com/Hologram-Technologies/hologram-os).
 
 ## One law
 
@@ -9,8 +12,8 @@ operating system, in any browser, no server, no install, no account.
 and re-derived on arrival. A byte that doesn't equal its name doesn't exist. Everything else — leanness,
 security, offline, portability — follows from that.
 
-Ask Q for something and it streams the bytes from wherever it can reach them (this origin, a mirror, the
-IPFS network, a peer), checks each against its fingerprint, and shows them only if they match. So Q never
+Ask for something and it streams the bytes from wherever it can reach them (this origin, a mirror, the
+IPFS network, a peer), checks each against its fingerprint, and shows them only if they match. So it never
 has to trust any single host to be online, or honest. Take every host away but one, and it still resolves.
 
 ## What this branch is
