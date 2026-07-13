@@ -29,6 +29,8 @@ import { makeLadder } from "../../usr/lib/holo/holo-rungs.mjs";
 // K2 (HOLO-SELF-LAWFUL): verify-at-ingest for closure-listed statics needs blake3 in-worker.
 // STATIC import (SWs disallow dynamic import); holo-rungs itself imports this same module.
 import { createBlake3 } from "../../usr/lib/holo/holo-blake3.mjs";
+// I0+I1 (HOLO-ONE-KAPPA-IN): ONE self-pin implementation shared with root-sw (Law L4); ships same-commit.
+import { makeSelfPin } from "../../usr/lib/holo/holo-self-pin.mjs";
 const _RUNG = (() => { try { return makeStoreRung(); } catch { return null; } })();
 
 const CACHE = "holo-msgr-shell-0876695d81fc";                     // bump → old (unverified) caches are purged on activate
@@ -41,6 +43,7 @@ const canon = (p) => (BASE && p.startsWith(BASE)) ? p.slice(BASE.length) : p;
 const SCOPE = BASE + "/apps/holo-messenger/";
 const RESCUER = makeEvictRescue({ base: BASE });
 const LADDER = makeLadder({ base: BASE, rung: async () => _RUNG });
+const SELF_PIN = makeSelfPin({ base: BASE, ladder: LADDER, rung: async () => _RUNG, closure: () => pinnedClosure(), onFresh: () => { _cl = null; _clP = null; } });
 const MANIFEST_URL = BASE + "/apps/holo-messenger/shell-manifest.json";
 // content-addressed κ-store sources: an asset's exact bytes live at <base> + <sha256>. Tried in order — the
 // same-origin mirror first (fast, but dies with the app origin), then the CROSS-ORIGIN HF κ-mirror, which gives
@@ -102,6 +105,8 @@ async function fetchVerified(req, kappa, mime) {
 
 self.addEventListener("install", (e) => {
   self.skipWaiting();
+  // I0+I1 (HOLO-ONE-KAPPA-IN): pin-at-install + boot-pack ingest — runs beside the precache, fail-soft.
+  try { e.waitUntil(SELF_PIN.selfPin()); } catch {}
   // Precache the shell, VERIFYING each asset (origin → κ-store). Tolerate a single miss so install never wedges.
   e.waitUntil((async () => {
     try {

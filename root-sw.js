@@ -19,7 +19,9 @@ const BOOT_FILES = { "/root-door.mjs": 1, "/holo-root-resolver.mjs": 1, "/holo-r
 const ROOT_FILES = { "/holo-resolver.mjs": 1, "/holo-fabric.mjs": 1, "/manifest.webmanifest": 1 };
 // MIME + the κ-CAS rung table live in ONE place now: holo-rungs.mjs (G0 — one ladder, rungs are data).
 
-self.addEventListener("install", () => self.skipWaiting());
+// I0+I1 (HOLO-ONE-KAPPA-IN): pin-at-install + boot-pack ingest — SELF_PIN is defined below (module
+// eval completes before the install event fires).
+self.addEventListener("install", (e) => { self.skipWaiting(); try { e.waitUntil(SELF_PIN.selfPin()); } catch {} });
 // THE rescue lives in ONE shared module (holo-evict-rescue.mjs) — root-sw and the messenger's holo-sw
 // import the same code: lazy+memoized registry (restart-safe), per-closure cache, mirror fetch through
 // the incremental-blake3 verifier, generalized to apps AND arbitrary evicted TREES.
@@ -37,10 +39,13 @@ import { makeLadder, MIME } from "./usr/lib/holo/holo-rungs.mjs";
 // STATIC import (SWs disallow dynamic import); holo-rungs itself imports this same module, so it is
 // guaranteed present in the same tree — no new ship surface.
 import { createBlake3 } from "./usr/lib/holo/holo-blake3.mjs";
+// I0+I1 (HOLO-ONE-KAPPA-IN): ONE self-pin implementation shared with holo-sw (Law L4); ships same-commit.
+import { makeSelfPin } from "./usr/lib/holo/holo-self-pin.mjs";
 let _rung = null;
 const rung = async () => { try { return (_rung ||= makeStoreRung()); } catch { return null; } };
 const LADDER = makeLadder({ base: BASE, rung });
 const RESCUER = makeEvictRescue({ base: BASE, rung });
+const SELF_PIN = makeSelfPin({ base: BASE, ladder: LADDER, rung, closure: () => pinnedClosure(), onFresh: () => { _cl = null; _clP = null; } });
 
 // ── PRISM (HOLO-PLAYGROUND-LIVE L1): the operator's personal refraction, NAME-keyed. The sealed
 // base is NEVER mutated: an edit mints κ-atoms into the device store and the prism maps a PATH →
