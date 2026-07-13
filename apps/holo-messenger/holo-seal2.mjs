@@ -92,7 +92,75 @@ export function makeSeal2({ voz, getState, putState, pickleKey } = {}) {
 
   const hasSession = async (cid) => !!(await _session(cid));
 
-  return { init, identityKey, publishBundle, startOutbound, sealTo, openFirst, open, receive, hasSession };
+  // ── MEGOLM (rooms, M4) — one OUTBOUND group session per room (mine); one INBOUND per (room, sender).
+  // Same waist discipline: every op re-pickles the advanced ratchet (HARD-1 holds for Megolm too). The
+  // session KEY that `groupKey` returns is the thing the engine distributes to members over the PAIRWISE
+  // Olm channels — never a server. ZERO hand-written crypto — vodozemac's audited Megolm only.
+  const groupOut = new Map();   // room → HoloGroupSession (mine)
+  const groupIn = new Map();    // room|senderId → HoloGroupInbound
+  const _gOutKey = (room) => "voz:group:out:" + room;
+  const _gInKey = (room, sid) => "voz:group:in:" + room + "|" + sid;
+  const _saveGOut = (room) => { const g = groupOut.get(room); return g ? putState(_gOutKey(room), g.pickle(pickleKey)) : Promise.resolve(); };
+  const _saveGIn = (room, sid) => { const g = groupIn.get(room + "|" + sid); return g ? putState(_gInKey(room, sid), g.pickle(pickleKey)) : Promise.resolve(); };
+
+  async function _gOut(room) {
+    if (groupOut.has(room)) return groupOut.get(room);
+    const p = await getState(_gOutKey(room));
+    if (p) { try { const g = voz.HoloGroupSession.fromPickle(p, pickleKey); groupOut.set(room, g); return g; } catch {} }
+    return null;
+  }
+  async function _gIn(room, sid) {
+    const k = room + "|" + sid;
+    if (groupIn.has(k)) return groupIn.get(k);
+    const p = await getState(_gInKey(room, sid));
+    if (p) { try { const g = voz.HoloGroupInbound.fromPickle(p, pickleKey); groupIn.set(k, g); return g; } catch {} }
+    return null;
+  }
+
+  // mint (or rotate) MY outbound session for a room → returns { id, key } to hand to members. Rotate = the
+  // PCS/kick primitive: a fresh session whose key the removed member never receives.
+  async function groupCreate(room) {
+    const g = new voz.HoloGroupSession();
+    groupOut.set(room, g);
+    await _saveGOut(room);
+    return { id: g.sessionId(), key: g.sessionKey() };
+  }
+  async function groupKey(room) {
+    const g = (await _gOut(room)) || null;
+    return g ? { id: g.sessionId(), key: g.sessionKey(), index: g.messageIndex() } : null;
+  }
+  async function groupSeal(room, text) {
+    const g = await _gOut(room); if (!g) throw new Error("holo-seal2: no outbound group session for " + room);
+    const c = g.encrypt(text);
+    await _saveGOut(room);
+    return { id: g.sessionId(), c };
+  }
+  // accept a sender's session key → build/replace their inbound view. Idempotent-ish: a NEWER key (rotation)
+  // replaces the old one; the firstKnownIndex on the fresh key seals everything before it.
+  async function groupAddInbound(room, sid, sessionKey) {
+    try {
+      const g = new voz.HoloGroupInbound(sessionKey);
+      groupIn.set(room + "|" + sid, g);
+      await _saveGIn(room, sid);
+      return { id: g.sessionId(), firstKnownIndex: g.firstKnownIndex() };
+    } catch { return null; }
+  }
+  async function groupOpen(room, sid, ct) {
+    const g = await _gIn(room, sid); if (!g) throw new Error("holo-seal2: no inbound group session for " + room + "|" + sid);
+    const d = JSON.parse(g.decrypt(ct));       // {i, p}
+    await _saveGIn(room, sid);
+    return d;
+  }
+  const hasGroupInbound = async (room, sid) => !!(await _gIn(room, sid));
+  // rotate MY outbound (kick/PCS) and drop every inbound for this room I currently hold whose sender is not
+  // in `keep` — after a kick, the removed sender's stream must go silent to me too. Returns the fresh key.
+  async function groupRotate(room, keep = null) {
+    if (keep) { for (const k of [...groupIn.keys()]) { const [r, sid] = k.split("|"); if (r === room && !keep.includes(sid)) { groupIn.delete(k); putState(_gInKey(room, sid), "").catch(() => {}); } } }
+    return groupCreate(room);
+  }
+
+  return { init, identityKey, publishBundle, startOutbound, sealTo, openFirst, open, receive, hasSession,
+           groupCreate, groupKey, groupSeal, groupAddInbound, groupOpen, hasGroupInbound, groupRotate };
 }
 
 // a cheap deterministic string hash (FNV-1a) → OTK index; spreads simultaneous initiators across the bundle.

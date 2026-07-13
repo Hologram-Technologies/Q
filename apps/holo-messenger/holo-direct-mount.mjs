@@ -297,7 +297,26 @@ function start() {
   if (!DOC || typeof window === "undefined") return;
   if (window.__holoDirectMount) return; window.__holoDirectMount = true;
   window.HoloDirect = { open, boot: _boot, link: myLink, code: async () => { await _boot(); return JSON.stringify(direct.myPub); }, state: (cid) => (direct ? direct.linkState(cid) : "off"),
-    vozReady: async (cid) => (direct ? direct.vozReady(cid) : false), sealStats: () => (direct ? direct.sealStats() : null) };
+    vozReady: async (cid) => (direct ? direct.vozReady(cid) : false), sealStats: () => (direct ? direct.sealStats() : null),
+    // ── ROOMS (M4) — the sealed team room over the SAME serverless door. Behind ?rooms=1 until the UI lands;
+    //   these are the callable primitives a witness (and the room UI, T6) drives. Each awaits the boot so a
+    //   fresh page can create/join without a manual boot() first.
+    createRoom: async (name) => { await _boot(); return direct.createRoom(name); },
+    joinRoom: async (payload) => { await _boot(); return direct.joinRoom(payload); },
+    roomLink: async (id) => { await _boot(); return direct.roomLink(id); },
+    roomSend: async (id, text) => { await _boot(); return direct.roomSend(id, text); },
+    roomKick: async (id, memberSign) => { await _boot(); return direct.roomKick(id, memberSign); },
+    rooms: async () => { await _boot(); return direct.rooms(); },
+    roomMembers: async (id) => { await _boot(); return direct.roomMembers(id); },
+    roomView: async (id) => { await _boot(); return direct.roomView(id); },
+    onRoom: (cb) => { _boot().then(() => direct.on("room", cb)); },
+    onRoomEvent: (cb) => { _boot().then(() => direct.on("roomevent", cb)); },
+    // if opened from a #room invite, auto-join once booted (fail-soft). Returns the parsed room or null.
+    joinFromFragment: async () => { await _boot(); const m = /[#&]room=v1\.([A-Za-z0-9_-]+)/.exec(location.hash || ""); if (!m) return null;
+      try { const p = JSON.parse(decodeURIComponent(escape(atob(m[1].replace(/-/g, "+").replace(/_/g, "/"))))); const r = await direct.joinRoom(p); return { ...r, invite: p }; } catch { return null; } } };
+  // auto-join a room invite the moment Direct is up (mirrors the #direct auto-open). Gated so it never fires
+  // on a normal boot; the fragment is scrubbed by the room parse path the same way #direct is.
+  try { if (/[#&]room=v1\./.test(location.hash || "")) { window.HoloDirect.joinFromFragment().catch(() => {}); } } catch {}
   setInterval(() => { _attach(); _renderSection(); }, 2000); _attach();
   // returning operator: if the sealed store already exists, boot in the background so the Direct threads
   // are VISIBLE in the main list without any click (the 3 MB spine cost is deferred past first paint;

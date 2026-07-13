@@ -43,7 +43,14 @@ export async function makeDirect({ identity = null, mailboxBase = null, trustSto
   const vozBook = new Map();   // cid → { bundle, oid } — the peer's Olm prekey bundle + identity key (persisted)
   const _vozSent = new Set();  // contacts we've already handed our bundle to (send it once)
   const _vozPending = new Map();   // signKey → {bundle,oid} — a bundle that arrived BEFORE we knew the contact (race)
-  const _stats = { olmSealed: 0, seal1Sealed: 0, olmOpened: 0 };   // honest instrumentation (witness + a truthful lock)
+  const _stats = { olmSealed: 0, seal1Sealed: 0, olmOpened: 0, megolmSealed: 0, megolmOpened: 0 };   // honest instrumentation (witness + a truthful lock)
+  // ── ROOMS (M4) — a room is a κ-object: { id, name, creator, members }. Megolm seals room words (per-sender
+  //    forward secrecy); each member's group session KEY rides the EXISTING pairwise Olm channels (room-key
+  //    frames), never a server. Membership change ROTATES every member's session (PCS) so a removed member's
+  //    old inbound views go dead — kick is cryptography, not a flag. All room frames are sealed+signed pairwise.
+  const rooms = new Map();   // roomId → { id, name, creator, members: Map<sign, {sign, box, name, admin}>, strand: [] }
+  const _roomWord = new Set(); const _roomWordQ = [];   // room-msg dedup (mid)
+  const _roomDedup = (mid) => { if (_roomWord.has(mid)) return true; _roomWord.add(mid); _roomWordQ.push(mid); if (_roomWordQ.length > 1024) _roomWord.delete(_roomWordQ.shift()); return false; };
   const sealer = {
     get kind() { return olm ? "olm" : "seal1"; },
     seal: (cid, plaintext, pub) => _sealImpl(cid, plaintext, pub),
@@ -112,7 +119,7 @@ export async function makeDirect({ identity = null, mailboxBase = null, trustSto
     save: save || ((c) => { try { if (typeof localStorage !== "undefined") localStorage.setItem(nsKey, JSON.stringify(c)); } catch {} }),
   });
   const book = new Map();     // contactId → pub {sign,box}
-  const listeners = { message: [], keychange: [], tick: [], typing: [], media: [] };
+  const listeners = { message: [], keychange: [], tick: [], typing: [], media: [], room: [], roomevent: [] };
   const emit = (ev, x) => (listeners[ev] || []).forEach((f) => { try { f(x); } catch {} });
 
   // the durable store (holo-direct-store, optional): contacts + messages survive reload, sealed at rest.
@@ -122,6 +129,15 @@ export async function makeDirect({ identity = null, mailboxBase = null, trustSto
   // R2/R4 — rehydrate each contact's Olm prekey bundle so a RETURNING user keeps ratcheting with no fresh
   // handshake (the seal2 account + sessions rehydrate from the vault inside `olm`; this restores the peer half).
   if (olm && store && store.getMeta) { for (const cid of [...book.keys()]) { try { const v = await store.getMeta("voz:peer:" + cid); if (v) vozBook.set(cid, JSON.parse(v)); } catch {} } }
+  // R4/T4 — rehydrate ROOMS a returning member belongs to (roster + strand). The Megolm sessions themselves
+  // reload LAZILY from the vault inside `olm` (voz:group:out|in pickles) on first send/open — no re-handshake.
+  if (olm && store && store.getMeta) { try {
+    const idx = JSON.parse((await store.getMeta("rooms:index")) || "[]");
+    for (const rid of idx) { try { const snap = JSON.parse(await store.getMeta("room:" + rid)); if (snap && snap.id) {
+      const mm = new Map(); for (const m of (snap.members || [])) mm.set(m.sign, m);
+      rooms.set(snap.id, { id: snap.id, name: snap.name, creator: snap.creator, members: mm, strand: snap.strand || [] });
+    } } catch {} }
+  } catch {} }
 
   // ── ONE wire contract (C3): user text travels as {t:"msg",text}; control frames are {t:"ack"|"typing"}.
   // Legacy inbound bare text is accepted as a message (older peers); outbound always wraps.
@@ -215,6 +231,24 @@ export async function makeDirect({ identity = null, mailboxBase = null, trustSto
       return null;
     }
     if (payload.t === "typing") { if (verified) emit("typing", { contactId }); return null; }
+
+    // ── KEY frames (Holo Keys): a live power, redeemed over this same sealed door. The engine only CARRIES —
+    // authority is issuer-local (holo-keys checks MY keyring; unknown/revoked/expired refuse at the door). A
+    // key-invoke may arrive from a first-contact holder (the grant introduced us, like a Direct link): the
+    // frame's _intro() box key upgrades them to answerable, so the key-result can travel back. Never persisted.
+    if (payload.t === "key-invoke" || payload.t === "key-result") {
+      const cid = contactId || (_nameFor(payload, r.from) || "direct:" + (r.from || "").slice(0, 12));
+      _upgradeFrom(cid, r.from, payload);
+      try {
+        const Keys = await import("./holo-key.mjs?v=k1");
+        await Keys.handleFrame(payload, { from: r.from, cid, reply: (f) => _sendControl(cid, f) });
+        emit("key", { contactId: cid, from: r.from, frame: payload.t, grantId: payload.grantId || null });
+      } catch (e) { console.warn("[direct] key frame failed:", String(e)); }
+      return null;
+    }
+
+    // ── ROOM frames (M4): all authenticated (sealed+signed pairwise). r.from is the actor's sign key.
+    if (payload.t && payload.t.startsWith("room-")) { await _deliverRoom(payload, r, contactId); return null; }
 
     // media (N7): the message is a sealed DESCRIPTOR {κ_ct, key, iv, name, mime, size}; the bytes live on
     // the content network as ciphertext and fetch when a holder is up. Persisted like text; the fetch is
@@ -395,11 +429,238 @@ export async function makeDirect({ identity = null, mailboxBase = null, trustSto
     return out;
   }
 
+  // ── ROOM ENGINE (M4) ────────────────────────────────────────────────────────────────────────────────
+  // Bind a room member as an answerable contact (their sign+box), keyed by their sign so fan-out can reach
+  // them. Never overwrites an existing full contact's keys (anti-MITM, same policy as _upgradeFrom).
+  function _bindMember(m) {
+    if (!m || !m.sign) return null;
+    let cid = _findBySign(m.sign);
+    if (!cid) { cid = "direct:" + m.sign.slice(0, 12); if (m.box) addContact(cid, { sign: m.sign, box: m.box }); }
+    else if (m.box && !(book.get(cid) || {}).box) addContact(cid, { sign: m.sign, box: m.box });
+    return cid;
+  }
+  const _roomMembersArr = (room) => [...room.members.values()];
+  const _me = () => ({ sign: myPub.sign, box: myPub.box, name: displayName || null });
+  // hand MY current group key for a room to one member (over the pairwise sealed channel).
+  async function _sendRoomKey(room, memberSign) {
+    if (!olm) return;
+    const gk = await olm.groupKey(room.id); if (!gk) return;
+    const cid = _findBySign(memberSign); if (!cid) return;
+    await _sendControl(cid, { t: "room-key", room: room.id, key: gk.key, sid: gk.id, from: myPub.sign });
+  }
+  async function _broadcastRoomKey(room, exclude = []) {
+    for (const m of _roomMembersArr(room)) if (m.sign !== myPub.sign && !exclude.includes(m.sign)) await _sendRoomKey(room, m.sign);
+  }
+  // over a LOSSY relay a single key frame can drop, silently missing a sender's whole stream. Re-broadcast a
+  // couple of times after a membership change so keys converge without waiting for a can't-decrypt trigger.
+  function _broadcastRoomKeySoon(room, exclude = []) {
+    for (const ms of [2500, 6000]) setTimeout(() => { const r = rooms.get(room.id); if (r) _broadcastRoomKey(r, exclude).catch(() => {}); }, ms);
+  }
+
+  // CREATE a room: I am the admin; mint my Megolm outbound now. Returns the room + its invite link.
+  async function createRoom(name) {
+    if (!olm) return { ok: false, error: "rooms need the ratchet (olm)" };
+    const nonce = (typeof crypto !== "undefined" && crypto.getRandomValues) ? [...crypto.getRandomValues(new Uint8Array(9))].map((b) => b.toString(16).padStart(2, "0")).join("") : String(Date.now());
+    const id = "room:" + (await _sha256hex(myPub.sign + "|" + name + "|" + nonce)).slice(0, 24);
+    const room = { id, name: String(name || "Room").slice(0, 64), creator: myPub.sign, members: new Map(), strand: [] };
+    room.members.set(myPub.sign, { ..._me(), admin: true });
+    room.strand.push({ op: "create", by: myPub.sign, ts: Date.now(), name: room.name });
+    rooms.set(id, room);
+    await olm.groupCreate(id);
+    _persistRoom(room);
+    return { ok: true, room: _roomView(room), link: roomLink(id) };
+  }
+  const _roomSnapshot = (room) => ({ id: room.id, name: room.name, creator: room.creator, members: _roomMembersArr(room), strand: room.strand });
+  // persist a room snapshot AND keep the rooms:index (the store has no key enumeration) so a returning member
+  // rehydrates every room on boot. Fire-and-forget; the Megolm pickles persist separately inside `olm`.
+  async function _persistRoom(room) {
+    if (!store || !store.setMeta) return;
+    try {
+      await store.setMeta("room:" + room.id, JSON.stringify(_roomSnapshot(room)));
+      const idx = JSON.parse((await store.getMeta("rooms:index")) || "[]");
+      if (!idx.includes(room.id)) { idx.push(room.id); await store.setMeta("rooms:index", JSON.stringify(idx)); }
+    } catch {}
+  }
+  const _roomView = (room) => ({ id: room.id, name: room.name, creator: room.creator, admin: (room.members.get(myPub.sign) || {}).admin === true, members: _roomMembersArr(room).map((m) => ({ sign: m.sign, name: m.name, admin: m.admin, me: m.sign === myPub.sign })) });
+
+  // the invite link: keys ride the FRAGMENT (never a request line). Carries the creator's box so a fresh
+  // joiner can seal the pairwise join frame to them (TOFU, bound to the creator sign).
+  function roomLink(id) {
+    const room = rooms.get(id); if (!room) return null;
+    const payload = { v: 1, room: id, name: room.name, creator: room.creator, creatorBox: (room.members.get(room.creator) || {}).box || myPub.box };
+    const b64 = (typeof btoa !== "undefined")
+      ? btoa(unescape(encodeURIComponent(JSON.stringify(payload)))).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "")
+      : Buffer.from(JSON.stringify(payload)).toString("base64url");
+    // point at the /join/ card page (fragment-preserving forward) so a shared room link renders the invite
+    // card on social platforms; the #fragment (keys) still travels only to the human's browser. Derive the
+    // messenger dir from this page's path (…/apps/holo-messenger/app.html → …/apps/holo-messenger/join/).
+    if (typeof location === "undefined") return "#room=v1." + b64;
+    const dir = location.pathname.replace(/[^/]*$/, "");        // strip the filename → the app dir (trailing /)
+    return location.origin + dir + "join/#room=v1." + b64;
+  }
+
+  // JOIN from an invite payload {room,name,creator,creatorBox}: bind the creator as a contact, send them a
+  // signed join intent over the pairwise channel. The creator (admin) admits us → room-welcome carries the
+  // roster + keys. Fully serverless.
+  async function joinRoom(payload) {
+    if (!olm) return { ok: false, error: "rooms need the ratchet (olm)" };
+    if (!payload || !payload.room || !payload.creator) return { ok: false, error: "bad room invite" };
+    const cid = _bindMember({ sign: payload.creator, box: payload.creatorBox, name: null });
+    // provisional local room shell (upgraded on welcome)
+    if (!rooms.get(payload.room)) rooms.set(payload.room, { id: payload.room, name: payload.name || "Room", creator: payload.creator, members: new Map([[payload.creator, { sign: payload.creator, box: payload.creatorBox, name: null, admin: true }]]), strand: [] });
+    await _ensureVoz(cid);   // make sure we can ratchet with the admin
+    await _sendControl(cid, { t: "room-join", room: payload.room, member: _me() });
+    return { ok: true, room: payload.room, pending: true };
+  }
+
+  // SEND a room word: Megolm-seal once, fan the SAME ciphertext to every member over their pairwise channel.
+  async function roomSend(roomId, text) {
+    const room = rooms.get(roomId); if (!room) return { ok: false, error: "unknown room" };
+    if (!olm) return { ok: false, error: "no ratchet" };
+    let sealed; try { sealed = await olm.groupSeal(roomId, JSON.stringify({ text, name: displayName || null })); } catch { return { ok: false, error: "no group session — (re)join first" }; }
+    const mid = (await _sha256hex(roomId + "|" + myPub.sign + "|" + sealed.c + "|" + Date.now())).slice(0, 24);
+    const ts = Date.now();
+    _stats.megolmSealed++;
+    // echo locally so the sender sees their own word (Megolm can't self-decrypt an outbound session)
+    const mine = { room: roomId, from: myPub.sign, name: displayName || null, text, ts, mid, me: true };
+    if (store) store.putMsg({ kappa: mid, contactId: roomId, ts, dir: "out", text, room: roomId, status: "sent" }).catch(() => {});
+    emit("room", mine);
+    for (const m of _roomMembersArr(room)) {
+      if (m.sign === myPub.sign) continue;
+      const cid = _findBySign(m.sign); if (!cid) continue;
+      _sendControl(cid, { t: "room-msg", room: roomId, c: sealed.c, sid: sealed.id, mid, ts, from: myPub.sign });
+    }
+    return { ok: true, mid, ts };
+  }
+
+  // KICK (admin): remove the member, ROTATE my outbound (PCS) and re-key only the REMAINING members. Tell the
+  // remaining members to remove + rotate too, so EVERY surviving member's stream is fresh — the kicked key
+  // receives nothing after the cut and its old inbound views can't read the new session ids.
+  async function roomKick(roomId, memberSign) {
+    const room = rooms.get(roomId); if (!room) return { ok: false, error: "unknown room" };
+    if ((room.members.get(myPub.sign) || {}).admin !== true) return { ok: false, error: "admin only" };
+    if (memberSign === myPub.sign) return { ok: false, error: "cannot kick yourself" };
+    room.members.delete(memberSign);
+    room.strand.push({ op: "remove", by: myPub.sign, member: memberSign, ts: Date.now() });
+    const keep = _roomMembersArr(room).map((m) => m.sign);
+    await olm.groupRotate(roomId, keep);                         // fresh outbound; drop kicked sender's inbound
+    _persistRoom(room);
+    for (const m of _roomMembersArr(room)) {
+      if (m.sign === myPub.sign) continue;
+      const cid = _findBySign(m.sign); if (!cid) continue;
+      await _sendControl(cid, { t: "room-remove", room: roomId, member: memberSign, from: myPub.sign });
+      await _sendRoomKey(room, m.sign);                          // my fresh key → remaining only
+    }
+    emit("roomevent", { room: roomId, kind: "remove", member: memberSign });
+    return { ok: true };
+  }
+
+  // the ONE room-frame gate. r.from = the authenticated actor sign key.
+  async function _deliverRoom(payload, r, contactId) {
+    if (!olm || !r.verified) return;
+    const roomId = payload.room; if (!roomId) return;
+    let room = rooms.get(roomId);
+
+    if (payload.t === "room-join") {                            // admin path: someone opened my link
+      if (!room || (room.members.get(myPub.sign) || {}).admin !== true) return;   // only the admin admits
+      const nm = payload.member || {}; if (nm.sign !== r.from) return;            // the join must be self-signed
+      const cid = _bindMember(nm);
+      const existing = _roomMembersArr(room).filter((m) => m.sign !== myPub.sign);
+      if (!room.members.has(nm.sign)) { room.members.set(nm.sign, { sign: nm.sign, box: nm.box, name: nm.name || null, admin: false }); room.strand.push({ op: "add", by: myPub.sign, member: nm.sign, ts: Date.now() }); }
+      _persistRoom(room);
+      // welcome the newcomer: full roster + my group key; then tell every existing member to add them.
+      const gk = await olm.groupKey(roomId);
+      await _sendControl(cid, { t: "room-welcome", room: roomId, name: room.name, creator: room.creator, roster: _roomMembersArr(room), key: gk && gk.key, sid: gk && gk.id, from: myPub.sign });
+      for (const ms of [2500, 6000]) setTimeout(() => { const r = rooms.get(roomId); if (r && r.members.has(nm.sign)) _sendRoomKey(r, nm.sign).catch(() => {}); }, ms);   // re-hand my key (lossy relay)
+      for (const m of existing) { const mcid = _findBySign(m.sign); if (mcid) await _sendControl(mcid, { t: "room-add", room: roomId, member: { sign: nm.sign, box: nm.box, name: nm.name || null }, from: myPub.sign }); }
+      emit("roomevent", { room: roomId, kind: "add", member: nm.sign });
+      return;
+    }
+
+    if (payload.t === "room-welcome") {                         // joiner path: I've been admitted
+      if (r.from !== payload.creator) return;                   // welcome must come from the room creator (TOFU)
+      room = room || { id: roomId, name: payload.name || "Room", creator: payload.creator, members: new Map(), strand: [] };
+      room.name = payload.name || room.name; room.creator = payload.creator;
+      for (const m of (payload.roster || [])) { room.members.set(m.sign, { sign: m.sign, box: m.box, name: m.name || null, admin: m.sign === payload.creator }); _bindMember(m); }
+      room.members.set(myPub.sign, { ..._me(), admin: myPub.sign === payload.creator });
+      rooms.set(roomId, room);
+      if (payload.key) { await olm.groupAddInbound(roomId, payload.creator, payload.key); }   // read the admin
+      await olm.groupCreate(roomId);                            // MY outbound for this room
+      _persistRoom(room);
+      await _broadcastRoomKey(room);                            // hand my key to everyone (admin + peers)
+      _broadcastRoomKeySoon(room);                              // …and again, so a dropped key frame converges
+      emit("roomevent", { room: roomId, kind: "joined", view: _roomView(room) });
+      return;
+    }
+
+    if (payload.t === "room-add") {                            // an existing member learns of a newcomer
+      if (!room) return;
+      const nm = payload.member || {}; if (!nm.sign) return;
+      if (!room.members.has(nm.sign)) { room.members.set(nm.sign, { sign: nm.sign, box: nm.box, name: nm.name || null, admin: false }); room.strand.push({ op: "add", by: r.from, member: nm.sign, ts: Date.now() }); }
+      _bindMember(nm);
+      _persistRoom(room);
+      await _sendRoomKey(room, nm.sign);                        // hand the newcomer MY key so they can read me
+      for (const ms of [2500, 6000]) setTimeout(() => { const r = rooms.get(roomId); if (r && r.members.has(nm.sign)) _sendRoomKey(r, nm.sign).catch(() => {}); }, ms);
+      emit("roomevent", { room: roomId, kind: "add", member: nm.sign });
+      return;
+    }
+
+    if (payload.t === "room-key") {                            // a member handed me their Megolm session key
+      if (!room) return;
+      await olm.groupAddInbound(roomId, r.from, payload.key);
+      return;
+    }
+
+    if (payload.t === "room-key-req") {                        // a member couldn't open my stream → re-hand my key
+      if (!room || !room.members.has(r.from)) return;
+      await _sendRoomKey(room, r.from);
+      return;
+    }
+
+    if (payload.t === "room-remove") {                         // admin removed someone → I rotate too (PCS)
+      if (!room || r.from !== room.creator) return;            // only the creator/admin removes
+      const gone = payload.member; if (!gone) return;
+      room.members.delete(gone);
+      room.strand.push({ op: "remove", by: r.from, member: gone, ts: Date.now() });
+      const keep = _roomMembersArr(room).map((m) => m.sign);
+      await olm.groupRotate(roomId, keep);                     // fresh outbound + drop the kicked sender's inbound
+      _persistRoom(room);
+      await _broadcastRoomKey(room, [gone]);                   // my fresh key → remaining only
+      emit("roomevent", { room: roomId, kind: "remove", member: gone });
+      return;
+    }
+
+    if (payload.t === "room-msg") {                            // a Megolm room word
+      if (!room || !room.members.has(r.from)) return;          // sender must be a current member
+      // SELF-HEAL over a lossy relay: if I hold no inbound for this sender (their room-key frame was dropped),
+      // ask for it — once per sender per gap — rather than silently missing their whole stream. The word that
+      // triggered this is replayed by the sender's next send (Megolm indices let a late inbound catch up).
+      if (!(await olm.hasGroupInbound(roomId, r.from))) { const cid = _findBySign(r.from); if (cid) _sendControl(cid, { t: "room-key-req", room: roomId, from: myPub.sign }); return; }
+      if (_roomDedup(payload.mid)) return;
+      let d; try { d = await olm.groupOpen(roomId, r.from, payload.c); } catch { const cid = _findBySign(r.from); if (cid) _sendControl(cid, { t: "room-key-req", room: roomId, from: myPub.sign }); return; }   // rotated/gap → re-request
+      let text = d.p, name = null; try { const pj = JSON.parse(d.p); if (pj && typeof pj.text === "string") { text = pj.text; name = pj.name || null; } } catch {}
+      _stats.megolmOpened++;
+      const sender = room.members.get(r.from) || {};
+      if (name && !sender.name) { sender.name = name; room.members.set(r.from, sender); }
+      if (store) store.putMsg({ kappa: payload.mid, contactId: roomId, ts: payload.ts || Date.now(), dir: "in", text, room: roomId }).catch(() => {});
+      emit("room", { room: roomId, from: r.from, name: sender.name || name, text, ts: payload.ts || Date.now(), mid: payload.mid, index: d.i });
+      return;
+    }
+  }
+
   return {
     myPub,
     addContact,
+    // rooms (M4)
+    createRoom, joinRoom, roomSend, roomKick, roomLink,
+    rooms: () => [...rooms.values()].map(_roomView),
+    roomView: (id) => { const r = rooms.get(id); return r ? _roomView(r) : null; },
+    roomMembers: (id) => { const r = rooms.get(id); return r ? _roomMembersArr(r).map((m) => ({ sign: m.sign, name: m.name, admin: m.admin })) : []; },
     contacts: () => [...book.keys()],
     send, poll, warm, sendTyping, sendMedia,
+    // Holo Keys carrier: one sealed control frame to a contact (dual-path like every control frame). The
+    // _intro() box key rides inside so a first-contact issuer can answer — the N8 two-way door, reused.
+    keySend: (cid, frame) => _sendControl(cid, { ...frame, ..._intro() }),
     mediaBytes: (kappaCt) => (store ? store.getMedia(kappaCt) : Promise.resolve(null)),   // → {bytes,name,mime}|null
     history: (contactId, opts) => (store ? store.msgs(contactId, opts) : Promise.resolve([])),
     conversations: async () => {   // the list the sheet renders: contacts + last word, newest first
