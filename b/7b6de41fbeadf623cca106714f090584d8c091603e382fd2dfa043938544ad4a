@@ -9,7 +9,7 @@
  "tiers": {
   "core": {
    "files": 612,
-   "bytes": 12549354,
+   "bytes": 12549592,
    "hf": 0
   },
   "apps": {
@@ -16259,8 +16259,8 @@
    "source": "hf"
   },
   "apps/player/holo-evicted.json": {
-   "sha256": "768a15061c03bacf5d7a0a8a531c8b40c3be09d1e34b682381be7105520c167c",
-   "blake3": "4859cb8ec0d0b104919b655144cbc2b5d5ee33fffc50de2c6084f4d76cb0154b",
+   "sha256": "1ecb009917e201caa5571a2c0ec7b7892761f69a42839e3d0d2db06784e7e6ba",
+   "blake3": "e95d30f2741da21be156b632dbf1fd5c359c9844653d657dbedc2bac851b2c3c",
    "bytes": 11559,
    "tier": "apps",
    "source": "origin"
@@ -16681,7 +16681,7 @@
    "source": "hf"
   },
   "apps/player/index.html": {
-   "blake3": "07dde70b0b1cfb0fccd2ed858103021e5eedd081a40c1c47689b232839c05995",
+   "blake3": "42e3f3dc3c07b096f4ea8e922f79e04ed5c9e19594e600f69ec5a7714d7d8673",
    "tier": "apps",
    "source": "hf"
   },
@@ -29979,9 +29979,9 @@
    "source": "origin"
   },
   "usr/lib/holo/holo-plymouth.mjs": {
-   "sha256": "b66f7678432fdf1626863f0f35c84429bb2b5a2ea194626c8bdb8b9505447463",
-   "blake3": "a594683036c9ab8a6a4962a9d8dbe795db73b7f236f6f1d629ea323066f99b05",
-   "bytes": 96038,
+   "sha256": "98324595b8d02ddb1a422566560fbf5fe96750563a62777e62e97242da66827d",
+   "blake3": "dc78e788a1c0b4167191055a89034e63f3deb73f94d4bb8f5ccbd3172dc83ebe",
+   "bytes": 96276,
    "tier": "core",
    "source": "origin"
   },
