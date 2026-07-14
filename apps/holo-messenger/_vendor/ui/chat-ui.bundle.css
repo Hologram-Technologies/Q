@@ -188,3 +188,29 @@ kbd, code, pre, samp, .holo-mono, [class*="mono"]{ font-family:var(--font-mono);
 .hk-chip, .hk-chip span, .hk-legend, .hk-legend span{ font-size:var(--fs-sm); }                  /* 13.3 → 13 */
 .holo-list-title, .holo-inbox-head b, .holo-inbox-title-lg{ font-size:var(--fs-xl); }            /* 19 → 20 */
 .holo-row-chev, .holo-inbox-x, .holo-ns-ic{ font-size:var(--fs-lg); }                            /* 17/18 icon glyphs → 16 */
+
+/* MOBILE-BAR v1 — on phones the left rail becomes a fixed bottom tab bar (native mobile pattern), and BOTH content surfaces (home + chat) inset above it so nothing is ever covered — including the message composer, which flows inside its pane rather than being fixed. Coarse-pointer + narrow only, so desktop is byte-unchanged. Geometry per the prior 375px verification. */
+@media (pointer: coarse) and (max-width: 600px){
+  :root{ --holo-rail-w: 0px; }
+  nav.holo-rail{
+    position: fixed !important;
+    inset: auto 0 0 0 !important;
+    flex-direction: row !important;
+    width: auto !important; height: auto !important; min-height: 56px !important; max-height: none !important;
+    padding: 6px max(8px, env(safe-area-inset-right)) calc(6px + env(safe-area-inset-bottom)) max(8px, env(safe-area-inset-left)) !important;
+    gap: 2px !important;
+    overflow-x: auto !important; overflow-y: hidden !important;
+    justify-content: space-around !important; align-items: center !important;
+    background: rgba(24,24,23,.92) !important;
+    -webkit-backdrop-filter: blur(20px) saturate(1.2) !important; backdrop-filter: blur(20px) saturate(1.2) !important;
+    border-top: 1px solid rgba(255,255,255,.09) !important;
+    border-right: 0 !important;
+    box-shadow: 0 -1px 20px rgba(0,0,0,.35) !important;
+    z-index: 2147482000 !important;
+    scrollbar-width: none !important;
+  }
+  nav.holo-rail::-webkit-scrollbar{ display: none !important; }
+  nav.holo-rail .holo-rail-sep, nav.holo-rail .holo-rail-spacer, nav.holo-rail .holo-rail-home{ display: none !important; }
+  .holo-home-space{ inset: 0 0 calc(56px + env(safe-area-inset-bottom)) 0 !important; }
+  .cs-main-container{ inset: 0 0 calc(56px + env(safe-area-inset-bottom)) 0 !important; }
+}

@@ -171,3 +171,46 @@ kbd, code, pre, samp, .holo-mono, [class*="mono"]{ font-family:var(--font-mono);
 .holo-wa-root .cs-message__footer,
 .holo-wa-root .cs-message-group__footer,
 .cs-conversation__last-activity-time, .holo-msg-time{ font-size:var(--fs-xs); }
+
+/* CLAUDE-FEEL-F2 — type-ladder collapse (HOLO-CLAUDE-FEEL F2). Second marker-guarded block, layered after
+   the shipped CLAUDE-FEEL block (seq 320) so it can ship additively without a wholesale swap. Snaps the last
+   orphan font-sizes onto the six-size ladder (each to its NEAREST value — a ≤1px shift, so density is
+   unchanged) and floors the inbox timestamp, so the whole experience reads at one type scale. Chat-surface
+   selectors carry the .holo-wa-root prefix to win the live bundle's own em-based rules. */
+.holo-inbox-when{ font-size:var(--fs-xs); }                                                      /* 11.5 → 12 floor */
+.holo-wa-root .cs-conversation__name{ font-size:var(--fs-lg); }                                  /* 16.5 → 16 */
+.holo-wa-root .cs-conversation__info-content,
+.holo-wa-root .cs-message__html-content,
+.holo-wa-root .cs-message__content,
+.holo-wa-root .cs-conversation-header__info{ font-size:var(--fs-base); }                         /* 13.8/14.2/14.4 → 14 */
+.holo-inbox-title{ font-size:var(--fs-base); }                                                   /* 14.5 → 14 */
+.holo-suggest-chip, .holo-chip, .holo-chip-n{ font-size:var(--fs-sm); }                          /* 13.5/12.8 → 13 */
+.hk-chip, .hk-chip span, .hk-legend, .hk-legend span{ font-size:var(--fs-sm); }                  /* 13.3 → 13 */
+.holo-list-title, .holo-inbox-head b, .holo-inbox-title-lg{ font-size:var(--fs-xl); }            /* 19 → 20 */
+.holo-row-chev, .holo-inbox-x, .holo-ns-ic{ font-size:var(--fs-lg); }                            /* 17/18 icon glyphs → 16 */
+
+/* MOBILE-BAR v1 — on phones the left rail becomes a fixed bottom tab bar (native mobile pattern), and BOTH content surfaces (home + chat) inset above it so nothing is ever covered — including the message composer, which flows inside its pane rather than being fixed. Coarse-pointer + narrow only, so desktop is byte-unchanged. Geometry per the prior 375px verification. */
+@media (pointer: coarse) and (max-width: 600px){
+  :root{ --holo-rail-w: 0px; }
+  nav.holo-rail{
+    position: fixed !important;
+    inset: auto 0 0 0 !important;
+    flex-direction: row !important;
+    width: auto !important; height: auto !important; min-height: 56px !important; max-height: none !important;
+    padding: 6px max(8px, env(safe-area-inset-right)) calc(6px + env(safe-area-inset-bottom)) max(8px, env(safe-area-inset-left)) !important;
+    gap: 2px !important;
+    overflow-x: auto !important; overflow-y: hidden !important;
+    justify-content: space-around !important; align-items: center !important;
+    background: rgba(24,24,23,.92) !important;
+    -webkit-backdrop-filter: blur(20px) saturate(1.2) !important; backdrop-filter: blur(20px) saturate(1.2) !important;
+    border-top: 1px solid rgba(255,255,255,.09) !important;
+    border-right: 0 !important;
+    box-shadow: 0 -1px 20px rgba(0,0,0,.35) !important;
+    z-index: 2147482000 !important;
+    scrollbar-width: none !important;
+  }
+  nav.holo-rail::-webkit-scrollbar{ display: none !important; }
+  nav.holo-rail .holo-rail-sep, nav.holo-rail .holo-rail-spacer, nav.holo-rail .holo-rail-home{ display: none !important; }
+  .holo-home-space{ inset: 0 0 calc(56px + env(safe-area-inset-bottom)) 0 !important; }
+  .cs-main-container{ inset: 0 0 calc(56px + env(safe-area-inset-bottom)) 0 !important; }
+}
