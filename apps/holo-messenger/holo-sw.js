@@ -33,7 +33,7 @@ import { createBlake3 } from "../../usr/lib/holo/holo-blake3.mjs";
 import { makeSelfPin } from "../../usr/lib/holo/holo-self-pin.mjs";
 const _RUNG = (() => { try { return makeStoreRung(); } catch { return null; } })();
 
-const CACHE = "holo-msgr-shell-3f9c92f55702";                     // bump → old (unverified) caches are purged on activate
+const CACHE = "holo-msgr-shell-21ec11ec44b6";                     // bump → old (unverified) caches are purged on activate
 // BASE-RELOCATABLE: the worker may be served under ANY prefix (OS root, a GitHub Pages /<repo>/ subpath, a
 // static mirror). Every location below derives from where THIS script actually lives; at the OS root BASE is ""
 // and behavior is byte-identical. Manifest paths stay CANONICAL ("/apps/holo-messenger/…" — they are identity,
@@ -222,8 +222,11 @@ async function cacheFirst(req, pathname) {
   // visits must not turn the returning boot into a re-download race (measured live: app.html sat 9.2s
   // behind exactly that). Freshness stays the page's job — it reseals on the new signed head, exactly
   // the root-scope contract. Queryless only (a ?v= version intent must never ride an old seal).
-  if (!req.url.includes("?")) {
-    const sealed = await caches.match(req, { ignoreSearch: true });
+  // P1 (HOLO-PAINTED-TRUTH): the seal now holds EXACT versioned URLs too (the page seals its own
+  // script/link subresources), so an exact global match satisfies a ?v= version intent precisely.
+  // The query-BLIND fallback stays queryless-only (a ?v= must never ride an old queryless entry).
+  {
+    const sealed = (await caches.match(req)) || (req.url.includes("?") ? null : (await caches.match(req, { ignoreSearch: true })));
     if (sealed) { if (!SHELL_KAPPA.size) loadManifest(); return stamp(sealed, kx, "boot-seal"); }
   }
   // A restarted worker loses the in-memory manifest (install doesn't re-run) — lazily reload it (from the

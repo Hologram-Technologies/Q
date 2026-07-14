@@ -84,6 +84,18 @@ self.addEventListener("activate", (e) => e.waitUntil(RESCUER.registry().then(() 
 // worker life; a restarted worker re-loads once. No pin yet → null → today's behavior exactly.
 let _cl = null, _clP = null, _clAt = 0;
 let _relSlowAt = 0;   // W1: release.json collar slow-memo (see the release tier below)
+// P2 (HOLO-PAINTED-TRUTH): network-first under a COLLAR — the socket keeps priority, the pinned closure
+// answers when it hangs, and no fetch event stays open unboundedly when an alternative exists (a pinned
+// WAITING worker was observed live: activation waits on in-flight respondWith promises).
+function collaredNet(netThunk, altThunk, ms) {
+  return (async () => {
+    const net = netThunk().catch(() => null);
+    const fast = await Promise.race([net, new Promise((r) => setTimeout(() => r("slow"), ms || 1600))]);
+    if (fast && fast !== "slow") return fast;
+    try { const alt = await altThunk(); if (alt) return alt; } catch {}
+    return (await net) || Response.error();
+  })();
+}
 function pinnedClosure() {
   // K2: ABSENCE is retried (holo-pin mints the pin AFTER the first fetch events — memoizing "no pin
   // yet" for the worker's whole life would keep the first session unlawful); a verified MISMATCH or a
@@ -292,8 +304,19 @@ self.addEventListener("fetch", (e) => {
           }
         } catch {}
       }
+      // P2 (HOLO-PAINTED-TRUTH): the boot tier's network refill is collared too — a sealed-set miss on a
+      // hung socket (measured live: 6.2s on holo-widgets after an interrupted seal) heals from the pinned
+      // closure after 1.6s instead of holding the boot; no alternative → the network keeps priority.
+      const netP = fetch(req);
+      {
+        const fast = await Promise.race([netP.catch(() => null), new Promise((r) => setTimeout(() => r("slow"), 1600))]);
+        if (fast === "slow" || fast === null) {
+          const healed = await pathFallback(p);
+          if (healed) { netP.catch(() => {}); return healed; }
+        }
+      }
       try {
-        const resp = await fetch(req);
+        const resp = await netP;
         // K2 verify-at-ingest (L5 at the trust boundary — ADR-019): a closure-listed body from the
         // network re-derives against its pinned κ; verified bytes enter the device store, so the NEXT
         // boot is lawful and local. A mismatch is witnessed and the sealed κ wins via the ladder; if
@@ -328,7 +351,10 @@ self.addEventListener("fetch", (e) => {
   // REJECTION (radio dead) falls to the pinned closure → device store, verified. Prefix check only —
   // no manifest lookup on the hot path (§3.5).
   if (p.startsWith(BASE + "/")) {
-    e.respondWith(fetch(req).catch(async () => (await pathFallback(p)) || Response.error()));
+    // P2 (HOLO-PAINTED-TRUTH): byte-identical online semantics (network answers — even a 404 — pass
+    // through), but a HUNG socket is answered by the pinned closure after the collar instead of holding
+    // the request (and the worker's activation) hostage.
+    e.respondWith(collaredNet(() => fetch(req), () => pathFallback(p)));
     return;
   }
 
@@ -339,6 +365,8 @@ self.addEventListener("fetch", (e) => {
   // died even though the pin holds it. Now the remapped path falls back to the pinned closure → store.
   if (ROOT_FILES[p] || RESCUE.some((d) => p.startsWith(d))) {
     const rp = BASE + p;
-    e.respondWith(fetch(rp + url.search).catch(async () => (await pathFallback(rp)) || Response.error()));
+    // P2 (HOLO-PAINTED-TRUTH): same collar as the catch-all — remapped canonical paths served many
+    // pre-paint modules at 6-7s each on a hung socket (measured live); the pin answers after 1.6s.
+    e.respondWith(collaredNet(() => fetch(rp + url.search), () => pathFallback(rp)));
   }
 });
