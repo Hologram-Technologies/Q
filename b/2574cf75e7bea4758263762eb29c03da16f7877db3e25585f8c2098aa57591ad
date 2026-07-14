@@ -9,13 +9,13 @@
  "tiers": {
   "core": {
    "files": 667,
-   "bytes": 13813866,
+   "bytes": 13814168,
    "hf": 0
   },
   "apps": {
-   "files": 5283,
-   "bytes": 1734162,
-   "hf": 5224
+   "files": 5284,
+   "bytes": 1734253,
+   "hf": 5225
   },
   "heavy": {
    "files": 20,
@@ -16346,9 +16346,9 @@
    "source": "hf"
   },
   "apps/player/holo-evicted.json": {
-   "sha256": "9404882cca4bc2c640771292f53782e76f416ac0600986a8b50de4138845cce0",
-   "blake3": "347d8d29244ca067ceeab7922df632d0f865261b7d6a1ebcaa2c9c65b7619ae2",
-   "bytes": 11468,
+   "sha256": "2b80f7a57692e4e413602ca4c5a20acc0a5ddb4d662d53000e4ce8b2f6db166c",
+   "blake3": "208dd1a63376134ad5a8f642f246573380375fc4a7fce4d181e79a31b6f1f633",
+   "bytes": 11559,
    "tier": "apps",
    "source": "origin"
   },
@@ -16499,6 +16499,11 @@
   },
   "apps/player/holo-palette.mjs": {
    "blake3": "b0b2e5c2309e27d5faea8faee12bf4b5ec6e9c35e4184f9f26d8ec2bfe95e778",
+   "tier": "apps",
+   "source": "hf"
+  },
+  "apps/player/holo-podcasts.mjs": {
+   "blake3": "b37004b9d0ce6fcd860fbd6be703ec3e4d223b6ef470e4745449725c3ded5105",
    "tier": "apps",
    "source": "hf"
   },
@@ -16763,7 +16768,7 @@
    "source": "hf"
   },
   "apps/player/index.html": {
-   "blake3": "8c2a18de1e80733225b60618af3c0d06a322ecc68274dae5ac218eac5b503200",
+   "blake3": "247bc826ac424f72d385aa26f2be76aac6fb3a1fffcae4e530c273468be1de99",
    "tier": "apps",
    "source": "hf"
   },
@@ -29312,9 +29317,9 @@
    "source": "origin"
   },
   "root-sw.js": {
-   "sha256": "e8e49b9f78d9e649b2d7e426f7e1325524908a56c6e2d0c853524e23823f8e7f",
-   "blake3": "36a8f1cc59c5b44da258bb0367c9824675cd5e553a623da19701f0279fec69c9",
-   "bytes": 25453,
+   "sha256": "496746c5d03052a3d9fa4192a7713449b937216ea8487e5399ddc41088d2e639",
+   "blake3": "06dbacc4d6838cb274dba186df0edc13c76ec5794ccaba4e5bad5f88c785ca43",
+   "bytes": 25755,
    "tier": "core",
    "source": "origin"
   },
