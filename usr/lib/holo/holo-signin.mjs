@@ -183,7 +183,16 @@ const HL_CSS = `#holo-login{position:fixed;inset:0;z-index:2147483000;color:var(
 @keyframes hl-spin{to{transform:rotate(360deg)}}@keyframes hl-rise{from{opacity:0;transform:translateY(10px) scale(.99);filter:blur(2px)}to{opacity:1;transform:none;filter:none}}
 #holo-login.unfog .hl-frost{animation:hl-defog .72s cubic-bezier(.4,0,.2,1) forwards}#holo-login.unfog .hl-panel{animation:hl-lift .68s cubic-bezier(.4,0,.2,1) forwards;pointer-events:none}
 @keyframes hl-defog{to{opacity:0}}@keyframes hl-lift{to{opacity:0;transform:translateY(-10px) scale(1.03)}}
-@media (prefers-reduced-motion:reduce){#holo-login .hl-panel,#holo-login .spin,#holo-login .hl-bio:disabled::after{animation:none}#holo-login.unfog .hl-frost,#holo-login.unfog .hl-panel{animation:hl-defog .3s ease forwards}}`;
+@media (prefers-reduced-motion:reduce){#holo-login .hl-panel,#holo-login .spin,#holo-login .hl-bio:disabled::after{animation:none}#holo-login.unfog .hl-frost,#holo-login.unfog .hl-panel{animation:hl-defog .3s ease forwards}}
+/* NO-OVERLAP (appended override) — the panel was anchored at a fixed 61.8vh, independent of the bottom-pinned
+   wordmark, so on any short-enough screen the actions ran into the brand. Cap the golden anchor so the panel
+   always clears the reserved wordmark band (golden preserved wherever it fits); tiny screens drop the mark. */
+#holo-login .hl-lock{padding-top:max(16px,min(calc(61.8vh - var(--avatar)/2),calc(100vh - 520px)));padding-bottom:max(var(--g2),88px)}
+#holo-login .hl-lock{padding-top:max(16px,min(calc(61.8dvh - var(--avatar)/2),calc(100dvh - 520px)))}
+@media (max-height:520px){#holo-login .hl-brand{display:none}}
+/* CENTER (appended override) — the side gutter YIELDS to the field: under ~710px wide the fixed φ gutter
+   overflowed the single grid track right, so the panel sat off-centre on phones (+24px at 375px). */
+#holo-login .hl-lock{padding-left:max(12px,min(var(--g2),calc((100vw - var(--field))/2)));padding-right:max(12px,min(var(--g2),calc((100vw - var(--field))/2)))}`;
 function injectCss() {
   try { if (document.getElementById("holo-signin-css")) return; const s = document.createElement("style"); s.id = "holo-signin-css"; s.textContent = HL_CSS; document.head.appendChild(s); } catch {}
 }
@@ -351,6 +360,10 @@ export async function signIn({ root, params, app = "holospace", appName = "Holog
       // THE NAME CEREMONY — after the device-rooted ceremony has passed, before anything else paints. One
       // choke-point, so EVERY door (first-run enrol, returning unlock, silent SSO, restore) names exactly once.
       if (!guest) { try { principal = await ensureNamed(panel, principal); } catch {} }
+      // AUTO-SKIP marker: record whether THIS entry was a guest, so a returning guest re-enters with no gate
+      // next time (set below, before the gate). Cleared on any real-operator entry so an enrolled operator is
+      // NEVER auto-downgraded to guest (even on a transient roster-read miss).
+      try { if (guest) localStorage.setItem("holo.lastWasGuest", "1"); else localStorage.removeItem("holo.lastWasGuest"); } catch {}
       // HANDOFF SEAM: a caller (e.g. the OS greeter) owns session + navigation. Run the ceremony, hand off,
       // still cache the greeting hint for next-boot baseline, then reveal. The caller's onEstablished does its
       // own openSession/persist/publish/enterShell — the primitive does NOT double it.
@@ -492,6 +505,14 @@ export async function signIn({ root, params, app = "holospace", appName = "Holog
       { label: "Use another device", icon: '<svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"><rect x="7" y="2.5" width="10" height="19" rx="2.5"/><path d="M11 18.5h2"/></svg>', run: () => joinAndEnter() },
       { label: "Restore", icon: '<svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 1 0 3.2-6.9"/><path d="M3 4v5h5"/></svg>', run: () => restoreAndEnter() },
     ];
+
+    // AUTO-SKIP FOR RETURNING GUESTS (no redundant gate — "it just works" like WhatsApp): a visitor whose LAST
+    // entry was a guest AND who has no enrolled operator credential is a returning guest — re-enter silently,
+    // exactly as tapping "Continue as guest" would. The guest namespace is stable ("guest"), so identity + chats
+    // carry over; there is nothing to authenticate. First-timers (no marker) still see the gate ONCE; an enrolled
+    // operator (selected.cred) still gets their secure biometric — the marker is cleared on any operator entry so
+    // this can never downgrade one. Zero-prompt, no-downgrade, honest serverless auto-resume.
+    try { if (localStorage.getItem("holo.lastWasGuest") === "1" && (!selected || !selected.cred)) return guestEnter(); } catch {}
 
     // No enclave here (headless / no biometric) → Guest is the way in.
     if (!hasBio) { renderNoBio(panel, selected, reason); const g = panel.querySelector("#hl-guest"); if (g) g.onclick = guestEnter; return; }

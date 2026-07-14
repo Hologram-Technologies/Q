@@ -9,13 +9,13 @@
  "tiers": {
   "core": {
    "files": 635,
-   "bytes": 12730835,
+   "bytes": 12733075,
    "hf": 0
   },
   "apps": {
-   "files": 5281,
-   "bytes": 1557871,
-   "hf": 5234
+   "files": 5282,
+   "bytes": 1560826,
+   "hf": 5235
   },
   "heavy": {
    "files": 20,
@@ -4194,9 +4194,9 @@
    "source": "origin"
   },
   "apps/jellyfin/holo-jellyfin-sw.js": {
-   "sha256": "c6b33a4a22c95cd1cde7ec955c3cca63e4122c6072cc2030873a0f4196c2a985",
-   "blake3": "75633e3a5bed114eb29f80dd994a46f5a6832faaab72d259dc31b8cce6c0fb47",
-   "bytes": 102615,
+   "sha256": "1594f710e979bb88df7d6725a0c60f468cce24cf29a4b836ba2914a5d7a0a8a7",
+   "blake3": "3803683523121d89310b160995a287a71a6b25ce41dcbe7e0f0d0153b3edae06",
+   "bytes": 105003,
    "tier": "apps",
    "source": "origin"
   },
@@ -16117,9 +16117,9 @@
    "source": "hf"
   },
   "apps/player/holo-evicted.json": {
-   "sha256": "dbb19aa6f0554127672a62e012e5b7c77b61fa4661e170ee358ff3e966b1e42b",
-   "blake3": "23b2c2d62f067df9c6e75939c5a788ea9c15c265c8807d986d86ba1e97ea62db",
-   "bytes": 10901,
+   "sha256": "909f9e498696158071b4737d26549ed368148282582ae789dfa8b7a0f2c7d9da",
+   "blake3": "3d4ec711729eb61ee9cf113c70a34a42852ac3cf5b9afb4ef833da3e302da9a2",
+   "bytes": 11468,
    "tier": "apps",
    "source": "origin"
   },
@@ -16150,6 +16150,11 @@
   },
   "apps/player/holo-imusic.mjs": {
    "blake3": "3adfb6ebeb1751f0be3d07efe9f629dd4f385901c65855ef8f06b4453e61955a",
+   "tier": "apps",
+   "source": "hf"
+  },
+  "apps/player/holo-jf-bridge.mjs": {
+   "blake3": "af460d745514cf214b021a74cb72e0994d9bf1e5950a3c0133b0fc81df9e3eac",
    "tier": "apps",
    "source": "hf"
   },
@@ -16529,7 +16534,7 @@
    "source": "hf"
   },
   "apps/player/index.html": {
-   "blake3": "fe13143052aa124f66a5a5207a2666776531a063ed379a31d0e5dfc29add1cc2",
+   "blake3": "568b3dc764c21a92f4227e65f5dee6de89bbcca50f5589f4155046200bdeae83",
    "tier": "apps",
    "source": "hf"
   },
@@ -30006,9 +30011,9 @@
    "source": "origin"
   },
   "usr/lib/holo/holo-signin.mjs": {
-   "sha256": "b8b97ba21d05731dabbb1283c0460276e54632ba7c5215429335dd5e4e410807",
-   "blake3": "8b0d847d7484bc32a3de7c0fcb0a83a4f15bd7713e2a5d84cc9667ea74785d12",
-   "bytes": 44263,
+   "sha256": "d4cb5acb2717d89518eed48405c9554c015f51c52fabdfb6c1e1ed270033abda",
+   "blake3": "0925a325a969e647f38a57a7fc041cc3cf925c171f1707ef410530f74e33a07e",
+   "bytes": 46503,
    "tier": "core",
    "source": "origin"
   },
