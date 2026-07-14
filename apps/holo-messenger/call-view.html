@@ -110,7 +110,7 @@
       try { localStorage.setItem("holo.call.name", myName); } catch {}
       const [{ joinMesh }, { openMeetUI }] = await Promise.all([
         import("./holo-call-mesh.mjs?v=8e2430929cf3"),
-        import("./holo-meet-ui.mjs?v=4e9148a489b3"),
+        import("./holo-meet-ui.mjs?v=dc06c4befcc3"),
       ]);
       $("lobby").classList.add("hide");
       try { $("pv").srcObject = null; } catch {}   // release the lobby preview — the grid's self-tile is the ONE live view now
