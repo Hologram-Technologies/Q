@@ -309,6 +309,11 @@ const CSS = `
 #holo-login .hlp-foot{color:var(--muted,#8b949e);font-size:13px}
 #holo-login .hlp-foot a{color:var(--ink-dim,rgba(231,237,250,.7));text-decoration:underline;text-decoration-color:rgba(255,255,255,.2);text-underline-offset:2px}
 /* CLAUDE-READ ⤴ */
+/* STAGE ⤵ — the hero emblem sits IN a space, not ON a flat: one key light above centre + an edge vignette (static gradients, GPU-composited, zero per-frame cost). Lit only while the boot holds the hero; dissolves with the ceremony. */
+#holo-login .hlp::before{content:"";position:absolute;inset:0;pointer-events:none;opacity:0;transition:opacity 1.2s ease;background:radial-gradient(42% 42% at 50% 46%,rgba(125,239,201,.04),transparent 70%),radial-gradient(62% 56% at 50% 46%,rgba(255,255,255,.05),transparent 72%),radial-gradient(130% 130% at 50% 50%,transparent 56%,rgba(0,0,0,.42) 100%)}
+#holo-login.hl-boot .hlp.on::before{opacity:1}
+#holo-login .hlp.greet::before,#holo-login .hlp.done::before{opacity:0}
+/* STAGE ⤴ */
 `;
 function injectCss() {
   try { if (document.getElementById("holo-plymouth-css")) return; const s = document.createElement("style"); s.id = "holo-plymouth-css"; s.textContent = CSS; document.head.appendChild(s); } catch {}
