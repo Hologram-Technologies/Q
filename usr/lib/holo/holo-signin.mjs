@@ -93,7 +93,7 @@ async function hydrateFace(panel, u) {
 // SUPER-CLEAN GATE: two choices on the face — the biometric (your name) + "Continue as guest". The rare
 // recovery doors (another device / restore) live behind the SAME ⋯ the appearance does (holo-plymouth's
 // panel renders whatever actions the primitive offers it) — one quiet door for everything secondary.
-const guestBtnHtml = () => `<button class="hl-alt" id="hl-guestbtn">Continue as guest</button>`;
+const guestBtnHtml = () => `<button class="hl-alt" id="hl-guestbtn">${I.ghost}<span>Continue as guest</span></button>`;
 
 const _linkStyle = "width:100%;font-size:12px;padding:10px;border-radius:8px;background:rgba(255,255,255,.08);color:#cfe;border:1px solid rgba(255,255,255,.15);font-family:inherit";
 function renderAddDevice(panel, url) {

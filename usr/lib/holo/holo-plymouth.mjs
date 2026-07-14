@@ -1027,7 +1027,7 @@ export function attachPlymouth(overlay, host) {
   // second visit is a greeting, not a ceremony. Skippability and the hard cap are unchanged.
   // BOOT IS FIVE SECONDS, EVERY OPEN (by request): retired the returning-visitor recognition-downgrade so
   // the hero holds the full five seconds on every fresh open. Only the same-tab Lock & Sign Out stays short.
-  const BOOT_MIN = shortHero ? 1200 : 5000, BOOT_MAX = shortHero ? 1600 : 5600;
+  const BOOT_MIN = shortHero ? 1200 : 3000, BOOT_MAX = shortHero ? 1600 : 3400;
   const bootT0 = (() => { try { return window.__hlBootT0 || Date.now(); } catch { return Date.now(); } })();
   let bootDone = false, bootTimer = 0;
   const endBoot = () => {
