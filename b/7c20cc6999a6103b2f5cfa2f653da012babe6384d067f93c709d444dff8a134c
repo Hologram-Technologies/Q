@@ -9,7 +9,7 @@
  "tiers": {
   "core": {
    "files": 635,
-   "bytes": 12735181,
+   "bytes": 12737248,
    "hf": 0
   },
   "apps": {
@@ -2935,9 +2935,9 @@
    "source": "hf"
   },
   "apps/holo-messenger/_vendor/ui/chat-ui.bundle.css": {
-   "sha256": "ec159eae953301305906e34f613a00a6cb38aaa01d98f7496861e553bc3dcf9b",
-   "blake3": "f9eccca1aa77f99a0cca2601a1d82984ff66690038817576e4c27903ecf32a8c",
-   "bytes": 207553,
+   "sha256": "dec9ea5d59eb4c98f91e7a6c4cccffd230fa05fd141b1ecbf37b90c192cdd97b",
+   "blake3": "52cabcf97009d137c042e77a437d73f7809273ce340e967c402c969d962182a6",
+   "bytes": 208412,
    "tier": "core",
    "source": "origin"
   },
@@ -3628,8 +3628,8 @@
    "source": "origin"
   },
   "apps/holo-messenger/holo-sw.js": {
-   "sha256": "325d430d792ba4bfb83c1b3225490257510a73f182476b827bc6834e65e89794",
-   "blake3": "901d852483546cdacefcbc893c5852e9e4e100a78ef5cfafd510be20c2c26eca",
+   "sha256": "fa2f3228fcb392f9360b5f6b4098b7641db52b5339cf9c9c3ca797096b30d39d",
+   "blake3": "9ff0e7e100888f32db8a6db253a05093dc6d769c48665b35c942200544de710f",
    "bytes": 26338,
    "tier": "core",
    "source": "origin"
@@ -4048,8 +4048,8 @@
    "source": "origin"
   },
   "apps/holo-messenger/shell-manifest.json": {
-   "sha256": "f2d6c1e422b13f43fd50ecd0419892911ef4bc38b3d57508d3c296a0a25cf333",
-   "blake3": "f8a4ab1a9a55fa2243ed28aaf7b3ab42048e6809aed86b2bb83d23e4e061c98a",
+   "sha256": "5743d9d47b5def4817ec40f14f61d2a41f8a3efddf4d06c2c7c2f8184ab5242d",
+   "blake3": "5d612a5e92482aaae257fb571672934c7f7bd74cb39a6240992dc11c67441709",
    "bytes": 8507,
    "tier": "core",
    "source": "origin"
@@ -30287,9 +30287,9 @@
    "source": "origin"
   },
   "usr/lib/holo/q/holo-q-guards.mjs": {
-   "sha256": "888cfdf5958462c07ce13e95656cf666be823ef917cbd428f5d3e1e802dda89c",
-   "blake3": "c0591708771b995a845e30283d40d9f5ae6ce60bcc277ce6fd855f7cd9aa7319",
-   "bytes": 16202,
+   "sha256": "16fabde4e62b8d1460009a1bbb77b41f9239f8f8156a9d72cc9116a1aec87df2",
+   "blake3": "ecf4d27f797f745939519e05c9e0e4da749ac892ec9c2e163fa91a9623d08ad5",
+   "bytes": 17039,
    "tier": "core",
    "source": "origin"
   },
@@ -30952,9 +30952,9 @@
    "source": "origin"
   },
   "usr/share/frame/wallet.html": {
-   "sha256": "300189d2692735c69cd4f2defdd312253cf0893ecee748d833b01ca4208584a2",
-   "blake3": "43adc525a08a2af4934738fb36d646c9db0a2d6d7247fad71d84d257665c5340",
-   "bytes": 122239,
+   "sha256": "5db5acc913e7bbebed18c93d51ad6febb1e2c2871b50795e9ac0cab253e2df71",
+   "blake3": "cf42d0145b1eec9a23d065ee01c97f9dd75001982d21c1f78b440a12e3ffe873",
+   "bytes": 122610,
    "tier": "core",
    "source": "origin"
   },
