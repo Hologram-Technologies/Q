@@ -1,0 +1,29 @@
+<!doctype html>
+<html lang="en"><head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>HOLOGRAM</title>
+<style>html,body{height:100%;margin:0;background:#1f1f1e;color:#e8e6e3;font:14px/1.5 system-ui,sans-serif}
+.c{height:100%;display:grid;place-items:center}.m{opacity:.7;letter-spacing:.02em}</style>
+</head><body><div class="c"><div class="m" id="m">opening&hellip;</div></div>
+<script>
+(async () => {
+  const SITE = "/hologram-os/";
+  const key = "holo404:" + location.pathname + location.search;
+  const home = () => location.replace(SITE);
+  let tried = 0; try { tried = +sessionStorage.getItem(key) || 0; } catch {}
+  if (tried >= 1 || !("serviceWorker" in navigator)) return home();
+  try { sessionStorage.setItem(key, "1"); } catch {}
+  try {
+    const reg = await navigator.serviceWorker.register(SITE + "root-sw.js", { type: "module", scope: SITE })
+      .catch(() => navigator.serviceWorker.register(SITE + "root-sw-classic.js", { scope: SITE }));
+    const sw = reg.installing || reg.waiting || reg.active;
+    if (!sw) return home();
+    if (sw.state !== "activated")
+      await Promise.race([
+        new Promise(r => sw.addEventListener("statechange", () => sw.state === "activated" && r(1))),
+        new Promise(r => setTimeout(r, 8000)),
+      ]);
+    location.reload(); // controlled navigation now — the rescuer serves this path, or we land here once more and go Home
+  } catch { home(); }
+})();
+</script></body></html>

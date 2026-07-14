@@ -8,8 +8,8 @@
  "mirror": "https://huggingface.co/HOLOGRAMTECH/holo-messenger-shell/resolve/main/b/",
  "tiers": {
   "core": {
-   "files": 662,
-   "bytes": 13721629,
+   "files": 667,
+   "bytes": 13813866,
    "hf": 0
   },
   "apps": {
@@ -31,10 +31,45 @@
    "tier": "core",
    "source": "origin"
   },
+  ".holo/sha256/31365b0b2f83cc3ae69f1ab91477a7cbed4fd2ab00366a84d5aea9212db0d4dc.js": {
+   "sha256": "31365b0b2f83cc3ae69f1ab91477a7cbed4fd2ab00366a84d5aea9212db0d4dc",
+   "blake3": "69493a1f8233cc934b19ab3fc9334b0980b3c1e2c1012e00254e98345c9ed74b",
+   "bytes": 56065,
+   "tier": "core",
+   "source": "origin"
+  },
+  ".holo/sha256/a0ebbc696bda5154727b76b42c11921231cbc652de3e705dd6b632456e6f34aa.js": {
+   "sha256": "a0ebbc696bda5154727b76b42c11921231cbc652de3e705dd6b632456e6f34aa",
+   "blake3": "ccdc4c592f48919e1f0c142dbc677a7b2820e662d4c35ad5b02210b66955985b",
+   "bytes": 7973,
+   "tier": "core",
+   "source": "origin"
+  },
+  ".holo/sha256/b2bfa104b9ee8e3bb631dcd0ec0e6f7017b8898c4304666f5b3dfeeebc926eb9.css": {
+   "sha256": "b2bfa104b9ee8e3bb631dcd0ec0e6f7017b8898c4304666f5b3dfeeebc926eb9",
+   "blake3": "cbd96db3883014eb0d951b8ff2bf69796bf4027edb314fed868e3ae5f9e9ad3a",
+   "bytes": 8471,
+   "tier": "core",
+   "source": "origin"
+  },
+  ".holo/sha256/c4414e9c61a6ae6b8c19145dddbbe24c68bea83784666434a94cf033b06cc483.css": {
+   "sha256": "c4414e9c61a6ae6b8c19145dddbbe24c68bea83784666434a94cf033b06cc483",
+   "blake3": "1f29a13bf488c4bef3ad0f8a9c1335f15c968afbdc277b9527b500b39dff0ce4",
+   "bytes": 17631,
+   "tier": "core",
+   "source": "origin"
+  },
   ".nojekyll": {
    "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
    "blake3": "af1349b9f5f9a1a6a0404dea36dcc9499bcb25c9adc112b7cc9a93cae41f3262",
    "bytes": 0,
+   "tier": "core",
+   "source": "origin"
+  },
+  "404.html": {
+   "sha256": "4dad1cc256784c5ca8924b464349d2113d4d3dda53e46df3c0783d2416c60291",
+   "blake3": "c8777f475b35814a1f2f8e4d49bf13231d0d05f5a628e8a22efb0e6185f64c67",
+   "bytes": 1493,
    "tier": "core",
    "source": "origin"
   },
@@ -3206,9 +3241,9 @@
    "source": "origin"
   },
   "apps/holo-messenger/_vendor/ui/chat-ui.bundle.css": {
-   "sha256": "2e16f34a8afca9c4bf9e3d061ee8e7c13e95ba68dd576c7d8ab0eea1f0e0ac39",
-   "blake3": "59037b30e4b9ec1cd1ff04779dc30a6da43e87720d4193692bad570f29646c51",
-   "bytes": 224302,
+   "sha256": "1368d3c5634f639ea9cf6e17051b1124101e02a96c041c2587c56c1664530842",
+   "blake3": "41659e71f396d05eb45a5ccf639092193fb14e5dc7dd1bde3dcecb6411c890b0",
+   "bytes": 224937,
    "tier": "core",
    "source": "origin"
   },
@@ -3822,8 +3857,8 @@
    "source": "origin"
   },
   "apps/holo-messenger/holo-sw.js": {
-   "sha256": "2999b8ca84bb51d768fc18182e7eb1c6855f1183fd9c0eab4ea4ab5288889982",
-   "blake3": "c152e3f8ba443fce83b15c820743f3e89aee1e39d9e93d37392fc484a81a3a00",
+   "sha256": "862d484f922c40befa0f3e356b759772c21a78ce8c84eb5f0db29f675c6933b8",
+   "blake3": "616767ca2e7f6d0d0251cb5f9d6024cb6f5d528a51b201fd8b71c9a5f0e63369",
    "bytes": 26338,
    "tier": "core",
    "source": "origin"
@@ -4242,8 +4277,8 @@
    "source": "origin"
   },
   "apps/holo-messenger/shell-manifest.json": {
-   "sha256": "e77fa6e05b80833ec915806c8ab40602dca833d43cb7a0f994be7165aec78b3e",
-   "blake3": "37d46ae69a89d72c45f69751b860538d97664fb661d4f50ff03df2e0735052a9",
+   "sha256": "bb766c941deaaa2d0c5d3637480d8888b39db36ab7d706431d1ee42aa1a202fb",
+   "blake3": "a9188664587f110576f9f83560da76694a772733d8647256dade0e8e539ea781",
    "bytes": 6471,
    "tier": "core",
    "source": "origin"
@@ -30019,9 +30054,9 @@
    "source": "origin"
   },
   "usr/lib/holo/holo-plymouth.mjs": {
-   "sha256": "cc070275c481e97eb2d09c305ebb1397a45350a90c24e69bbc6165bce8f0c2cb",
-   "blake3": "996a3b37be8fb5bc92ec7ae1fea81ab732931d647a2a4a4eb573b3014288a3e7",
-   "bytes": 96069,
+   "sha256": "0c4c39d784aa5885e42f7bff25972e9433707b9b34d5d860019140e1eb4af7ef",
+   "blake3": "93242adcb3619760157dd8bc25c692604d87baa0fa96d91b132bedfcedb842ca",
+   "bytes": 96038,
    "tier": "core",
    "source": "origin"
   },
