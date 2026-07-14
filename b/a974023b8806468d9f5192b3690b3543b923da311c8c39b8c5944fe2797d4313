@@ -9,7 +9,7 @@
  "tiers": {
   "core": {
    "files": 623,
-   "bytes": 12744970,
+   "bytes": 12745695,
    "hf": 0
   },
   "apps": {
@@ -2940,9 +2940,9 @@
    "source": "hf"
   },
   "apps/holo-messenger/_vendor/ui/chat-ui.bundle.css": {
-   "sha256": "84d26067f812a0313dec9601a94821b78e7d5cc2fa5fec9a2a04a0d8bf4d96c0",
-   "blake3": "761c444926add87c39716785dbf86daca16d6f11f81fafcb3e46bbb09b94949e",
-   "bytes": 221472,
+   "sha256": "1e7b11494f78887d4278391bd3f1dfb465c377a14fd63724b27dfbaac7958e9d",
+   "blake3": "722494350f22a6f24691a3a7319d52282dbe0ff315000868bc97adfc2738ad17",
+   "bytes": 222165,
    "tier": "core",
    "source": "origin"
   },
@@ -3549,8 +3549,8 @@
    "source": "origin"
   },
   "apps/holo-messenger/holo-sw.js": {
-   "sha256": "59ec1aba0ac5997aa3de932513c11863c66c1d8bba3b049511bec924bb31027b",
-   "blake3": "94847a55f9605b2e1954ba2eef6ff91346d9913260b79a93d14fa78a1d0fa629",
+   "sha256": "2dcb7909c6b563bf8c272d29542e7873329f20abe66a88c516c8bb6acda3c89e",
+   "blake3": "90a59ba75b36097027bd3dd6a22006fba926a5d6f9c9777eacce607471c12df0",
    "bytes": 26338,
    "tier": "core",
    "source": "origin"
@@ -3969,8 +3969,8 @@
    "source": "origin"
   },
   "apps/holo-messenger/shell-manifest.json": {
-   "sha256": "be5b3f310057931496c3026c6740ea63bb6d59339a11e222e493dac2c5ef3e62",
-   "blake3": "107a0664a21b84cb838a36f9b07ef5e8251c4ae8a9aa1cfcca85535df5824eb1",
+   "sha256": "71f2e0ccf744d59571b8ea3f7ccf216d33eb0c5fbb64b28c1375fdcb4ead65dd",
+   "blake3": "9b12c99cb040e558a6455d379c3c3f132041337a87b4f51c3ef665b77a646f2f",
    "bytes": 6471,
    "tier": "core",
    "source": "origin"
@@ -30897,9 +30897,9 @@
    "source": "origin"
   },
   "usr/share/frame/wallet.html": {
-   "sha256": "5db5acc913e7bbebed18c93d51ad6febb1e2c2871b50795e9ac0cab253e2df71",
-   "blake3": "cf42d0145b1eec9a23d065ee01c97f9dd75001982d21c1f78b440a12e3ffe873",
-   "bytes": 122610,
+   "sha256": "7b1bc1cc01caa4525f32d32a1022e59b0f8dd4bc3d79b992ddcce39b808e1979",
+   "blake3": "4bd99e461a63afeb2b27616ac4159d2fb8f5549f5b7a5218ad975f6f899d0eb5",
+   "bytes": 122642,
    "tier": "core",
    "source": "origin"
   },
