@@ -238,7 +238,13 @@ function warmWhenIdle() {
   if (DOC.visibilityState !== "visible") { DOC.addEventListener("visibilitychange", warmWhenIdle, { once: true }); return; }
   if ("requestIdleCallback" in window) requestIdleCallback(warm, { timeout: 4500 }); else setTimeout(warm, 2500);
 }
-warmWhenIdle();
+// MOBILE-LEAN (2026-07): the idle auto-warm pulls the ~7MB ONNX seed AND the ~28s BitNet κ-stream — the
+// single heaviest thing on the mobile boot path. Q still warms INSTANTLY on the real orb tap (onOrbDown →
+// warm(), below), so on phones / data-saver we skip the *speculative* auto-warm and let genuine intent
+// trigger it. Desktop is unchanged. Predicate = coarse-pointer + small viewport (the shell's own phone
+// test) or Save-Data — flagship phones included, since mobile CPU/battery/net are the constraint, not GPU.
+const _qLeanMobile = (() => { try { return (matchMedia("(pointer:coarse)").matches && Math.min(innerWidth, innerHeight) <= 700) || navigator.connection?.saveData === true; } catch { return false; } })();
+if (!_qLeanMobile) warmWhenIdle();
 
 let greeting = false;
 function speakGreeting() { greeting = true; Promise.resolve(voice.speak(greetLine())).catch(() => {}).then(() => { greeting = false; }); }
