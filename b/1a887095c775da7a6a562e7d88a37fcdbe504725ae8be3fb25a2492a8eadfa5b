@@ -9,7 +9,7 @@
  "tiers": {
   "core": {
    "files": 635,
-   "bytes": 12733075,
+   "bytes": 12732010,
    "hf": 0
   },
   "apps": {
@@ -2935,9 +2935,9 @@
    "source": "hf"
   },
   "apps/holo-messenger/_vendor/ui/chat-ui.bundle.css": {
-   "sha256": "5ee158561352d32d3e0096294a6aedb750352313b533f64da81108d59aea1098",
-   "blake3": "d28976a7d4f1d5556d273174c852da3217ae53ba52c280ee0db8d29843761031",
-   "bytes": 206023,
+   "sha256": "ec159eae953301305906e34f613a00a6cb38aaa01d98f7496861e553bc3dcf9b",
+   "blake3": "f9eccca1aa77f99a0cca2601a1d82984ff66690038817576e4c27903ecf32a8c",
+   "bytes": 207553,
    "tier": "core",
    "source": "origin"
   },
@@ -3628,8 +3628,8 @@
    "source": "origin"
   },
   "apps/holo-messenger/holo-sw.js": {
-   "sha256": "4d94482bf03ea4a96eed106fa9ea2585c83d5796b4bcc15cde643f3a77660454",
-   "blake3": "2be0ed5772b8ce8f2cf799d0bba4fcac4d7905424a62acd2086d28cccc8ac682",
+   "sha256": "6f76e8921c779d32f8c053be12f974ade915b5b198aac7bc880c06cf9ab92e6e",
+   "blake3": "c80d6ac653d0826f26fe62a2cb7092b3ae8adbb75fdf3d798e2b44f8e7d248b5",
    "bytes": 26003,
    "tier": "core",
    "source": "origin"
@@ -4048,8 +4048,8 @@
    "source": "origin"
   },
   "apps/holo-messenger/shell-manifest.json": {
-   "sha256": "281fe47344e9942a9129e48718b78cb416014a82e07e6f6fe41beb18ec1ddde4",
-   "blake3": "9c9060360faeb6f8db583bf0993363ca6ca9ccdf88992d38f77f47c4ffb36f33",
+   "sha256": "ee59c5956f12f29d07eefd4057310e8f3be29cd41e6d124027b72654959217bb",
+   "blake3": "9a660ddcbf70e001bd6e8df755ce44d93c1aa490896e42c60e3cb2ed3c81aed4",
    "bytes": 8507,
    "tier": "core",
    "source": "origin"
@@ -29024,9 +29024,9 @@
    "source": "origin"
   },
   "index.html": {
-   "sha256": "0c6cf8d9948f1622fe666e68d24e11ddd760f22ce61fbab52cf9b2c5cf9c390c",
-   "blake3": "1f81d1d6ea8610b683b53a8a03bd70bdfd79898a4929b62468bb916c450484b4",
-   "bytes": 7031,
+   "sha256": "813525485aa892df232b52ae97cefb7033b5b4f7c607a060879870ff4ceb3559",
+   "blake3": "ba614bf367d3ff90876ef66758432ad5bfbd9b4dbcb2560b3ed80e4724b6c5ac",
+   "bytes": 4436,
    "tier": "core",
    "source": "origin"
   },
