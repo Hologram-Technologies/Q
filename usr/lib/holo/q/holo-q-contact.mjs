@@ -87,6 +87,37 @@ export function stripScaffold(raw) {
   return t.replace(/^\n+/, "");
 }
 
+// ── isRealAnswer(text, userText): the QUALITY FLOOR (HOLO-Q-FIRST-CONTACT C1). A candidate reply may
+//    finalize as Q's κ only if it is a real answer — not a one-glyph fragment (a live screenshot showed Q
+//    reply with a single `"`), not an echo of the user's own words, not a canned-bot greeting. Used as the
+//    ESCALATION predicate in respond(): a tier whose draft fails simply falls through to the next rung
+//    (exactly like an empty generation), so the floor never silences Q — it routes around weak answers.
+//    Pure + deterministic → Node-witnessable. Conservative by design: legitimate short answers ("4.",
+//    "Yes — done.") pass via the terminal-punctuation clause; ordinary prose is never rejected. ──
+export function isRealAnswer(text, userText = "", opts = {}) {
+  const t = String(text == null ? "" : text).trim();
+  if (!t) return false;
+  const glyphs = (t.match(/[\p{L}\p{N}]/gu) || []).length;                        // letters + digits ("4." is a real answer)
+  if (!glyphs) return false;                                                      // pure punctuation/emoji fragment ('"', '…')
+  const words = t.split(/\s+/).filter((w) => /\p{L}|\d/u.test(w)).length;
+  const short = words < 2 || glyphs < 6;
+  if (short && !/[.!?…]$/.test(t)) return false;                                  // an unterminated fragment; "4." or "Yes!" stay legal
+  const norm = (s) => String(s || "").toLowerCase().replace(/[^\p{L}\d]+/gu, " ").trim();
+  const nt = norm(t), nu = norm(userText);
+  if (nu && nu.length >= 4 && (nt === nu || (nt.startsWith(nu) && nt.length < nu.length + 8))) return false;   // parrot-echo of the user's turn
+  if (/\bhow (?:can|may) i (?:help|assist) you\b/i.test(t) && !/\b(hi|hey|hello|good (?:morning|afternoon|evening))\b/i.test(String(userText || ""))) return false;   // canned-bot tell outside a greeting
+  if (opts && opts.strict) {
+    // STRICT tier (the cold ONNX seed's 16-token drafts): a truncated draft almost never ends in terminal
+    // punctuation and word-salad repeats itself ("let me let me…" was caught live). Real seed drafts pass both;
+    // a rejected one escalates to the full brain — strict mode never silences Q, it only routes around junk.
+    if (!/[.!?…)"']$/.test(t)) return false;                                      // mid-word truncation ("…for you will phone to30")
+    if (/\b(\p{L}+(?:\s+\p{L}+)?)\s+\1\b/iu.test(t)) return false;                // immediate word/bigram stutter ("let me let me")
+    if (/^[a-z]/.test(t)) return false;                                           // leading fragment ("n home I'm sorry…") — a finished draft starts a sentence
+    if (((t.match(/"/g) || []).length % 2) === 1) return false;                   // unbalanced straight quote ('Sure! Please let me" is when…')
+  }
+  return true;
+}
+
 // ── makeQGroupResponder({ brain, now, persona, classify }) — M7: Q as a PARTICIPANT in a human group thread.
 // respondInGroup(thread, { publish, mintFn, ... }) reads the shared thread, replies ONLY when the latest message
 // @-mentions Q (and isn't Q's own), and PUBLISHES the reply over the group's transport so every peer sees it
@@ -185,6 +216,7 @@ export function makeQResponder({ thread, brain, now = () => new Date().toISOStri
     //    always get the full brain. A miss falls through to the brain below (honest). ──
     if (seed && !brainIsReady()) {
       let ans = null; try { ans = seed(intentText); } catch (e) { ans = null; }
+      if (ans && !isRealAnswer(stripScaffold(ans), intentText)) ans = null;   // C1 floor: a weak memo entry falls through (curated seeds all pass; this guards a bad edit)
       if (ans) {
         const disp = stripScaffold(ans);
         await setTyping(true, onTyping);
@@ -205,8 +237,11 @@ export function makeQResponder({ thread, brain, now = () => new Date().toISOStri
       catch (e) {} finally { await setTyping(false, onTyping); }
       if (signal && signal.aborted) return { aborted: true, skill: "respond", text: stripScaffold(stext), kappa: null };
       stext = stripScaffold(stext).trim();   // a scaffold-ONLY draft strips to empty → falls through to the full brain (honest)
-      if (stext) { const res = await finalizeQ(stext); return { aborted: false, skill: "respond", text: stext, kappa: res.kappa, seq: res.seq, media: [], authored: !!passport, seedOnnx: true }; }
-      // empty seed draft → fall through to the full brain (honest)
+      // C1 QUALITY FLOOR: the tiny seed can emit a one-glyph or parrot draft (a live screenshot caught a lone `"`
+      // finalized as Q's whole reply). A draft below the floor is treated EXACTLY like an empty one — fall through
+      // to the full brain / the surface's proven fallback ladder — instead of persisting garbage as a κ.
+      if (stext && isRealAnswer(stext, intentText, { strict: true })) { const res = await finalizeQ(stext); return { aborted: false, skill: "respond", text: stext, kappa: res.kappa, seq: res.seq, media: [], authored: !!passport, seedOnnx: true }; }
+      // empty/weak seed draft → fall through to the full brain (honest)
     }
 
     const skill = classify(intentText);
@@ -220,14 +255,22 @@ export function makeQResponder({ thread, brain, now = () => new Date().toISOStri
     if (retrieve) { try { const ctx = await retrieve(intentText); if (ctx && typeof ctx === "string") history.splice(1, 0, { role: "system", content: ctx }); } catch (e) {} }
     await setTyping(true, onTyping);
     let text = "";
+    // C1 floor at the LAST rung: one silent regenerate on a below-floor answer; the retry's result stands either
+    // way (an imperfect answer beats silence — this rung must never dead-end a surface that has no fallback).
     try {
-      for await (const delta of brain.generate(history, { signal })) {
+      for (let attempt = 0; attempt < 2; attempt++) {
+        text = "";
+        try {
+          for await (const delta of brain.generate(history, { signal })) {
+            if (signal && signal.aborted) break;
+            text += delta;
+            try { onDelta(delta, stripScaffold(text)); } catch (e) {}
+          }
+        } catch (e) { /* a load/stream failure leaves text as-is; honest partial, finalized below only if non-empty */ }
         if (signal && signal.aborted) break;
-        text += delta;
-        try { onDelta(delta, stripScaffold(text)); } catch (e) {}
+        if (!text.trim() || isRealAnswer(stripScaffold(text).trim(), intentText)) break;   // empty (nothing to retry against) or real → done
       }
-    } catch (e) { /* a load/stream failure leaves text as-is; honest partial, finalized below only if non-empty */ }
-    finally { await setTyping(false, onTyping); }
+    } finally { await setTyping(false, onTyping); }
 
     if (signal && signal.aborted) return { aborted: true, skill, text, kappa: null };   // ephemeral bubble dropped by caller
     text = text.trim();
@@ -297,7 +340,7 @@ export function makeSpeculator({ brain, persona = Q_PERSONA, classify = classify
 // with an always-online dot. Speculation: makeSpeculator({ brain }); input 'pause' → start(draft, view);
 // send → commit(text) (hit ⇒ ingest the text as Q; miss ⇒ q.respond). All on-device; no egress.
 if (typeof window !== "undefined" && !window.HoloQContact) {
-  window.HoloQContact = { Q_IDENTITY, Q_PERSONA, qGenesis, classifySkill, historyFrom, makeQResponder, makeSpeculator, stripScaffold };
+  window.HoloQContact = { Q_IDENTITY, Q_PERSONA, qGenesis, classifySkill, historyFrom, makeQResponder, makeSpeculator, stripScaffold, isRealAnswer };
 }
 
-export default { Q_IDENTITY, Q_PERSONA, qGenesis, classifySkill, historyFrom, makeQResponder, makeSpeculator, stripScaffold };
+export default { Q_IDENTITY, Q_PERSONA, qGenesis, classifySkill, historyFrom, makeQResponder, makeSpeculator, stripScaffold, isRealAnswer };

@@ -9,7 +9,7 @@
  "tiers": {
   "core": {
    "files": 634,
-   "bytes": 12693253,
+   "bytes": 12698712,
    "hf": 0
   },
   "apps": {
@@ -3621,9 +3621,9 @@
    "source": "origin"
   },
   "apps/holo-messenger/holo-sw.js": {
-   "sha256": "7d5bcb5ca14505caa7f042fa6b318176bea904793fc4dded93a62e6f2102a50b",
-   "blake3": "e9a8dbc7f409e4c660657a2f0031ce6faa7bb38dd5df0f2c93e15384500eaf6a",
-   "bytes": 24665,
+   "sha256": "a22aeca3ae31ff043e34cf9068e8acaefbf89d1fdaa4c6510a41bf51784a30fa",
+   "blake3": "6924f2dd09dad831af0e00f2894391aebfeb7b59c6939666bfa5bf9f172de6ec",
+   "bytes": 25178,
    "tier": "core",
    "source": "origin"
   },
@@ -29040,16 +29040,16 @@
    "source": "origin"
   },
   "root-sw-classic.js": {
-   "sha256": "d8e5680f2c4f4ae69d35132dc6785fbdc91d5944cc17ced1dfe25a2bca003151",
-   "blake3": "d78f3d7ad482a4625e2ad9d2ccf8f83b2fed6a940a480f35da550a323228531a",
-   "bytes": 3810,
+   "sha256": "902b52ead69f720c20b02792b4b69d9b84f7eee5cdfa5fe9a54514a707a1430b",
+   "blake3": "17bc8c4e3324bc90213470bce493f6d2742d4a41f91ca8cf6d8ddfb786c3d2c7",
+   "bytes": 4136,
    "tier": "core",
    "source": "origin"
   },
   "root-sw.js": {
-   "sha256": "cbedee6f82d11db24cc2987482b475a47f6eb5f6360c432b08512bbec8673f87",
-   "blake3": "cd89ee92862b87a1793af14999fe38795ea830963a8b4a490c6126fde75d58bd",
-   "bytes": 22246,
+   "sha256": "8fd63e0d73d007b520cca05525801f1aea77a9efcd907499f456d635542bf8d6",
+   "blake3": "2830ff84fddfb4b4642027dce3268253a9e807add6b343388aa7a8e563b77a55",
+   "bytes": 22882,
    "tier": "core",
    "source": "origin"
   },
@@ -30268,9 +30268,9 @@
    "source": "origin"
   },
   "usr/lib/holo/q/holo-q-contact.mjs": {
-   "sha256": "a05ed85189c0795bb24a153fff1994b88b8b16cc699ef4ce560fc202497bf10a",
-   "blake3": "8b3259d7a7f1754edfc3b1c9338533a7ff8b594ee58857a4ed1e8f392bbc410d",
-   "bytes": 22581,
+   "sha256": "830e7f59d3091ed00cb026c1932bf353ba7e86ea436084ae35acfdb1216a6a3c",
+   "blake3": "12540710b781276f71908623fd9990b15c5f3f8f23d017d26ca461cb6cd96919",
+   "bytes": 26565,
    "tier": "core",
    "source": "origin"
   },
