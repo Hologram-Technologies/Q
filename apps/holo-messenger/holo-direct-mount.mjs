@@ -30,7 +30,7 @@ async function _boot() {
   if (direct) return direct;
   if (bootP) return bootP;
   bootP = (async () => {
-    const { makeDirect } = await import("./holo-direct.mjs?v=aim1");   // aim1: presence + away (A1/A3)
+    const { makeDirect } = await import("./holo-direct.mjs?v=aim1s");   // aim1: presence + away (A1/A3)
     const { getIdentity } = await import("./holo-direct-id.mjs");
     // the operator namespace: the signed-in identity's stable id when the gate resolved one, else "guest"
     // (ONE stable identity per device+origin — never per session). 3 s race: Direct must not hang on auth.
@@ -354,6 +354,13 @@ function start() {
     onPresence: (cb) => { _boot().then(() => direct.on("presence", cb)); },
     verifyStatus: (cid) => (direct ? direct.verifyStatus(cid) : { status: "unknown" }),
     onMessage: (cb) => { _boot().then(() => direct.on("message", cb)); },
+    // ── STATUS (WhatsApp Status): the story rail — fan a story/revoke to every contact, ack back to the
+    //   author, subscribe the engine (holo-status.mjs owns shelf/TTL/receipts; this door only carries).
+    postStory: async (st) => { await _boot(); return direct.postStory(st); },
+    storyFan: async (fr) => { await _boot(); return direct.storyFan(fr); },
+    storyCtl: async (cid, fr) => { await _boot(); return direct.storyCtl(cid, fr); },
+    onStory: (cb) => { _boot().then(() => direct.on("story", cb)); },
+    mySign: async () => { await _boot(); return (direct.myPub && direct.myPub.sign) || null; },
     conversations: async () => { await _boot(); return direct.conversations(); },
     getMeta: async (k) => { await _boot(); return direct.getMeta(k); },
     setMeta: async (k, v) => { await _boot(); return direct.setMeta(k, v); },

@@ -240,6 +240,21 @@ export async function makeDirect({ identity = null, mailboxBase = null, trustSto
     await _fanPresence();                                    // state change → dual-path
     return { ok: true, ..._myPresence };
   }
+  // ── STATUS (WhatsApp Status): one frame fanned to every contact — dual-path like a presence CHANGE (the
+  // mailbox reaches offline contacts). One frame per HUMAN (sign-dedup); never to self. holo-status.mjs owns
+  // the shelf, TTL and receipts; the engine only carries. storyFan carries revokes over the same rail.
+  async function _fanStoryFrame(f) {
+    const fanned = new Set(); let sent = 0;
+    for (const [cid, pub] of book) {
+      if (!pub || !pub.box || fanned.has(pub.sign) || (myPub && pub.sign === myPub.sign)) continue;
+      fanned.add(pub.sign);
+      try { if (await _sendControl(cid, f)) sent++; } catch {}
+    }
+    return { ok: true, sent, contacts: fanned.size };
+  }
+  const postStory = (story) => _fanStoryFrame({ t: "story", story, ts: Date.now() });
+  const storyFan = (frame) => _fanStoryFrame(frame);
+  const storyCtl = (cidOrSign, frame) => { const cid = book.has(cidOrSign) ? cidOrSign : _findBySign(cidOrSign); return cid ? _sendControl(cid, frame) : Promise.resolve(false); };
   const _beatT = setInterval(() => { _fanPresence({ beat: true }).catch(() => {}); }, Math.max(1000, presenceBeatMs));
   const _sweepT = setInterval(() => {
     const now = Date.now();
@@ -299,6 +314,15 @@ export async function makeDirect({ identity = null, mailboxBase = null, trustSto
                   ts: payload.ts || Date.now(), expires: Date.now() + presenceTtlMs };
       _peerPresence.set(r.from, p);
       if (!prev || prev.state !== p.state || prev.msg !== p.msg) emit("presence", { contactId, sign: r.from, state: p.state, msg: p.msg, profile: p.profile, ts: p.ts });
+      return null;
+    }
+
+    // ── STATUS frames (WhatsApp Status over the SAME sealed door): a story is ephemeral social broadcast —
+    // consumed here, never a chat bubble. CONTACTS ONLY at the door (the presence rule). The engine only
+    // CARRIES: storage, the 24h TTL, seen-state, receipts and rendering all live in holo-status.mjs.
+    if (payload.t === "story" || payload.t === "story-ack" || payload.t === "story-revoke") {
+      if (!verified) return null;
+      emit("story", { contactId, sign: r.from, frame: payload, ts: payload.ts || Date.now() });
       return null;
     }
 
@@ -778,6 +802,7 @@ export async function makeDirect({ identity = null, mailboxBase = null, trustSto
     roomView: (id) => { const r = rooms.get(id); return r ? _roomView(r) : null; },
     roomMembers: (id) => { const r = rooms.get(id); return r ? _roomMembersArr(r).map((m) => ({ sign: m.sign, name: m.name, admin: m.admin })) : []; },
     contacts: () => [...book.keys()],
+    postStory, storyFan, storyCtl,   // STATUS: fan a story / a revoke to every contact · ack back to its author
     send, poll, warm, sendTyping, sendMedia,
     // presence (AIM A1/A3): my state is what I announced; a buddy's state is what they announced, TTL-honest.
     setPresence,
