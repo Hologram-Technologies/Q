@@ -118,6 +118,13 @@ export async function joinMesh(intent, { media = null, displayName = "", onParti
     nameOf: (other) => names.get(other) || null,
     mute(on) { if (media) media.getAudioTracks().forEach((t) => (t.enabled = !on)); },
     setCamera(on) { if (media) media.getVideoTracks().forEach((t) => (t.enabled = on)); },
+    // camera flip (front↔back): swap the outgoing VIDEO track on every peer without renegotiation
+    // (replaceTrack is seamless), and keep the local `media` object consistent so mute/setCamera still work.
+    async replaceVideoTrack(track) {
+      if (!track) return;
+      for (const [, st] of peers) { const s = st.pc.getSenders().find((x) => x.track && x.track.kind === "video"); if (s) { try { await s.replaceTrack(track); } catch {} } }
+      if (media) { const old = media.getVideoTracks()[0]; if (old && old !== track) { try { media.removeTrack(old); old.stop(); } catch {} } try { media.addTrack(track); } catch {} }
+    },
     streamOf: (other) => { const st = peers.get(other); return st ? st.stream : null; },
     _pcs: () => [...peers.values()].map((st) => st.pc),   // debug/witness: the raw peer connections (bitrate-cap gate)
     leave() { left = true; try { sig.post({ kind: "bye" }); } catch {} try { clearInterval(asTimer); } catch {} for (const [, st] of peers) { try { st.pc.close(); } catch {} } peers.clear(); try { sig.close(); } catch {} try { ac && ac.close(); } catch {} onState({ phase: "ended" }); },

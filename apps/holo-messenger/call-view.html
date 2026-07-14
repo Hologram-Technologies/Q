@@ -105,11 +105,12 @@
 
     async function enter(it) {
       $("join").disabled = true;
+      let facing = "user";   // front camera default; flip toggles to the back on mobile
       const myName = ($("myName").value || "Guest").trim().slice(0, 40) || "Guest";
       try { localStorage.setItem("holo.call.name", myName); } catch {}
       const [{ joinMesh }, { openMeetUI }] = await Promise.all([
-        import("./holo-call-mesh.mjs?v=4d0de757be97"),
-        import("./holo-meet-ui.mjs?v=f0143e6c8eec"),
+        import("./holo-call-mesh.mjs?v=8e2430929cf3"),
+        import("./holo-meet-ui.mjs?v=4e9148a489b3"),
       ]);
       $("lobby").classList.add("hide");
       try { $("pv").srcObject = null; } catch {}   // release the lobby preview — the grid's self-tile is the ONE live view now
@@ -119,6 +120,14 @@
         onLeave: () => { try { mesh && mesh.leave(); } catch {} try { media && media.getTracks().forEach((t) => t.stop()); } catch {} setTimeout(() => { try { window.close(); } catch {} $("lobby").classList.remove("hide"); setStatus("You left the call", "warnpill"); $("join").disabled = false; }, 250); },
         onToggleMute: (m) => { if (media) media.getAudioTracks().forEach((t) => (t.enabled = !m)); },
         onToggleCamera: (off) => { if (media) media.getVideoTracks().forEach((t) => (t.enabled = !off)); },
+        onFlipCamera: video ? async () => {
+          const next = facing === "user" ? "environment" : "user";
+          let ns = null; try { ns = await navigator.mediaDevices.getUserMedia({ video: { facingMode: { ideal: next } }, audio: false }); } catch {}
+          const track = ns && ns.getVideoTracks()[0]; if (!track) { try { ns && ns.getTracks().forEach((t) => t.stop()); } catch {} return; }
+          facing = next;
+          if (mesh && mesh.replaceVideoTrack) { try { await mesh.replaceVideoTrack(track); } catch {} }
+          ui.attachLocal(media, myName, facing === "user");
+        } : null,
       });
       ui.attachLocal(media, myName);
       if (media) { media.getAudioTracks().forEach((t) => (t.enabled = micOn)); media.getVideoTracks().forEach((t) => (t.enabled = camOn)); }
