@@ -144,6 +144,14 @@ const CSS = `
 #holo-login .hlm-note{color:var(--muted,#8b949e);font-size:13px;line-height:1.65}
 @media (max-width:560px){#holo-login .hlm-doc h1{font-size:32px}#holo-login .hlm-close{font-size:26px}}
 /* CLAUDE-READ ⤴ */
+
+/* CLAUDE-DESK WORDMARK (appended override) — smaller, sharper brand mark on BOTH the boot hero and the login
+   greeter: it signs the screen quietly instead of shouting from the bottom edge, with a touch more breathing
+   room beneath it. (The base .hl-brand rule keeps its exact bytes for the anti-revert gate; NEVER transform
+   the mark here: its centring is a transform and flattening it parks the wordmark off-centre.) */
+#holo-login .hl-brand svg{width:clamp(26px,2.6vw,30px);height:clamp(26px,2.6vw,30px)}
+#holo-login .hl-brand b{font-size:clamp(17px,1.9vw,21px)}
+#holo-login .hl-brand{bottom:max(30px,3vh,env(safe-area-inset-bottom))}
 `;
 
 function injectCss() { try { const old = document.getElementById("holo-manifesto-css"); if (old) old.remove(); const s = document.createElement("style"); s.id = "holo-manifesto-css"; s.textContent = CSS; document.head.appendChild(s); } catch {} }

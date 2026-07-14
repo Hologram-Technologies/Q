@@ -378,8 +378,8 @@ const POSES = {
   // natural size (bounded, so a soft render never turns to mush) — both players EASE it like cap, so the
   // hand-off to greet is ONE continuous shrink-and-glide, never a snap.
   boot:   { cx: 0.5, cy: 0.5, cap: 0.95, up: 1.5 },
-  greet:  { cx: 0.5, cy: 0.36, cap: 0.50, anchor: true, mult: 8 },
-  verify: { cx: 0.5, cy: 0.36, cap: 0.54, anchor: true, mult: 8 },
+  greet:  { cx: 0.5, cy: 0.36, cap: 0.50, anchor: true, mult: 10, up: 1.35 },
+  verify: { cx: 0.5, cy: 0.36, cap: 0.54, anchor: true, mult: 10, up: 1.35 },
 };
 // GOLDEN HERO: the emblem grows UPWARD from the identity slot (its bottom pinned just above the button) to
 // fill the upper golden-major section — its centre lands on the upper golden line (38.2vh) while the
@@ -391,8 +391,8 @@ function anchorTarget(overlay, p, fallback) {
     if (a) {
       const r = a.getBoundingClientRect();
       if (r.width) {
-        const topGap = Math.round(window.innerHeight * 0.06);        // golden breathing room above the emblem
-        const cap = Math.max(r.width, Math.min(r.width * (p.mult || 8), r.bottom - topGap, window.innerWidth * 0.9));
+        const topGap = Math.round(window.innerHeight * 0.05);        // golden breathing room above the emblem
+        const cap = Math.max(r.width, Math.min(r.width * (p.mult || 8), r.bottom - topGap, window.innerWidth * 0.9, window.innerHeight * 0.56));
         return { cx: r.left + r.width / 2, cy: r.bottom - cap / 2, cap };
       }
     }
@@ -1025,7 +1025,8 @@ export function attachPlymouth(overlay, host) {
   // RETURNING = RECOGNITION (INSTANT-RETURN W1, same law as ARRIVAL A3): an operator or guest this device
   // already knows re-enters on the SHORT hero too — the full five seconds is the FIRST impression; the
   // second visit is a greeting, not a ceremony. Skippability and the hard cap are unchanged.
-  try { if (!shortHero && (localStorage.getItem("holo.lastOperator") || localStorage.getItem("holo-messenger/id-secret"))) shortHero = true; } catch {}
+  // BOOT IS FIVE SECONDS, EVERY OPEN (by request): retired the returning-visitor recognition-downgrade so
+  // the hero holds the full five seconds on every fresh open. Only the same-tab Lock & Sign Out stays short.
   const BOOT_MIN = shortHero ? 1200 : 5000, BOOT_MAX = shortHero ? 1600 : 5600;
   const bootT0 = (() => { try { return window.__hlBootT0 || Date.now(); } catch { return Date.now(); } })();
   let bootDone = false, bootTimer = 0;

@@ -190,6 +190,14 @@ const HL_CSS = `#holo-login{position:fixed;inset:0;z-index:2147483000;color:var(
 #holo-login .hl-lock{padding-top:max(16px,min(calc(61.8vh - var(--avatar)/2),calc(100vh - 520px)));padding-bottom:max(var(--g2),88px)}
 #holo-login .hl-lock{padding-top:max(16px,min(calc(61.8dvh - var(--avatar)/2),calc(100dvh - 520px)))}
 @media (max-height:520px){#holo-login .hl-brand{display:none}}
+/* CLAUDE-DESK BALANCE (appended override) — the greeter uses the screen the way the enclosing Claude desktop
+   does: a larger identity slot (so the boot emblem lands bigger, per holo-plymouth's anchor math), the panel
+   settled toward true centre, ONE uniform UI text (every visible word the same size and weight — only the
+   HOLOGRAM logotype keeps its own logotype style), and a calmer bottom band under a smaller wordmark. */
+#holo-login{--avatar:clamp(120px,calc(var(--u)*7.6),152px)}
+#holo-login .hl-lock{padding-top:max(16px,min(calc(61.8vh - var(--avatar)/2),calc(100vh - 470px)))}
+#holo-login .hl-lock{padding-top:max(16px,min(calc(61.8dvh - var(--avatar)/2),calc(100dvh - 470px)))}
+#holo-login .hl-name,#holo-login .hl-lbl,#holo-login .hl-bio,#holo-login .hl-alt,#holo-login .hl-enclave{font-size:var(--u);font-weight:500;letter-spacing:0}
 /* CENTER (appended override) — the side gutter YIELDS to the field: under ~710px wide the fixed φ gutter
    overflowed the single grid track right, so the panel sat off-centre on phones (+24px at 375px). */
 #holo-login .hl-lock{padding-left:max(12px,min(var(--g2),calc((100vw - var(--field))/2)));padding-right:max(12px,min(var(--g2),calc((100vw - var(--field))/2)))}`;
