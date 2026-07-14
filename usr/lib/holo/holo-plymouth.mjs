@@ -218,7 +218,7 @@ const CSS = `
 /* the panel's own reveal: an explicit fresh animation at hl-boot removal — the load-time hl-rise has long
    finished (fill:both holds opacity 1), and a transition cannot interpolate an animation-supplied value,
    so without this the panel would SNAP in while the rest fades (.hlp-reveal is added by endBoot). */
-@keyframes hlp-reveal{from{opacity:0;transform:translateY(10px) scale(.99);filter:blur(2px)}to{opacity:1;transform:none;filter:none}}
+@keyframes hlp-reveal{from{opacity:0;transform:translateY(10px) scale(.99)}to{opacity:1;transform:none}}
 #holo-login.hlp-reveal:not(.hl-boot):not(.unfog) .hl-panel{animation:hlp-reveal .6s cubic-bezier(.4,0,.2,1) both}
 /* the ⋯ door — the SAME quiet affordance the home screen wears, top-right: everything about how this
    computer looks and wakes lives behind it. One circle, no words. */
@@ -378,8 +378,8 @@ const POSES = {
   // natural size (bounded, so a soft render never turns to mush) — both players EASE it like cap, so the
   // hand-off to greet is ONE continuous shrink-and-glide, never a snap.
   boot:   { cx: 0.5, cy: 0.5, cap: 0.95, up: 1.5 },
-  greet:  { cx: 0.5, cy: 0.36, cap: 0.50, anchor: true, mult: 10, up: 1.35 },
-  verify: { cx: 0.5, cy: 0.36, cap: 0.54, anchor: true, mult: 10, up: 1.35 },
+  greet:  { cx: 0.5, cy: 0.36, cap: 0.50, anchor: true, mult: 10, up: 1.5 },
+  verify: { cx: 0.5, cy: 0.36, cap: 0.54, anchor: true, mult: 10, up: 1.5 },
 };
 // GOLDEN HERO: the emblem grows UPWARD from the identity slot (its bottom pinned just above the button) to
 // fill the upper golden-major section — its centre lands on the upper golden line (38.2vh) while the
@@ -392,7 +392,7 @@ function anchorTarget(overlay, p, fallback) {
       const r = a.getBoundingClientRect();
       if (r.width) {
         const topGap = Math.round(window.innerHeight * 0.05);        // golden breathing room above the emblem
-        const cap = Math.max(r.width, Math.min(r.width * (p.mult || 8), r.bottom - topGap, window.innerWidth * 0.9, window.innerHeight * 0.56));
+        const cap = Math.max(r.width, Math.min(r.width * (p.mult || 8), r.bottom - topGap, window.innerWidth * 0.9, window.innerHeight * 0.62));
         return { cx: r.left + r.width / 2, cy: r.bottom - cap / 2, cap };
       }
     }

@@ -8,8 +8,8 @@
  "mirror": "https://huggingface.co/HOLOGRAMTECH/holo-messenger-shell/resolve/main/b/",
  "tiers": {
   "core": {
-   "files": 623,
-   "bytes": 12748457,
+   "files": 662,
+   "bytes": 13722233,
    "hf": 0
   },
   "apps": {
@@ -2939,10 +2939,276 @@
    "tier": "apps",
    "source": "hf"
   },
+  "apps/holo-messenger/_vendor/telegram/README.txt": {
+   "sha256": "e4251e2b5d0f523d0ce799dab9704936efe0b2c5a0d3ac403f76e25c27942f65",
+   "blake3": "c987ab64f8b407bb752263d75dc3c00fd5baae6554c827cf51426f666784bb6f",
+   "bytes": 335,
+   "tier": "core",
+   "source": "origin"
+  },
+  "apps/holo-messenger/_vendor/telegram/boot.mjs": {
+   "sha256": "f27e4df0ac89e7b0b061ce00408676f8e3c7059d9947c354870cac06fba27fd4",
+   "blake3": "6caae66904d2d1284fdcbec3956ba11ba4a5020c9b6a0ed65fabde8a00ec7ef3",
+   "bytes": 349,
+   "tier": "core",
+   "source": "origin"
+  },
+  "apps/holo-messenger/_vendor/telegram/hashfix.mjs": {
+   "sha256": "829eb2008dde73e13ad96d141175fa3cb1d7d7bf59c8bbbe4dd122414290bcc7",
+   "blake3": "e0390fd76616631229cb8c0f04c49f001bc41a539750ecce37f76a1b9026a3a9",
+   "bytes": 3112,
+   "tier": "core",
+   "source": "origin"
+  },
+  "apps/holo-messenger/_vendor/telegram/m0.mjs": {
+   "sha256": "8c04910c00f7d6685dd0b9dbaf7a2cf5c0ab4d04ddd61f705e12c5d7e4984c32",
+   "blake3": "e0acd4308aff64820115a1969ada5f19b6880992fd3d722d4ca8a723cbf87dbf",
+   "bytes": 307,
+   "tier": "core",
+   "source": "origin"
+  },
+  "apps/holo-messenger/_vendor/telegram/m1.mjs": {
+   "sha256": "61df9c177c1423780d3142ed82268a5fa463bb5554e34f5a2a05d1f98250c9e0",
+   "blake3": "a6c7a7985d9c19f04fc7404e5e07f4983729a9d2505216177f150e2c994bdb27",
+   "bytes": 533,
+   "tier": "core",
+   "source": "origin"
+  },
+  "apps/holo-messenger/_vendor/telegram/m10.mjs": {
+   "sha256": "215c06bf669019afdac60e8078d7a20bbe8a707024fabd42972b1283cbdc85e8",
+   "blake3": "432ad3ea763ff306476e1289572fba54c93b727a094233a0be7b944f628a91a2",
+   "bytes": 1641,
+   "tier": "core",
+   "source": "origin"
+  },
+  "apps/holo-messenger/_vendor/telegram/m11.mjs": {
+   "sha256": "09e5bf19e4502c96a01d94c9c173b8fbd956b6bba947e776f00e86885ec5e135",
+   "blake3": "c2773ac3695768a451afbaf5a3d54e6eafa8499095e7deae89832e6a494ce8d0",
+   "bytes": 4188,
+   "tier": "core",
+   "source": "origin"
+  },
+  "apps/holo-messenger/_vendor/telegram/m12.mjs": {
+   "sha256": "375d627c276f8a8735962229c65cdcc0f19f979be0293b47919228ebce1282a6",
+   "blake3": "01f9fec52fa9ee4c70dcb27038468809efbcbba28a46459e909af5c2d0519ab6",
+   "bytes": 811036,
+   "tier": "core",
+   "source": "origin"
+  },
+  "apps/holo-messenger/_vendor/telegram/m13.mjs": {
+   "sha256": "2923654f5c2da86d7509a88ee608c678fb09d92d1c72f88ac0b38edff4a7f5e1",
+   "blake3": "3c52021a21bc58132ea9665adff72a2dcfa0bcc69fee1051cfad4cf0f51d4e48",
+   "bytes": 10907,
+   "tier": "core",
+   "source": "origin"
+  },
+  "apps/holo-messenger/_vendor/telegram/m14.mjs": {
+   "sha256": "be3d88555a43f2c17b492867bc774c7dfebe57dae81388d2eb788d8a3405f849",
+   "blake3": "b6b9b1a49acb14bb15cfea70e266d793627843a631dd7329bcc63c139b82e8c8",
+   "bytes": 1498,
+   "tier": "core",
+   "source": "origin"
+  },
+  "apps/holo-messenger/_vendor/telegram/m15.mjs": {
+   "sha256": "4bb3f80916165dfa08708cc098738253bb6edc66bf7d1e78de2d02667902d278",
+   "blake3": "5605937dc0622b9a5097aa2a88ba33f4a895e637f815eacfed87a66503e90d88",
+   "bytes": 746,
+   "tier": "core",
+   "source": "origin"
+  },
+  "apps/holo-messenger/_vendor/telegram/m16.mjs": {
+   "sha256": "7cd7325f9f94a1fe3f05f0e570528f595dbf735f3ebef33fc49d16af1450a8bf",
+   "blake3": "7a9a74bd6626e09a3614b1281519270f1c7b4e4a3d8541299c9200b536076c52",
+   "bytes": 1893,
+   "tier": "core",
+   "source": "origin"
+  },
+  "apps/holo-messenger/_vendor/telegram/m17.mjs": {
+   "sha256": "b7862dbfba8bbbca956f19e4e08280b529e4b27468779775a9093aef8c92dc1d",
+   "blake3": "4035122e9f56a33fe2f9bde0f0fe42829cd9b4efd01f378eff15ca85fc03619f",
+   "bytes": 2938,
+   "tier": "core",
+   "source": "origin"
+  },
+  "apps/holo-messenger/_vendor/telegram/m18.mjs": {
+   "sha256": "6e69ddc3803381d7c9208147113c2a8de09f33ccd559fb5d90e5cd77d19c939c",
+   "blake3": "8e2492aa5c80feeb9a047cf877ec6a4c08aeccec852d4458a5af6f020a3da0be",
+   "bytes": 3192,
+   "tier": "core",
+   "source": "origin"
+  },
+  "apps/holo-messenger/_vendor/telegram/m19.mjs": {
+   "sha256": "33f1125514cc4c438774a4835bb651ab066dbf3a5cd4262896994057958a5140",
+   "blake3": "5cbf75d61651caa2d49e0676b0e669b6f483078a80557db3b15ed880cf8c4c95",
+   "bytes": 3050,
+   "tier": "core",
+   "source": "origin"
+  },
+  "apps/holo-messenger/_vendor/telegram/m2.mjs": {
+   "sha256": "64fb61aa5f48644d685f9ceabedba60ea6b5d6ce03dac1943e863d00d9e574f3",
+   "blake3": "dcdbc1668443cf36c990419bbb03ab22b21c9fbf67e5dd18624e289203d8f5c8",
+   "bytes": 28845,
+   "tier": "core",
+   "source": "origin"
+  },
+  "apps/holo-messenger/_vendor/telegram/m20.mjs": {
+   "sha256": "c66ff4b406bad449bfb2ced355f15badf16f4d9e035d2d300e33b5aeee64e3be",
+   "blake3": "7ef7260134c80f070c0e24536fa6596dc59b67c1d399416a6669baebee5ecef1",
+   "bytes": 685,
+   "tier": "core",
+   "source": "origin"
+  },
+  "apps/holo-messenger/_vendor/telegram/m21.mjs": {
+   "sha256": "047e45ab1d2022d1aa9f984ccdffdb6a453b4add3a093e7a51d6bbeb51dfc2e6",
+   "blake3": "e87ad93aca5e2b9ad2a1c96ce2378465eafef1e50c32e985dd3b312c9f5c5ea7",
+   "bytes": 283,
+   "tier": "core",
+   "source": "origin"
+  },
+  "apps/holo-messenger/_vendor/telegram/m22.mjs": {
+   "sha256": "3f3e225fbce928e7556c759c2426ecafb05e451430e798d9f14e62c61208f2f0",
+   "blake3": "8dd3cd33994f2f24b977d7ee9a3c5feff99402ec4c70c4c8edacb0261405ebe4",
+   "bytes": 3166,
+   "tier": "core",
+   "source": "origin"
+  },
+  "apps/holo-messenger/_vendor/telegram/m23.mjs": {
+   "sha256": "7eb9d43291cf89f80b2a6b9ec89a8c7827d8ebaf45bfbd9bed12f49dfcb09b0b",
+   "blake3": "bdcd82e4af010fab5fb6878295747b8b2c162b8cecb0e15d65fad2ecce25fafa",
+   "bytes": 5362,
+   "tier": "core",
+   "source": "origin"
+  },
+  "apps/holo-messenger/_vendor/telegram/m24.mjs": {
+   "sha256": "a98282cfe854330df5843cfa4ce5c5467a4486a9aa3aa5cf24d21463af987e77",
+   "blake3": "2a88450e73ccca2f4b818b9fc6edf34dd37a5287effc92e8eaaa635e62daf00e",
+   "bytes": 891,
+   "tier": "core",
+   "source": "origin"
+  },
+  "apps/holo-messenger/_vendor/telegram/m25.mjs": {
+   "sha256": "564301e3e6cf3e854d1186ae71180d088522a8908d8c1f256fd57f5fdd4d3ac3",
+   "blake3": "8f424332da5528b20e172ce75cc0f1e698ea87f8292f91e526bc374d7990ce5b",
+   "bytes": 979,
+   "tier": "core",
+   "source": "origin"
+  },
+  "apps/holo-messenger/_vendor/telegram/m3.mjs": {
+   "sha256": "22dbb3c11f7dd879c13cfda1f6f4a8b905a6a0832ee8effb467bf66cbb06ee26",
+   "blake3": "6cbf4eaa07fb86f341524515c822d120e8095b2072fdf5b883691333060cb836",
+   "bytes": 10555,
+   "tier": "core",
+   "source": "origin"
+  },
+  "apps/holo-messenger/_vendor/telegram/m4.mjs": {
+   "sha256": "25e7dd626b227a24ab18c88c38b19d8f2b79cea195d328e090da393b23437181",
+   "blake3": "34b6537b17e3e16147790c21f122f95c223509c74ab87ce42e8fe4117cb83305",
+   "bytes": 6205,
+   "tier": "core",
+   "source": "origin"
+  },
+  "apps/holo-messenger/_vendor/telegram/m5.mjs": {
+   "sha256": "b5d9f2c943b54e116da088bd863165229531c7415bdc3619e2a40676cc1975d0",
+   "blake3": "791a5734e86e208e29536fb8987bc1e5f558a19fcbf1736822e0602633ab852c",
+   "bytes": 12110,
+   "tier": "core",
+   "source": "origin"
+  },
+  "apps/holo-messenger/_vendor/telegram/m6.mjs": {
+   "sha256": "3af29aceefcbec22708bbce99c5f66c5a945ea48ed5ba4905a91e5d67019e18e",
+   "blake3": "eae83e88bdfae4740232d6da87ea1468da1b4257fc05535751fbd2b8ade7493c",
+   "bytes": 2754,
+   "tier": "core",
+   "source": "origin"
+  },
+  "apps/holo-messenger/_vendor/telegram/m7.mjs": {
+   "sha256": "50af6793b67bcafecda0909b58ce6b0b35c2b60079ef91cf9c10e178e8cff4e9",
+   "blake3": "125cdb4c3aec7fd3defb59723151381783ae784c93c926208e421b1da869bedd",
+   "bytes": 1770,
+   "tier": "core",
+   "source": "origin"
+  },
+  "apps/holo-messenger/_vendor/telegram/m8.mjs": {
+   "sha256": "f9afabbaeda6ed76b46366fc57312fe79b69452db35481830a091a0727291a7b",
+   "blake3": "c81d6fb37d55d0620294c09e03480ace5ff608bae12d2ae5fee2398ded669851",
+   "bytes": 397,
+   "tier": "core",
+   "source": "origin"
+  },
+  "apps/holo-messenger/_vendor/telegram/m9.mjs": {
+   "sha256": "ec11b5a1b453033700efb278be440822d7da8460d19691fc8b7a765eeac38101",
+   "blake3": "9bb4d87b6e4aa66e1f2b9b3565b09985332716d529c7ecbb52118e662f93584b",
+   "bytes": 7849,
+   "tier": "core",
+   "source": "origin"
+  },
+  "apps/holo-messenger/_vendor/telegram/noble/_assert.mjs": {
+   "sha256": "7695fe9689e3799e477b2e5bf8408a142bbfdf7d714d13214f5a5c82e84251e3",
+   "blake3": "dd9a1424fd68b8ef908df3da68b2c4e0494f567619d57c360109bbf930a7be68",
+   "bytes": 1175,
+   "tier": "core",
+   "source": "origin"
+  },
+  "apps/holo-messenger/_vendor/telegram/noble/crypto.mjs": {
+   "sha256": "fe23c9fadbbbdc205707e045b292d697448c1527874a9654850cb414aaa24d97",
+   "blake3": "a445735f093958e87133f430aa152a2017852f34b36bf6d38f34b2b9dc755dd7",
+   "bytes": 180,
+   "tier": "core",
+   "source": "origin"
+  },
+  "apps/holo-messenger/_vendor/telegram/noble/hmac.bundle.mjs": {
+   "sha256": "34919cc889b9add234b9c3f8bff1571cefc2d38b9e75929189b3188df9a65237",
+   "blake3": "9f9f157bb9d3ae258098dd13c37a50a2818b8b737fccccb3752ad07136195a76",
+   "bytes": 2521,
+   "tier": "core",
+   "source": "origin"
+  },
+  "apps/holo-messenger/_vendor/telegram/noble/hmac.mjs": {
+   "sha256": "72cf70bbec2979bc3370e4d0808b54592f8477867d0145ed35394cbcbc0eb080",
+   "blake3": "0906ae92357e290694f8cc0f9caa9b8b58e95b18363239f14ba1c0251446347b",
+   "bytes": 1430,
+   "tier": "core",
+   "source": "origin"
+  },
+  "apps/holo-messenger/_vendor/telegram/noble/pbkdf2.bundle.mjs": {
+   "sha256": "271e638370657e4473d4faaadafdeac3d7a7f0c2100e71180e4277cdfa82c571",
+   "blake3": "cdca3687a2eee28c18e0df3d0b84ff651ef1455231770624663b610716688a87",
+   "bytes": 1517,
+   "tier": "core",
+   "source": "origin"
+  },
+  "apps/holo-messenger/_vendor/telegram/noble/sha1.bundle.mjs": {
+   "sha256": "d217d60b43df1ea176ce3ff72079a5d738fbd0020777ae67926d48b8ded45fd3",
+   "blake3": "2780435ec2401e047b1e7bdd497c4c316bedacec2aa10f0963473360d04e3836",
+   "bytes": 3876,
+   "tier": "core",
+   "source": "origin"
+  },
+  "apps/holo-messenger/_vendor/telegram/noble/sha256.bundle.mjs": {
+   "sha256": "e3f97062329877963b741a566e3aa85b7b7e81d49d39eeab180e05321a62de7c",
+   "blake3": "e976e8512a76f949d27a074b861e25b3fe97b9a3645841219f5a054e2dd7400f",
+   "bytes": 5030,
+   "tier": "core",
+   "source": "origin"
+  },
+  "apps/holo-messenger/_vendor/telegram/noble/sha512.bundle.mjs": {
+   "sha256": "2475e90150b5f6bb5ed8177085b17532825c4bcb853d7d06540b983b9c24b29d",
+   "blake3": "dfa4a4230ef06c02282a14e5229c44091930fcd954124a6190d21eeb779ae69c",
+   "bytes": 9360,
+   "tier": "core",
+   "source": "origin"
+  },
+  "apps/holo-messenger/_vendor/telegram/noble/utils.mjs": {
+   "sha256": "e77ff6103db0b16440296b74be9a7ab12c96b0572b6fe0a60b8ae92f5b6e9c1b",
+   "blake3": "f8d7ca6aca1c67a20cdd5cc9703722db7b9406d030b5b18ee033e33466dbb3ea",
+   "bytes": 3233,
+   "tier": "core",
+   "source": "origin"
+  },
   "apps/holo-messenger/_vendor/ui/chat-ui.bundle.css": {
-   "sha256": "2e16f34a8afca9c4bf9e3d061ee8e7c13e95ba68dd576c7d8ab0eea1f0e0ac39",
-   "blake3": "59037b30e4b9ec1cd1ff04779dc30a6da43e87720d4193692bad570f29646c51",
-   "bytes": 224302,
+   "sha256": "1368d3c5634f639ea9cf6e17051b1124101e02a96c041c2587c56c1664530842",
+   "blake3": "41659e71f396d05eb45a5ccf639092193fb14e5dc7dd1bde3dcecb6411c890b0",
+   "bytes": 224937,
    "tier": "core",
    "source": "origin"
   },
@@ -3132,6 +3398,13 @@
    "sha256": "fb28ea5f9587d3bd26d0a01c6ee494ffe9f03ff4a2abca8c0b30ec9bbfe32f77",
    "blake3": "c5e984c02f859fce72fd88ed6fd852b9f01278d8c245967a36595ec0b53dba89",
    "bytes": 5419,
+   "tier": "core",
+   "source": "origin"
+  },
+  "apps/holo-messenger/connectors/tg-connector.mjs": {
+   "sha256": "e9bef190e8cd70166135116f2e8ddd436d47d0f705998f9bca3c213eb8130fbf",
+   "blake3": "13a46c1d84468226aebe96499e8515e42ad07d25713de5cdbd3e13f22a627753",
+   "bytes": 8375,
    "tier": "core",
    "source": "origin"
   },
@@ -3353,9 +3626,9 @@
    "source": "origin"
   },
   "apps/holo-messenger/holo-messenger-app.mjs": {
-   "sha256": "e99bb9094d0796f810c305f0ab6147feee2cb5a537391c54d6b23586a4911ca7",
-   "blake3": "3cb7c04ddfe9d04afb5ddbe51b7f1ebe63e64f0294b5524648691d2d9bc30d7d",
-   "bytes": 334762,
+   "sha256": "7b594319f50034a29876756daa28dac3a0ca022ae22f46ad1616ca868355ba9f",
+   "blake3": "156ce6d037fbb7b025feb9f044d9c27ff98ae556a3961d804caa65467d70de95",
+   "bytes": 343661,
    "tier": "core",
    "source": "origin"
   },
@@ -3549,8 +3822,8 @@
    "source": "origin"
   },
   "apps/holo-messenger/holo-sw.js": {
-   "sha256": "4bd60e6f6380812d96cc6f3d181f648f0c0510330ec99adfe966276aaa90691c",
-   "blake3": "bdce9c58744d65afb82fd5cc34d80017befde1429c6e0d282457df0fcae35c19",
+   "sha256": "862d484f922c40befa0f3e356b759772c21a78ce8c84eb5f0db29f675c6933b8",
+   "blake3": "616767ca2e7f6d0d0251cb5f9d6024cb6f5d528a51b201fd8b71c9a5f0e63369",
    "bytes": 26338,
    "tier": "core",
    "source": "origin"
@@ -3969,8 +4242,8 @@
    "source": "origin"
   },
   "apps/holo-messenger/shell-manifest.json": {
-   "sha256": "7faccd014c971ff01859a0450e319945264a4719e02865a56551d6d5b0e51b95",
-   "blake3": "6e7371fdfa4f2a0edd4801cd4ddcc4d6554dfeea4f35b3b692d23a0172a531b2",
+   "sha256": "bb766c941deaaa2d0c5d3637480d8888b39db36ab7d706431d1ee42aa1a202fb",
+   "blake3": "a9188664587f110576f9f83560da76694a772733d8647256dade0e8e539ea781",
    "bytes": 6471,
    "tier": "core",
    "source": "origin"
@@ -29746,9 +30019,9 @@
    "source": "origin"
   },
   "usr/lib/holo/holo-plymouth.mjs": {
-   "sha256": "cc070275c481e97eb2d09c305ebb1397a45350a90c24e69bbc6165bce8f0c2cb",
-   "blake3": "996a3b37be8fb5bc92ec7ae1fea81ab732931d647a2a4a4eb573b3014288a3e7",
-   "bytes": 96069,
+   "sha256": "0c4c39d784aa5885e42f7bff25972e9433707b9b34d5d860019140e1eb4af7ef",
+   "blake3": "93242adcb3619760157dd8bc25c692604d87baa0fa96d91b132bedfcedb842ca",
+   "bytes": 96038,
    "tier": "core",
    "source": "origin"
   },
