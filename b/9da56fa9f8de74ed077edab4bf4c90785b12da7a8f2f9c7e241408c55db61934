@@ -9,7 +9,7 @@
  "tiers": {
   "core": {
    "files": 614,
-   "bytes": 12710387,
+   "bytes": 12710493,
    "hf": 0
   },
   "apps": {
@@ -16266,8 +16266,8 @@
    "source": "hf"
   },
   "apps/player/holo-evicted.json": {
-   "sha256": "86d2ffa97f2c5fde6215f21c910b2395fa6f3bb95f253a9bdb975a2b90d59d03",
-   "blake3": "3110e87b3dafb51de9e40df0969471128b3ae0e0f9e5d98abaf6f3058236ff9f",
+   "sha256": "93039b770b4a7aa3a936bb77ffde9629f37c4d924a966c791f107d52f3f70d3a",
+   "blake3": "f4ca1fcbb99a6cfc15643fdda7fb3907e65f3e25ec2f82a8295a9d89cdca1336",
    "bytes": 11559,
    "tier": "apps",
    "source": "origin"
@@ -16688,7 +16688,7 @@
    "source": "hf"
   },
   "apps/player/index.html": {
-   "blake3": "1a3b54bf183c8a15d24d275c56850f8433d4d49c4d12e0c33fd7b64ba19f08f5",
+   "blake3": "2cd4c4936e27999b57a0db24d2b73f5a4e6774ddd756d2093d3d2e5e4f0fc6cc",
    "tier": "apps",
    "source": "hf"
   },
@@ -30196,9 +30196,9 @@
    "source": "origin"
   },
   "usr/lib/holo/holo-signin.mjs": {
-   "sha256": "34f84ec7a7b19ca916fcfdf547c98e75882db85ab3d488a202dfa2beda3a9efe",
-   "blake3": "e9f5f313218c5a65ace7c4dd8506490eb1b22710bbc83bf3cc7f2110480a1ee3",
-   "bytes": 47428,
+   "sha256": "ffa406b9ba88792c6ffe40d5bbbfa79526f0d73e4535fa0b14def67387020670",
+   "blake3": "5bdcf3c9fe4e460c8b4fdc23ae24f9b6660814ce421843fb51debe97a77f0b99",
+   "bytes": 47534,
    "tier": "core",
    "source": "origin"
   },
