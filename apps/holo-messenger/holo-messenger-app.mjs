@@ -25,10 +25,10 @@ import { planProposal as _qPlan, mayProceed as _qMayProceed, isActionable as _qA
 import * as HoloTogether from "./holo-together.mjs";   // TOGETHER: one link to a live shared experience (works off-Hologram)
 import "./holo-together-rtc.mjs";   // installs window.HoloTogether (WebRTC host/join over the signal relay)
 import * as TogetherPlayer from "./holo-together-player.mjs";   // TOGETHER: in-app host driver (overlay player + bindVideo)
-import * as HoloCall from "./holo-call.mjs?v=8c1a249f8792";   // CALLS: 1:1 voice/video (Nostr signaling on hosted origins + TURN + the ring detector); ?v busts the SW cache-first module
+import * as HoloCall from "./holo-call.mjs?v=8c1a249f8792";   // CALLS: 1:1 voice/video (Nostr signaling on hosted origins + TURN + the ring detector) + HD callMedia/tunePeer; ?v busts the SW cache-first module
 import { openCallUI } from "./holo-call-ui.mjs?v=d2de7b874247";   // CALLS: the floating call surface — now RINGS (WebAudio ring/ringback + vibration)
-import * as HoloMesh from "./holo-call-mesh.mjs?v=4d0de757be97";   // MEET: N-peer group mesh over the ONE shared signal door (Nostr on web)
-import { openMeetUI } from "./holo-meet-ui.mjs?v=f0143e6c8eec";   // MEET: the grid meeting surface (own DOM)
+import * as HoloMesh from "./holo-call-mesh.mjs?v=4d0de757be97";   // MEET: N-peer group mesh over the ONE shared signal door (Nostr on web) + names/adaptive-bitrate/meet-link ring
+import { openMeetUI } from "./holo-meet-ui.mjs?v=f0143e6c8eec";   // MEET: the grid meeting surface (own DOM) — labels + Invite copy-link
 import { makeQResponder, makeQGroupResponder, mentionsQ } from "../../usr/lib/holo/q/holo-q-contact.mjs";   // Q AS A CONTACT
 import { seedLookup } from "../../usr/lib/holo/q/holo-q-seed.mjs";   // O(1) cold-start instant answers (first-time responsiveness)
 import { createHoloModelBrain } from "../../usr/lib/holo/voice/holo-voice-holo-brain.mjs";   // Q's on-device brain (stream + setSkill)
@@ -37,6 +37,10 @@ import { createHoloModelBrain } from "../../usr/lib/holo/voice/holo-voice-holo-b
 // disk) must degrade Q to its seed tier, NEVER take down the whole messenger boot. The inbox, chats, and real sends
 // cannot depend on the model's module graph linking. (Was a static import — that made one bad glue file fatal.)
 import "../../usr/lib/holo/q/holo-q-passport.mjs";   // window.HoloQPassport - Q signs its own messages (Agent Passport)
+// MOBILE-LEAN (2026-07): ONE phone predicate reused by the mobile-lean gates below (Q-brain import + Harper
+// pre-warm). Coarse pointer + small viewport (the shell's own phone test) OR Save-Data — flagship phones
+// included, since mobile CPU/battery/network are the constraint, not GPU. Desktop → false → behaviour unchanged.
+const _qLeanMobile = (() => { try { return (typeof matchMedia !== "undefined" && matchMedia("(pointer:coarse)").matches && Math.min(innerWidth, innerHeight) <= 700) || (typeof navigator !== "undefined" && navigator.connection?.saveData === true); } catch { return false; } })();
 import "../../usr/lib/holo/holo-syshealth.mjs";   // M2 system-awareness: window.HoloSysHealth.summary() — the OS's OWN live health, fail-soft (no signal → honest all-clear)
 import "../../usr/lib/holo/holo-memory.mjs";   // M3 real inner life: window.HoloMemory — Q's persistent, κ-sealed, AES-encrypted (vault) user-model. Fail-closed private (no vault → in-session only, never plaintext)
 import "../../usr/lib/holo/holo-q-corpus.mjs";
@@ -1835,6 +1839,9 @@ async function ensureHubConnector() {
 // which networks are genuinely connectable right now (real bridge running, or the host hub is present)
 function realNetworkIds() {
   const ids = Object.keys(BRIDGES);
+  // SERVERLESS WEB: Telegram connects IN-BROWSER (gramjs → Telegram DC over wss, no server/app), so it is
+  // web-capable on EVERY surface — the card reads "tap to connect" and opens the QR, not "open in the app".
+  if (!ids.includes("telegram")) ids.push("telegram");
   try { if (typeof window !== "undefined" && window.__holoHub && window.__holoHub.connect) for (const n of NETWORKS) if (!ids.includes(n.id)) ids.push(n.id); } catch {}
   return ids;
 }
@@ -2519,7 +2526,7 @@ async function buildQ() {
         append: async ({ role, text }) => { try { const t = String(text || "").trim(); if (!t) return null; await c.thread.ingest({ text: t, sender: (role === "assistant" || role === "Q") ? "Q" : "Me", sentAt: now(), chat: "Q", source: "holo" }); _touch(c.meta.genesis); rebuildSoon(); return true; } catch (e) { return null; } },
       };
     } catch (e) {}
-    const qFirst = (profileName || "").trim().split(/\s+/)[0];   // greet by first name when known (returning operator); graceful "Hey," on a fresh, unnamed first run
+    const _qn0 = (profileName || "").trim().split(/\s+/)[0]; const qFirst = /^(you|operator|guest|explorer)$/i.test(_qn0) ? "" : _qn0;   // greet by first name when known (returning operator); graceful "Hey," on a fresh, unnamed first run
     let _greet = `Hey${qFirst ? " " + qFirst : ""}, I'm Q. I'm on this device, so anything you say here stays with you. Ask me anything, or @Q me in any chat.`;
     try {
       const M = (typeof window !== "undefined") && window.HoloMemory;
@@ -2546,11 +2553,28 @@ async function buildQ() {
     // construction throws, fall back to a no-op brain (info never-ready) so the responder rides the instant seed /
     // ONNX tiers. Everything else — inbox, chats, peer sends, Q's grounded turn-rendering — boots and works unchanged.
     let _qBrainRaw;
-    try { const _bm = await import("../q/core/q-brain-fast.mjs"); _qBrainRaw = _bm.createFastQBrain({ family: "BitNet", maxTokens: 512 }); }
-    catch (e) { _qBrainRaw = { info: () => ({ ready: false }), load: async () => {}, generate: async function* () {}, chat: async () => "", persona: () => "" }; }
+    const _qNoopBrain = () => ({ info: () => ({ ready: false }), load: async () => {}, generate: async function* () {}, chat: async () => "", persona: () => "" });
+    // MOBILE-LEAN: the real BitNet brain STATICALLY pulls apps/q/pkg/holospaces_web (~6.5 MB wasm) into the
+    // module graph the instant it is imported. Nothing at first paint needs it — Q answers via the instant
+    // seed / on-demand ONNX tiers until warmed. So on phones/data-saver we DON'T import it at boot; ensureBrain()
+    // imports + constructs it on the first real warm (the orb tap → window.HoloQ.warm), keeping ~6.5 MB off the
+    // mobile critical path while orb-open still upgrades to the full brain. Desktop: eager, exactly as before.
+    let _qBrainReady = false;
+    async function ensureBrain() {
+      if (_qBrainReady) return _qBrainRaw;
+      _qBrainReady = true;
+      try { const _bm = await import("../q/core/q-brain-fast.mjs"); _qBrainRaw = _bm.createFastQBrain({ family: "BitNet", maxTokens: 512 }); }
+      catch (e) { _qBrainRaw = _qNoopBrain(); }
+      return _qBrainRaw;
+    }
+    if (_qLeanMobile) { _qBrainRaw = _qNoopBrain(); }
+    else { await ensureBrain(); }
     const _qWarm = () => { try { const i = _qBrainRaw.info && _qBrainRaw.info(); return !!(i && i.ready); } catch { return false; } };
     qBrain = {
       ..._qBrainRaw,
+      // dynamic delegates so a lazy ensureBrain() swap on mobile is visible to every consumer (not a boot snapshot)
+      info: (...a) => { try { return _qBrainRaw.info(...a); } catch { return { ready: false }; } },
+      persona: (...a) => { try { return _qBrainRaw.persona ? _qBrainRaw.persona(...a) : ""; } catch { return ""; } },
       generate: async function* (h, o) { if (!_qWarm()) return; yield* _qBrainRaw.generate(h, o); },
       chat: async (h, o) => { if (!_qWarm()) return ""; return _qBrainRaw.chat(h, o); },
     };
@@ -2634,7 +2658,7 @@ async function buildQ() {
         return text.trim(); } catch { return ""; }
     }
     try { window.HoloQ = window.HoloQ || {}; window.HoloQ.generate = async (prompt) => qBrain.chat([{ role: "user", content: String(prompt) }]); window.HoloQ.generateStream = async (prompt, onToken) => { let acc = ""; const push = (full) => { try { if (onToken) onToken(full); } catch (e) {} }; try { const full = await qBrain.chat([{ role: "user", content: String(prompt) }], { onToken: (t) => { acc += String(t || ""); push(acc); }, onDelta: (dd, f) => { acc = (typeof f === "string") ? f : (acc + String(dd || "")); push(acc); } }); const text = String(full || acc || ""); if (!acc && text && onToken) { const parts = text.split(/(\s+)/); let s = ""; for (const w of parts) { s += w; push(s); await new Promise((r) => setTimeout(r, 12)); } } return text; } catch (e) { return acc || ""; } };   // HOLO-Q-INSTANT-REAL: stream the drawer brain token-by-token (native if the engine streams, else word-chunked)
-    window.HoloQ.draftLight = draftLight; window.HoloQ.warm = () => _qBrainRaw.load((p) => { try { window.__holoQLoad = p; } catch (e) {} }).catch(() => {}); window.HoloQ.warmSeed = () => { try { return ensureOnnxSeed(); } catch (e) { return null; } }; window.HoloQ.ready = () => _qWarm(); window.HoloQ.info = () => { try { return _qBrainRaw.info(); } catch (e) { return { ready: false }; } }; window.HoloQ.stats = () => qLastStats; } catch {}
+    window.HoloQ.draftLight = draftLight; window.HoloQ.warm = async () => { try { await ensureBrain(); return await _qBrainRaw.load((p) => { try { window.__holoQLoad = p; } catch (e) {} }); } catch (e) {} }; window.HoloQ.warmSeed = () => { try { return ensureOnnxSeed(); } catch (e) { return null; } }; window.HoloQ.ready = () => _qWarm(); window.HoloQ.info = () => { try { return _qBrainRaw.info(); } catch (e) { return { ready: false }; } }; window.HoloQ.stats = () => qLastStats; } catch {}
     // ── selfTest(): a one-command, real-hardware proof that Q actually replies — warm if needed, run a fixed prompt
     // through the SAME chat() path a real turn uses (off the live thread), then assert the SHIPPED text is non-empty,
     // humanized (no LLM tells), and on-identity (no cloud claim), reporting TTFT + tok/s. Run in the console on real
@@ -2643,7 +2667,7 @@ async function buildQ() {
       window.HoloQ.selfTest = async (prompt = "Tell me something amazing") => {
         if (qThinking || _qAbort) return { ok: false, error: "busy — a Q turn is in flight; try again in a moment" };
         const t0 = (typeof performance !== "undefined" ? performance.now() : Date.now());
-        try { if (!_qWarm()) await _qBrainRaw.load(); } catch (e) {}
+        try { if (!_qWarm()) { await ensureBrain(); await _qBrainRaw.load(); } } catch (e) {}
         if (!_qWarm()) return { ok: false, error: "brain not ready (needs WebGPU / still warming)" };
         let persona = ""; try { persona = (qBrain.persona ? qBrain.persona() : "") + _qStyle; } catch (e) {}
         const history = [{ role: "system", content: persona }, { role: "user", content: String(prompt) }];
@@ -3532,7 +3556,10 @@ try { restoreRooms(); } catch {}       // ONE ROOM: rehydrate sealed group rows 
   };
   try { (typeof requestIdleCallback === "function") ? requestIdleCallback(_startBridges, { timeout: 800 }) : setTimeout(_startBridges, 60); } catch { _startBridges(); }
   // warm the on-device grammar engine (Harper WASM) at idle so the FIRST send is already tidied instantly (fail-open)
-  try { const _warmG = () => { import("../../usr/lib/holo/holo-grammar.mjs").then((g) => { _grammarG = g; _grammarMod = Promise.resolve(g); return g && g.warm && g.warm(); }).catch(() => {}); }; (typeof requestIdleCallback === "function") ? requestIdleCallback(_warmG, { timeout: 4000 }) : setTimeout(_warmG, 2500); } catch {}
+  // MOBILE-LEAN: Harper's slimBinaryInlined.js is ~23 MB — the single biggest thing on the mobile boot path. Skip
+  // the speculative boot pre-warm on phones; grammar still loads on-demand on the first send (fail-open, text
+  // returns UNCHANGED if cold), so the only cost is the very first mobile message isn't pre-tidied. Desktop unchanged.
+  if (!_qLeanMobile) try { const _warmG = () => { import("../../usr/lib/holo/holo-grammar.mjs").then((g) => { _grammarG = g; _grammarMod = Promise.resolve(g); return g && g.warm && g.warm(); }).catch(() => {}); }; (typeof requestIdleCallback === "function") ? requestIdleCallback(_warmG, { timeout: 4000 }) : setTimeout(_warmG, 2500); } catch {}
   // ── Stage 7 P2 - SOVEREIGN SOCIAL GRAPH cold-start: harvest the REAL cross-platform firehose (every chat's
   // history the bridges already synced) into the pure derivation (holo-social-graph). NEVER on boot - an explicit
   // call (window.__graph.derive) so it can't block first paint; recent history dominates the weight so we cap
