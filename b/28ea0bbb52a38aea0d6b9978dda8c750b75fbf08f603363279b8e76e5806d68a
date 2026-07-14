@@ -492,7 +492,7 @@ if (document.readyState === "complete") go(); else addEventListener("load", go);
 
 <script type="module">
   // ?v=N - bump on each deploy so the browser can never serve a stale cached bundle (the cause of a frozen/old build).
-  import "./_vendor/ui/chat-ui.bundle.js?v=d5ea9e0a4d9a";   // → window.HoloMessengerUI
+  import "./_vendor/ui/chat-ui.bundle.js?v=7c0ac719466c";   // → window.HoloMessengerUI
   // Opt-in: render the WhatsApp UX from STREAMING shadcn κ-components instead of the chatscope bundle.
   // Lazy — the module loads ONLY when opted in (?ui=shadcn or holo.ui.shadcn=1); the default boot never
   // parses it. Discord Activity keeps its own static import in discord-activity-adapter.mjs.
@@ -500,7 +500,7 @@ if (document.readyState === "complete") go(); else addEventListener("load", go);
     if (new URLSearchParams(location.search).get("ui") === "shadcn" || localStorage.getItem("holo.ui.shadcn") === "1")
       await import("./messenger-shadcn-ui.mjs");
   } catch {}
-  import { boot } from "./holo-messenger-app.mjs?v=e99bb9094d07";
+  import { boot } from "./holo-messenger-app.mjs?v=c0a2dce8753c";
 
   const root = document.getElementById("root");
   // TEE GATE + SPECULATIVE WARM PAINT, one motion. The gate already mounted (parallel module above); it

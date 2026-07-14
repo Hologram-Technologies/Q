@@ -500,7 +500,7 @@ if (document.readyState === "complete") go(); else addEventListener("load", go);
     if (new URLSearchParams(location.search).get("ui") === "shadcn" || localStorage.getItem("holo.ui.shadcn") === "1")
       await import("./messenger-shadcn-ui.mjs");
   } catch {}
-  import { boot } from "./holo-messenger-app.mjs?v=e99bb9094d07";
+  import { boot } from "./holo-messenger-app.mjs?v=c0a2dce8753c";
 
   const root = document.getElementById("root");
   // TEE GATE + SPECULATIVE WARM PAINT, one motion. The gate already mounted (parallel module above); it
