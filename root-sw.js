@@ -370,6 +370,14 @@ self.addEventListener("fetch", (e) => {
     const rp = BASE + p;
     // P2 (HOLO-PAINTED-TRUTH): same collar as the catch-all — remapped canonical paths served many
     // pre-paint modules at 6-7s each on a hung socket (measured live); the pin answers after 1.6s.
-    e.respondWith(collaredNet(() => fetch(rp + url.search), () => pathFallback(rp)));
+    // On a network MISS the evicted rescue (tree maps → κ-mirror, every byte re-derived) answers
+    // before the 404 escapes — an evicted file addressed root-absolutely is still content (L1).
+    const net = () => fetch(rp + url.search).then((r) => {
+      if (r && (r.ok || r.status !== 404)) return r;
+      try { const cand = RESCUER.matchSync(rp);
+        if (cand) return RESCUER.rescue(new Request(rp + url.search), cand).then((x) => (x && x.ok ? x : r)).catch(() => r); } catch {}
+      return r;
+    });
+    e.respondWith(collaredNet(net, () => pathFallback(rp)));
   }
 });

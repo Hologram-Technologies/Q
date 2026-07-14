@@ -57,7 +57,7 @@ export function makeEvictRescue({ base, blake3Import, rung } = {}) {
         if (p.startsWith(pref) && !p.endsWith("holo-evicted.json"))
           return { kind: "tree", key: t.prefix, rel: p.slice(pref.length).split("?")[0], closureUrl: base + "/" + t.closure };
       }
-    } else if (p.startsWith(base + "/_shared/") || p.startsWith(base + "/usr/share/")) {
+    } else if (p.startsWith(base + "/_shared/") || p.startsWith(base + "/usr/share/") || p.startsWith(base + "/usr/lib/holo/holowhat/")) {
       // registry unknown (fresh restart): tentatively claim the tree-capable prefixes too
       return { kind: "tree?", key: null, rel: null, closureUrl: null, path: p };
     }
