@@ -25,7 +25,10 @@ const ROOT_FILES = { "/holo-resolver.mjs": 1, "/holo-fabric.mjs": 1, "/manifest.
 
 // I0+I1 (HOLO-ONE-KAPPA-IN): pin-at-install + boot-pack ingest — SELF_PIN is defined below (module
 // eval completes before the install event fires).
-self.addEventListener("install", (e) => { self.skipWaiting(); try { e.waitUntil(SELF_PIN.selfPin()); } catch {} });
+// BYTE-ZERO (S0): install carries NOTHING — selfPin (closure + 2.8MB pack ingest) moved AFTER
+// activate→claim, so a cold first visit is CONTROLLED in the time it takes to fetch evicted.json,
+// not the pack. The ingest still runs under activate's waitUntil (the worker lives to finish it).
+self.addEventListener("install", () => self.skipWaiting());
 // THE rescue lives in ONE shared module (holo-evict-rescue.mjs) — root-sw and the messenger's holo-sw
 // import the same code: lazy+memoized registry (restart-safe), per-closure cache, mirror fetch through
 // the incremental-blake3 verifier, generalized to apps AND arbitrary evicted TREES.
@@ -75,7 +78,7 @@ function loadPrismNames() {
 }
 self.addEventListener("message", (ev) => { if (ev.data && ev.data.type === "holo-prism-updated") { loadPrismNames(); try { caches.delete("holo-prism-derived"); } catch {} } });
 
-self.addEventListener("activate", (e) => e.waitUntil(RESCUER.registry().then(() => { loadPrismNames(); return self.clients.claim(); })));
+self.addEventListener("activate", (e) => e.waitUntil(RESCUER.registry().then(() => { loadPrismNames(); return self.clients.claim(); }).then(() => { try { return SELF_PIN.selfPin(); } catch {} })));
 
 // ── O3: the PINNED CLOSURE as the SW's offline path→κ map ──────────────────────────────────────────────
 // holo-pin.mjs verifies os-closure.json against the SIGNED head and hands it to this worker through the

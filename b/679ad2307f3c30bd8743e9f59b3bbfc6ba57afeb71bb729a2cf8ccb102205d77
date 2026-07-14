@@ -9,7 +9,7 @@
  "tiers": {
   "core": {
    "files": 635,
-   "bytes": 12737248,
+   "bytes": 12738518,
    "hf": 0
   },
   "apps": {
@@ -16122,8 +16122,8 @@
    "source": "hf"
   },
   "apps/player/holo-evicted.json": {
-   "sha256": "130e4ac4fde70879ee7fefc13af9d258e573da7046e809af77fea6fc320a5c9b",
-   "blake3": "45e8b8e3bafdfe3d8b37c140176992912edde3b88e880aa3782502803a05d7d9",
+   "sha256": "246235f785fe7cf33784974665d15acff97997c1d4a08563bfcab6358c72ab31",
+   "blake3": "c6a5bf01ee2ac5b755dcbba1491593a0d567959dcd6ea6fbe0d4add711f48d25",
    "bytes": 11468,
    "tier": "apps",
    "source": "origin"
@@ -16539,7 +16539,7 @@
    "source": "hf"
   },
   "apps/player/index.html": {
-   "blake3": "3b5ef5fbfb8e0522fef5b92caded5ab28574598b10b1977e043be66802e5e70d",
+   "blake3": "600b26a5c3233d14c742c4e91e336f2b7c1bef7344d29057b3089ef35128cb86",
    "tier": "apps",
    "source": "hf"
   },
@@ -29029,9 +29029,9 @@
    "source": "origin"
   },
   "index.html": {
-   "sha256": "813525485aa892df232b52ae97cefb7033b5b4f7c607a060879870ff4ceb3559",
-   "blake3": "ba614bf367d3ff90876ef66758432ad5bfbd9b4dbcb2560b3ed80e4724b6c5ac",
-   "bytes": 4436,
+   "sha256": "d7df1caf03e8396d190b93f43113f11176bcf37b1811ec55e6c794be64d3e341",
+   "blake3": "3f34237cb8c00e5dd9bff5d153d43645d11f1ffc7530e715d7c581246c186980",
+   "bytes": 5405,
    "tier": "core",
    "source": "origin"
   },
@@ -29064,9 +29064,9 @@
    "source": "origin"
   },
   "root-sw.js": {
-   "sha256": "68c7eebd3e1ec1bcc47c2ed005c0d6c01cbd94788f395395147bd8bfe39e293e",
-   "blake3": "b398e53500ff7cbd065b73b9a23c168e7aaa8858e6b0f486d96ea07cd7fd0eb4",
-   "bytes": 24657,
+   "sha256": "ea028c6044889eabad7b6509f6841c9640ef8c04ca584139ccb2dc53d09e195b",
+   "blake3": "24d0ee6e1c8b097104ca9de46e0cdcdefdfcf364e0cf5b972353e5bc590c6e8a",
+   "bytes": 24958,
    "tier": "core",
    "source": "origin"
   },
