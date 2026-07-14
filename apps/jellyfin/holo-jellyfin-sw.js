@@ -1307,7 +1307,33 @@ async function playerFetch(rel) {
   }
   return direct || new Response("", { status: 404 });
 }
-const playerDataFetch = (u, opts) => playerFetch(relOf(u));            // for holo-library (rootUrl + shards, all player-scope)
+// κ-objects are origin-independent: a b/<blake3> miss on one mirror re-derives from another, verify-or-
+// refuse. (Found via ONE-BRAIN U1c: the library root's mirror field 404s its own shards — the live player
+// only survives because the ROOT holo-sw rescues its pages' fetches; an SW's own fetches bypass that.)
+async function kappaByBlake3(hex) {
+  const cached = await cacheGet("holo-jf-player", hex);
+  if (cached) return new Response(cached, { headers: { "content-type": "application/octet-stream" } });
+  for (const base of [APPS_MIRROR, HF_B]) {
+    const res = await fetch(base + hex).catch(() => null);
+    if (!res || !res.ok) continue;
+    const bytes = new Uint8Array(await res.arrayBuffer());
+    if (blake3hex(bytes) !== hex) continue;                            // refused → try the next origin
+    await cachePut("holo-jf-player", hex, bytes);
+    return new Response(bytes, { headers: { "content-type": "application/octet-stream" } });
+  }
+  return new Response("", { status: 404 });
+}
+const playerDataFetch = async (u, opts) => {                           // for holo-library (rootUrl + shards)
+  const s = String(u);
+  if (/^https?:\/\//.test(s) && !s.startsWith(self.location.origin)) { // the root's mirror URLs are absolute
+    const direct = await fetch(s, opts).catch(() => null);
+    if (direct && direct.ok) return direct;
+    const bh = (s.match(/\/b\/([0-9a-f]{64})(\?|$)/) || [])[1];
+    if (bh) return kappaByBlake3(bh);
+    return direct || new Response("", { status: 404 });
+  }
+  return playerFetch(relOf(s));
+};
 
 // ── the library plane (verify-or-refuse shards, J0-proven inside the SW) ─────────────────────────────────
 let lib = null, libLoading = null;
@@ -1322,7 +1348,13 @@ const ensureLib = () => {
 };
 
 // ── UserData — IDB write-through map (favorites/played/resume persist forever) ───────────────────────────
+// ONE BRAIN (HOLO-TV-ONE-BRAIN U1): the Holo TV player writes this SAME store through holo-jf-bridge.mjs.
+// The map loads ONCE per SW instance — the BroadcastChannel keeps it fresh when the other surface writes
+// (and carries our writes to the player, which repaints its wall). Deltas arriving before ensure() are
+// safe to drop: the IDB load that follows already contains them.
 let UD = null, udLoading = null, udDb = null;
+const UD_BC = typeof BroadcastChannel !== "undefined" ? new BroadcastChannel("holo-jf-ud") : null;
+if (UD_BC) UD_BC.onmessage = (e) => { const d = e && e.data; if (d && d.id && d.v && UD) UD.set(d.id, d.v); };
 const ud = {
   ensure() {
     if (UD) return Promise.resolve();
@@ -1340,7 +1372,7 @@ const ud = {
     return udLoading;
   },
   get: (id) => UD && UD.get(id),
-  set(id, v) { UD.set(id, v); try { udDb.transaction("ud", "readwrite").objectStore("ud").put(v, id); } catch {} },
+  set(id, v) { v = { ...v, HoloAt: Date.now() }; UD.set(id, v); try { udDb.transaction("ud", "readwrite").objectStore("ud").put(v, id); } catch {} try { UD_BC && UD_BC.postMessage({ id, v }); } catch {} },
   entries: () => (UD ? UD.entries() : [][Symbol.iterator]()),
 };
 
@@ -1464,8 +1496,11 @@ const trace = [];
 async function dispatch(req) {
   const u = new URL(req.url);
   const p = u.pathname;
+  // out-of-scope same-origin traffic (e.g. a client reading /apps/player/ data) is NOT ours — pass it
+  // through untouched. Without this the API fallback ate it and answered {} (found via ONE-BRAIN U1c).
+  if (!p.startsWith(SCOPE)) return fetch(req).catch(() => new Response("", { status: 504 }));
   // scope-relative view: live the app sits at /Q/apps/jellyfin/, in the harness at /
-  const rel = p.startsWith(SCOPE) ? "/" + p.slice(SCOPE.length) : p;
+  const rel = "/" + p.slice(SCOPE.length);
   if (/^\/(web|lib|feed|kappa|holo-jellyfin-(sw\.js|core\.mjs|music\.mjs)|index\.html$|__holo|holo-evicted\.json$|LICENSE)/.test(rel) || rel === "/") {
     if (rel === "/__holo/trace") return new Response(JSON.stringify(trace), { headers: { "content-type": "application/json" } });
     if (/^\/web\/serviceworker\.js$/.test(rel)) return new Response("", { status: 404 });   // the PWA hijacker stays dead
