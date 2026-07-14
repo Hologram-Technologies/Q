@@ -1016,6 +1016,10 @@ export function attachPlymouth(overlay, host) {
   // ritual stamps the flag (sessionStorage = per-tab, exactly the right lifetime); reading it clears it.
   let shortHero = false;
   try { shortHero = sessionStorage.getItem("holo.ceremony.short") === "1"; if (shortHero) sessionStorage.removeItem("holo.ceremony.short"); } catch {}
+  // RETURNING = RECOGNITION (INSTANT-RETURN W1, same law as ARRIVAL A3): an operator or guest this device
+  // already knows re-enters on the SHORT hero too — the full five seconds is the FIRST impression; the
+  // second visit is a greeting, not a ceremony. Skippability and the hard cap are unchanged.
+  try { if (!shortHero && (localStorage.getItem("holo.lastOperator") || localStorage.getItem("holo-messenger/id-secret"))) shortHero = true; } catch {}
   const BOOT_MIN = shortHero ? 1200 : 5000, BOOT_MAX = shortHero ? 1600 : 5600;
   const bootT0 = (() => { try { return window.__hlBootT0 || Date.now(); } catch { return Date.now(); } })();
   let bootDone = false, bootTimer = 0;
