@@ -286,6 +286,7 @@ const CSS = `
 #holo-login .hlp-btn{width:40px;height:40px;transition:background .15s,color .15s,border-color .15s,box-shadow .15s}
 #holo-login .hlp-btn:hover{background:var(--field-bg,rgba(255,255,255,.12));border-color:var(--glass-border,rgba(255,255,255,.2));color:var(--ink,#fff)}
 #holo-login .hlp-btn:focus-visible{outline:2px solid var(--accent,#7defc9);outline-offset:2px}
+@media (pointer:coarse){#holo-login .hlp-btn{width:44px;height:44px}}
 #holo-login .hlp-sheet{border-radius:18px;box-shadow:0 24px 70px rgba(0,0,0,.5)}
 #holo-login .hlp-head{padding:18px 20px 12px}
 #holo-login .hlp-title{font-weight:600;letter-spacing:-.01em}
