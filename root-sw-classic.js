@@ -11,6 +11,7 @@ const BOOT_DIRS = ["/usr/lib/holo/", "/usr/share/plymouth/", "/apps/holo-messeng
 const BOOT_FILES = { "/root-door.mjs": 1, "/holo-root-resolver.mjs": 1, "/holo-resolve-view.mjs": 1, "/apps/index.jsonld": 1, "/apps-blake3.json": 1, "/genesis-pack.mjs": 1, "/holo-portal.mjs": 1 };
 const ROOT_FILES = { "/holo-resolver.mjs": 1, "/holo-fabric.mjs": 1, "/manifest.webmanifest": 1 };
 const MIME = { js: "text/javascript", mjs: "text/javascript", css: "text/css", json: "application/json", svg: "image/svg+xml", wasm: "application/wasm", html: "text/html" };
+let _relSlowAt = 0;   // W1: release.json collar slow-memo (mirrors root-sw.js)
 self.addEventListener("install", () => self.skipWaiting());
 self.addEventListener("activate", (e) => e.waitUntil(self.clients.claim()));
 self.addEventListener("fetch", (e) => {
@@ -33,8 +34,14 @@ self.addEventListener("fetch", (e) => {
   if (p === BASE + "/release.json") {
     e.respondWith((async () => {
       const net = fetch(req).catch(() => null);
+      net.then((r) => { if (r) _relSlowAt = 0; });
+      if (_relSlowAt && Date.now() - _relSlowAt < 8000) {
+        const hit = await caches.match(req, { ignoreSearch: true });
+        if (hit) return hit;
+      }
       const fast = await Promise.race([net, new Promise((r) => setTimeout(() => r("slow"), 1200))]);
       if (fast && fast !== "slow") return fast;
+      _relSlowAt = Date.now();
       const hit = await caches.match(req, { ignoreSearch: true });
       if (hit) return hit;
       return (await net) || Response.error();

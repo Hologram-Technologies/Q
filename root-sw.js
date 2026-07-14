@@ -83,6 +83,7 @@ self.addEventListener("activate", (e) => e.waitUntil(RESCUER.registry().then(() 
 // release pointer (network-first tier keeps that honest; offline, the sealed copy answers). Memoized per
 // worker life; a restarted worker re-loads once. No pin yet → null → today's behavior exactly.
 let _cl = null, _clP = null, _clAt = 0;
+let _relSlowAt = 0;   // W1: release.json collar slow-memo (see the release tier below)
 function pinnedClosure() {
   // K2: ABSENCE is retried (holo-pin mints the pin AFTER the first fetch events — memoizing "no pin
   // yet" for the worker's whole life would keep the first session unlawful); a verified MISMATCH or a
@@ -248,9 +249,18 @@ self.addEventListener("fetch", (e) => {
   // the page's own head-poll + reseal pick up a newer release on the next healthy fetch.
   if (p === BASE + "/release.json") {
     e.respondWith((async () => {
+      // slow-memo: the boot reads the release 3× (seed ×2 + portal) — once the network has PROVEN hung,
+      // the next reads inside the same 8s window serve the sealed copy immediately instead of re-paying
+      // the collar; the background fetch clears the memo the moment the network heals.
       const net = fetch(req).catch(() => null);
+      net.then((r) => { if (r) _relSlowAt = 0; });
+      if (_relSlowAt && Date.now() - _relSlowAt < 8000) {
+        const hit = await caches.match(req, { ignoreSearch: true });
+        if (hit) return hit;
+      }
       const fast = await Promise.race([net, new Promise((r) => setTimeout(() => r("slow"), 1200))]);
       if (fast && fast !== "slow") return fast;
+      _relSlowAt = Date.now();
       const hit = await caches.match(req, { ignoreSearch: true });
       if (hit) return hit;
       return (await net) || Response.error();

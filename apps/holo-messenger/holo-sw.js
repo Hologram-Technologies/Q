@@ -204,16 +204,21 @@ function stamp(resp, kx, src) {
 // MANIFESTED shell asset must pass verification (origin → κ-store) or is REFUSED (502). Non-manifested statics keep
 // plain cache-first (nothing to verify against).
 async function cacheFirst(req, pathname) {
-  // A restarted worker loses the in-memory manifest (install doesn't re-run) — lazily reload it (from the
-  // integrity index, which is never intercepted/killed) so verification + κ-store recovery survive eviction.
-  if (!SHELL_KAPPA.size) await loadManifest();
+  // W1 (HOLO-INSTANT-RETURN): a cached hit was VERIFIED when it was stored — serving it never needs the
+  // manifest, so the cache lookup comes FIRST. A restarted worker awaiting the manifest ahead of the
+  // lookup held the warm app.html navigation 9.1s behind one cold socket (measured live); now a hit
+  // answers instantly and merely refreshes the manifest in the background. Every MISS still awaits the
+  // manifest below — verification is unchanged.
   const cache = await caches.open(CACHE);
   // A ?query is an explicit version intent (e.g. q-summon.mjs?v=9) — it MUST bust the cache. ignoreSearch
   // would serve a stale ?v=8 entry for a ?v=9 request (the bug that froze the Q drawer on old bytes), so
   // only fall back to the query-insensitive match for queryless requests (plain static assets, unchanged).
   const kx = closureKappaSync(pathname);   // K2: opportunistic, sync — never awaited on the hot path
   const hit = (await cache.match(req)) || (req.url.includes("?") ? null : (await cache.match(req, { ignoreSearch: true })));
-  if (hit) return stamp(hit, kx, "shell-cache");
+  if (hit) { if (!SHELL_KAPPA.size) loadManifest(); return stamp(hit, kx, "shell-cache"); }
+  // A restarted worker loses the in-memory manifest (install doesn't re-run) — lazily reload it (from the
+  // integrity index, which is never intercepted/killed) so verification + κ-store recovery survive eviction.
+  if (!SHELL_KAPPA.size) await loadManifest();
   const cpath = canon(pathname);   // κ lookups use the canonical id, wherever the shell is mounted
   let kappa = expectedKappa(cpath);
   if (kappa) {
