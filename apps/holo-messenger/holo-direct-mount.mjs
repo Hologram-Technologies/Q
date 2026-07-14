@@ -22,7 +22,7 @@ const _isRawId = (cid) => /^direct:/.test(String(cid || ""));
 const _shortCode = (cid) => (String(cid || "").replace(/^direct:/, "").replace(/[^A-Za-z0-9]/g, "").slice(0, 4).toUpperCase() || "····");
 function _alias(cid) { try { return (localStorage.getItem("holo.direct.alias." + cid) || "").trim() || null; } catch { return null; } }
 function _setAlias(cid, nm) { try { nm = String(nm || "").trim(); if (nm) localStorage.setItem("holo.direct.alias." + cid, nm); else localStorage.removeItem("holo.direct.alias." + cid); } catch {} }
-function _label(cid) { return _alias(cid) || (!_isRawId(cid) ? String(cid) : "Sealed contact · " + _shortCode(cid)); }
+function _label(cid) { return _alias(cid) || (!_isRawId(cid) ? String(cid) : "~" + _shortCode(cid)); }
 // names + previews are peer-controlled → escape before they touch innerHTML (a link's name is untrusted).
 const _htm = (s) => String(s == null ? "" : s).replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
 
@@ -240,7 +240,7 @@ async function _renderSection() {
       sec.style.cssText = "display:flex;flex-direction:column;padding:2px 0 4px;border-bottom:1px solid var(--wa-border,rgba(255,255,255,.08))";
       wrap.prepend(sec);
     }
-    sec.innerHTML = `<div style="font-size:10.5px;letter-spacing:.08em;text-transform:uppercase;color:var(--wa-dim,#8aa0ad);padding:6px 16px 2px">Holo Direct · sealed</div>`;
+    sec.innerHTML = "";
     for (const c of convs.slice(0, 12)) {
       const cid = c.name || c.contactId;
       const label = _label(cid);                                  // human name — never the raw direct:<key>
@@ -250,10 +250,10 @@ async function _renderSection() {
       row.style.cssText = "display:flex;align-items:center;gap:11px;background:transparent;border:0;padding:8px 14px;cursor:pointer;text-align:left;color:var(--wa-text,#e9f1f5);width:100%";
       row.onmouseenter = () => { row.style.background = "rgba(255,255,255,.05)"; };
       row.onmouseleave = () => { row.style.background = "transparent"; };
-      const preview = c.last ? ((c.last.dir === "out" ? "You: " : "") + (c.last.text || "")) : "say hello";
+      const preview = c.last ? ((c.last.dir === "out" ? "You: " : "") + (c.last.text || "")) : "";
       row.innerHTML = `<div style="width:40px;height:40px;border-radius:50%;display:grid;place-items:center;font-weight:700;color:#04110d;background:linear-gradient(135deg,#00d09c,#27e3b3);flex:0 0 auto">${(label.trim()[0] || "·").toUpperCase()}</div>
         <div style="min-width:0;flex:1"><div style="display:flex;justify-content:space-between;gap:8px"><span style="font-weight:600;font-size:14px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${_htm(label)}</span><span style="font-size:11px;color:var(--wa-dim,#8aa0ad);flex:0 0 auto">${_fmtT(c.last && c.last.ts)}</span></div>
-        <div style="display:flex;justify-content:space-between;gap:8px;align-items:center"><span style="font-size:12.5px;color:var(--wa-dim,#8aa0ad);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">🔒 ${_htm(preview)}</span>${n ? `<span class="holo-direct-unread" style="background:#00d09c;color:#04110d;font-size:11px;font-weight:700;border-radius:10px;padding:1px 6px;flex:0 0 auto">${n}</span>` : ""}</div></div>`;
+        <div style="display:flex;justify-content:space-between;gap:8px;align-items:center"><span style="font-size:12.5px;color:var(--wa-dim,#8aa0ad);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${_htm(preview)}</span>${n ? `<span class="holo-direct-unread" style="background:#00d09c;color:#04110d;font-size:11px;font-weight:700;border-radius:10px;padding:1px 6px;flex:0 0 auto">${n}</span>` : ""}</div></div>`;
       row.onclick = () => { if (c.pub && c.pub.box) open(c.pub, { name: cid }); };
       sec.append(row);
     }
@@ -267,7 +267,7 @@ function _sheet() {
   const el = (t, css, html) => { const n = DOC.createElement(t); if (css) n.style.cssText = css; if (html != null) n.innerHTML = html; return n; };
   const ov = el("div", "position:fixed;inset:0;z-index:2147483400;background:rgba(4,7,11,.7);backdrop-filter:blur(6px);display:flex;align-items:center;justify-content:center;padding:18px;font:14px/1.5 system-ui,sans-serif");
   const card = el("div", "width:min(380px,94vw);background:#0e1620;border:1px solid #1f2c35;border-radius:18px;padding:18px;color:#e9f1f5;display:flex;flex-direction:column;gap:10px");
-  card.append(el("div", "font-weight:700;font-size:15px", "🔐 Holo Direct — sealed, native, serverless"));
+  card.append(el("div", "font-weight:700;font-size:15px", "New chat"));
   // the conversation list: who you've talked to + the last word, newest first. Tap to reopen (history
   // hydrates from the sealed store). Populated async; hidden until there's at least one conversation.
   const convWrap = el("div", "display:none;flex-direction:column;gap:2px;max-height:180px;overflow:auto;margin:-2px 0 2px");
@@ -290,28 +290,28 @@ function _sheet() {
     }
   }).catch(() => {});
   const me = el("input", "background:#0a1119;border:1px solid #1f2c35;border-radius:10px;color:#e9f1f5;padding:8px;font-size:13px");
-  me.placeholder = "Your display name (travels with your link)"; me.value = localStorage.getItem("holo.direct.name") || "";
+  me.placeholder = "Your name"; me.value = localStorage.getItem("holo.direct.name") || "";
   me.onchange = () => { localStorage.setItem("holo.direct.name", me.value.trim()); mine.value = "…"; myLink().then((l) => { mine.value = l; }); };
   card.append(me);
-  card.append(el("div", "font-size:12px;color:#8aa0ad", "Your link — send it over anything. It carries your PUBLIC keys only; every message is sealed end-to-end; verification is the safety-number ritual, not the link:"));
+  card.append(el("div", "font-size:12px;color:#8aa0ad", "Your invite link — share it so people can message you. Every chat is end-to-end encrypted:"));
   const mine = el("textarea", "background:#0a1119;border:1px solid #1f2c35;border-radius:10px;color:#9fd;padding:8px;font:11px ui-monospace,monospace;height:64px;resize:none");
   mine.readOnly = true; mine.className = "holo-direct-mylink"; mine.value = "…";
   myLink().then((l) => { mine.value = l; });
-  const copy = el("button", "align-self:flex-start;background:rgba(255,255,255,.06);border:1px solid #1f2c35;border-radius:9px;color:#e9f1f5;padding:6px 10px;font-size:12px;cursor:pointer", "Copy my link");
+  const copy = el("button", "align-self:flex-start;background:rgba(255,255,255,.06);border:1px solid #1f2c35;border-radius:9px;color:#e9f1f5;padding:6px 10px;font-size:12px;cursor:pointer", "Copy link");
   copy.onclick = () => { try { navigator.clipboard.writeText(mine.value); copy.textContent = "Copied ✓"; } catch {} };
   card.append(mine, copy);
-  card.append(el("div", "font-size:12px;color:#8aa0ad;margin-top:4px", "Got someone's link? Just open it — or paste it here:"));
+  card.append(el("div", "font-size:12px;color:#8aa0ad;margin-top:4px", "Have someone's invite link? Paste it here:"));
   const theirs = el("textarea", "background:#0a1119;border:1px solid #1f2c35;border-radius:10px;color:#e9f1f5;padding:8px;font:11px ui-monospace,monospace;height:48px;resize:none");
-  const start = el("button", "background:linear-gradient(90deg,#00d09c,#1fd6ac);color:#04110d;border:0;border-radius:11px;padding:10px;font-weight:700;cursor:pointer", "Start sealed chat");
+  const start = el("button", "background:linear-gradient(90deg,#00d09c,#1fd6ac);color:#04110d;border:0;border-radius:11px;padding:10px;font-weight:700;cursor:pointer", "Start chat");
   const err = el("div", "display:none;color:#ffb0b0;font-size:12px");
   start.onclick = async () => {
     try {
       const m = /[#&]direct=v1\.([A-Za-z0-9_-]+)/.exec(theirs.value.trim());
-      if (!m) throw new Error("that's not a Direct link");
+      if (!m) throw new Error("That's not a valid invite link");
       const pub = JSON.parse(_ub64u(m[1]));
       if (!pub.sign || !pub.box) throw new Error("the link is missing its keys");
       ov.remove(); await open(pub, { name: pub.name || null });
-    } catch (e) { err.style.display = "block"; err.textContent = "Not a Direct link — " + (e.message || e); }
+    } catch (e) { err.style.display = "block"; err.textContent = "Invalid link — " + (e.message || e); }
   };
   const close = el("button", "background:transparent;border:0;color:#8aa0ad;cursor:pointer", "Close");
   close.onclick = () => ov.remove();
