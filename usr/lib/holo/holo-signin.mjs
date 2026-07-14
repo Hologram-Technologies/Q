@@ -35,7 +35,7 @@ const I = {
   lock: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="11" width="14" height="9" rx="2"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/></svg>',
 };
 // Touch devices get the slide-to-enter; fine-pointer (desktop) keeps the tap key. Resolved once.
-const COARSE = (() => { try { return matchMedia("(pointer:coarse)").matches; } catch { return false; } })();
+const COARSE = (() => { try { return matchMedia("(pointer:coarse)").matches && !matchMedia("(any-pointer:fine)").matches; } catch { return false; } })();
 const beamHtml = () => `<svg class="hl-beam" preserveAspectRatio="none"><rect x="1" y="1" rx="11" ry="11" pathLength="100"></rect></svg>`;
 const enclaveHtml = () => { let n = "this device"; try { n = teeName() || n; } catch {} return `<div class="hl-enclave">${I.lock}<span>Secured by ${esc(n)}</span></div>`; };
 const slideHtml = (label) => `<div class="hl-slide" id="hl-slide" role="button" tabindex="0" aria-label="Slide to sign in as ${esc(label)}"><div class="hl-fill"></div><div class="hl-track-lbl"><span>Slide to enter</span></div><div class="hl-knob">${I.arrow}</div></div>`;
