@@ -87,9 +87,16 @@ export async function makeDirect({ identity = null, mailboxBase = null, trustSto
   async function _openImpl(env) {
     if (env && env.s === "olm") {
       if (!olm) return { ok: false };
-      const cid = _findBySign(env.from); if (!cid) return { ok: false };   // no session route for an unknown sender
-      try { const pt = await olm.receive(cid, env.oid, { t: env.t, c: env.c }); _stats.olmOpened++; return { ok: true, from: env.from, verified: true, plaintext: pt }; }
-      catch { return { ok: false }; }
+      // one human can sit in the book under SEVERAL cids (a room-transport stub "direct:<hex>" AND a
+      // link-opened name) while the Olm session pickle lives under only ONE of them — _findBySign's first
+      // match routed to the wrong alias and the frame died in silence. Try EVERY alias for this sign; a
+      // wrong-session decrypt just throws and the loop moves on (fail-soft, exactly one can succeed).
+      for (const [cid, p] of book) {
+        if (p.sign !== env.from) continue;
+        try { const pt = await olm.receive(cid, env.oid, { t: env.t, c: env.c }); _stats.olmOpened++; return { ok: true, from: env.from, verified: true, plaintext: pt }; }
+        catch {}
+      }
+      return { ok: false };
     }
     return Seal.open(env, { myKeys: id });
   }
@@ -216,8 +223,12 @@ export async function makeDirect({ identity = null, mailboxBase = null, trustSto
   if (store && store.getMeta) { try { const v = JSON.parse((await store.getMeta("presence:self")) || "null"); if (v && v.state === "away") _myPresence = { state: "away", msg: v.msg || null, profile: v.profile || null }; } catch {} }
   const _presenceFrame = () => ({ t: "presence", state: _myPresence.state, ...(_myPresence.msg ? { msg: _myPresence.msg } : {}), ...(_myPresence.profile ? { profile: _myPresence.profile } : {}), ts: Date.now() });
   async function _fanPresence({ beat = false } = {}) {
-    const f = _presenceFrame();
-    for (const [cid, pub] of book) { if (!pub || !pub.box) continue; await _sendControl(cid, f, { linkOnly: beat }).catch(() => {}); }
+    const f = _presenceFrame(); const fanned = new Set();
+    for (const [cid, pub] of book) {   // one beacon per HUMAN — a two-alias contact is not two buddies
+      if (!pub || !pub.box || fanned.has(pub.sign)) continue;
+      fanned.add(pub.sign);
+      await _sendControl(cid, f, { linkOnly: beat }).catch(() => {});
+    }
   }
   async function setPresence({ state = "online", msg = null, profile = null } = {}) {
     if (!PRESENCE_STATES.includes(state)) return { ok: false, error: "state must be online|idle|away" };
