@@ -29,6 +29,11 @@ export async function engineKappa() {
 export async function createEngine(modelEntry, loaded) {
   const { gpu, info, imageKappa } = loaded;
   const m = modelEntry;
+  // W2 (Q-WAFER): KV-commons blobs SEALED IN THE WAFER (minted once on a real GPU at forge time) —
+  // a fresh device restores the persona prefill instead of computing it. Matched by (layout, nIds,
+  // idsSha) so a blob only restores on the exact kv layout + token ids it was minted for.
+  const sealedKvc = (loaded.sealed && loaded.sealed.kvc) || null;
+  const idsSha = async (ids) => { try { const b = new TextEncoder().encode(ids.join(",")); return [...new Uint8Array(await crypto.subtle.digest("SHA-256", b))].map((x) => x.toString(16).padStart(2, "0")).join(""); } catch { return null; } };
   const engineReady = engineKappa();
 
   // model κ: the κ-disk's VERIFIED image_kappa when present (a real content address of the
@@ -39,6 +44,11 @@ export async function createEngine(modelEntry, loaded) {
 
   const memo = new Map();
   let _drafter = null;   // learned speculative drafter (fn(seq,max)=>ids); null → standard decode. Set via setDrafter().
+  // D1 (Q-DERIVED-MIND) SPECULATIVE SELF: the spec path also arms by CATALOG opt-in (m.spec) with no
+  // learned drafter — gpu.setDrafter(null) keeps the gpu's internal n-gram drafter (prompt-lookup:
+  // drafts cost ~0 JS, greedy batched verify keeps output BYTE-IDENTICAL, SP.cold self-throttles on
+  // miss streaks). ?spec=0 kills, ?spec=1 forces — both for honest A/B on the ?stats ledger.
+  const _specQ = (() => { try { return typeof location !== "undefined" ? new URLSearchParams(location.search).get("spec") : null; } catch { return null; } })();
   let _pinLen = 0;       // KV-COMMONS prefix pin: length of the pinned shared prefix (0 = none). See pinPrefix/usePin below.
 
   const tokenize = (text) => { try { return JSON.parse(qvac_tokenize(text)).ids || []; } catch { return []; } };
@@ -81,7 +91,8 @@ export async function createEngine(modelEntry, loaded) {
     // head, the drafter proposes and the target batch-verifies — output is BYTE-IDENTICAL to greedy decode
     // (greedy verify), streamed via onCommit. Any incompatibility/throw falls straight through to the standard
     // loop below, so default Q (no drafter) and unsupported models are completely unaffected.
-    if (!err && _drafter && gpu.specDecode && gpu.setDrafter) {
+    const _specOn = _specQ === "0" ? false : _specQ === "1" ? true : !!(_drafter || m.spec);
+    if (!err && _specOn && gpu.specDecode && gpu.setDrafter) {
       try {
         gpu.setDrafter(_drafter);
         const out = []; const t0 = _perf(); let ttft2 = 0, tokps2 = 0;
@@ -248,6 +259,26 @@ export async function createEngine(modelEntry, loaded) {
       try {
         if (!gpu.restoreState || !gpu.kvLayoutOf || !ids || ids.length < 2) return 0;
         const layout = gpu.kvLayoutOf(ids.length);
+        // WAFER-FIRST (W2): a sealed blob matching this device's exact (layout, nIds, idsSha) restores
+        // with zero prior visits — the fresh-user path. Any failure falls through to OPFS untouched.
+        if (sealedKvc) {
+          try {
+            const want = sealedKvc.filter((e) => e.layout === layout && e.nIds === ids.length);
+            if (want.length) {
+              const sha = await idsSha(ids);
+              const hit = sha && want.find((e) => e.idsSha === sha);
+              if (hit) {
+                const bytes = await hit.get();               // κ-verified by the reader; throws on tamper
+                const resident = await gpu.restoreState(ids.slice(), { layout: hit.layout, L: hit.L, bytes });
+                if (resident) {
+                  await gpu.sync(ids.slice(), true);         // re-step the last prefix token (validates, resident logits)
+                  _pinLen = gpu.cachedLen;
+                  return _pinLen;
+                }
+              }
+            }
+          } catch (e) { try { gpu.reset(); } catch {} }      // sealed miss/tamper → clean slate, OPFS path below
+        }
         const { commonsKey, load } = await import("./kv-commons.mjs");
         const key = commonsKey(["kvc1", modelKappa, layout, ids.join(",")]);
         if (!key) return 0;

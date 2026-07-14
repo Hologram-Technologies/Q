@@ -27,7 +27,10 @@ export const MODELS = [
   // holoUrl (H1/T2): ONE Range-streamed `.holo` (embedded tokenizer + BLAKE3 blocks + OPFS warm) —
   // cold 336 reqs→3, warm 0 network/~10ms. Fail-soft: until the file is uploaded to HF the first tiny
   // range request 404s and load self-heals to the parts path below (no regression). Publish = H4.
-  { fam: "BitNet", name: "BitNet-2B-4T · ternary", canonical: true, kappaUrl: "https://huggingface.co/HOLOGRAMTECH/q-bitnet-2b/resolve/main", holoUrl: "https://huggingface.co/HOLOGRAMTECH/q-bitnet-2b/resolve/main/q-bitnet-2b.holo", manifestKappa: "did:holo:sha256:fcf835659d88d2fe6f683cf1ab8de6a6ba6214ea0deeee4b1bcf3da1a4c05412", size: "0.69 GB", fmt: "t2 1.58-bit κ", cap: 900, ctx: 3000, kv4: true, gpu: true, gpuOnly: true, chat: true, llama3: true, tools: false, bos: true, eosText: "<|eot_id|>", rep: 1.05, kappa: true },
+  // spec:true (D1 Q-DERIVED-MIND): speculative decode via the gpu's internal n-gram drafter — greedy
+  // batched verify = BYTE-IDENTICAL output, self-throttles on miss streaks. Arms only where the spec
+  // head is supported (resident + int4 KV); high-tier f32-KV devices fall through untouched. ?spec=0/1 A/B.
+  { fam: "BitNet", name: "BitNet-2B-4T · ternary", canonical: true, spec: true, kappaUrl: "https://huggingface.co/HOLOGRAMTECH/q-bitnet-2b/resolve/main", holoUrl: "https://huggingface.co/HOLOGRAMTECH/q-bitnet-2b/resolve/main/q-bitnet-2b.v2.holo", holoMirrors: ["https://github.com/HOLOGRAM-TECHNOLOGIES/hologram-os/releases/download/wafer-bitnet-2b-v2/q-bitnet-2b.v2.holo"], manifestKappa: "did:holo:sha256:fcf835659d88d2fe6f683cf1ab8de6a6ba6214ea0deeee4b1bcf3da1a4c05412", size: "0.69 GB", fmt: "t2 1.58-bit κ", cap: 900, ctx: 3000, kv4: true, gpu: true, gpuOnly: true, chat: true, llama3: true, tools: false, bos: true, eosText: "<|eot_id|>", rep: 1.05, kappa: true },
   // FLOOR TIER (HOLO-ANY-BROWSER-500): Falcon-E-1B-Instruct — natively-ternary, chat-tuned, ~475 MB
   // resident. On integrated GPUs (where a normal browser lands) it decodes ~140 tok/s vs BitNet-2B's
   // ~40. Its OWN template is ChatML (<|im_start|>) — NOT the word-frame the 3B uses — eos <|end_of_text|>.
@@ -140,17 +143,24 @@ async function loadKappa(m, onStatus, onProgress) {
   const pin = (typeof m.manifestKappa === "string" && m.manifestKappa) || (typeof m.kappa === "string" && m.kappa) || null;
   const __b3 = (typeof window !== "undefined" && window.__blake3Map) || undefined;   // inject canonical map (test BLAKE3 axis before the HF upload)
   const ing = await import("../qvac-ingest.mjs");
-  let manifest, fetchTensor, info, fetchCanon, headerBytes = null, usedHolo = false;
+  let manifest, fetchTensor, info, fetchCanon, headerBytes = null, usedHolo = false, sealed = null;
   // INSTANT SINGLE-FILE LOAD (H1/T2): a catalog `holoUrl` → ONE Range-streamed `.holo` (embedded
   // tokenizer, BLAKE3-verified blocks, OPFS-warm) instead of 330 loose block requests. Fail-soft:
   // any error (no holoUrl, host without Range, corrupt file) drops to the proven parts path below.
   if (m.holoUrl && (typeof window === "undefined" || window.__noholo !== true)) {
     try {
       const hs = await import("./holo-stream-load.mjs");
-      const r = await hs.openHoloKappa(hfProxy(m.holoUrl), { onProgress: (d, t) => onProgress(d, t, "streaming") });
+      // W3 (Q-WAFER): m.holoMirrors = alternate dumb static origins for the SAME bytes (κ makes
+      // them interchangeable) — the reader races first-response and fails over per-block.
+      const r = await hs.openHoloKappa(hfProxy(m.holoUrl), { mirrors: (m.holoMirrors || []).map((u) => hfProxy(u)), onProgress: (d, t) => onProgress(d, t, "streaming") });
       manifest = r.manifest; fetchTensor = r.fetchTensor; fetchCanon = r.fetchTensor; info = r.info;
       headerBytes = r.tokenizerBytes; usedHolo = true;
+      sealed = r.sealed || null;                              // W2: wafer-sealed KV commons → engine restores instead of prefilling
       _mk.holoWarm = !!r.warm;
+      // W1 (Q-WAFER) honest marks: % of the wire that had arrived when the reader returned — proof
+      // the engine build pipelines BEHIND the download instead of waiting for the last byte.
+      _mk.holoStream = r.progress || null;
+      try { if (r.progress) _mk.holoReturnPct = r.progress().pct; } catch {}
     } catch (e) { try { console.warn("[loader] .holo path failed, falling back to parts:", e && e.message || e); } catch {} }
   }
   if (!usedHolo) {
@@ -214,9 +224,11 @@ async function loadKappa(m, onStatus, onProgress) {
   const prog = (done, total) => onProgress(done, total, "streaming");
   const gpu = await createQvacGPU(manifest, fetchTensor, kvOf(m), lr.eos ?? 2, sm, sm ? prog : null);
   _mk.engineMs = Math.round(performance.now() - _mk.t0) - _mk.manifestMs - _mk.tokenizerMs;
+  // W1 marks at engine-ready: first tensor served at N% of the wire (pipelining proof), engine done at M%.
+  try { if (_mk.holoStream) { const p = _mk.holoStream(); _mk.holoFirstTensorPct = p.marks.firstTensorPct; _mk.holoEnginePct = p.pct; } } catch {}
   window.__gpu = gpu;
   onStatus("");
-  return { gpu, info: lr, manifest, imageKappa: info.root || null, ld: modelLinkedData(m, info.root) };
+  return { gpu, info: lr, manifest, imageKappa: info.root || null, ld: modelLinkedData(m, info.root), ...(sealed ? { sealed } : {}) };
 }
 
 // Very-large-model path: the GGUF never enters wasm; only the header does (tokenizer + manifest),

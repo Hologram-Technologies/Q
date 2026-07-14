@@ -124,7 +124,7 @@ try{if(window.self===window.top){if(self.crossOriginIsolated){try{sessionStorage
   #mic.rec{color:#fff;background:linear-gradient(135deg,#ff5b7b,#e0245e);border-color:transparent;animation:micpulse 1.2s ease-out infinite}
   #mic.busy{opacity:.55;pointer-events:none}
   @keyframes micpulse{0%{box-shadow:0 0 0 0 rgba(224,36,94,.5)}100%{box-shadow:0 0 0 15px rgba(224,36,94,0)}}
-  /* HOLO-Q-CLEAN-EMBED: the drawer is ONE flat plane = the left-nav chrome (#1f1f1e). Composer, chips and send all
+/* HOLO-Q-CLEAN-EMBED: the drawer is ONE flat plane = the left-nav chrome (#1f1f1e). Composer, chips and send all
      flatten into it — no off-colour boxes, no borders, no divider lines. Standalone (no .qembed) is untouched. */
   html.qembed header{border-bottom-color:transparent!important}
   html.qembed #in{background:rgba(255,255,255,.055)!important;box-shadow:none!important}
@@ -228,6 +228,8 @@ let m = MODELS[defaultModelIndex()];
     const cands = MODELS.filter((x) => famq.includes((x.fam || "").toLowerCase()) || (x.fam || "").toLowerCase().includes(famq)).sort((a, b) => (b.fam || "").length - (a.fam || "").length);
     const bit = cands[0] || MODELS.find((x) => (x.fam || "").toLowerCase() === "bitnet") || m;
     m = { ...bit, kappaUrl: base, name: bit.name, manifestKappa: kappa ? undefined : bit.manifestKappa }; } }
+// ?holo=<url> overrides the single-file wafer source (mirror testing, staged wafers); ?holo=0 disables the .holo path.
+{ const hq = params.get("holo"); if (hq != null) m = { ...m, holoUrl: hq === "0" ? undefined : hq }; }
 let engine = null, convIds = [], busy = false, armed = false, idleT = null, _liteMode = false;   // _liteMode = no-WebGPU serverless brain (M2: NEVER dead-end — instant seed + on-device canned reasoning, any browser)
 let swapLock = null, _genActive = 0, tier = "seed";   // HOLO-Q-INSTANT-MIND ladder: seed → bridge (Falcon-E-1B, real answers while canon streams) → canon (BitNet)
 // ── THE ONE REPLY-SPINE, instantiated with q-chat's OWN capabilities (the messenger injects its own). generate =
@@ -307,6 +309,25 @@ function primePersona() {
   })();
   return primingPromise;
 }
+// ── W2 (Q-WAFER) OPERATOR MINT: export THIS device's persona K/V as wafer-sealable kvc files ──
+// Console, once per kv layout (one f32-tier + one int4-tier device): await __exportKvCommons()
+// Downloads kvc-<layout>-<n>.json + .bin → drop into the κ-object's kvc/ dir → forge/holo-kappa-pack.mjs
+// seals them into the .holo → a FRESH device with the same layout+ids restores instead of prefilling.
+window.__exportKvCommons = async () => {
+  if (!engine || tier !== "canon") throw new Error("canon mind not armed yet — wait for BitNet");
+  const gpu = window.__gpu; if (!gpu || !gpu.dumpState) throw new Error("gpu.dumpState unavailable");
+  const ids = personaPrefixIds();
+  if (!personaReady) await (primePersona() || Promise.resolve());
+  if (gpu.cachedLen < ids.length) await engine.pinPrefix(ids);
+  const blob = await gpu.dumpState(ids.length); if (!blob) throw new Error("dumpState empty");
+  const sha = [...new Uint8Array(await crypto.subtle.digest("SHA-256", new TextEncoder().encode(ids.join(","))))].map((x) => x.toString(16).padStart(2, "0")).join("");
+  const meta = { layout: blob.layout, L: blob.L, nIds: ids.length, idsSha: sha };
+  const name = "kvc-" + String(blob.layout).replace(/[^a-zA-Z0-9._-]/g, "_") + "-" + ids.length;
+  const dl = (data, fn, type) => { const a = document.createElement("a"); a.href = URL.createObjectURL(new Blob([data], { type })); a.download = fn; a.click(); setTimeout(() => URL.revokeObjectURL(a.href), 5000); };
+  dl(JSON.stringify(meta), name + ".json", "application/json");
+  dl(blob.bytes, name + ".bin", "application/octet-stream");
+  return meta;
+};
 
 // ── WhatsApp bubble helpers ──
 const fmtTime = (ms) => new Date(ms).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
@@ -326,6 +347,44 @@ const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 const _tick = (b) => b && b.querySelector(".tick");
 function delivered(b) { const t = _tick(b); if (t) t.textContent = "✓✓"; }              // grey double-tick
 function markRead(b) { const t = _tick(b); if (t) { t.textContent = "✓✓"; t.classList.add("read"); } }   // turns blue — Q read you
+
+// ── D5 (Q-DERIVED-MIND) VERIFIED THOUGHT: canon answers carry a quiet ⟡ next to the timestamp —
+// tap it for the receipt (mind κ · answer κ) and a LIVE re-derivation: the exact turn replays on
+// THIS device's GPU and must reproduce κ(output) byte-for-byte (greedy is deterministic). Seed and
+// demo turns never get a seal — no proof claimed where none exists (honest rungs law). Re-derive
+// resets the KV; the next turn re-prefills once (correctness unchanged, one-turn warmth cost). ──
+let _lastReceipt = null;   // promise of the just-generated turn's sealed receipt (canon path only)
+function sealLast(rec) {
+  try {
+    const bs = log.querySelectorAll(".row.a .msg"); const b = bs[bs.length - 1]; if (!b) return;
+    const t = b.querySelector(".t"); if (!t || t.querySelector(".qseal")) return;
+    const s = document.createElement("span"); s.className = "qseal"; s.textContent = " ⟡";
+    s.title = "verified thought — tap for the receipt"; s.style.cssText = "cursor:pointer;opacity:.55;margin-left:4px";
+    s.onclick = (ev) => { ev.stopPropagation(); showReceipt(rec); };
+    t.appendChild(s);
+  } catch (e) {}
+}
+function showReceipt(rec) {
+  try { const old = document.getElementById("qreceipt"); if (old) old.remove(); } catch (e) {}
+  const el = document.createElement("div"); el.id = "qreceipt";
+  el.style.cssText = "position:fixed;left:12px;bottom:88px;z-index:30;max-width:min(420px,86vw);font:11px/1.6 ui-monospace,Menlo,Consolas,monospace;color:#d6f0ff;background:rgba(8,12,18,.85);backdrop-filter:blur(16px);-webkit-backdrop-filter:blur(16px);border:1px solid rgba(255,255,255,.14);border-radius:12px;padding:10px 12px;box-shadow:0 8px 30px rgba(0,0,0,.45);word-break:break-all";
+  const outK = (rec && rec.body && rec.body["prov:generated"] && rec.body["prov:generated"]["holo:outputTokens"]) || "";
+  el.innerHTML = `<div style="opacity:.8">⟡ verified thought — this answer is a derivation</div>` +
+    `<div style="margin-top:6px;opacity:.6">mind</div><div>${esc(String((engine && engine.modelKappa) || ""))}</div>` +
+    `<div style="margin-top:4px;opacity:.6">answer κ</div><div>${esc(String(outK))}</div>` +
+    `<div id=qrederive style="margin-top:8px;color:#9fd4ff;cursor:pointer">↻ re-derive on this device</div>` +
+    `<div style="margin-top:6px;opacity:.45">tap this card to close</div>`;
+  el.onclick = () => el.remove();
+  document.body.appendChild(el);
+  const rd = el.querySelector("#qrederive");
+  rd.onclick = async (ev) => {
+    ev.stopPropagation();
+    if (busy || _genActive > 0) { rd.textContent = "… wait for the current turn to finish"; return; }
+    rd.textContent = "↻ re-deriving — the exact turn replays on your GPU…";
+    try { const r = await engine.reDerive(rec); rd.textContent = r.ok ? "✓ re-derived byte-identical — κ(output) matches" : ("✗ " + (r.reason || "mismatch")); rd.style.color = r.ok ? "#7fe0a8" : "#ffb3b3"; }
+    catch (e) { rd.textContent = "✗ " + ((e && e.message) || e); rd.style.color = "#ffb3b3"; }
+  };
+}
 
 // ── THE INGENIOUS BIT: Q doesn't dump one AI wall of text. It TALKS — a few natural, human-sized messages that
 // arrive one after another with a real typing cadence (like a thoughtful friend texting), each set in warm,
@@ -378,7 +437,7 @@ async function deliver(fullText, opts = {}) {
   const segs = splitReply(fullText);
   for (let i = 0; i < segs.length; i++) {
     if (i > 0 && !opts.instant) { const th = bubble("a", "", { think: true }); typing(true); await sleep(Math.min(1500, 420 + segs[i].length * 6)); th.parentNode && th.parentNode.remove(); }
-    bubble("a", segs[i], { html: true }); remember("a", segs[i]); speak(segs[i]); log.scrollTop = log.scrollHeight;
+    bubble("a", segs[i], { html: true }); remember("a", segs[i]); if (!opts.spoken) speak(segs[i]); log.scrollTop = log.scrollHeight;
     await sleep(opts.instant ? 16 : 90);
   }
 }
@@ -466,6 +525,7 @@ function demoReply(text) {
 async function generate(text, skipUser) {
   const _tSend = _perf();
   stopSpeak();   // barge-in: a new turn cancels any reply Q is still speaking
+  const cs = mkClauseSpeaker();   // live voice: this turn's reply is spoken WHILE it streams (HQ-only)
   busy = true; send.disabled = true; send.classList.remove("ready"); hideChips();
   let ub = null;
   if (!skipUser) { ub = bubble("u", text); remember("u", text); try { reply.remember(text); } catch (e) {} }   // …and into the SHARED realm memory (Q Remembers You), same store as every surface
@@ -497,7 +557,7 @@ async function generate(text, skipUser) {
           if (hq.generateStream) {
             // REAL-TIME: stream the drawer brain's tokens into a live bubble as it thinks (+ measure tok/s honestly)
             let live = null, liveTxt = null;
-            out = await hq.generateStream(prompt, (full) => { if (!full) return; if (!_tFirst) _tFirst = _perf(); _last = full; if (!live) { try { think.parentNode && think.parentNode.remove(); } catch (e) {} live = bubble("a", ""); liveTxt = document.createTextNode(""); live.insertBefore(liveTxt, live.firstChild); _streamed = true; } liveTxt.nodeValue = full; log.scrollTop = log.scrollHeight; });
+            out = await hq.generateStream(prompt, (full) => { if (!full) return; if (!_tFirst) _tFirst = _perf(); _last = full; if (!live) { try { think.parentNode && think.parentNode.remove(); } catch (e) {} live = bubble("a", ""); liveTxt = document.createTextNode(""); live.insertBefore(liveTxt, live.firstChild); _streamed = true; } liveTxt.nodeValue = full; cs.feed(full); log.scrollTop = log.scrollHeight; });
             if (live) { const r = live.closest(".row"); if (r) r.remove(); }
             out = String(out || "").trim();
           } else { out = String((await hq.generate(prompt)) || "").trim(); }
@@ -531,11 +591,12 @@ async function generate(text, skipUser) {
       // engine speed. On completion the live bubble is swapped ONCE for the polished multi-bubble
       // layout (deliver instant mode below) — same final text, zero pacing tax.
       let live = null, liveTxt = null;
+      const ctxIds0 = convIds;                                  // pre-turn context — the receipt's ctxIds (D5)
       const res = await engine.generate(convIds.concat(turnIds), { maxNew: m.cap || 256, onToken: (ev) => {
         typing(true);
         if (!ev || !ev.text) return;
         if (!live) { think.parentNode && think.parentNode.remove(); live = bubble("a", ""); liveTxt = document.createTextNode(""); live.insertBefore(liveTxt, live.firstChild); _streamed = true; }
-        liveTxt.nodeValue = ev.text; log.scrollTop = log.scrollHeight;
+        liveTxt.nodeValue = ev.text; cs.feed(ev.text); log.scrollTop = log.scrollHeight;
       } });
       if (live) { const r = live.closest(".row"); if (r) r.remove(); }
       out = res.text || ""; convIds = res.ids;
@@ -543,11 +604,19 @@ async function generate(text, skipUser) {
       if (!window.__ttfw.firstBrainTtft) window.__ttfw.firstBrainTtft = ttft;
       const _warm = (reused > 0) || commonsRestored || !firstTurn;   // reused persona pin, restored commons, or a running-conversation turn
       record({ warm: _warm, cold: !_warm, ttft, tokps: (res.stats && res.stats.tokps) || 0, ack: ackMs, spec: (res.stats && res.stats.spec) || null, model: (m && m.name || "").split("·")[0].trim() });   // metrics go to the ?stats ledger only — the chat stays clean, just like WhatsApp
+      // D5: seal the turn (fire-and-forget) — the ⟡ lands on the delivered bubble below
+      _lastReceipt = null;
+      try { if (res.outIds && res.outIds.length) _lastReceipt = engine.buildReceipt({ promptText: text, ctxIds: ctxIds0, turnIds, outIds: res.outIds.slice(), fromMemo: false }); } catch (e) { _lastReceipt = null; }
       } finally { _genActive--; }
     }
     out = (reply.finalize(out).text) || "…";   // ★ the ONE finalize: identity guard → humanize → record the self-evolution signal (same as every surface)
     think.parentNode && think.parentNode.remove();
-    await deliver(out, { instant: _streamed });   // streamed live → final layout lands at once (no pacing tax); demo keeps the choreography
+    // live voice hand-off: if clauses were already spoken along the stream, flush the tail and DON'T
+    // re-speak in deliver (double voice). If HQ never warmed mid-stream, deliver's speak() parks the
+    // whole reply for the moment the neural voice is ready — never the OS floor.
+    const _spokenLive = _streamed && cs.flush(out);
+    await deliver(out, { instant: _streamed, spoken: _spokenLive });   // streamed live → final layout lands at once (no pacing tax); demo keeps the choreography
+    if (_lastReceipt) { const rp = _lastReceipt; _lastReceipt = null; rp.then((rec) => rec && sealLast(rec)).catch(() => {}); }   // D5: ⟡ on the final bubble
   } catch (e) { think.parentNode && think.parentNode.remove(); bubble("a", "⚠ " + e.message); }
   typing(false); busy = false; send.disabled = false; input.focus(); scheduleIdle();
 }
@@ -646,6 +715,7 @@ const _OS_VOICE_OK = (() => { try { return /[?&]osvoice=1/.test(location.search)
 function _flushVoiceQ() { const t = _voiceQ; if (t && _kokoro && _kokoro.ready && _kokoro.ready()) { _voiceQ = null; speak(t); } }
 function speak(text) {
   if (!voiceOn || !text) return;
+  text = _spokenText(text); if (!text) return;   // Q says human words — markdown/code/urls stay on screen only
   if (_kokoro && _kokoro.ready && _kokoro.ready()) {   // beautiful neural voice — the ONLY voice Q uses
     qOrb("speaking"); _qSpeaking++;
     _kokoro.speak(text).then(() => { _qSpeaking = Math.max(0, _qSpeaking - 1); if (!_qSpeaking) qOrb("idle"); }).catch(() => { _qSpeaking = Math.max(0, _qSpeaking - 1); if (!_qSpeaking) qOrb("idle"); if (_OS_VOICE_OK) _osSpeak(text); });
@@ -654,7 +724,50 @@ function speak(text) {
   if (_OS_VOICE_OK) { _osSpeak(text); return; }   // opt-in accessibility floor only
   _voiceQ = text;   // HQ-only: hold the latest utterance until Kokoro is warm, then speak it beautifully
 }
-function stopSpeak() { _qSpeaking = 0; qOrb("idle"); try { if (_tts) _tts.cancel(); } catch {} try { if (_kokoro && _kokoro.stop) _kokoro.stop(); } catch {} }
+function stopSpeak() { _csEpoch++; _csQ = Promise.resolve(); _qSpeaking = 0; qOrb("idle"); try { if (_tts) _tts.cancel(); } catch {} try { if (_kokoro && _kokoro.stop) _kokoro.stop(); } catch {} }
+
+// ── LIVE VOICE (clause-streamed): Q speaks WHILE the reply streams, sentence by sentence, tracking the
+// text as it paints — pipelined audio so it flows like a person talking, never a wait-then-monologue.
+// HQ-only law holds: clauses are voiced only once the neural voice is warm; never the OS floor. A new
+// turn (stopSpeak) bumps the epoch so queued clauses from the old reply can never speak late. ──
+let _csEpoch = 0, _csQ = Promise.resolve();
+function _spokenText(t) {   // what Q SAYS vs what it SHOWS: strip markdown/code/urls so the voice stays human
+  return String(t || "").replace(/```[\s\S]*?```/g, " code block ").replace(/`([^`]*)`/g, "$1")
+    .replace(/https?:\/\/\S+/g, "a link").replace(/[*_#>|]+/g, " ").replace(/\s{2,}/g, " ").trim();
+}
+function mkClauseSpeaker() {
+  const epoch = _csEpoch; let cur = 0;
+  const MIN = 16;   // don't voice tiny fragments — they sound clipped
+  const part = (t) => {
+    t = _spokenText(t); if (!t) return;
+    _csQ = _csQ.then(() => {
+      if (epoch !== _csEpoch || !voiceOn) return;
+      if (!(_kokoro && _kokoro.ready && _kokoro.ready())) return;   // HQ-or-silent mid-stream — the full reply is parked by speak() at flush instead
+      qOrb("speaking"); _qSpeaking++;
+      return _kokoro.speak(t).catch(() => {}).then(() => { _qSpeaking = Math.max(0, _qSpeaking - 1); if (!_qSpeaking) qOrb("idle"); });
+    });
+  };
+  return {
+    hq: () => !!(_kokoro && _kokoro.ready && _kokoro.ready()),
+    spokeAny: () => cur > 0,
+    feed(full) {   // voice every COMPLETE sentence painted so far (one chunk — kokoro pipelines its sentences)
+      if (!(_kokoro && _kokoro.ready && _kokoro.ready())) return;   // not warm → leave cur at 0 so flush/park covers the whole reply
+      full = String(full || "");
+      const rest = full.slice(cur);
+      let idx = -1; const re = /[.!?…](?=["')\]]*(\s|$))/g; let mm;
+      while ((mm = re.exec(rest))) idx = mm.index;
+      if (idx >= 0 && idx + 1 >= MIN) { cur += idx + 1; part(rest.slice(0, idx + 1)); }
+      else if (rest.length > 260) { const c = rest.lastIndexOf(", "); if (c >= MIN) { cur += c + 1; part(rest.slice(0, c + 1)); } }   // very long clause: cut at a comma so audio never falls behind the text
+    },
+    flush(full) {   // end of stream: voice the tail (or, if HQ never warmed, hand the WHOLE reply to speak() to park)
+      full = String(full || "");
+      if (cur === 0) return false;                    // nothing spoken → caller lets deliver()/speak() park it whole
+      const rest = full.slice(cur); cur = full.length;
+      if (rest.trim()) part(rest);
+      return true;
+    },
+  };
+}
 // Q's voice is always on — start warming the neural voice immediately (it upgrades the greeting + replies).
 warmKokoro();
 try { if (_tts) _tts.onvoiceschanged = () => { _qVoice = pickVoice(); }; } catch {}
@@ -717,6 +830,23 @@ if (micBtn && micAvailable) {   // syncComposer() shows the mic only when the fi
 try { const oc = document.getElementById("orb"); if (oc) { const orb = mountOrb(oc); if (orb.fallback) document.querySelector(".av").style.background = "radial-gradient(circle at 32% 27%,#c6b8ff,#8b7bff 52%,#5b3fd6 100%)"; } } catch (e) {}
 const had = restore();
 input.focus();
+// ── D2 (Q-DERIVED-MIND) PORTABLE MOMENT: a conversation moment IS content — one link resumes it ──
+// #moment=<b64url(gzip(JSON{v:1,model,turns}))> — the payload travels IN the fragment (never sent to
+// any server, exactly the YourSpace #p= law). Restore = hydrate the transcript + liveTurns; the canon
+// bind re-frames those turns (reframeForCanon), re-prefills DETERMINISTICALLY, and Q continues the
+// thought. Cross-device by construction: no KV bytes travel (layouts differ per device) — the content
+// re-derives, which is the κ law. Mint: await QMoment.copy() (or .link()).
+const MOMENT = (() => { try { const h = String(location.hash || "").match(/[#&]moment=([A-Za-z0-9_-]+)/); return h ? h[1] : null; } catch { return null; } })();
+const _b64uToBytes = (s) => { const b = atob(s.replace(/-/g, "+").replace(/_/g, "/")); const u = new Uint8Array(b.length); for (let i = 0; i < b.length; i++) u[i] = b.charCodeAt(i); return u; };
+const _bytesToB64u = (u) => { let s = ""; for (let i = 0; i < u.length; i++) s += String.fromCharCode(u[i]); return btoa(s).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, ""); };
+async function _gz(u8, dir) { const st = dir === "d" ? new DecompressionStream("gzip") : new CompressionStream("gzip"); const w = st.writable.getWriter(); w.write(u8); w.close(); return new Uint8Array(await new Response(st.readable).arrayBuffer()); }
+async function momentLink() {
+  const turns = liveTurns.filter((t) => t.text && t.text.length <= 4000).slice(-24);
+  const payload = { v: 1, model: m.manifestKappa || m.name || "", turns };
+  const tok = _bytesToB64u(await _gz(new TextEncoder().encode(JSON.stringify(payload))));
+  return location.origin + location.pathname + "#moment=" + tok;
+}
+window.QMoment = { link: momentLink, copy: async () => { const u = await momentLink(); try { await navigator.clipboard.writeText(u); } catch {} return u; } };
 // INSTANT GREETING: on a fresh cold visit the weights are still streaming (tens of seconds on a new device).
 // Don't leave the screen empty waiting on a model-authored hello — Q says hi INSTANTLY (canned, on-brand),
 // the model warms underneath, and the FIRST real message uses the real brain. New users feel Q alive in <150ms.
@@ -725,9 +855,28 @@ const INSTANT_HELLO = "Hey, I'm Q. I live right here on your device, so whatever
 const WELCOME_BACK = "Welcome back. I'm right here — what's on your mind?";
 // FRESH GREETING EVERY OPEN: Q opens on ONE clean greeting bubble, shown instantly. If the shared realm knows your
 // name, this SAME bubble is personalized to "Welcome back, <name>" (async, in place — never a second line).
+// A #moment boot suppresses the hello SYNCHRONOUSLY (the restored thread IS the opening); a corrupt
+// payload recovers to the normal hello (never a dead empty chat).
 let _greetBubble = null;
-if (!DEMO && !params.get("q") && !_embedded) { _greetBubble = bubble("a", INSTANT_HELLO); renderChips(); scheduleIdle(); greeted = true; armGreeting(INSTANT_HELLO); window.__ttfw.helloMs = Math.round(performance.now() - window.__ttfw.t0); }   // embedded → the drawer renders the SHARED c.isQ thread (or an instant hello if empty) in its own boot block below
+if (!DEMO && !params.get("q") && !_embedded && !MOMENT) { _greetBubble = bubble("a", INSTANT_HELLO); renderChips(); scheduleIdle(); greeted = true; armGreeting(INSTANT_HELLO); window.__ttfw.helloMs = Math.round(performance.now() - window.__ttfw.t0); }   // embedded → the drawer renders the SHARED c.isQ thread (or an instant hello if empty) in its own boot block below
 else { armGreeting(INSTANT_HELLO); }
+if (MOMENT && !_embedded && !DEMO) (async () => {
+  try {
+    const p = JSON.parse(new TextDecoder().decode(await _gz(_b64uToBytes(MOMENT), "d")));
+    if (p.v !== 1 || !Array.isArray(p.turns) || !p.turns.length) throw new Error("bad moment");
+    for (const t of p.turns.slice(-24)) {
+      const side = t.side === "u" ? "u" : "a", text = String(t.text || "").slice(0, 4000);
+      if (!text) continue;
+      bubble(side, text); liveTurns.push({ side, text });
+    }
+    greeted = true; window.__momentN = liveTurns.length;
+    try { log.scrollTop = log.scrollHeight; } catch {}
+  } catch (e) {
+    // corrupt/foreign payload → recover to the normal instant hello (never dead air)
+    if (!greeted) { _greetBubble = bubble("a", INSTANT_HELLO); renderChips(); scheduleIdle(); greeted = true; }
+    try { console.warn("[moment] restore failed:", e && e.message || e); } catch {}
+  }
+})();
 if (!DEMO) { (async () => { try {
   let M = window.HoloMemory; for (let i = 0; i < 25 && !M; i++) { await new Promise((r) => setTimeout(r, 200)); M = window.HoloMemory; }   // wait for the realm to bind (hydrates async)
   if (!M) return; if (M.ready) await M.ready();
@@ -765,9 +914,11 @@ else (async () => {
   // the whole load races a hard deadline. Miss it → drop to the instant LITE brain so Q answers NOW, and keep the
   // real download alive in the BACKGROUND; the moment a real mind lands it upgrades in place. No path can hang.
   //
-  // THE MIND LADDER (HOLO-Q-INSTANT-MIND, P0-witnessed in _bridge_witness.html): seed → bridge → canon.
-  // On a COLD device the canon stream is minutes — so the deadline-miss path arms Falcon-E-1B (0.37 GB,
-  // REAL generation) as a BRIDGE while canon streams underneath. Witness facts the flow obeys:
+  // THE MIND LADDER (HOLO-Q-INSTANT-MIND → Q-WAFER): seed → canon. BITNET-ONLY by operator decision
+  // (2026-07-14): ONE mind streams — the seed carries the conversation until BitNet lands (the W1
+  // progressive .holo stream collapses the post-download tail, so canon arrival ≈ wire time). The
+  // Falcon-E-1B BRIDGE rung is retired from the default path; `?bridge=1` re-arms it for A/B only.
+  // Witness facts the (opt-in) bridge flow still obeys:
   //   W2 canon's network stream is wasm-free → safe to overlap with bridge generation;
   //   W3 the wasm TOKENIZER is a singleton → any canon header load poisons the live tokenizer, so the canon
   //      ENGINE BUILD (~6s, OPFS-warm) is serialized behind swapLock at a turn boundary, and after ANY bridge
@@ -775,7 +926,10 @@ else (async () => {
   //   W5 each engine owns its GPUDevice → bridge.destroy() after the swap is isolated.
   let _lit = false;                                   // once we've dropped to lite, background load-status writes must not re-flip the header
   const CANON_M = m;                                  // the catalog/override canon entry (BitNet) — `m` swaps per tier so framing follows the ACTIVE brain
-  const BRIDGE_M = (() => { const f = MODELS.find((x) => x.floor && x.kappaUrl && x.manifestKappa && !x.disabled); return f ? { ...f } : null; })();   // the pinned floor tier (Falcon-E-1B κ-object) — null means no bridge, lite carries alone
+  const BRIDGE_M = (() => {
+    if (!params.has("bridge")) return null;         // BITNET-ONLY (Q-WAFER): no Falcon rung — null means no bridge, the seed carries alone until canon lands; ?bridge=1 re-arms for A/B
+    const f = MODELS.find((x) => x.floor && x.kappaUrl && x.manifestKappa && !x.disabled); return f ? { ...f } : null;
+  })();
   let bridgeGpu = null, _bridgeTainted = false;       // _bridgeTainted: a bridge header entered wasm → canon must rebuild fresh (W3)
   function enterLite(detail) {
     if (_lit) return; _lit = true;
@@ -837,7 +991,7 @@ else (async () => {
     const ce = await createEngine(CANON_M, loaded);
     const wasBridge = tier === "bridge", wasLite = _liteMode;
     m = CANON_M; engine = ce; tier = "canon"; _liteMode = false; armed = true;
-    convIds = wasBridge ? reframeForCanon(ce) : [];                     // carry the conversation across the tokenizer boundary
+    convIds = (wasBridge || (window.__momentN | 0) > 0) ? reframeForCanon(ce) : [];   // carry the conversation across the tokenizer boundary — bridge swap OR a restored #moment (D2)
     personaIds = null;                                                  // persona ids were (possibly) bridge-tokenized — recompute lazily with canon's tokenizer
     if (bridgeGpu) { try { bridgeGpu.destroy(); } catch (e) {} bridgeGpu = null; }   // W5: isolated teardown
     try { window.__engine = ce; } catch {}
@@ -875,8 +1029,8 @@ else (async () => {
         onProgress: (d, t, w) => { if (_lit) return; const pct = t ? Math.round(100 * d / t) : 0; setStatus("loading", pct ? `warming up… ${pct}%` : "warming up…"); } });
       loaded = _dl > 0 ? await Promise.race([loadP, new Promise((r) => setTimeout(() => r("__deadline__"), _dl))]) : await loadP;
       if (loaded === "__deadline__") {
-        // COLD: the canon stream will take minutes. Answer NOW (lite), arm the BRIDGE mind (real answers in
-        // ~download-time of 0.37 GB), and upgrade to canon when its bytes land. ?nobridge disables for A/B.
+        // COLD: canon is still streaming. Answer NOW (lite/seed) and upgrade to canon when its bytes
+        // land (BITNET-ONLY: no bridge rung — BRIDGE_M is null unless ?bridge=1 re-arms it for A/B).
         enterLite("bringing my full mind online…");
         if (!params.has("nobridge") && BRIDGE_M && BRIDGE_M.kappaUrl) {
           _bridgeTainted = true;                       // the bridge header WILL enter wasm → canon must rebuild fresh (W3)

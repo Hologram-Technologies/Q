@@ -13,9 +13,14 @@
 //   ready() · loadVoice(onProgress) · speak(text[,voice]) · stop() · engine()      — backward-compat singleton
 //                                                                                     (apps/q q-chat.html etc.)
 
+// HQ-ONLY LAW (operator, 2026-07-13): Q speaks in its beautiful neural voice or it HOLDS — the robotic
+// speechSynthesis floor is opt-in only (?osvoice=1, accessibility). A held utterance is parked (latest wins)
+// and spoken the instant the HD voice warms, so the first thing you ever hear from Q is already gorgeous.
+const _OS_FLOOR = (() => { try { return /[?&]osvoice=1/.test(location.search); } catch (e) { return false; } })();
+
 export function createVoice(opts = {}) {
   const onLevel = typeof opts.onLevel === "function" ? opts.onLevel : function () {};
-  let raf = 0, lvl = 0, tgt = 0, active = false, cur = null, hd = null, ac = null, node = null, curSrc = null;
+  let raf = 0, lvl = 0, tgt = 0, active = false, cur = null, hd = null, ac = null, node = null, curSrc = null, parked = null;
 
   function pump() {
     if (!active) return;
@@ -92,8 +97,9 @@ export function createVoice(opts = {}) {
   async function speak(text) {
     text = String(text || "").trim(); if (!text) return false;
     stop();
-    if (hd) { try { return await speakHD(text); } catch (e) { /* HD failed → floor, Q still talks */ } }
-    return speakSpeech(text);
+    if (hd) { try { return await speakHD(text); } catch (e) { /* HD errored mid-utterance → floor only if opted in */ } }
+    if (_OS_FLOOR) return speakSpeech(text);   // accessibility floor, explicit opt-in only
+    parked = text; return false;               // HQ-or-hold: spoken beautifully the moment HD warms (latest wins)
   }
 
   // warm the ON-DEVICE HD voice. Plan A = fully-local vendored createTTS (messenger/OS: no HF, no import map);
@@ -135,10 +141,17 @@ export function createVoice(opts = {}) {
         let ko = await _importKo();
         if (!ko) { await new Promise((r) => setTimeout(r, 500)); ko = await _importKo(); }   // warm the SW, retry once
         if (!ko) throw new Error("kokoro.js unresolved");
-        const tf = await import(/* @vite-ignore */ "@huggingface/transformers");
+        // kokoro.js RE-EXPORTS its transformers env — use it directly. The bare "@huggingface/transformers"
+        // import-map entry is ROOT-absolute, which is a dead URL on a /Q mount without the root SW (the map
+        // was the last root-absolute dependency killing this plan on the live site).
+        const tf = ko.env ? ko : await import(/* @vite-ignore */ "@huggingface/transformers");
         const env = tf.env, KokoroTTS = ko.KokoroTTS;
         env.allowRemoteModels = true; env.allowLocalModels = false;
-        try { const wasm = new URL("/_shared/voice/vendor/kokoro/transformers/", import.meta.url).href; if (env.backends && env.backends.onnx && env.backends.onnx.wasm) { env.backends.onnx.wasm.wasmPaths = wasm; env.backends.onnx.wasm.proxy = true; } } catch (e) {}
+        // EVICTED-TREE LAW (live /Q): do NOT override wasmPaths or set proxy here. ort's proxy worker is a
+        // blob worker whose fetches BYPASS the service worker — and the vendored transformers dir is an
+        // evicted tree (real network 404s; only SW-rescued page-context fetches reach it). Defaults resolve
+        // the wasm relative to transformers.js and fetch it from the PAGE context, where the rescue serves
+        // it verified; webgpu carries the heavy math. This exact config is live-proven (fp16 ready in 24s).
         // HIGHER-QUALITY VOICE: on a WebGPU device stream the fp16 weights and synth on the GPU — far warmer
         // and more natural than the q8/wasm floor, and quicker to speak. Fall back to q8/wasm without WebGPU,
         // or if the GPU load fails, so higher quality never costs reliability.
@@ -151,7 +164,8 @@ export function createVoice(opts = {}) {
         return true;
       } catch (e) {}
       return false;
-    })().catch(() => false);
+    })().catch(() => false)
+      .then((ok) => { if (ok && parked) { const t = parked; parked = null; speak(t); } return ok; });   // HD just warmed → speak the held utterance
     return warming;
   }
 
