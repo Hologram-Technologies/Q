@@ -1025,8 +1025,10 @@ export function attachPlymouth(overlay, host) {
   // RETURNING = RECOGNITION (INSTANT-RETURN W1, same law as ARRIVAL A3): an operator or guest this device
   // already knows re-enters on the SHORT hero too — the full five seconds is the FIRST impression; the
   // second visit is a greeting, not a ceremony. Skippability and the hard cap are unchanged.
-  // BOOT IS FIVE SECONDS, EVERY OPEN (by request): retired the returning-visitor recognition-downgrade so
-  // the hero holds the full five seconds on every fresh open. Only the same-tab Lock & Sign Out stays short.
+  // RETURNING = FAST (by request: as quick as possible for returning users): a device we already know
+  // re-enters on the SHORT hero (~1.2s) — the full 3-second hero is the FIRST impression only. First-timers
+  // still get the cinematic 3s; the same-tab Lock & Sign Out handshake stays short too.
+  try { if (!shortHero && (localStorage.getItem("holo.lastOperator") || localStorage.getItem("holo-messenger/id-secret"))) shortHero = true; } catch {}
   const BOOT_MIN = shortHero ? 1200 : 3000, BOOT_MAX = shortHero ? 1600 : 3400;
   const bootT0 = (() => { try { return window.__hlBootT0 || Date.now(); } catch { return Date.now(); } })();
   let bootDone = false, bootTimer = 0;
