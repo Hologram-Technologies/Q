@@ -476,7 +476,7 @@ import("/usr/lib/holo/holo-names.mjs").then((m) => { classifyName = m.classify |
   ];
   legend.innerHTML = CHIPS.map((c, i) =>
     `<button class="hk-chip" type="button" tabindex="-1" data-i="${i}" title="${esc(c.label)}">${c.kbd ? `<kbd>${esc(c.kbd)}</kbd>` : ""}<span>${esc(c.label)}</span></button>`).join("");
-  core.title = "Shortcuts — hold " + altSym;
+  core.title = "Shortcuts, hold " + altSym;
   tag.innerHTML = `<kbd>${altSym}</kbd> for shortcuts`;
 
   const DKEY = "holo.hints.dismissed.v1";

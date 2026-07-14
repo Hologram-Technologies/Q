@@ -203,7 +203,7 @@ function buildRailControl() {
   btn.type = "button";
   btn.className = "holo-rail-btn holo-pwr-btn";
   btn.title = "Lock & sign out";
-  btn.setAttribute("aria-label", "Power — lock and sign out");
+  btn.setAttribute("aria-label", "Lock or sign out");
   btn.innerHTML = PWR;
   btn.addEventListener("click", (e) => { e.preventDefault(); e.stopPropagation(); btn.classList.add("armed"); open(); });
   wrap.appendChild(btn);

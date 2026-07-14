@@ -129,7 +129,7 @@
         // Absent a sampled wallpaper they fall back to the fixed light ink + dark halo (unchanged behaviour).
         "color:var(--hw-ink,var(--holo-ink,#f4f6fa));-webkit-tap-highlight-color:transparent;",
         // ONE typeface (the OS face) + the OS readability floor (--holo-font-min, 16px) — every widget inherits both
-        "font:var(--holo-weight-light,300) max(var(--holo-font-min,16px),16px)/1.4 var(--holo-font-sans,system-ui,-apple-system,'Segoe UI',Roboto,sans-serif);",
+        "font:var(--holo-weight-light,300) max(var(--holo-font-min,16px),16px)/1.4 var(--font-ui,var(--holo-font-sans,system-ui,-apple-system,'Segoe UI',Roboto,sans-serif));",
         // cross-fade ink/halo as the widget slides across a light↔dark boundary (never jarring)
         "text-shadow:var(--hw-shadow,0 1px 18px rgba(0,0,0,.5),0 1px 3px rgba(0,0,0,.55));transition:color .35s ease,text-shadow .35s ease,filter .2s}",
       ".hw-widget[hidden]{display:none}",
@@ -144,6 +144,7 @@
         "backdrop-filter:blur(9px) saturate(1.15);box-shadow:0 20px 54px rgba(0,0,0,.4);transition:opacity .18s ease}",
       ".hw-widget:hover .hw-frame,.hw-widget.resizing .hw-frame,.hw-widget.editing .hw-frame{opacity:1}",
       ".hw-body{position:relative;z-index:1;text-shadow:inherit}",
+      ".hw-greeting, .hw-greeting .hw-body, .hw-greeting .hw-body *{font-family:var(--font-display,ui-serif,Georgia,serif)}",
       ".hw-widget.editing .hw-body{filter:blur(1.5px) brightness(.7);pointer-events:none}",
       // resize grip — bottom-right, revealed on hover, scales the whole object (persists)
       ".hw-grip{position:absolute;right:-8px;bottom:-8px;width:17px;height:17px;border-radius:50%;cursor:nwse-resize;z-index:4;opacity:0;transition:opacity .15s;",
@@ -224,7 +225,7 @@
     root.innerHTML =
       '<div class="hw-frame"></div>' +
       '<div class="hw-body"></div>' +
-      '<div class="hw-tools"><button class="edit" title="Edit">✎</button><button class="kap" title="Verify — derive this widget’s κ">⛎</button></div>' +
+      '<div class="hw-tools"><button class="edit" title="Edit"><svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M4 20h4L19 9a2 2 0 0 0-3-3L5 17Z"/><path d="M14 7l3 3"/></svg></button><button class="kap" title="Check this hasn’t changed"><svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l7 3v5c0 4.4-3 7.6-7 9-4-1.4-7-4.6-7-9V6Z"/><path d="M9 12l2 2 4-4"/></svg></button></div>' +
       '<div class="hw-grip" title="drag to resize"></div>';
     DOC.body.appendChild(root);
     w.el = root; w.body = root.querySelector(".hw-body"); w._subs = [];
@@ -528,8 +529,8 @@
     var tools = w.el.querySelector(".hw-tools"); if (!tools) return;
     tools.querySelector(".edit").addEventListener("click", function (e) { e.stopPropagation(); openEdit(w); });
     var kb = tools.querySelector(".kap");
-    kb.addEventListener("click", function (e) { e.stopPropagation(); sealOne(w).then(function (k) { clip("holo://" + k, "Copied this widget’s κ"); }); });
-    kb.addEventListener("mouseenter", function () { if (kb._v) return; kb._v = 1; sealOne(w).then(function (k) { kb.classList.add("ok"); kb.title = "Verified ✓ · holo://" + k.slice(0, 12) + "…"; }); });
+    kb.addEventListener("click", function (e) { e.stopPropagation(); sealOne(w).then(function (k) { clip("holo://" + k, "Widget link copied"); }); });
+    kb.addEventListener("mouseenter", function () { if (kb._v) return; kb._v = 1; sealOne(w).then(function (k) { kb.classList.add("ok"); kb.title = "Checked, unchanged"; }); });
   }
 
   // ── inline edit — a field panel generated from the type's declared schema ────────────────────
@@ -576,8 +577,8 @@
     if (SEL.length >= 2) { items.push(["⛓  Bundle " + SEL.length + " selected", groupSelected]); items.push(["—"]); }   // ≥2 shift-selected → fuse into one κ
     items = items.concat([
       ["✎  Edit…", function () { openEdit(w); }],
-      ["⛎  Copy widget κ", function () { sealOne(w).then(function (k) { clip("holo://" + k, "Copied this widget’s κ"); }); }],
-      ["⌗  Copy whole board κ", function () { sealAll().then(function (k) { clip("holo://" + k, "Copied a link to your whole widget board"); }); }],
+      ["⛎  Copy link to this widget", function () { sealOne(w).then(function (k) { clip("holo://" + k, "Widget link copied"); }); }],
+      ["⌗  Copy link to the whole board", function () { sealAll().then(function (k) { clip("holo://" + k, "Board link copied"); }); }],
       ["⎘  Duplicate", function () { duplicate(w); }],
       ["—"],
       ["⊖  Hide", function () { hide(w); }],
