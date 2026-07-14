@@ -216,6 +216,16 @@ async function cacheFirst(req, pathname) {
   const kx = closureKappaSync(pathname);   // K2: opportunistic, sync — never awaited on the hot path
   const hit = (await cache.match(req)) || (req.url.includes("?") ? null : (await cache.match(req, { ignoreSearch: true })));
   if (hit) { if (!SHELL_KAPPA.size) loadManifest(); return stamp(hit, kx, "shell-cache"); }
+  // W1 (HOLO-INSTANT-RETURN): a fresh ship renames THIS shell cache (stamp), so the visit after any
+  // deploy starts from an empty scoped cache — but the ROOT boot seal (holo-boot-<release>) still holds
+  // the previous VERIFIED document + login chain. Serve it before any socket: a deploy between two
+  // visits must not turn the returning boot into a re-download race (measured live: app.html sat 9.2s
+  // behind exactly that). Freshness stays the page's job — it reseals on the new signed head, exactly
+  // the root-scope contract. Queryless only (a ?v= version intent must never ride an old seal).
+  if (!req.url.includes("?")) {
+    const sealed = await caches.match(req, { ignoreSearch: true });
+    if (sealed) { if (!SHELL_KAPPA.size) loadManifest(); return stamp(sealed, kx, "boot-seal"); }
+  }
   // A restarted worker loses the in-memory manifest (install doesn't re-run) — lazily reload it (from the
   // integrity index, which is never intercepted/killed) so verification + κ-store recovery survive eviction.
   if (!SHELL_KAPPA.size) await loadManifest();
