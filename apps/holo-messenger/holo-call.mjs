@@ -120,7 +120,12 @@ function _makePeer(post, other, polite, localStream, onRemoteStream, onState) {
   pc.ontrack = ({ streams }) => { if (streams && streams[0]) onRemoteStream(streams[0]); };
   pc.onnegotiationneeded = async () => { try { makingOffer = true; await pc.setLocalDescription(); post({ to: other, kind: "sdp", data: pc.localDescription }); } catch {} finally { makingOffer = false; } };
   pc.onicecandidate = ({ candidate }) => { if (candidate) post({ to: other, kind: "ice", data: candidate }); };
-  pc.onconnectionstatechange = () => { if (pc.connectionState === "connected") tunePeer(pc); onState(pc.connectionState); };   // 1:1 → full HD budget
+  // survive a network change: restartIce re-gathers on the new path (Wi-Fi↔cellular) instead of freezing
+  let reT = null;
+  const restart = (delay) => { clearTimeout(reT); reT = setTimeout(() => { const cs = pc.connectionState, ics = pc.iceConnectionState; if (cs === "connected" || cs === "completed" || ics === "connected" || ics === "completed") return; try { pc.restartIce(); } catch {} }, delay); };
+  pc.oniceconnectionstatechange = () => { const s = pc.iceConnectionState; if (s === "failed") { onState("reconnecting"); restart(300); } else if (s === "disconnected") { onState("reconnecting"); restart(2500); } else if (s === "connected" || s === "completed") onState("connected"); };
+  try { if (navigator.connection && navigator.connection.addEventListener) { pc._netHook = () => restart(200); navigator.connection.addEventListener("change", pc._netHook); } } catch {}
+  pc.onconnectionstatechange = () => { const cs = pc.connectionState; if (cs === "connected") { tunePeer(pc); onState("connected"); } else if (cs === "failed") { onState("reconnecting"); restart(300); } else onState(cs); };   // 1:1 → full HD budget
   async function onSignal(d) {
     try {
       if (d.sdp) {
@@ -132,7 +137,7 @@ function _makePeer(post, other, polite, localStream, onRemoteStream, onState) {
       } else if (d.ice) { try { await pc.addIceCandidate(d.ice); } catch (e) { if (!ignoreOffer) throw e; } }
     } catch {}
   }
-  return { pc, onSignal, close: () => { try { pc.close(); } catch {} } };
+  return { pc, onSignal, close: () => { try { clearTimeout(reT); } catch {} try { if (pc._netHook && navigator.connection) navigator.connection.removeEventListener("change", pc._netHook); } catch {} try { pc.close(); } catch {} } };
 }
 
 // DECLINE without joining — the callee's red button. Opens the signal door just long enough to tell the caller

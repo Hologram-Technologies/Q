@@ -5,7 +5,7 @@
 // P2P (DTLS-SRTP); the relay only shuttles SDP/ICE. Mesh is fine to ~6 peers; beyond that an SFU forwards (MEET-E seam).
 
 import * as Together from "./holo-together.mjs";
-import { openSignal, tunePeer } from "./holo-call.mjs?v=8c1a249f8792";   // THE ONE SIGNAL DOOR — origin /signal on desktop, sealed Nostr rendezvous on hosted static; ?v matches app.mjs's pin so the SW serves ONE fresh copy, never a stale bare-URL cache hit
+import { openSignal, tunePeer } from "./holo-call.mjs?v=930599a2417d";   // THE ONE SIGNAL DOOR — origin /signal on desktop, sealed Nostr rendezvous on hosted static; ?v matches app.mjs's pin so the SW serves ONE fresh copy, never a stale bare-URL cache hit
 
 const ICE = [
   { urls: "stun:stun.l.google.com:19302" },
@@ -65,6 +65,23 @@ export async function joinMesh(intent, { media = null, displayName = "", onParti
   const sayName = () => { if (displayName) { try { sig.post({ kind: "name", name: String(displayName).slice(0, 40) }); } catch {} } };
   sayName();   // introduce yourself; re-said whenever a NEW peer appears so late joiners always learn every name
 
+  // ── RESILIENCE: a call must SURVIVE a network change (Wi-Fi↔cellular on a phone), not freeze. When a peer's
+  // ICE dies, restartIce() re-gathers candidates on the new network → onnegotiationneeded fires a fresh offer
+  // (perfect negotiation resolves the glare of both sides restarting). "disconnected" is often transient so we
+  // wait a beat; "failed" restarts now. A `connection.change` handoff proactively restarts every peer.
+  function scheduleRestart(other, st, delay) {
+    if (left || !peers.has(other)) return;
+    clearTimeout(st.reT);
+    st.reT = setTimeout(() => {
+      if (left || !peers.has(other)) return;
+      const cs = st.pc.connectionState, ics = st.pc.iceConnectionState;
+      if (cs === "connected" || cs === "completed" || ics === "connected" || ics === "completed") return;   // recovered on its own
+      try { st.pc.restartIce(); } catch {}
+    }, delay);
+  }
+  let _netHook = null;
+  try { const conn = navigator.connection; if (conn && conn.addEventListener) { _netHook = () => { for (const [other, st] of peers) scheduleRestart(other, st, 200); }; conn.addEventListener("change", _netHook); } } catch {}
+
   function ensure(other) {
     if (other === me || peers.has(other) || left) return;
     const pc = new RTCPeerConnection({ iceServers: ICE });
@@ -75,7 +92,18 @@ export async function joinMesh(intent, { media = null, displayName = "", onParti
     pc.ontrack = ({ streams }) => { if (streams && streams[0]) { st.stream = streams[0]; onParticipant(other, streams[0], names.get(other) || null); } };
     pc.onnegotiationneeded = async () => { try { st.makingOffer = true; await pc.setLocalDescription(); sig.post({ to: other, kind: "sdp", data: pc.localDescription }); } catch {} finally { st.makingOffer = false; } };
     pc.onicecandidate = ({ candidate }) => { if (candidate) sig.post({ to: other, kind: "ice", data: candidate }); };
-    pc.onconnectionstatechange = () => { if (pc.connectionState === "connected") retune(); onState({ peer: other, state: pc.connectionState }); };
+    pc.oniceconnectionstatechange = () => {
+      const s = pc.iceConnectionState;
+      if (s === "failed") { onState({ peer: other, state: "reconnecting" }); scheduleRestart(other, st, 300); }
+      else if (s === "disconnected") { onState({ peer: other, state: "reconnecting" }); scheduleRestart(other, st, 2500); }
+      else if (s === "connected" || s === "completed") { onState({ peer: other, state: "connected" }); }
+    };
+    pc.onconnectionstatechange = () => {
+      const cs = pc.connectionState;
+      if (cs === "connected") { retune(); onState({ peer: other, state: "connected" }); }
+      else if (cs === "failed") { onState({ peer: other, state: "reconnecting" }); scheduleRestart(other, st, 300); }
+      else onState({ peer: other, state: cs });
+    };
   }
   async function onSignal(other, d) {
     const st = peers.get(other); if (!st) return; const pc = st.pc;
@@ -88,7 +116,7 @@ export async function joinMesh(intent, { media = null, displayName = "", onParti
       } else if (d.ice) { try { await pc.addIceCandidate(d.ice); } catch (e) { if (!st.ignoreOffer) throw e; } }
     } catch {}
   }
-  function drop(other) { const st = peers.get(other); if (!st) return; try { st.pc.close(); } catch {} peers.delete(other); names.delete(other); analysers.delete(other); onParticipantLeave(other); retune(); }
+  function drop(other) { const st = peers.get(other); if (!st) return; try { clearTimeout(st.reT); } catch {} try { st.pc.close(); } catch {} peers.delete(other); names.delete(other); analysers.delete(other); onParticipantLeave(other); retune(); }
 
   // active-speaker: RMS of each remote stream via an AudioContext analyser; loudest above a floor wins.
   let ac = null, asTimer = null, lastAS = null; const analysers = new Map();
@@ -127,6 +155,6 @@ export async function joinMesh(intent, { media = null, displayName = "", onParti
     },
     streamOf: (other) => { const st = peers.get(other); return st ? st.stream : null; },
     _pcs: () => [...peers.values()].map((st) => st.pc),   // debug/witness: the raw peer connections (bitrate-cap gate)
-    leave() { left = true; try { sig.post({ kind: "bye" }); } catch {} try { clearInterval(asTimer); } catch {} for (const [, st] of peers) { try { st.pc.close(); } catch {} } peers.clear(); try { sig.close(); } catch {} try { ac && ac.close(); } catch {} onState({ phase: "ended" }); },
+    leave() { left = true; try { sig.post({ kind: "bye" }); } catch {} try { clearInterval(asTimer); } catch {} try { if (_netHook && navigator.connection) navigator.connection.removeEventListener("change", _netHook); } catch {} for (const [, st] of peers) { try { clearTimeout(st.reT); } catch {} try { st.pc.close(); } catch {} } peers.clear(); try { sig.close(); } catch {} try { ac && ac.close(); } catch {} onState({ phase: "ended" }); },
   };
 }

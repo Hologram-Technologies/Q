@@ -60,7 +60,7 @@
   <script type="module">
     // ?v pins: this page is never SW-cached (new path), but these modules ARE cache-first — the pins force the
     // exact shipped bytes. Keep them in lockstep with app.html's pins (the pin step of every ship).
-    import { parseMeet } from "./holo-call-mesh.mjs?v=4d0de757be97";
+    import { parseMeet } from "./holo-call-mesh.mjs?v=5cc68afe953e";
     const $ = (id) => document.getElementById(id);
     const setStatus = (t, cls = "") => { const s = $("status"); s.textContent = t; s.className = "pill " + cls; };
     const show = (id, on = true) => $(id).classList.toggle("hide", !on);
@@ -91,7 +91,7 @@
       $("note").textContent = "🔒 End-to-end encrypted · nothing to install";
       if (video) { show("togCam"); show("preview"); }
 
-      try { const { callMedia } = await import("./holo-call.mjs?v=8c1a249f8792"); media = await callMedia(video); } catch {}
+      try { const { callMedia } = await import("./holo-call.mjs?v=930599a2417d"); media = await callMedia(video); } catch {}
       if (media && video) { try { $("pv").srcObject = media; } catch {} }
       else if (video) { $("pvOff").textContent = "Camera unavailable — you can still join"; show("pvOff"); }
       if (!media) $("note").textContent = "Mic unavailable — you can join to listen.";
@@ -109,8 +109,8 @@
       const myName = ($("myName").value || "Guest").trim().slice(0, 40) || "Guest";
       try { localStorage.setItem("holo.call.name", myName); } catch {}
       const [{ joinMesh }, { openMeetUI }] = await Promise.all([
-        import("./holo-call-mesh.mjs?v=8e2430929cf3"),
-        import("./holo-meet-ui.mjs?v=dc06c4befcc3"),
+        import("./holo-call-mesh.mjs?v=5cc68afe953e"),
+        import("./holo-meet-ui.mjs?v=cfd22bc662a6"),
       ]);
       $("lobby").classList.add("hide");
       try { $("pv").srcObject = null; } catch {}   // release the lobby preview — the grid's self-tile is the ONE live view now
@@ -139,7 +139,7 @@
         onName: (id, nm) => ui.setLabel(id, nm),
         onParticipantLeave: (id) => ui.removeParticipant(id),
         onActiveSpeaker: (id) => ui.setActiveSpeaker(id),
-        onState: (st) => { if (st && st.phase) ui.setPhase(st.phase); },
+        onState: (st) => { if (st && st.phase) ui.setPhase(st.phase); else if (st && st.peer && st.state) ui.setPeerState(st.peer, st.state === "reconnecting" ? "reconnecting" : "connected"); },
       });
       window.__holoCallMesh = mesh;   // witness/debug handle
     }

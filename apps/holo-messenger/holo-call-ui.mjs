@@ -106,8 +106,10 @@ export function openCallUI({ mode = "outgoing", name = "Someone", video = false,
     overlay,
     setPhase(phase) {
       if (phase === "connecting") statusEl.textContent = "Connecting…";
-      else if (phase === "connected") startTimer();
-      else if (phase === "ended" || phase === "failed" || phase === "disconnected") { statusEl.textContent = phase === "failed" ? "Call failed" : "Call ended"; setTimeout(close, 900); }
+      else if (phase === "connected") { const wasReconn = connected && timer; startTimer(); if (wasReconn && video) statusEl.textContent = ""; }
+      // a network change (Wi-Fi↔cellular) → the mesh/peer restarts ICE under us. Show it, never auto-close.
+      else if (phase === "reconnecting" || phase === "disconnected") { statusEl.textContent = "Reconnecting…"; }
+      else if (phase === "ended" || phase === "failed") { statusEl.textContent = phase === "failed" ? "Call failed" : "Call ended"; setTimeout(close, 900); }
       else if (phase === "declined") { stopRing(); statusEl.textContent = "Declined"; setTimeout(close, 900); }
       else if (phase === "no-answer") { stopRing(); statusEl.textContent = "No answer"; setTimeout(close, 1200); }
       else if (phase === "missed") { stopRing(); statusEl.textContent = "Missed call"; setTimeout(close, 1200); }

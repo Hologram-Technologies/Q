@@ -106,6 +106,7 @@ export function openMeetUI({ name = "Call", video = true, inviteLink = "", onLea
 
   // ── participant model ──
   const remotes = new Map();   // id → { stream, label, audio }
+  const _reconn = new Set();   // peer ids currently reconnecting (network dropped, ICE restarting)
   let selfLabel = "You", focusId = null, pinned = false, alone = true;
 
   function playAudio(id, stream) { const r = remotes.get(id); if (!r) return; let a = r.audio; if (!a) { a = el("audio"); a.autoplay = true; a.setAttribute("playsinline", ""); overlay.append(a); r.audio = a; } try { a.srcObject = stream; a.play && a.play().catch(() => {}); } catch {} }
@@ -167,7 +168,13 @@ export function openMeetUI({ name = "Call", video = true, inviteLink = "", onLea
     },
     setActiveSpeaker(id) { if (!remotes.has(id) || pinned || id === focusId) return; focusId = id; paintStage(); rebuildStrip(); },
     setLabel(id, label) { const r = remotes.get(id); if (r && label) { r.label = label; if (id === focusId) { stageName.textContent = label; stageOrb.textContent = ini(label); } rebuildStrip(); } },
-    setPhase(p) { if (p === "connecting") statusEl.textContent = "Connecting"; else if (p === "connected") statusEl.textContent = ""; else if (p === "ended") { statusEl.textContent = "Ended"; setTimeout(close, 600); } },
+    setPhase(p) { if (p === "connecting") statusEl.textContent = "Connecting"; else if (p === "connected") { if (!_reconn.size) statusEl.textContent = ""; } else if (p === "ended") { statusEl.textContent = "Ended"; setTimeout(close, 600); } },
+    // a peer's network dropped → show it honestly (never a silent freeze); the mesh is restarting ICE under it
+    setPeerState(id, state) {
+      if (state === "reconnecting") _reconn.add(id); else _reconn.delete(id);
+      statusEl.textContent = _reconn.size ? "Reconnecting" : "";
+      stageVideo.style.filter = _reconn.has(focusId) ? "grayscale(.5) brightness(.72)" : "none";
+    },
     tileCount: () => remotes.size + 1,
     close,
   };
