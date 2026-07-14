@@ -43,6 +43,10 @@
   {
    "prefix": "usr/lib/holo/holowhat/",
    "closure": "usr/lib/holo/holowhat/holo-evicted.json"
+  },
+  {
+   "prefix": "_shared/",
+   "closure": "_shared/holo-evicted.json"
   }
  ]
 }
