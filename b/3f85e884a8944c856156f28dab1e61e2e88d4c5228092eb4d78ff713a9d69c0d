@@ -9,7 +9,7 @@
  "tiers": {
   "core": {
    "files": 614,
-   "bytes": 12705616,
+   "bytes": 12707218,
    "hf": 0
   },
   "apps": {
@@ -3133,9 +3133,9 @@
    "source": "origin"
   },
   "apps/holo-messenger/_vendor/ui/chat-ui.bundle.css": {
-   "sha256": "eb2c2b496fa0c2216db2d842a46fd9b4eebab7a518a843a45335e4a74bc3b1ac",
-   "blake3": "3faa3a341fd64fc2a3a9f97afef46866bac008dd203014f0539a273a9aa3ca0c",
-   "bytes": 246098,
+   "sha256": "033da68efaf2af7b4f2cff5904e39e8d7c6bcfcf544467667ab833ef62abd879",
+   "blake3": "4527b5a4c3b8e8f7eda40755b191183a0213338913b19109fef4dc4e8a107b4f",
+   "bytes": 247700,
    "tier": "core",
    "source": "origin"
   },
@@ -3777,8 +3777,8 @@
    "source": "origin"
   },
   "apps/holo-messenger/holo-sw.js": {
-   "sha256": "d3ea4d126e98045ae4c876cb0da0f43f82b88a335af59234b55514b3345a31bf",
-   "blake3": "133cbebb7961dc44e7a04c66bb17eeaa4b1a0c5aae43a191edcca2b0b39d0dfc",
+   "sha256": "df72ad82f8782a0840f2478d71a398756434978d6016eb5734e0b94459ffca3b",
+   "blake3": "37d2241a5672ceaa9011847583f824c028f4288c77256f90346ba07784e061e0",
    "bytes": 26338,
    "tier": "core",
    "source": "origin"
@@ -4197,8 +4197,8 @@
    "source": "origin"
   },
   "apps/holo-messenger/shell-manifest.json": {
-   "sha256": "e9370712449044454dfe6398aaf4794f072e152f382fc490bdb3f3727a61fe76",
-   "blake3": "5d09c666e630b53ec771545794118c8b64b8d853a30fec62f020efaa770d1d38",
+   "sha256": "9c82cbb570f734670e1661e0ecf86d41cae5468b625700f8ce7b6ccbafa3882f",
+   "blake3": "212599674bf06264d7d8a4e7d586c48c591d7ef5e2b1623b8b8e12df74d83609",
    "bytes": 6812,
    "tier": "core",
    "source": "origin"
@@ -16266,8 +16266,8 @@
    "source": "hf"
   },
   "apps/player/holo-evicted.json": {
-   "sha256": "4d2eb8f23c095e64448b4e421c383b4482256b39434373bec220e117db2eb664",
-   "blake3": "e7ac559e104dca685076ffaa13ce974348a28e1c2b809453d5541245481ed4e1",
+   "sha256": "86d2ffa97f2c5fde6215f21c910b2395fa6f3bb95f253a9bdb975a2b90d59d03",
+   "blake3": "3110e87b3dafb51de9e40df0969471128b3ae0e0f9e5d98abaf6f3058236ff9f",
    "bytes": 11559,
    "tier": "apps",
    "source": "origin"
@@ -16688,7 +16688,7 @@
    "source": "hf"
   },
   "apps/player/index.html": {
-   "blake3": "46dab0519e7cc8958e8cdc4360fab28126574f6ac413407a5b89ae10d7bd1a63",
+   "blake3": "1a3b54bf183c8a15d24d275c56850f8433d4d49c4d12e0c33fd7b64ba19f08f5",
    "tier": "apps",
    "source": "hf"
   },
