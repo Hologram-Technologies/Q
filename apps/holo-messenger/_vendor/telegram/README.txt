@@ -1,0 +1,1 @@
+// gramjs 2.26.22 vendored for the browser (esm.sh?bundle graph, self-contained, Buffer/process globals via boot.mjs). Entry: boot.mjs → { TelegramClient, Api, sessions:{StringSession,...} }. PROVEN 2026-07-14: constructs + connect() resolves to a Telegram DC in-browser, no server. See HOLO-MESSENGER-TELEGRAM-SERVERLESS-PROMPT.md.
