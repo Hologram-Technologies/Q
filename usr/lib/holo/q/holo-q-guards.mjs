@@ -121,36 +121,50 @@ export function humanize(t) {
   return s;
 }
 
-// Split a reply into natural, WhatsApp-sized beats — Q talks in a few short human messages, not one wall. Each
-// bubble is a SELF-CONTAINED, complete point capped at 260 chars (Twitter-ish), so it reads like a person firing
-// off separate thoughts. We pack WHOLE sentences into each bubble (never cut mid-sentence) and start a new bubble
-// before a sentence would push it past the cap; a single over-long sentence is split at a clause, then a word,
-// boundary as a last resort. Pure. The caller ingests each beat as its own message.
+// Split a reply into natural, WhatsApp-sized beats — Q talks in a few short human messages, not one wall.
+// Each bubble is a SELF-CONTAINED, complete point (never cut mid-sentence). A paragraph that outgrows the
+// ~260-char cap is split into the FEWEST whole-sentence beats that fit, BALANCED — a 470-char answer reads
+// as two even thoughts, not one full bubble and a ragged tail. A single over-long sentence still breaks at
+// a clause, then a word, boundary as a last resort. Delivery is CAPPED at 3 beats total — beyond that Q
+// reads as spam, so the tail folds into the final bubble. Pure. The caller ingests each beat as a message.
 export const Q_BUBBLE_CAP = 260;
+export const Q_MAX_BEATS = 3;
 export function splitReply(text) {
   const CAP = Q_BUBBLE_CAP;
   const t = String(text || "").trim(); if (!t) return [t];
   const paras = t.split(/\n{2,}/).map((s) => s.trim()).filter(Boolean);
   const out = [];
   for (const p of paras) {
-    const sents = p.match(/[^.!?]+[.!?]+[\s"'”’)]*|[^.!?]+$/g) || [p];
-    let cur = "";
-    const flush = () => { const s = cur.trim(); if (s) out.push(s); cur = ""; };
-    for (let s of sents) {
+    if (p.length <= CAP) { out.push(p); continue; }
+    // whole sentences, then any single sentence still over the cap breaks at clause → word → hard cut
+    const sents = [];
+    for (let s of p.match(/[^.!?]+[.!?]+[\s"'”’)]*|[^.!?]+$/g) || [p]) {
       s = s.trim(); if (!s) continue;
-      if (((cur ? cur + " " : "") + s).length <= CAP) { cur = (cur ? cur + " " : "") + s; continue; }
-      flush();
-      if (s.length <= CAP) { cur = s; continue; }
-      // an over-long single sentence → break at a clause (, ;) then a space, near the cap; hard-cut only if forced
-      let rest = s;
-      while (rest.length > CAP) {
-        let cut = rest.lastIndexOf(", ", CAP); if (cut < CAP * 0.5) cut = rest.lastIndexOf("; ", CAP);
-        if (cut < CAP * 0.5) cut = rest.lastIndexOf(" ", CAP); if (cut < 1) cut = CAP;
-        out.push(rest.slice(0, cut).trim()); rest = rest.slice(cut).trim();
+      while (s.length > CAP) {
+        let cut = s.lastIndexOf(", ", CAP); if (cut < CAP * 0.5) cut = s.lastIndexOf("; ", CAP);
+        if (cut < CAP * 0.5) cut = s.lastIndexOf(" ", CAP); if (cut < 1) cut = CAP;
+        sents.push(s.slice(0, cut).trim()); s = s.slice(cut).trim();
       }
-      cur = rest;
+      if (s) sents.push(s);
     }
-    flush();
+    // balanced fill: aim each beat at (chars left / beats left); take the sentence only if that lands
+    // CLOSER to the budget than stopping short — so beats come out even instead of greedy-then-ragged.
+    const target = Math.max(2, Math.ceil(p.length / CAP));
+    let beats = target, rem = sents.slice();
+    while (rem.length) {
+      if (beats <= 1) { out.push(rem.join(" ").trim()); break; }
+      const left = rem.reduce((n, s) => n + s.length + 1, -1);
+      const budget = left / beats;
+      let cur = rem.shift();
+      while (rem.length > beats - 1) {
+        const next = cur + " " + rem[0];
+        if (Math.abs(next.length - budget) <= Math.abs(cur.length - budget)) cur = next, rem.shift();
+        else break;
+      }
+      out.push(cur.trim()); beats--;
+    }
   }
+  // the delivery cap — fold everything past the third beat into the final bubble
+  while (out.length > Q_MAX_BEATS) { const tail = out.pop(); out[out.length - 1] += "\n\n" + tail; }
   return out.length ? out : [t.slice(0, CAP)];
 }
