@@ -55,3 +55,19 @@
   .holo-wa-root .holo-suggest,
   .holo-wa-root .holo-compose-ctx { left: 34%; }
 }
+
+/* CLAUDE-LOGIN-CENTER v1 — the lock's side gutter YIELDS to the field: under ~710px of width the fixed
+   φ gutter (--g2, ~50px) overflowed the login's single grid track to the RIGHT, so the whole sign-in
+   panel sat visibly off-centre on phones (+24px at 375px wide). The gutter now shrinks to exactly centre
+   the field; wide screens keep the full φ gutter. Pure layout, scoped, additive. */
+#holo-login .hl-lock{
+  padding-left:max(12px,min(var(--g2),calc((100vw - var(--field))/2))) !important;
+  padding-right:max(12px,min(var(--g2),calc((100vw - var(--field))/2))) !important;
+}
+
+/* CLAUDE-BRAND-BREATH v1 — the wordmark's bottom margin scales with the screen: a fixed 26px reads
+   cramped on tall desktops (2.4% at 1080p, 1.2% at 4K). 2.6vh keeps the same optical weight at every
+   height; screens ≤1000px tall are byte-identical (max picks 26px). Safe-area still wins on phones. */
+#holo-login .hl-brand{
+  bottom:max(26px,2.6vh,env(safe-area-inset-bottom)) !important;
+}
