@@ -2,8 +2,8 @@
 // conflict) rendering an N-tile GRID (your self-view + every remote participant), an active-speaker highlight, and
 // controls (mute / camera / leave). The app owns the mesh (holo-call-mesh.joinMesh) and feeds streams in.
 
-export function openMeetUI({ name = "Meeting", video = true, onLeave = () => {}, onToggleMute = () => {}, onToggleCamera = () => {} } = {}) {
-  if (typeof document === "undefined") return { addParticipant() {}, removeParticipant() {}, setActiveSpeaker() {}, attachLocal() {}, setPhase() {}, close() {}, tileCount: () => 0 };
+export function openMeetUI({ name = "Meeting", video = true, inviteLink = "", onLeave = () => {}, onToggleMute = () => {}, onToggleCamera = () => {} } = {}) {
+  if (typeof document === "undefined") return { addParticipant() {}, removeParticipant() {}, setActiveSpeaker() {}, setLabel() {}, attachLocal() {}, setPhase() {}, close() {}, tileCount: () => 0 };
   const el = (t, css, html) => { const n = document.createElement(t); if (css) n.style.cssText = css; if (html != null) n.innerHTML = html; return n; };
 
   const overlay = el("div", "position:fixed;inset:0;z-index:2147483600;background:#070b0f;display:flex;flex-direction:column;font:14px/1.5 system-ui,-apple-system,'Segoe UI',Roboto,sans-serif;color:#e9f1f5");
@@ -30,6 +30,17 @@ export function openMeetUI({ name = "Meeting", video = true, onLeave = () => {},
   muteBtn.onclick = () => { muted = !muted; onToggleMute(muted); muteBtn.textContent = muted ? "🔇 Unmute" : "🎙 Mute"; };
   ctrls.append(muteBtn);
   if (video) { const cam = mkBtn("rgba(255,255,255,.12)", "#fff", "📷 Camera off"); cam.onclick = () => { cameraOff = !cameraOff; onToggleCamera(cameraOff); cam.textContent = cameraOff ? "📷 Camera on" : "📷 Camera off"; }; ctrls.append(cam); }
+  // Meet's one-tap growth loop: anyone in the room can pull the next person in — the link IS the invitation.
+  if (inviteLink) {
+    const inv = mkBtn("rgba(255,255,255,.12)", "#fff", "🔗 Invite");
+    inv.onclick = async () => {
+      let done = false;
+      try { await navigator.clipboard.writeText(inviteLink); done = true; } catch {}
+      if (!done) { try { const ta = el("textarea", "position:fixed;opacity:0"); ta.value = inviteLink; document.body.append(ta); ta.select(); done = document.execCommand("copy"); ta.remove(); } catch {} }
+      inv.textContent = done ? "✓ Link copied" : "🔗 Invite"; setTimeout(() => { inv.textContent = "🔗 Invite"; }, 1600);
+    };
+    ctrls.append(inv);
+  }
   const leaveBtn = mkBtn("#e76f6f", "#0b1014", "Leave"); leaveBtn.onclick = () => { onLeave(); close(); }; ctrls.append(leaveBtn);
 
   function close() { try { for (const [, t] of tiles) { try { t.video.srcObject = null; } catch {} } } catch {} try { overlay.remove(); } catch {} }
@@ -39,6 +50,7 @@ export function openMeetUI({ name = "Meeting", video = true, onLeave = () => {},
     attachLocal(stream, label = "You") { let t = tiles.get("__self"); if (!t) { t = mkTile("__self", label, true); tiles.set("__self", t); grid.prepend(t.tile); } try { t.video.srcObject = stream; } catch {} relayout(); },
     addParticipant(id, stream, label = "Guest") { let t = tiles.get(id); if (!t) { t = mkTile(id, label, false); tiles.set(id, t); grid.append(t.tile); } try { t.video.srcObject = stream; } catch {} relayout(); },
     removeParticipant(id) { const t = tiles.get(id); if (t) { try { t.video.srcObject = null; } catch {} t.tile.remove(); tiles.delete(id); relayout(); } },
+    setLabel(id, label) { const t = tiles.get(id); if (!t || !label) return; try { const tag = t.tile.querySelector("div:last-child"); if (tag) tag.textContent = label; const av = t.avatar && t.avatar.querySelector("div"); if (av) av.textContent = (String(label).trim()[0] || "·").toUpperCase(); } catch {} },
     setActiveSpeaker(id) { for (const [tid, t] of tiles) t.tile.style.borderColor = (tid === id) ? "#00d09c" : "transparent"; },
     setPhase(p) { const s = head.querySelector("#meetStatus"); if (p === "connecting") s.textContent = "Connecting…"; else if (p === "connected") s.textContent = ""; else if (p === "ended") { s.textContent = "Ended"; setTimeout(close, 700); } },
     tileCount: () => tiles.size,

@@ -18,12 +18,46 @@ const ICE = [
 ];
 const _rid = () => "c" + Math.random().toString(36).slice(2, 10);
 
+// ── media quality (shared by 1:1 calls, the group mesh, and the standalone call-view page) ───────────────────────
+// callMedia: getUserMedia with WhatsApp/Meet-grade defaults — 720p30, echo-cancelled/denoised/AGC'd speech — and a
+// graceful ladder: HD → any camera → mic only → null. contentHints let the encoder optimize (speech vs motion).
+export async function callMedia(video) {
+  const md = (typeof navigator !== "undefined") && navigator.mediaDevices; if (!md || !md.getUserMedia) return null;
+  const audio = { echoCancellation: true, noiseSuppression: true, autoGainControl: true };
+  const hd = video ? { width: { ideal: 1280 }, height: { ideal: 720 }, frameRate: { ideal: 30, max: 30 }, facingMode: "user" } : false;
+  let s = null;
+  try { s = await md.getUserMedia({ audio, video: hd }); }
+  catch { try { s = await md.getUserMedia({ audio, video: !!video }); } catch { try { s = await md.getUserMedia({ audio: true }); } catch {} } }
+  if (s) { try { s.getAudioTracks().forEach((t) => { t.contentHint = "speech"; }); s.getVideoTracks().forEach((t) => { t.contentHint = "motion"; }); } catch {} }
+  return s;
+}
+// tunePeer: cap sender bitrates so quality is HIGH but never floods a peer's downlink (the mesh scales the cap by
+// room size). "balanced" degradation keeps both motion and sharpness under pressure. Safe to call repeatedly; must
+// run after negotiation (encodings exist once the transceiver is live) — callers invoke it on "connected".
+export async function tunePeer(pc, { videoKbps = 2500, audioKbps = 64 } = {}) {
+  try {
+    for (const sn of pc.getSenders()) {
+      if (!sn || !sn.track) continue;
+      try {
+        const p = sn.getParameters(); if (!p.encodings || !p.encodings.length) p.encodings = [{}];
+        p.encodings[0].maxBitrate = (sn.track.kind === "video" ? videoKbps : audioKbps) * 1000;
+        if (sn.track.kind === "video") p.degradationPreference = "balanced";
+        await sn.setParameters(p);
+      } catch {}
+    }
+  } catch {}
+}
+
 // ── link layer (kind:"call") ──────────────────────────────────────────────────────────────────────────────────────
 export async function createCall({ callerName = "", video = false, ttlSeconds = 3600, signal = null, room = null } = {}) {
   // content carries the modality ("audio"|"video"); capability "control" = a real participant (vs a view-only guest)
   return Together.createSession({ kind: "call", hostName: callerName, capability: "control", content: video ? "video" : "audio", signal, room, ttlSeconds });
 }
-export function buildCallLink(intent, opts = {}) { return Together.buildLink(intent, { viewPath: "/apps/holo-messenger/together-view.html", ...opts }); }
+// The view page is CALL-VIEW (a real participant lobby → the meet grid, any browser) — a NEW path, so no SW ever
+// serves it stale (the M4 rule), and the live ring regex already recognizes call-view.html#. Anchored to THIS
+// module's own URL (import.meta.url), the proven normalization-proof way to survive /Q → /hologram-os → root moves.
+const _VIEW_URL = (() => { try { return new URL("./call-view.html", import.meta.url).pathname; } catch { return "/apps/holo-messenger/call-view.html"; } })();
+export function buildCallLink(intent, opts = {}) { return Together.buildLink(intent, { viewPath: _VIEW_URL, ...opts }); }
 export function parseCall(input) { return Together.parseSession(input); }
 export function describeCall(intent) { return { video: intent.content === "video", caller: intent.hostName || "Someone", headline: (intent.hostName || "Someone") + " is calling", verb: intent.content === "video" ? "Video call" : "Voice call" }; }
 // SYNC detector for an incoming-call link in a message body → { intent, url } | null (ring on a FRESH one).
@@ -86,7 +120,7 @@ function _makePeer(post, other, polite, localStream, onRemoteStream, onState) {
   pc.ontrack = ({ streams }) => { if (streams && streams[0]) onRemoteStream(streams[0]); };
   pc.onnegotiationneeded = async () => { try { makingOffer = true; await pc.setLocalDescription(); post({ to: other, kind: "sdp", data: pc.localDescription }); } catch {} finally { makingOffer = false; } };
   pc.onicecandidate = ({ candidate }) => { if (candidate) post({ to: other, kind: "ice", data: candidate }); };
-  pc.onconnectionstatechange = () => onState(pc.connectionState);
+  pc.onconnectionstatechange = () => { if (pc.connectionState === "connected") tunePeer(pc); onState(pc.connectionState); };   // 1:1 → full HD budget
   async function onSignal(d) {
     try {
       if (d.sdp) {
