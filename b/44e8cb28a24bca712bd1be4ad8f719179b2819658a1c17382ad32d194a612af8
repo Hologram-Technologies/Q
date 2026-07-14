@@ -31,7 +31,7 @@
 <meta name="twitter:image" content="https://hologram-technologies.github.io/Q/apps/holo-messenger/og.jpg">
 <link rel="apple-touch-icon" href="./icons/apple-touch-icon.png">
 
-<link rel="stylesheet" href="./_vendor/ui/chat-ui.bundle.css?v=4bcbc0e1984d">
+<link rel="stylesheet" href="./_vendor/ui/chat-ui.bundle.css?v=94b1bdbc7612">
 <!-- BOOT GROUND — the ONE source of truth for the boot/login darkness. Every boot-time surface reads
      var(--boot-ground): the body pre-paint, the login --wall, the plymouth splash layer + its base, the
      signin wall, and the power veil (all with a matching literal fallback for bare surfaces without this
@@ -423,6 +423,8 @@ try { var _pt = JSON.parse(localStorage.getItem("holo.theme.v1") || "{}") || {};
         var cache = await caches.open(name);
         var SET = [
           "", "index.html", "apps/holo-messenger/app.html",
+          // W1 (HOLO-INSTANT-RETURN): the seed fast path + portal entry — sealed so a returning boot needs ZERO network
+          "genesis-pack.mjs", "holo-portal.mjs",
           // the DOOR's own closure — the root navigation must RESOLVE offline, not just paint: the door
           // module + its pure resolver + the inline name plane + the signed index it reads (release.json
           // is answered network-FIRST by root-sw, so the sealed copy serves only when the radio is dead).
@@ -479,7 +481,7 @@ try { var _pt = JSON.parse(localStorage.getItem("holo.theme.v1") || "{}") || {};
     if (new URLSearchParams(location.search).get("ui") === "shadcn" || localStorage.getItem("holo.ui.shadcn") === "1")
       await import("./messenger-shadcn-ui.mjs");
   } catch {}
-  import { boot } from "./holo-messenger-app.mjs?v=7c1342ca5b1d";
+  import { boot } from "./holo-messenger-app.mjs?v=e99bb9094d07";
 
   const root = document.getElementById("root");
   // TEE GATE + SPECULATIVE WARM PAINT, one motion. The gate already mounted (parallel module above); it

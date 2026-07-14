@@ -15,7 +15,11 @@ const RESCUE = ["/apps/", "/usr/", "/_shared/", "/vendor/", "/sbin/", "/ui/"];
 const BOOT_DIRS = ["/usr/lib/holo/", "/usr/share/plymouth/", "/apps/holo-messenger/", "/_shared/"];
 // the DOOR's own closure at the root scope — sealed by app.html into holo-boot-<stamp>; without these the
 // offline root navigation paints a door that 404s its own module graph and dead-ends at the floor line.
-const BOOT_FILES = { "/root-door.mjs": 1, "/holo-root-resolver.mjs": 1, "/holo-resolve-view.mjs": 1, "/apps/index.jsonld": 1, "/apps-blake3.json": 1 };
+// W1 (HOLO-INSTANT-RETURN): the seed's fast path (genesis-pack) + the portal entry boot CACHE-FIRST from
+// the sealed release-stamped set — their freshness is governed by the seal exactly like the document that
+// pins their hashes (a mismatched pack is refused by the seed, fail-closed). A warm boot must never wait
+// on a socket for bytes it already holds; before the first seal these are cache misses → network, as today.
+const BOOT_FILES = { "/root-door.mjs": 1, "/holo-root-resolver.mjs": 1, "/holo-resolve-view.mjs": 1, "/apps/index.jsonld": 1, "/apps-blake3.json": 1, "/genesis-pack.mjs": 1, "/holo-portal.mjs": 1 };
 const ROOT_FILES = { "/holo-resolver.mjs": 1, "/holo-fabric.mjs": 1, "/manifest.webmanifest": 1 };
 // MIME + the κ-CAS rung table live in ONE place now: holo-rungs.mjs (G0 — one ladder, rungs are data).
 
@@ -237,8 +241,20 @@ self.addEventListener("fetch", (e) => {
   // release.json is the UPDATE FEED — network-FIRST so a new signed head is never masked by a stale
   // cache; only when the network is actually gone does the sealed copy answer (the door then still
   // resolves the messenger by its signed κ with the radio dead).
+  // W1 (HOLO-INSTANT-RETURN): a 1.2s COLLAR on the network-first — a fresh signed head still wins whenever
+  // the network answers promptly (GH Pages ~100-300ms), but a hung first socket (WPAD, dead keep-alive,
+  // captive portal) may not hold the returning boot hostage when a sealed copy exists. Measured live: the
+  // warm paint sat 10-13.7s on exactly this fetch. Slow with NO sealed copy awaits the network as before;
+  // the page's own head-poll + reseal pick up a newer release on the next healthy fetch.
   if (p === BASE + "/release.json") {
-    e.respondWith(fetch(req).catch(async () => (await caches.match(req, { ignoreSearch: true })) || Response.error()));
+    e.respondWith((async () => {
+      const net = fetch(req).catch(() => null);
+      const fast = await Promise.race([net, new Promise((r) => setTimeout(() => r("slow"), 1200))]);
+      if (fast && fast !== "slow") return fast;
+      const hit = await caches.match(req, { ignoreSearch: true });
+      if (hit) return hit;
+      return (await net) || Response.error();
+    })());
     return;
   }
 

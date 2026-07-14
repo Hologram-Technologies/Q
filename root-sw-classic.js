@@ -7,7 +7,8 @@
 const BASE = new URL("./", self.location.href).pathname.replace(/\/$/, "");
 const RESCUE = ["/apps/", "/usr/", "/_shared/", "/vendor/", "/sbin/", "/ui/"];
 const BOOT_DIRS = ["/usr/lib/holo/", "/usr/share/plymouth/", "/apps/holo-messenger/", "/_shared/"];
-const BOOT_FILES = { "/root-door.mjs": 1, "/holo-root-resolver.mjs": 1, "/holo-resolve-view.mjs": 1, "/apps/index.jsonld": 1, "/apps-blake3.json": 1 };
+// W1 (HOLO-INSTANT-RETURN): seed fast path + portal entry cache-first from the sealed set (mirrors root-sw.js).
+const BOOT_FILES = { "/root-door.mjs": 1, "/holo-root-resolver.mjs": 1, "/holo-resolve-view.mjs": 1, "/apps/index.jsonld": 1, "/apps-blake3.json": 1, "/genesis-pack.mjs": 1, "/holo-portal.mjs": 1 };
 const ROOT_FILES = { "/holo-resolver.mjs": 1, "/holo-fabric.mjs": 1, "/manifest.webmanifest": 1 };
 const MIME = { js: "text/javascript", mjs: "text/javascript", css: "text/css", json: "application/json", svg: "image/svg+xml", wasm: "application/wasm", html: "text/html" };
 self.addEventListener("install", () => self.skipWaiting());
@@ -27,9 +28,17 @@ self.addEventListener("fetch", (e) => {
     })());
     return;
   }
-  // release.json: network-first, sealed fallback — mirrors the module worker (never mask a new head).
+  // release.json: network-first with the SAME 1.2s collar as the module worker (never mask a new head;
+  // never let a hung socket hold the returning boot hostage when a sealed copy exists — INSTANT-RETURN W1).
   if (p === BASE + "/release.json") {
-    e.respondWith(fetch(req).catch(async () => (await caches.match(req, { ignoreSearch: true })) || Response.error()));
+    e.respondWith((async () => {
+      const net = fetch(req).catch(() => null);
+      const fast = await Promise.race([net, new Promise((r) => setTimeout(() => r("slow"), 1200))]);
+      if (fast && fast !== "slow") return fast;
+      const hit = await caches.match(req, { ignoreSearch: true });
+      if (hit) return hit;
+      return (await net) || Response.error();
+    })());
     return;
   }
   // offline boot tier — cache-first from the sealed holo-boot set (see root-sw.js for the contract).

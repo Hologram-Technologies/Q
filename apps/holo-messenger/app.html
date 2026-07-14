@@ -423,6 +423,8 @@ try { var _pt = JSON.parse(localStorage.getItem("holo.theme.v1") || "{}") || {};
         var cache = await caches.open(name);
         var SET = [
           "", "index.html", "apps/holo-messenger/app.html",
+          // W1 (HOLO-INSTANT-RETURN): the seed fast path + portal entry — sealed so a returning boot needs ZERO network
+          "genesis-pack.mjs", "holo-portal.mjs",
           // the DOOR's own closure — the root navigation must RESOLVE offline, not just paint: the door
           // module + its pure resolver + the inline name plane + the signed index it reads (release.json
           // is answered network-FIRST by root-sw, so the sealed copy serves only when the radio is dead).
