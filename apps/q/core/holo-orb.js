@@ -305,11 +305,12 @@ export function mountOrb(canvas, opts) {
 }
 
 // ─────────────────────────────────────────────────────────────────────────────────────────────────────────
-// FALLBACK — the original self-contained WebGL2 wireframe icosphere (VERBATIM from hf-space-q-chat/core/
-// holo-orb.js), so where WebGPU/worker isn't available the messenger's Q orb still animates as it always has.
+// FALLBACK — the self-contained WebGL2 wireframe icosphere, restyled QUIET: where WebGPU isn't available
+// (Brave shields, older GPUs) the orb must still look like the OS — a dim violet-ink lattice breathing on
+// dark glass, never the loud rainbow wireframe. Geometry and motion are the proven originals; only the ink
+// changed (single hue family, low alpha) so the fallback reads as a resting state of the hero orb.
 // ─────────────────────────────────────────────────────────────────────────────────────────────────────────
-const SPECTRUM = [[1,.231,.42],[1,.62,.173],[1,.886,.29],[.275,.878,.541],[.169,.831,1],[.357,.549,1],[.78,.482,1],[1,.231,.42]];
-function hueAt(t){ t=(t%1+1)%1; const n=SPECTRUM.length-1, f=t*n, i=Math.floor(f), k=f-i, a=SPECTRUM[i], b=SPECTRUM[Math.min(i+1,n)]; return [a[0]+(b[0]-a[0])*k, a[1]+(b[1]-a[1])*k, a[2]+(b[2]-a[2])*k]; }
+function hueAt(t){ const k=0.5+0.5*Math.sin(t*2*Math.PI); return [0.42+0.14*k, 0.44+0.06*k, 0.66+0.24*k]; }   // ink indigo → soft violet, one quiet family
 function norm(v){ const l=Math.hypot(v[0],v[1],v[2])||1; return [v[0]/l,v[1]/l,v[2]/l]; }
 function icosphere(sub){
   const t=(1+Math.sqrt(5))/2;
@@ -343,7 +344,7 @@ function mountWebglOrb(canvas){
     }`;
   const fs=`#version 300 es
     precision highp float; in vec3 vCol; in float vD; out vec4 o;
-    void main(){ float d=0.72+0.28*smoothstep(-1.0,1.0,vD); o=vec4(vCol*d, 0.92); }`;
+    void main(){ float d=0.40+0.30*smoothstep(-1.0,1.0,vD); o=vec4(vCol*d, 0.45); }`;
   const sh=(t,s)=>{ const o=gl.createShader(t); gl.shaderSource(o,s); gl.compileShader(o); if(!gl.getShaderParameter(o,gl.COMPILE_STATUS)){ console.error("[orb] shader:", gl.getShaderInfoLog(o)); } return o; };
   const prog=gl.createProgram(); gl.attachShader(prog,sh(gl.VERTEX_SHADER,vs)); gl.attachShader(prog,sh(gl.FRAGMENT_SHADER,fs)); gl.linkProgram(prog);
   if(!gl.getProgramParameter(prog,gl.LINK_STATUS)){ console.error("[orb] link:", gl.getProgramInfoLog(prog)); return { fallback:true, mode:"none", stop(){} }; }

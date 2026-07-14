@@ -9,12 +9,12 @@
  "tiers": {
   "core": {
    "files": 623,
-   "bytes": 12745695,
+   "bytes": 12747832,
    "hf": 0
   },
   "apps": {
    "files": 5283,
-   "bytes": 1734133,
+   "bytes": 1734162,
    "hf": 5224
   },
   "heavy": {
@@ -2940,9 +2940,9 @@
    "source": "hf"
   },
   "apps/holo-messenger/_vendor/ui/chat-ui.bundle.css": {
-   "sha256": "1e7b11494f78887d4278391bd3f1dfb465c377a14fd63724b27dfbaac7958e9d",
-   "blake3": "722494350f22a6f24691a3a7319d52282dbe0ff315000868bc97adfc2738ad17",
-   "bytes": 222165,
+   "sha256": "2e16f34a8afca9c4bf9e3d061ee8e7c13e95ba68dd576c7d8ab0eea1f0e0ac39",
+   "blake3": "59037b30e4b9ec1cd1ff04779dc30a6da43e87720d4193692bad570f29646c51",
+   "bytes": 224302,
    "tier": "core",
    "source": "origin"
   },
@@ -3549,8 +3549,8 @@
    "source": "origin"
   },
   "apps/holo-messenger/holo-sw.js": {
-   "sha256": "2dcb7909c6b563bf8c272d29542e7873329f20abe66a88c516c8bb6acda3c89e",
-   "blake3": "90a59ba75b36097027bd3dd6a22006fba926a5d6f9c9777eacce607471c12df0",
+   "sha256": "4bd60e6f6380812d96cc6f3d181f648f0c0510330ec99adfe966276aaa90691c",
+   "blake3": "bdce9c58744d65afb82fd5cc34d80017befde1429c6e0d282457df0fcae35c19",
    "bytes": 26338,
    "tier": "core",
    "source": "origin"
@@ -3969,8 +3969,8 @@
    "source": "origin"
   },
   "apps/holo-messenger/shell-manifest.json": {
-   "sha256": "71f2e0ccf744d59571b8ea3f7ccf216d33eb0c5fbb64b28c1375fdcb4ead65dd",
-   "blake3": "9b12c99cb040e558a6455d379c3c3f132041337a87b4f51c3ef665b77a646f2f",
+   "sha256": "7faccd014c971ff01859a0450e319945264a4719e02865a56551d6d5b0e51b95",
+   "blake3": "6e7371fdfa4f2a0edd4801cd4ddcc4d6554dfeea4f35b3b692d23a0172a531b2",
    "bytes": 6471,
    "tier": "core",
    "source": "origin"
@@ -16602,9 +16602,9 @@
    "source": "origin"
   },
   "apps/q/core/holo-orb.js": {
-   "sha256": "eddaf5346340937550a79c402f3f3572da445033889f7b6abcc4e9e85a287c97",
-   "blake3": "8ed151d30a76a18a7503fad151dccd4ae2472e7fa6e62c1359a0dcfaa34a7742",
-   "bytes": 28910,
+   "sha256": "bdb559bd0dec93fd70e9c1ed515bbd483ff4cadc8ce38df946983adca29c604e",
+   "blake3": "02dfec6079bdcd279cb71737b29ef556a6532f36ed8e159c13ebfadf4bed4e7a",
+   "bytes": 28939,
    "tier": "apps",
    "source": "origin"
   },
