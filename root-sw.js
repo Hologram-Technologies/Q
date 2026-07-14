@@ -366,8 +366,10 @@ self.addEventListener("fetch", (e) => {
   // the document — on the /Q mount it escapes the bundle, so remap it onto BASE. O5: this was network-ONLY
   // (fetch(BASE+p)); offline it rejected and the asset (a wallpaper, a login module addressed absolutely)
   // died even though the pin holds it. Now the remapped path falls back to the pinned closure → store.
-  if (ROOT_FILES[p] || RESCUE.some((d) => p.startsWith(d))) {
-    const rp = BASE + p;
+  if (ROOT_FILES[p] || RESCUE.some((d) => p.startsWith(d)) || p.startsWith("/_vendor/")) {
+    // /_vendor/ exists ONLY under the messenger app — a shell asset addressed relative to a root-based
+    // document lands here; remap it to its real home so the ROOT base does not 404 (still one messenger).
+    const rp = BASE + (p.startsWith("/_vendor/") ? "/apps/holo-messenger" : "") + p;
     // P2 (HOLO-PAINTED-TRUTH): same collar as the catch-all — remapped canonical paths served many
     // pre-paint modules at 6-7s each on a hung socket (measured live); the pin answers after 1.6s.
     // On a network MISS the evicted rescue (tree maps → κ-mirror, every byte re-derived) answers

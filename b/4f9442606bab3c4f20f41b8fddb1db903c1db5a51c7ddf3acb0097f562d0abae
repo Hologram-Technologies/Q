@@ -8,8 +8,8 @@
  "mirror": "https://huggingface.co/HOLOGRAMTECH/holo-messenger-shell/resolve/main/b/",
  "tiers": {
   "core": {
-   "files": 662,
-   "bytes": 13722233,
+   "files": 667,
+   "bytes": 13814168,
    "hf": 0
   },
   "apps": {
@@ -31,10 +31,45 @@
    "tier": "core",
    "source": "origin"
   },
+  ".holo/sha256/31365b0b2f83cc3ae69f1ab91477a7cbed4fd2ab00366a84d5aea9212db0d4dc.js": {
+   "sha256": "31365b0b2f83cc3ae69f1ab91477a7cbed4fd2ab00366a84d5aea9212db0d4dc",
+   "blake3": "69493a1f8233cc934b19ab3fc9334b0980b3c1e2c1012e00254e98345c9ed74b",
+   "bytes": 56065,
+   "tier": "core",
+   "source": "origin"
+  },
+  ".holo/sha256/a0ebbc696bda5154727b76b42c11921231cbc652de3e705dd6b632456e6f34aa.js": {
+   "sha256": "a0ebbc696bda5154727b76b42c11921231cbc652de3e705dd6b632456e6f34aa",
+   "blake3": "ccdc4c592f48919e1f0c142dbc677a7b2820e662d4c35ad5b02210b66955985b",
+   "bytes": 7973,
+   "tier": "core",
+   "source": "origin"
+  },
+  ".holo/sha256/b2bfa104b9ee8e3bb631dcd0ec0e6f7017b8898c4304666f5b3dfeeebc926eb9.css": {
+   "sha256": "b2bfa104b9ee8e3bb631dcd0ec0e6f7017b8898c4304666f5b3dfeeebc926eb9",
+   "blake3": "cbd96db3883014eb0d951b8ff2bf69796bf4027edb314fed868e3ae5f9e9ad3a",
+   "bytes": 8471,
+   "tier": "core",
+   "source": "origin"
+  },
+  ".holo/sha256/c4414e9c61a6ae6b8c19145dddbbe24c68bea83784666434a94cf033b06cc483.css": {
+   "sha256": "c4414e9c61a6ae6b8c19145dddbbe24c68bea83784666434a94cf033b06cc483",
+   "blake3": "1f29a13bf488c4bef3ad0f8a9c1335f15c968afbdc277b9527b500b39dff0ce4",
+   "bytes": 17631,
+   "tier": "core",
+   "source": "origin"
+  },
   ".nojekyll": {
    "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
    "blake3": "af1349b9f5f9a1a6a0404dea36dcc9499bcb25c9adc112b7cc9a93cae41f3262",
    "bytes": 0,
+   "tier": "core",
+   "source": "origin"
+  },
+  "404.html": {
+   "sha256": "4dad1cc256784c5ca8924b464349d2113d4d3dda53e46df3c0783d2416c60291",
+   "blake3": "c8777f475b35814a1f2f8e4d49bf13231d0d05f5a628e8a22efb0e6185f64c67",
+   "bytes": 1493,
    "tier": "core",
    "source": "origin"
   },
@@ -29277,9 +29312,9 @@
    "source": "origin"
   },
   "root-sw.js": {
-   "sha256": "e8e49b9f78d9e649b2d7e426f7e1325524908a56c6e2d0c853524e23823f8e7f",
-   "blake3": "36a8f1cc59c5b44da258bb0367c9824675cd5e553a623da19701f0279fec69c9",
-   "bytes": 25453,
+   "sha256": "496746c5d03052a3d9fa4192a7713449b937216ea8487e5399ddc41088d2e639",
+   "blake3": "06dbacc4d6838cb274dba186df0edc13c76ec5794ccaba4e5bad5f88c785ca43",
+   "bytes": 25755,
    "tier": "core",
    "source": "origin"
   },
