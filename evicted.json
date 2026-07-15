@@ -51,6 +51,10 @@
   {
    "prefix": "apps/holo-messenger/",
    "closure": "apps/holo-messenger/holo-evicted.json"
+  },
+  {
+   "prefix": "vendor/onnxruntime-web/",
+   "closure": "vendor/onnxruntime-web/holo-evicted.json"
   }
  ]
 }
