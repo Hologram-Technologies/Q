@@ -9,7 +9,7 @@
  "tiers": {
   "core": {
    "files": 614,
-   "bytes": 12715168,
+   "bytes": 12720166,
    "hf": 0
   },
   "apps": {
@@ -3336,9 +3336,9 @@
    "source": "origin"
   },
   "apps/holo-messenger/call-view.html": {
-   "sha256": "aa1fbcee95ec4a208f91dae23652b68cdfebb837aebc9e2bbc303a98be58d3c9",
-   "blake3": "eda64cf5a6d8e05fa4ecb31110f8219c4bd11d0fba41b7703cf947cd40b108f7",
-   "bytes": 11424,
+   "sha256": "2c5ba354013fcbeba48af26e763b84c1f7e941b8b777ae6497e1ce774fb3b605",
+   "blake3": "67ae5b37df413263f707723bccfcc8db32e17103c646f8e503f54e6b925bb485",
+   "bytes": 11745,
    "tier": "core",
    "source": "origin"
   },
@@ -3406,9 +3406,9 @@
    "source": "origin"
   },
   "apps/holo-messenger/holo-call-mesh.mjs": {
-   "sha256": "5cc68afe953e480eaf085de9eeba5a3881c71c7d1dbf006bc34ec4d69c0448f3",
-   "blake3": "75e133f8fbc38731bb30a68fdfecd7d3b4cffab21ad5d4dc133c09adbcb355e5",
-   "bytes": 12143,
+   "sha256": "f66ee9f7ce0f72f6c91036d7f2dfba43dcb3cfe8713ab061d6537fd0095c0a8d",
+   "blake3": "e2903d387a007f501b11706d3e48ff685061118d6a94d94dc3fd1db1c4c3db6c",
+   "bytes": 14313,
    "tier": "core",
    "source": "origin"
   },
@@ -3567,16 +3567,16 @@
    "source": "origin"
   },
   "apps/holo-messenger/holo-meet-ui.mjs": {
-   "sha256": "cfd22bc662a66bde2b760f5da2b39345c0a3ec6a597743fe54d0e077b04c0a03",
-   "blake3": "0c86e2cd678bf023393291058d22bf8a59c520b2edd40c92eec03c4bd63bf081",
-   "bytes": 16516,
+   "sha256": "84c8749a9751b2f905a942eb923ec72dbca0b68b4c30eacd5cf4d9489940351b",
+   "blake3": "09e5fec14cacf8422111d6bbe3902624b5a62c43d2627ac273ac9eb9b2304845",
+   "bytes": 17126,
    "tier": "core",
    "source": "origin"
   },
   "apps/holo-messenger/holo-messenger-app.mjs": {
-   "sha256": "f7e7290a67cdb766335e7ecab52c36dfae3283ae0751a531344cbf5d32e4a28f",
-   "blake3": "e14616c09e7fd513c230a9c996cdc26ef6ba6d49c8e9ab9f7f423ac20076a8c5",
-   "bytes": 348650,
+   "sha256": "c7f994c9e55fb6406adb1850f3791fc59782fc251a36937009f421ec44f7a5b3",
+   "blake3": "1913657cb860717702e0668fa8ceeec8c268eb7d9137837bd8cd8e19ec0ea8df",
+   "bytes": 348917,
    "tier": "core",
    "source": "origin"
   },
@@ -3777,8 +3777,8 @@
    "source": "origin"
   },
   "apps/holo-messenger/holo-sw.js": {
-   "sha256": "4bc163edd46c2dc2366aa93587ccfe7ed7705d95cefc3d821c4502950f9daee0",
-   "blake3": "4028b892990b14b506e99b6b151a3ae5525da9fcb76c4f2b8b0ded0ce41434e5",
+   "sha256": "0947797727bf100e91c0295edb7f4d7f3a567b02044f331d868bc8374464126c",
+   "blake3": "b3cf5c4a18e650e163900c4aad4cd368321a25bccfd5f3d00d9ce5eea8e48537",
    "bytes": 26338,
    "tier": "core",
    "source": "origin"
@@ -4197,8 +4197,8 @@
    "source": "origin"
   },
   "apps/holo-messenger/shell-manifest.json": {
-   "sha256": "c740c902e03227b7251a8480fa05e15c72e7d9afa09d42172706e132c42ff776",
-   "blake3": "6e41575d08d12b0f3997e94aba537d34e16d1628c19d3e3278cf4a7f6cb60a56",
+   "sha256": "ef8960197549c1e951d1f0d91a8ec261f71ee1c52b5394c734bb6e5ee8f9bb4d",
+   "blake3": "18cf6ba3d9b38c4c49673a5dadfc0f061cc7d22914d9a78c597e52da25415cd7",
    "bytes": 6812,
    "tier": "core",
    "source": "origin"
@@ -29209,9 +29209,9 @@
    "source": "origin"
   },
   "index.html": {
-   "sha256": "9fab53891cdff3d5b27db974b4b88fd9ddd1a02c9224468f6a2cde1891d15e8b",
-   "blake3": "3f073548f98f78e7a59d74a6f09c44aec68f6857538614c52602db0a6828a2ac",
-   "bytes": 5996,
+   "sha256": "80fe1b21e073cecd491182a549110ac277fef6ffa77c58d18c69e5e3c581d78b",
+   "blake3": "6ab2923cf2cd86a6d7377e7f13a3acf6cae411c23bfbda91c7febb5ea122246e",
+   "bytes": 6855,
    "tier": "core",
    "source": "origin"
   },
@@ -31137,9 +31137,9 @@
    "source": "origin"
   },
   "usr/share/frame/home-screen.html": {
-   "sha256": "22ab67e2106e9b25c1084e7309d6b1d6c22781213b18258e99d0f366f86fa701",
-   "blake3": "25ce7e0cce911cde394b67d1aedea28f59917fee4c5a6ae58b5c8c7ac3324854",
-   "bytes": 133757,
+   "sha256": "bd4656b7bdcf6a56b4daeda896c5113cc3d2ec171b92db38a9b152d732a96d34",
+   "blake3": "a09ed0f24cdda6609b3eb629251327792867d62e8323140d4bcc488d52acc4b0",
+   "bytes": 134528,
    "tier": "core",
    "source": "origin"
   },

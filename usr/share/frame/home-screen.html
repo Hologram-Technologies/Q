@@ -944,7 +944,12 @@
   }
 
   // ── Q orb (corner) — the desktop's living form on the WebGL substrate; degrades to the CSS disc. ───
+  // MOBILE-LEAN (HOLO-PHONE): on phones/data-saver, DON'T eager-load Three.js + the voice-orb module at boot
+  // just to upgrade the corner wireframe — the animated SVG spectrum sphere (the fallback floor) is already
+  // beautiful and costs zero JS. Keeps the calm home's boot lean so it's fit to be the default phone home.
+  var _homeLeanMobile = (function () { try { return (typeof navigator !== "undefined" && navigator.userAgentData && navigator.userAgentData.mobile) || (matchMedia("(pointer:coarse)").matches && Math.min(innerWidth, innerHeight) <= 700) || (navigator.connection && navigator.connection.saveData === true); } catch (e) { return false; } })();
   (function bootOrb() {
+    if (_homeLeanMobile) return;   // keep the SVG spectrum-disc; no Three.js on the phone home boot
     var canvas = $("qcanvas"); if (!canvas) return;
     loadThree().then(function (ok) {
       if (!ok) return;                                                          // no THREE → keep the spectrum-disc fallback
