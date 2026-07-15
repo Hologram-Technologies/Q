@@ -9,12 +9,12 @@
  "tiers": {
   "core": {
    "files": 530,
-   "bytes": 10442282,
+   "bytes": 10441226,
    "hf": 0
   },
   "apps": {
-   "files": 5434,
-   "bytes": 1734338,
+   "files": 5438,
+   "bytes": 1768212,
    "hf": 5375
   },
   "heavy": {
@@ -1419,6 +1419,34 @@
    "blake3": "348bc9bd3780a4ade81906d4bcd8bc2307ec816b3b20e11b330a578dfa377d54",
    "tier": "apps",
    "source": "hf"
+  },
+  "apps/bonsai/holospace.json": {
+   "sha256": "6d2b616fd7c1e60fc725c7e38c41133f9246e7b943233062fa1d4be4a31276cb",
+   "blake3": "449d9b8cc6302801732e643d425eab423af1b7bc87eacfa11dfb4afe6904165d",
+   "bytes": 2350,
+   "tier": "apps",
+   "source": "origin"
+  },
+  "apps/bonsai/holospace.lock.json": {
+   "sha256": "460991e4aef8ce7b4a15bc0f17c7d068f1f7984402aeb05df4d87b9e5dc2e09a",
+   "blake3": "4a1c9624e5f689fade231f6bef4ec0e7daa1e8830a49eeb637e03633b51684ac",
+   "bytes": 2720,
+   "tier": "apps",
+   "source": "origin"
+  },
+  "apps/bonsai/icon.svg": {
+   "sha256": "28caf2452270a9a7498ce8e14543dae0fd872d5ed3ec5d1ba8a256956259401a",
+   "blake3": "788c5b290344908523e59eb039c6a1d7365af687e27e3f3e9ba463cd1c55a4ef",
+   "bytes": 462,
+   "tier": "apps",
+   "source": "origin"
+  },
+  "apps/bonsai/index.html": {
+   "sha256": "556fe704a35f8d8ea617bc800fec3053e1809ce167fcf157600a3709a75fb1e0",
+   "blake3": "6ce6887c3cb046c4a0645e99a32247c839228fd0382eda2588abea92f716053d",
+   "bytes": 14640,
+   "tier": "apps",
+   "source": "origin"
   },
   "apps/browser/_shared/arti-pkg/holo_arti_rt.js": {
    "blake3": "c25276f9b2b67f1394aed43d0ddbc41ed01a8ac656f340028ce4c3e8db569532",
@@ -4174,9 +4202,9 @@
    "source": "hf"
   },
   "apps/index.jsonld": {
-   "sha256": "7ed903ed227532f67ee0169f2a97ec94b7a4ca0401244b4b3c7551685dcc432b",
-   "blake3": "ac8d61b9bb26f2e0ae2651f2e1d42fae2aa33f86663e9c0f713bd4254d7c8e26",
-   "bytes": 22643,
+   "sha256": "9ef0163e4aa320c5ce0ec7a5183d907a7b9426740e0f7ba4aad11c5c785daa60",
+   "blake3": "3f6b66ad2d389f45a7a83284e67640ca542549aa52643c1d8733f5dfa05b8597",
+   "bytes": 21587,
    "tier": "core",
    "source": "origin"
   },
@@ -15911,8 +15939,8 @@
    "source": "hf"
   },
   "apps/music/holo-evicted.json": {
-   "sha256": "63100ce3e5cca9255b6640e06af19dbf482090bbc0156925b49d51f7a27a8a9a",
-   "blake3": "fabeee8e3dfc09b54464a991f7b4bb353709088c2af1a90b3ca348bf2de9e617",
+   "sha256": "fdfda820464b734bccb8406e9cccfe33d726d4f8a9fe4eb663e4bd5ac32fcf98",
+   "blake3": "ae007e340a6dccc037a0d030600aff73ba0db7dc3fd2e01cc3f8214bf8147687",
    "bytes": 4493,
    "tier": "apps",
    "source": "origin"
@@ -15938,7 +15966,7 @@
    "source": "hf"
   },
   "apps/music/index.html": {
-   "blake3": "308bb1c176791ad8b0390e37036819cae063f6ee656e06839c1db6eca0b35430",
+   "blake3": "c2103b69c267be7faf798b044661028d054208c3db1088c78f3e3ac412ea4f6b",
    "tier": "apps",
    "source": "hf"
   },
@@ -16744,9 +16772,9 @@
    "source": "origin"
   },
   "apps/q/core/loader.js": {
-   "sha256": "29a2c6bfa25e09e503e79c0b5c605533f8db924d8dc2835b17d8caf2510d6ba3",
-   "blake3": "994b01d3e041ab87d11abc6ac9393ee8e71cc5b574ef155f016b76f705a00e02",
-   "bytes": 26238,
+   "sha256": "d49aeedfc34f4fc6a63422f087a873633be1a0df7b9b9c29d313528c139700a0",
+   "blake3": "dc40c7ffd5e47a7d2c265c777699866f84ed2cbb145856b72bc963957627223b",
+   "bytes": 27421,
    "tier": "apps",
    "source": "origin"
   },
@@ -18949,9 +18977,9 @@
    "source": "origin"
   },
   "apps/q/holo-load2bit.mjs": {
-   "sha256": "7a914d1bfa9b6c10bbe8661f4f52f094601d5cbafe76afb00cbe27f00eed9e63",
-   "blake3": "4dd45595ca109128b672544e96ab21716059018b0bc80b351d043b3ee9ee2ce4",
-   "bytes": 11563,
+   "sha256": "f44c9e3b703fcdba2f0792720f68fe45e0f147892e2c17b71d2c8570d509b993",
+   "blake3": "fceb85935cad9c4a728c4e6965cb05802cb0746c886316e34514d299057e1d98",
+   "bytes": 11618,
    "tier": "apps",
    "source": "origin"
   },
@@ -19030,9 +19058,9 @@
    "source": "hf"
   },
   "apps/q/q-chat.html": {
-   "sha256": "a2023c78a21dbb2180a7ee6c1e9030fa06af063d2c47be92ae194e053e61965c",
-   "blake3": "aa5acdfb3ad52a793f8aae1cbf3631b1545b2fe4675fa339f334886036f4de2c",
-   "bytes": 90174,
+   "sha256": "511c25f390b4b4c9d8ee904cb9fd1143ca222bac64afb8a2e816e864a2b9ea11",
+   "blake3": "10c840fe1f16848bb7f07e54d589e99c475251d177fccf4d559f741dff9992c3",
+   "bytes": 98520,
    "tier": "apps",
    "source": "origin"
   },
@@ -19059,9 +19087,9 @@
    "source": "origin"
   },
   "apps/q/qvac-gpu.js": {
-   "sha256": "a1a6243afeb9807364482224b0bbb96e337a946e6d174e07f1605e83ab8fbf62",
-   "blake3": "3d9cc8aadb8392a27c1ff187d99f672e71632d6f56696c24749de3dd92acf51f",
-   "bytes": 172617,
+   "sha256": "e35ea5e7eafa9e146f7ac40ca52c3513564ca1ff8b0872f5eadf16874c56ebec",
+   "blake3": "47832f8bfc037998a7254d71be614e5c6e4632ed6f699c910599eb5f62919cc3",
+   "bytes": 176735,
    "tier": "apps",
    "source": "origin"
   },

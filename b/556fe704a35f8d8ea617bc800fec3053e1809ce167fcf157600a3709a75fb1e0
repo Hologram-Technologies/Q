@@ -1,0 +1,250 @@
+<!doctype html>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Bonsai</title>
+<style>
+  /* Claude-desk standing look: #1f1f1e stage, 11% hairlines, 10px radii, purple accent, one font stack. */
+  :root { --bg:#1f1f1e; --ink:#e8e6e0; --dim:rgba(232,230,224,.55); --faint:rgba(232,230,224,.35);
+          --hair:rgba(255,255,255,.11); --accent:#a78bfa; --accent-hi:#c4b5fd; --r:10px; }
+  * { box-sizing:border-box; margin:0; padding:0; }
+  html,body { height:100%; }
+  body { background:var(--bg); color:var(--ink); font:14px/1.55 system-ui,-apple-system,"Segoe UI",Inter,sans-serif;
+         -webkit-font-smoothing:antialiased; overflow:hidden; }
+  .num { font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace; font-size:12px; }
+  .stage { position:fixed; inset:0; display:flex; flex-direction:column; align-items:center; justify-content:center;
+           padding:24px; opacity:0; pointer-events:none; transition:opacity .6s ease; }
+  .stage.on { opacity:1; pointer-events:auto; }
+
+  /* ── arrival ── */
+  #arrive h1 { font-size:clamp(24px,4.5vw,40px); font-weight:600; letter-spacing:-.01em; text-align:center; max-width:720px; }
+  #arrive .sub { margin-top:14px; font-size:13px; color:var(--dim); text-align:center; }
+  #arrive button { margin-top:44px; background:none; border:1px solid var(--accent); color:var(--accent-hi);
+                   border-radius:var(--r); padding:13px 30px; font:600 13px/1 system-ui,sans-serif; letter-spacing:.14em;
+                   cursor:pointer; transition:background .25s,color .25s; }
+  #arrive button:hover { background:var(--accent); color:#17161c; }
+  #arrive .fine { margin-top:18px; font-size:12px; color:var(--faint); }
+
+  /* ── stream (the loading film) ── */
+  #stream { justify-content:center; }
+  #grid { display:grid; grid-template-columns:repeat(21,1fr); gap:2px; width:min(88vw,600px); }
+  #grid i { display:block; aspect-ratio:1; border-radius:1px; background:rgba(255,255,255,.06); transition:background .35s; }
+  #grid i.on { background:var(--accent); }
+  #grid i.hot { background:var(--accent-hi); }
+  #stream .stats { margin-top:20px; color:var(--dim); }
+  #stream .kap { margin-top:8px; color:var(--faint); font-size:12px; }
+  #stream .law { margin-top:22px; font-size:12px; color:var(--dim); text-align:center; max-width:480px; }
+  #stream .phase { margin-top:6px; font-size:12px; color:var(--accent-hi); min-height:18px; }
+
+  /* ── chat ── */
+  #chat { justify-content:flex-start; padding:0; }
+  #chat .col { display:flex; flex-direction:column; width:min(100%,760px); height:100%; padding:0 20px; }
+  #log { flex:1; overflow-y:auto; padding:28px 4px 16px; }
+  .msg { margin:0 0 18px; }
+  .msg .who { font-size:12px; color:var(--faint); letter-spacing:.08em; margin-bottom:4px; }
+  .msg.user .who { color:var(--dim); }
+  .msg .body { white-space:pre-wrap; }
+  details.think { margin:0 0 8px; border-left:2px solid var(--hair); padding-left:10px; }
+  details.think summary { list-style:none; cursor:pointer; font-size:12px; color:var(--faint); }
+  details.think summary::-webkit-details-marker { display:none; }
+  details.think .t { color:var(--faint); font-size:13px; white-space:pre-wrap; margin-top:4px; }
+  .note { text-align:center; font-size:12px; color:var(--faint); margin:6px 0 12px; }
+  #bar { display:flex; gap:10px; padding:12px 0 10px; border-top:1px solid var(--hair); }
+  #inp { flex:1; background:none; border:1px solid var(--hair); border-radius:var(--r); color:var(--ink);
+         padding:11px 14px; font:14px/1.4 system-ui,sans-serif; outline:none; }
+  #inp:focus { border-color:rgba(167,139,250,.5); }
+  #send { background:none; border:1px solid var(--accent); color:var(--accent-hi); border-radius:var(--r);
+          padding:0 20px; font:600 12px/1 system-ui,sans-serif; letter-spacing:.1em; cursor:pointer; }
+  #send:disabled { border-color:var(--hair); color:var(--faint); cursor:default; }
+  #chips { display:flex; flex-wrap:wrap; gap:8px; padding:0 0 14px; }
+  .chip { border:1px solid var(--hair); border-radius:999px; padding:4px 11px; font-size:12px; color:var(--dim); }
+  .chip b { color:var(--accent-hi); font-weight:600; }
+  #err { color:#f87171; font-size:13px; margin-top:16px; max-width:560px; text-align:center; white-space:pre-wrap; }
+</style>
+<body>
+
+<div class="stage on" id="arrive">
+  <h1>8 billion parameters. 1 bit. In your browser.</h1>
+  <div class="sub">Bonsai-8B &mdash; 1.16 GB, Apache-2.0, no server, no account.</div>
+  <button id="go">STREAM THE MIND</button>
+  <div class="fine" id="fine">WebGPU &middot; content-addressed &middot; verified block by block</div>
+</div>
+
+<div class="stage" id="stream">
+  <div id="grid"></div>
+  <div class="stats num" id="stats">&nbsp;</div>
+  <div class="kap num" id="kap">&nbsp;</div>
+  <div class="phase" id="phase">&nbsp;</div>
+  <div class="law">Every block is verified against its content address before it touches the GPU.</div>
+  <div id="err" hidden></div>
+</div>
+
+<div class="stage" id="chat">
+  <div class="col">
+    <div id="log"></div>
+    <div id="bar"><input id="inp" placeholder="Ask Bonsai anything" autocomplete="off"><button id="send">SEND</button></div>
+    <div id="chips"></div>
+  </div>
+</div>
+
+<script type="module">
+import init, { qvac_load_gpu, qvac_gpu_free } from "../q/pkg/holospaces_web.js";
+import { loadKappaObject } from "../q/holo-load2bit.mjs";
+import { createQvacGPU } from "../q/qvac-gpu.js?v=68";
+import { createEngine } from "../q/core/engine.js";
+
+const $ = (id) => document.getElementById(id);
+const show = (id) => { for (const s of document.querySelectorAll(".stage")) s.classList.toggle("on", s.id === id); };
+const short = (k) => String(k).replace(/^(did:holo:)?sha256:/, "").slice(0, 12) + "…";
+
+// model source: ?src=<κ-object dir> for dev, HF mirror by default. The manifest pin is the Law-L5 anchor.
+const SRC = new URLSearchParams(location.search).get("src");
+const BASE = SRC || "https://huggingface.co/HOLOGRAMTECH/q-bonsai-8b/resolve/main";
+const PIN = "did:holo:sha256:a0dc81f26ec5ce98b28ee9c1fab620e91c20720f777e1de6bc416317f54d27e2";
+const CTX = 640;
+
+let engine = null, gpu = null, rootK = "", warm = false, mind = [], thinkOpen = -1, thinkClose = -1;
+
+async function stream() {
+  show("stream");
+  const t0 = performance.now();
+  const phase = (s) => { $("phase").textContent = s; };
+  try {
+    if (!navigator.gpu) throw new Error("This browser has no WebGPU. Chrome or Edge 113+ required.");
+    // warm-load detect (honest offline copy): the κ-cache already holds the manifest → this visit is disk-speed.
+    try { const c = await caches.open("holo-kappa-v1"); warm = !!(await c.match(BASE + "/manifest.json")); } catch {}
+    phase(warm ? "returning — reading blocks from your disk" : "first visit — streaming blocks");
+    await init();
+    // PARALLEL κ-BLOCKS FIRST (the measured Netflix path on CDN origins): 399 content-addressed
+    // blocks race over 12 connections (HF cdn-lfs caps a single stream ~2 MB/s; the parallel parts
+    // path measured 6.8 MB/s on the same line). The ONE-file .holo stays as the fallback for
+    // origins that only host the wafer (and its OPFS warm store makes revisits 0-network either way).
+    let r, pinned = true, holo = false;
+    try {
+      r = await loadKappaObject(BASE, { expectKappa: PIN, blake3: false });
+    } catch (e1) {
+      try {
+        const hs = await import("../q/core/holo-stream-load.mjs");
+        r = await hs.openHoloKappa(BASE + "/q-bonsai-8b.v1.holo", {});
+        holo = true; warm = !!r.warm;
+      } catch (e) { if (!SRC) throw e; pinned = false; r = await loadKappaObject(BASE, { allowUnpinned: true, blake3: false }); }  // dev fallback only under ?src
+    }
+    rootK = (r.info && r.info.root) || PIN;
+    $("kap").textContent = "κ " + rootK + (holo ? " — blake3-verified stream" : pinned ? " — pin verified" : " — unpinned (dev)");
+    // shard grid: one cell per tensor block; a cell lights when its block has arrived, re-derived, and decompressed.
+    const names = (r.manifest.tensors || []).map((t) => t.name);
+    const grid = $("grid"); grid.style.gridTemplateColumns = `repeat(${Math.ceil(Math.sqrt(names.length * 21 / 19))},1fr)`;
+    const cells = names.map(() => { const i = document.createElement("i"); grid.appendChild(i); return i; });
+    const idx = new Map(names.map((n, i) => [n, i]));
+    let done = 0, bytes = 0, hot = null;
+    const tick = () => {
+      const dt = (performance.now() - t0) / 1000;
+      $("stats").textContent = `${(bytes / 1e6).toFixed(0)} MB · ${(bytes / 1e6 / Math.max(dt, .1)).toFixed(1)} MB/s · ${dt.toFixed(1)}s · ${done}/${names.length} tensors`;
+    };
+    const iv = setInterval(tick, 250);
+    const fetchT = async (name) => {                       // wrap fetchTensor: the per-block progress driver
+      const b = await r.fetchTensor(name);
+      bytes += b.byteLength; done++;
+      const c = cells[idx.get(name)];
+      if (c) { if (hot) hot.className = "on"; c.className = "hot"; hot = c; }
+      return b;
+    };
+    // tokenizer header (arch + vocab) — embedded in the .holo (0 extra fetches), else same κ-object dir.
+    const hdr = r.tokenizerBytes || new Uint8Array(await (await fetch(BASE + "/tokenizer.gguf")).arrayBuffer());
+    const lr = JSON.parse(qvac_load_gpu(hdr));
+    if (lr.error) throw new Error("tokenizer: " + lr.error);
+    try { qvac_gpu_free(); } catch {}
+    r.manifest.kv4 = false;                                // exact f32 KV (the proven first-light config)
+    gpu = await createQvacGPU(r.manifest, fetchT, CTX, lr.eos ?? 2, false);
+    clearInterval(iv); tick(); if (hot) hot.className = "on";
+    phase("resident — building the mind");
+    const m = { fam: "Bonsai", name: "Bonsai-8B · 1-bit", size: "1.16 GB", fmt: "q1 1-bit κ", cap: 200, ctx: CTX, qwen: true, chat: true, rep: 1.05, gpu: true, gpuOnly: true };
+    engine = await createEngine(m, { gpu, info: lr, imageKappa: r.info.root });
+    // Qwen3 thinking markers are atomic tokens and clean() strips them from text — split by token id instead.
+    const o = engine.tokenize("<think>"), c2 = engine.tokenize("</think>");
+    thinkOpen = o.length === 1 ? o[0] : -1; thinkClose = c2.length === 1 ? c2[0] : -1;
+    enterChat();
+  } catch (e) {
+    $("phase").textContent = ""; $("err").hidden = false;
+    $("err").textContent = "FAIL: " + (e && e.message || e);
+    console.error(e);
+  }
+}
+
+function chip(html) { const s = document.createElement("span"); s.className = "chip"; s.innerHTML = html; $("chips").appendChild(s); return s; }
+let tokChip = null;
+function enterChat() {
+  $("phase").textContent = warm ? "resident — from your disk" : "resident";
+  const mb = ((gpu.gpuBytes || gpu.memory || 0) / 1e6) | 0;
+  chip(`RESIDENT · <b class="num">${mb} MB</b> on GPU`);
+  tokChip = chip(`<b class="num">—</b> tok/s`);
+  chip(`κ <b class="num">${short(rootK)}</b>`);
+  chip(warm ? "loaded from your disk — 0 network" : "cached for instant return");
+  show("chat"); $("inp").focus();
+}
+
+const log = $("log");
+function msg(who, cls) {
+  const d = document.createElement("div"); d.className = "msg " + cls;
+  d.innerHTML = `<div class="who">${who}</div>`;
+  const think = document.createElement("details"); think.className = "think"; think.hidden = true;
+  think.innerHTML = `<summary>thinking…</summary><div class="t"></div>`;
+  const body = document.createElement("div"); body.className = "body";
+  d.appendChild(think); d.appendChild(body); log.appendChild(d);
+  log.scrollTop = log.scrollHeight;
+  return { body, think, t: think.querySelector(".t") };
+}
+function note(s) { const d = document.createElement("div"); d.className = "note"; d.textContent = s; log.appendChild(d); }
+
+// split streamed outIds into thinking + answer segments by the <think> token ids (robust: no
+// tags at position 0 → everything is answer; unclosed → everything so far is thinking).
+function splitThink(outIds) {
+  if (thinkOpen < 0 || outIds[0] !== thinkOpen) return { think: [], ans: outIds };
+  const c = outIds.indexOf(thinkClose);
+  if (c < 0) return { think: outIds.slice(1), ans: [] };
+  return { think: outIds.slice(1, c), ans: outIds.slice(c + 1) };
+}
+
+let busy = false;
+async function send() {
+  const q = $("inp").value.trim();
+  if (!q || busy || !engine) return;
+  busy = true; $("inp").value = ""; $("send").disabled = true;
+  msg("you", "user").body.textContent = q;
+  const turn = engine.tokenize(engine.frameTurn(q, mind.length > 0));
+  if (mind.length + turn.length + 256 > CTX) { mind = []; note("context reset"); }   // keep ≥256 tokens of room (thinking model)
+  const ids = mind.concat(mind.length ? turn : engine.tokenize(engine.frameTurn(q, false)));
+  const ui = msg("Bonsai", "bot"); ui.body.textContent = "…";
+  try {
+    const res = await engine.generate(ids, {
+      maxNew: CTX - ids.length - 8,                        // the whole remaining KV window (eos stops early)
+      onToken: (t) => {
+        if (t.stats && t.stats.tokps) tokChip.innerHTML = `<b class="num">${t.stats.tokps.toFixed(1)}</b> tok/s`;
+        const s = splitThink(t.outIds);
+        if (s.think.length) { ui.think.hidden = false; ui.t.textContent = engine.detokenize(s.think); }
+        ui.body.textContent = s.ans.length ? engine.detokenize(s.ans) : (s.think.length ? "" : t.text);
+        log.scrollTop = log.scrollHeight;
+      },
+    });
+    const s = splitThink(res.outIds || []);
+    if (s.think.length) { ui.think.hidden = false; ui.t.textContent = engine.detokenize(s.think); }
+    if (s.ans.length) {
+      ui.body.textContent = engine.detokenize(s.ans);
+      mind = ids.concat(s.ans);                            // history carries the ANSWER only (Qwen3 convention: prior-turn thinking dropped)
+    } else if (s.think.length) {
+      ui.body.textContent = "(ran out of room while thinking — ask again, shorter)";   // unclosed <think> at the window edge; turn not kept
+    } else {
+      ui.body.textContent = res.text;
+      mind = ids.concat(res.outIds || []);
+    }
+    if (res.stats && res.stats.tokps) tokChip.innerHTML = `<b class="num">${res.stats.tokps.toFixed(1)}</b> tok/s`;
+  } catch (e) { ui.body.textContent = "error: " + (e && e.message || e); }
+  busy = false; $("send").disabled = false; $("inp").focus();
+  log.scrollTop = log.scrollHeight;
+}
+
+$("go").addEventListener("click", stream);
+$("send").addEventListener("click", send);
+$("inp").addEventListener("keydown", (e) => { if (e.key === "Enter") send(); });
+if (!navigator.gpu) { $("go").disabled = true; $("fine").textContent = "This browser has no WebGPU — Chrome or Edge 113+ required."; }
+</script>
+</body>

@@ -147,7 +147,7 @@ try{if(window.self===window.top){if(self.crossOriginIsolated){try{sessionStorage
   <button id=send aria-label=Send>➤</button>
 </footer>
 <script type=module>
-import { loadModel, loadFromQ, MODELS, defaultModelIndex } from "./core/loader.js";
+import { loadModel, loadFromQ, MODELS, defaultModelIndex, ready as loaderReady } from "./core/loader.js";   // loaderReady: wasm init handle (the bonsai dev-origin header pre-warm needs κ before its first loadModel)
 import { createEngine } from "./core/engine.js";
 import { selfPersona } from "./core/q-self.mjs";
 import { identityGuard, INJECT_RE, injectionNotice, classifyAction } from "./core/holo-q-guards.mjs";   // the living-self safety spine, live
@@ -931,7 +931,22 @@ else (async () => {
     const f = MODELS.find((x) => x.floor && x.kappaUrl && x.manifestKappa && !x.disabled); return f ? { ...f } : null;
   })();
   let bridgeGpu = null, _bridgeTainted = false;       // _bridgeTainted: a bridge header entered wasm → canon must rebuild fresh (W3)
+  // BONSAI ASCENSION (HOLO-Q-SECOND-BRAIN, ?bonsai=1 · window.__bonsai): Bonsai-8B q1 as a rung ABOVE canon —
+  // the ladder answers instantly as today, and when the second brain is resident it takes over at the next turn
+  // boundary (tier "bonsai" outranks canon: once bound, canon never re-swaps over it). Opt-in ONLY: without the
+  // flag BONSAI_M is null and every call site below is inert — the shipped seed→canon ladder is untouched.
+  // ?bonsaisrc=<url> retargets the load at a dev origin (e.g. the minted local κ-dir) via a SHALLOW COPY —
+  // the exported MODELS entry is never mutated (same discipline as the ?kappa override above).
+  const BONSAI_M = (() => {
+    if (!(params.has("bonsai") || window.__bonsai)) return null;
+    const f = MODELS.find((x) => x.fam === "Bonsai" && x.kappaUrl && x.manifestKappa && !x.disabled);
+    if (!f) return null;
+    const src = params.get("bonsaisrc");
+    return src ? { ...f, kappaUrl: src.replace(/\/+$/, "") } : { ...f };
+  })();
+  let _canonGpu = null;                               // canon's GPUDevice handle, recorded at bind — the bonsai ascension retires it W5-isolated
   function enterLite(detail) {
+    if (tier === "bonsai") return;   // the ascension can bind BEFORE the load deadline (warm dev origin) — a late deadline/fallback must never drop a bound second brain back to lite
     if (_lit) return; _lit = true;
     _liteMode = true; armed = true; setStatus("online", detail || "on your device");
     try { for (const tb of [...log.querySelectorAll(".msg.think")]) { const r = tb.closest(".row"); if (r) r.remove(); } } catch (x) {}
@@ -951,6 +966,21 @@ else (async () => {
       return ids;
     } catch (e) { return []; }
   }
+  // reframeForCanon's ChatML twin: Bonsai is Qwen3-framed (<|im_*|> markers are atomic BPE tokens), so the same
+  // visible turns are re-tokenized under the ChatML template — what you told canon/the bridge, Bonsai knows.
+  // Called AFTER m = BONSAI_M (like _bindCanon's call order), so frameSystem() emits the qwen system frame.
+  function reframeForBonsai(be) {
+    try {
+      if (!BONSAI_M || !BONSAI_M.qwen) return [];
+      const turns = liveTurns.filter((t) => t.text && t.text.length < 900).slice(-12);
+      if (!turns.length) return [];
+      let s = frameSystem();
+      for (const t of turns) s += `<|im_start|>${t.side === "u" ? "user" : "assistant"}\n${t.text}<|im_end|>\n`;
+      let ids = be.tokenize(s);
+      if (BONSAI_M.bos && be.bosId != null) ids = [be.bosId, ...ids];
+      return ids;
+    } catch (e) { return []; }
+  }
   // arm the BRIDGE mind (Falcon-E-1B): real answers NOW while canon keeps streaming. Fail-soft: any miss stays lite.
   async function armBridge(bl) {
     if (tier !== "seed" || engine || !bl || !bl.gpu) { if (bl && bl.gpu && tier === "canon") { try { bl.gpu.destroy(); } catch (e) {} } return false; }
@@ -966,6 +996,7 @@ else (async () => {
   // the canon mind arrived → wire it in (W3: if a bridge ever touched wasm, rebuild the engine fresh from the
   // now-warm bytes inside swapLock at a turn boundary; the poisoned first engine is destroyed, its bytes kept).
   async function armFullMind(loaded) {
+    if (tier === "bonsai") { if (loaded && loaded.gpu) { try { loaded.gpu.destroy(); } catch (e) {} } return false; }   // bonsai sits ABOVE canon — a late canon landing is retired (bytes stay warm), never swapped over it
     if (tier === "canon") return false;
     if (_bridgeTainted) {
       if (loaded && loaded.gpu) { try { loaded.gpu.destroy(); } catch (e) {} }   // W3: engine poisoned (bridge header after canon's) — bytes are OPFS-warm, rebuild is ~6s
@@ -989,6 +1020,7 @@ else (async () => {
   async function _bindCanon(loaded) {
     setStatus("loading", "waking Q up…");
     const ce = await createEngine(CANON_M, loaded);
+    _canonGpu = loaded.gpu;                                             // recorded so a later bonsai ascension can retire canon (W5-isolated)
     const wasBridge = tier === "bridge", wasLite = _liteMode;
     m = CANON_M; engine = ce; tier = "canon"; _liteMode = false; armed = true;
     convIds = (wasBridge || (window.__momentN | 0) > 0) ? reframeForCanon(ce) : [];   // carry the conversation across the tokenizer boundary — bridge swap OR a restored #moment (D2)
@@ -1007,6 +1039,47 @@ else (async () => {
     else if (!greeted && !had) greet();
     else { if (!greeted) renderChips(); if (!personaReady && !commonsRestored) primePersona(); }
   }
+  // the ASCENSION swap (HOLO-Q-SECOND-BRAIN): Bonsai-8B takes over at the next turn boundary — the tainted-canon
+  // rebuild discipline, verbatim. Phase 1 (the boot kick below) warmed the bytes (OPFS parts-cache) but its
+  // tokenizer header entered wasm EARLY — any later header owns the singleton (W3) — so the phase-1 engine is
+  // DISCARDED (bytes kept) and rebuilt FRESH inside swapLock: the reload's header step re-claims the tokenizer
+  // for Bonsai, and no generation can interleave (generate serializes behind swapLock). Fail-soft everywhere:
+  // any miss stays on whatever real mind is live. Once bound, tier "bonsai" guards re-entry AND outranks canon.
+  async function armBonsai(bl) {
+    if (bl && bl.gpu) { try { bl.gpu.destroy(); } catch (e) {} }        // phase-1 engine = possibly-poisoned scaffold — VRAM back now, OPFS bytes stay warm
+    if (!BONSAI_M || !bl || !bl.gpu || tier === "bonsai") return false;
+    while (swapLock) { try { await swapLock; } catch (e) {} }           // let any in-flight canon swap land first (locks never nest)
+    if (tier === "bonsai") return false;
+    swapLock = (async () => {
+      try {
+        while (_genActive > 0) await sleep(150);                        // turn boundary — never mid-generation
+        setStatus("loading", "second brain waking…");
+        const fresh = await loadModel(BONSAI_M, { onStatus: () => {}, onProgress: () => {} });   // OPFS-warm reload → the wasm tokenizer is Bonsai's again
+        if (!fresh || !fresh.gpu) return;                               // stay on the current mind — still real
+        const be = await createEngine(BONSAI_M, fresh);
+        const hadMind = tier === "canon" || tier === "bridge", wasLite = _liteMode;
+        m = BONSAI_M; engine = be; tier = "bonsai"; _liteMode = false; armed = true;
+        convIds = reframeForBonsai(be);                                 // carry the conversation across the tokenizer boundary (ChatML)
+        personaIds = null; personaReady = false;                        // persona ids were canon/bridge-tokenized — recompute lazily under Bonsai's tokenizer
+        if (bridgeGpu) { try { bridgeGpu.destroy(); } catch (e) {} bridgeGpu = null; }   // W5: isolated teardown of the retired brains
+        if (_canonGpu) { try { _canonGpu.destroy(); } catch (e) {} _canonGpu = null; }
+        try { window.__engine = be; } catch (e) {}
+        window.__ttfw.bonsaiArmedMs = Math.round(performance.now() - window.__ttfw.t0);
+        try { console.log("[q] BONSAI BOUND — tier=bonsai · " + BONSAI_M.name + " · " + window.__ttfw.bonsaiArmedMs + "ms"); } catch (e) {}
+        setStatus("online");
+        if (!pendingQ.length && (hadMind || wasLite || seedTurns > 0)) { const up = "Second brain online — " + BONSAI_M.name + " is answering now."; bubble("a", up); remember("a", up); }   // honest seam, once
+        else if (!pendingQ.length && !greeted && !had) greet();
+        else if (!pendingQ.length && !greeted) renderChips();
+      } catch (e) {} finally { swapLock = null; }                       // tier === "bonsai" now guards re-entry
+    })();
+    await swapLock;
+    if (tier === "bonsai" && pendingQ.length) {                         // drain OUTSIDE the lock (generate awaits swapLock — draining inside would self-wait)
+      try { for (const tb of [...log.querySelectorAll(".msg.think")]) { const r = tb.closest(".row"); if (r) r.remove(); } } catch (x) {}
+      const q = pendingQ.slice(); pendingQ = [];
+      for (const p of q) { try { await generate(p, true); } catch (x) {} }
+    }
+    return tier === "bonsai";
+  }
   try {
     setStatus("connecting");
     // FAST no-WebGPU detection (≤1.8s): probe for a real GPU adapter BEFORE the multi-second model fetch. Brave
@@ -1014,6 +1087,31 @@ else (async () => {
     // of making the user wait for a model download to fail. This is what makes Q feel instant in ANY browser.
     const _gpuOk = await (async () => { try { if (!navigator.gpu || !navigator.gpu.requestAdapter) return false; const a = await Promise.race([navigator.gpu.requestAdapter().catch(() => null), new Promise((r) => setTimeout(() => r("t"), 1800))]); return !!a && a !== "t"; } catch (e) { return false; } })();
     if (!_gpuOk) throw new Error("no-webgpu");   // → the LITE-brain fallback (catch below): answer instantly, right here
+    // BONSAI ASCENSION phase 1 (opt-in, kicked FIRST so its header precedes any canon bind): warm the second
+    // brain's bytes in parallel with the ladder. Its tokenizer header enters wasm within seconds → mark the
+    // ladder bridge-tainted so EVERY canon bind rebuilds fresh under swapLock (W3, the existing discipline);
+    // armBonsai re-claims the tokenizer the same way at its own turn boundary. Header/status stays the
+    // ladder's — the second brain narrates to the console only. Absent the flag this block is inert.
+    if (BONSAI_M) {
+      _bridgeTainted = true;                     // a foreign header WILL enter wasm → any canon engine must rebuild fresh (W3)
+      (async () => {
+        // dev-origin header pre-warm: ?bonsaisrc points at dumb static servers whose Range support is partial or
+        // absent (python http.server; the harness serve.mjs mis-clamps) — readHeader's RANGED tokenizer fetch dies
+        // there. The κ-object bundles its tokenizer, so fetch it WHOLE (plain GET, always works) into the SAME
+        // κ-sealed OPFS header cache loadKappa consults first (key ["hdr1", pin]) — the ranged path is then skipped
+        // entirely. No-op when already warm; any miss falls through to the normal load path. Dev-flag-scoped only.
+        if (params.get("bonsaisrc") && BONSAI_M.manifestKappa) { try {
+          await loaderReady();
+          const kvc = await import("./core/kv-commons.mjs");
+          const hk = kvc.commonsKey(["hdr1", BONSAI_M.manifestKappa]);
+          if (hk && !(await kvc.load(hk).catch(() => null))) {
+            const r = await fetch(BONSAI_M.kappaUrl + "/tokenizer.gguf");
+            if (r.ok) await kvc.save(hk, new Uint8Array(await r.arrayBuffer()), { kind: "gguf-header", src: BONSAI_M.kappaUrl + "/tokenizer.gguf" });
+          }
+        } catch (e) {} }
+        return loadModel(BONSAI_M, { onStatus: (s) => { try { console.debug("[q bonsai]", String(s || "")); } catch (e) {} }, onProgress: () => {} });
+      })().then((bl) => armBonsai(bl)).catch(() => {});
+    }
     // ?q=<κ> — boot the WHOLE of Q from one content address (resident weights + tokenizer named by the manifest),
     // reconstructed from the local store with no catalog + 0 network. The literal front door; falls back to the
     // normal catalog load if the κ isn't resolvable here.

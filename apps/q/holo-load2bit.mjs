@@ -68,7 +68,7 @@ export function reshapeTensor(rec, raw) {
 // build the engine manifest from model meta + normalized tensor records {name→{N,K,fmt,s?}}. PURE — shared.
 export function buildEngineManifest(man, normRecs, e8lutData) {
   const tensors = Object.entries(normRecs).map(([name, rec]) => ({ name, N: rec.N, K: rec.K, blk: rec.fmt !== "f32", fmt: rec.fmt, ...(rec.s !== undefined ? { s: rec.s } : {}) }));
-  const native = man.mode === "q4" || man.mode === "q3" || man.mode === "e8" || man.mode === "bitnet";   // native-bits κ-object
+  const native = man.mode === "q4" || man.mode === "q3" || man.mode === "e8" || man.mode === "bitnet" || man.mode === "q1";   // q1 = Bonsai binary κ-object   // native-bits κ-object
   return {
     d: man.d, n_heads: man.n_heads, n_kv_heads: man.n_kv_heads, ff: man.ff, vocab: man.vocab, n_layers: man.n_layers, hd: man.hd,
     bits: native ? man.bits : 8, layout: man.layout, rope_base: man.rope_base, ...(man.maskId !== undefined ? { maskId: man.maskId, diffusion: true } : {}), attn_bias: man.attn_bias, qk_norm: man.qk_norm, qk_norm_dim: man.qk_norm_dim, tied: man.tied,

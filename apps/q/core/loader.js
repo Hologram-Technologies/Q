@@ -6,7 +6,7 @@
 // still exposed for the probe + system-monitor panels.)
 
 import init, { kappa, qvac_load_model, qvac_load_gpu, qvac_tokenize, qvac_continue, qvac_gpu_manifest, qvac_gpu_tensor, qvac_gpu_free, qvac_panic_hook } from "../pkg/holospaces_web.js";
-import { createQvacGPU } from "../qvac-gpu.js?v=67";
+import { createQvacGPU } from "../qvac-gpu.js?v=68";   // v68 = fmt q1 (Bonsai binary) kernels
 import { modelAsSource } from "./semantic.js";   // C2: a loaded model carries a W3C @type (schema:SoftwareSourceCode)
 
 // the model κ-object's W3C linked-data view — content-addressed identity (Law L1) + schema.org type.
@@ -53,6 +53,14 @@ export const MODELS = [
   // over `steps` denoising passes (engine.diffuse / gpu.diffuse), wall-clock fixed by steps not length.
   // maskId 151666 rides in the manifest (never tokenized from text). Greedy ⇒ deterministic ⇒ κ-re-derivable.
   { fam: "Dream", name: "Dream-7B · diffusion", kappaUrl: "https://huggingface.co/HOLOGRAMTECH/q-dream-7b/resolve/main", manifestKappa: "did:holo:sha256:7b862931ae088f348f1f7e9ea3adbd418924c2e07e6ddd134f926e5681ad760d", size: "2.9 GB", fmt: "q3f diffusion κ", cap: 192, ctx: 192, kv4: false, gpu: true, gpuOnly: true, chat: true, qwen: true, diffusion: true, steps: 12, rep: 1.0, kappa: true },
+  // BONSAI κ-STREAM (the second brain): PrismML Bonsai-8B — the first BINARY rung. Qwen3-8B moved
+  // end-to-end into {−1,+1} sign bits (1.125 bpw TRUE average — embed + lm_head included, no
+  // mixed-precision escape hatches) by Bonsai's Caltech representation, and passed through
+  // compile2bit q1 mode UNTOUCHED (no re-quant: the κ-object IS the published Apache-2.0 model,
+  // re-laid for the GPU). Engine fmt q1 (mmQ1Kernel — sign-select GEMV, f32 scale per 128).
+  // First light 2026-07-15: 15.5 tok/s resident, coherent thinking-mode output (bonsai-test.html).
+  // kappaUrl 404s until the HF upload lands (H4-style publish); local dev serves the minted dir.
+  { fam: "Bonsai", name: "Bonsai-8B · 1-bit", kappaUrl: "https://huggingface.co/HOLOGRAMTECH/q-bonsai-8b/resolve/main", holoUrl: "https://huggingface.co/HOLOGRAMTECH/q-bonsai-8b/resolve/main/q-bonsai-8b.v1.holo", manifestKappa: "did:holo:sha256:a0dc81f26ec5ce98b28ee9c1fab620e91c20720f777e1de6bc416317f54d27e2", size: "1.16 GB", fmt: "q1 1-bit κ", cap: 900, ctx: 3000, kv4: true, gpu: true, gpuOnly: true, chat: true, qwen: true, rep: 1.05, kappa: true },
   // Qwen κ-objects (q3f/q4) were pruned from disk for space — re-derive via compile2bit, then re-list.
 ];
 const kvOf = (m) => Math.max(96, (m.ctx || m.cap) + 8);

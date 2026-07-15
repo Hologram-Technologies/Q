@@ -869,6 +869,39 @@ fn main(@builtin(workgroup_id) wg:vec3<u32>, @builtin(local_invocation_id) lid:v
   if(t==0u && n0<P.y){ o[n0]=red[rr*${L}u]${add ? "+r[n0]" : ""}; }
 }`;
 
+// Binary GEMV (fmt q1 — Bonsai/PrismML Q1_0 pass-through: sign bits {−1,+1}, LSB-first, one f32
+// scale per 128 weights = per 4 u32 words). Same V2 shape as mmT2RKernel: R rows × L lanes × U
+// unroll over 32-weight u32 words, vec4 input reads, ONE scale read per word. 1.125 bpw traffic —
+// the leanest kernel in the family: unpack is a bare select on each bit.
+const mmQ1Kernel = (add, R = 4, L = 64, U = 1) => `
+@group(0) @binding(0) var<storage,read> x: array<vec4<f32>>;
+@group(0) @binding(1) var<storage,read> qw: array<u32>;
+@group(0) @binding(2) var<storage,read> sc: array<f32>;
+${add
+    ? "@group(0) @binding(3) var<storage,read> r: array<f32>;\n@group(0) @binding(4) var<storage,read_write> o: array<f32>;\n@group(0) @binding(5) var<uniform> P: vec4<u32>;"
+    : "@group(0) @binding(3) var<storage,read_write> o: array<f32>;\n@group(0) @binding(4) var<uniform> P: vec4<u32>;"}
+var<workgroup> red: array<f32, 256>;
+fn dot32(w:u32, xo:u32)->f32{
+  var s=0.0;
+  for(var j=0u;j<8u;j=j+1u){
+    let v=x[xo+j]; let b=w>>(j*4u);
+    s=s+select(-v.x,v.x,(b&1u)!=0u)+select(-v.y,v.y,(b&2u)!=0u)+select(-v.z,v.z,(b&4u)!=0u)+select(-v.w,v.w,(b&8u)!=0u);
+  }
+  return s;
+}
+@compute @workgroup_size(256)
+fn main(@builtin(workgroup_id) wg:vec3<u32>, @builtin(local_invocation_id) lid:vec3<u32>){
+  let K=P.x; let nw=K>>5u; let rr=lid.x/${L}u; let t=lid.x%${L}u;
+  let n0=(wg.y*65535u+wg.x)*${R}u+rr; let n=min(n0, P.y-1u);
+  let rowW=n*nw; let rowB=n*(K>>7u); var acc=0.0; var w=t*${U}u;
+  loop{ if(w>=nw){break;}
+    ${Array.from({ length: U }, (_, u) => `if(w+${u}u<nw){ acc=acc+dot32(qw[rowW+w+${u}u], (w+${u}u)<<3u)*sc[rowB+((w+${u}u)>>2u)]; }`).join("\n    ")}
+    w=w+${L * U}u; }
+  red[lid.x]=acc; workgroupBarrier();
+  var s=${L >> 1}u; loop{ if(s==0u){break;} if(t<s){ red[rr*${L}u+t]=red[rr*${L}u+t]+red[rr*${L}u+t+s]; } workgroupBarrier(); s=s/2u; }
+  if(t==0u && n0<P.y){ o[n0]=red[rr*${L}u]${add ? "+r[n0]" : ""}; }
+}`;
+
 // Fused ternary QKV/gate-up GEMV: THREE (or two) stacked weight tensors over the same input x in ONE
 // pass — rows 0..N1 from qw1 (scale s1), N1..N1+N2 from qw2 (s2), rest from qw3 (s3). Outputs land in
 // one concat buffer that downstream passes bind as sub-ranges. Cuts 3 dispatches → 1 (the dispatch/
@@ -1002,6 +1035,7 @@ ${bits === 3 && q3f ? `  let bp=sb*3u; let j=i&31u; var q:u32;
   else { let sp=(eq[bp]>>30u)|((eq[bp+1u]>>30u)<<2u)|((eq[bp+2u]>>30u)<<4u); if(j==30u){ q=sp&7u; } else { q=(sp>>3u)&7u; } }
   x[i]=f32(i32(q)-3)*es[sb];`
   : bits === 4 ? `  let gg=tok*d+i; let nib=(eq[gg>>3u]>>((gg&7u)*4u))&0xfu; x[i]=f32(i32(nib)-8)*es[sb];`
+  : bits === 1 ? `  let gg=tok*d+i; let bit=(eq[gg>>5u]>>(gg&31u))&1u; x[i]=select(-1.0,1.0,bit==1u)*es[gg>>7u];`
   : `  let gg=tok*d+i; let b=(eq[gg>>2u]>>((gg&3u)*8u))&0xffu; x[i]=f32(i32(b<<24u)>>24u)*es[sb];`}
 }`;
 // dedup-aware repetition penalty over the ring's last-64 window (exact Set semantics: first occurrence only)
@@ -1151,8 +1185,8 @@ export async function createQvacGPU(manifest, fetchTensor, cap = 64, eos = 2, st
   const preQuant = twoBit && !!manifest.preQuantized;        // load-direct: weights arrive ALREADY 2-bit (compiled offline) — no re-quant at load
   const nextP2 = (n) => { let p = 1; while (p < n) p <<= 1; return p; };
   const maxKp = rotate ? nextP2(Math.max(d, ff, kv_dim, n_heads * hd)) : 0;
-  const qlenOf = (t) => bits === 3 ? (t.N * (t.K / 32)) * 12 : bits === 4 ? (t.N * t.K) / 2 : t.N * t.K;   // Q3 = 3 u32 (12 bytes) per 32-block
-  const slenOf = (t) => t.N * (t.K / 32) * 4;
+  const qlenOf = (t) => bits === 1 ? (t.N * t.K) / 8 : bits === 3 ? (t.N * (t.K / 32)) * 12 : bits === 4 ? (t.N * t.K) / 2 : t.N * t.K;   // Q3 = 3 u32 (12 bytes) per 32-block; q1 = 1 sign bit/weight
+  const slenOf = (t) => bits === 1 ? t.N * (t.K / 128) * 4 : t.N * (t.K / 32) * 4;   // q1: one f32 scale per 128-weight block
 
   const adapter = await navigator.gpu.requestAdapter();
   // Big-vocab models (Qwen: 151 k × d int8 ≈ 136 MB) exceed the default 128 MB
@@ -1191,11 +1225,15 @@ export async function createQvacGPU(manifest, fetchTensor, cap = 64, eos = 2, st
   const P_mmT2 = hasT2 ? pipe(mmT2Kernel(false), "mmT2") : null, P_mmT2add = hasT2 ? pipe(mmT2Kernel(true), "mmT2add") : null;
   const hasT2R = manifest.tensors.some((t) => t.fmt === "t2r");
   const P_mmT2R = hasT2R ? pipe(mmT2RKernel(false), "mmT2R") : null, P_mmT2Radd = hasT2R ? pipe(mmT2RKernel(true), "mmT2Radd") : null;
+  // Bonsai binary tensors (fmt q1): own pipelines; per-128-block f32 scale buffer
+  const hasQ1 = manifest.tensors.some((t) => t.fmt === "q1");
+  const P_mmQ1 = hasQ1 ? pipe(mmQ1Kernel(false), "mmQ1") : null, P_mmQ1add = hasQ1 ? pipe(mmQ1Kernel(true), "mmQ1add") : null;
   // big-tensor geometry (≥16M weights): 16 rows × 16 lanes × unroll-4 — measured 1.6-2× on FFN shapes
   const T2BIG = 16e6;
   const P_mmQ3B = bits === 3 && q3f ? pipe(mmQ3BigKernel(), "mmQ3B") : null;   // big q3f (lm_head)
   const P_mmT2B = hasT2 ? pipe(mmT2Kernel(false, 16, 16, 4), "mmT2B") : null, P_mmT2Badd = hasT2 ? pipe(mmT2Kernel(true, 16, 16, 4), "mmT2Badd") : null;
   const P_mmT2RB = hasT2R ? pipe(mmT2RKernel(false, 16, 16, 4), "mmT2RB") : null, P_mmT2RBadd = hasT2R ? pipe(mmT2RKernel(true, 16, 16, 4), "mmT2RBadd") : null;
+  const P_mmQ1B = hasQ1 ? pipe(mmQ1Kernel(false, 16, 16, 4), "mmQ1B") : null, P_mmQ1Badd = hasQ1 ? pipe(mmQ1Kernel(true, 16, 16, 4), "mmQ1Badd") : null;
   // DRAFT: dense sub-norm (BitNet) STREAMING is enabled — the unfused layerBody applies attn/ffn sub-norm
   // (rms over the resident Nrm weights) with ws(role) from R[role], and mmW dispatches t2 (Falcon-E proves it);
   // combined with the t2 stream packing (t2stream), dense sub-norm streams. MoE sub-norm stays resident-only.
@@ -1247,6 +1285,10 @@ export async function createQvacGPU(manifest, fetchTensor, cap = 64, eos = 2, st
       for (let i = 0; i < lim; i++) { const b = bytes[i]; if ((b & 3) === 3 || ((b >> 2) & 3) === 3 || ((b >> 4) & 3) === 3 || (b >> 6) === 3) throw new Error(`t2r alphabet violation in ${name} @byte ${i}`); }
       return { q: bytes.subarray(0, ql), sRaw: bytes.subarray(ql).slice(), N: t.N, K: t.K, t2r: true };
     }
+    if (t.fmt === "q1") {                                   // binary ±1 (Bonsai Q1_0): blob = [signs N·K/8 B][f32 scales N·K/128·4 B]
+      const ql = t.N * t.K / 8;
+      return { q: bytes.subarray(0, ql), sRaw: bytes.subarray(ql).slice(), N: t.N, K: t.K, q1: true };
+    }
     if (t.fmt === "t2") {                                   // ternary: blob = codes only; scale lives in the manifest rec
       // geometric validity (Law L5 beyond bytes): ternary fields must decode in {0,1,2} — sampled
       // 64 KB/tensor at load; the full-census proof is the sealed atlas-bridge witness receipt.
@@ -1276,6 +1318,12 @@ export async function createQvacGPU(manifest, fetchTensor, cap = 64, eos = 2, st
       const qbuf = dev.createBuffer({ size: p.q.byteLength, usage: U.STORAGE | U.COPY_DST }); dev.queue.writeBuffer(qbuf, 0, p.q);
       const sb = dev.createBuffer({ size: Math.max(16, p.sRaw.byteLength), usage: U.STORAGE | U.COPY_DST }); dev.queue.writeBuffer(sb, 0, p.sRaw);
       W[name] = { qbuf, sbuf: sb, uni: ubuf(new Uint32Array([p.K, p.N, p.K / 16, 0])), N: p.N, K: p.K, Kp: p.K, t2r: true };
+      return;
+    }
+    if (p.q1) {                                             // binary + per-128-block scale buffer
+      const qbuf = dev.createBuffer({ size: p.q.byteLength, usage: U.STORAGE | U.COPY_DST }); dev.queue.writeBuffer(qbuf, 0, p.q);
+      const sb = dev.createBuffer({ size: Math.max(16, p.sRaw.byteLength), usage: U.STORAGE | U.COPY_DST }); dev.queue.writeBuffer(sb, 0, p.sRaw);
+      W[name] = { qbuf, sbuf: sb, uni: ubuf(new Uint32Array([p.K, p.N, p.K / 128, 0])), N: p.N, K: p.K, Kp: p.K, q1: true };
       return;
     }
     const sBytes = p.sRaw || p.s;                           // e8q scales stay raw f16 bytes; others are f32 arrays
@@ -1602,6 +1650,10 @@ export async function createQvacGPU(manifest, fetchTensor, cap = 64, eos = 2, st
     ? (t2big(ws)
       ? pass(enc, P_mmT2RB, [xb, ws.qbuf, ws.sbuf, ob, ws.uni], grid(Math.ceil(ws.N / 16)))
       : pass(enc, P_mmT2R, [xb, ws.qbuf, ws.sbuf, ob, ws.uni], grid(Math.ceil(ws.N / 4))))
+    : ws.q1
+    ? (t2big(ws)
+      ? pass(enc, P_mmQ1B, [xb, ws.qbuf, ws.sbuf, ob, ws.uni], grid(Math.ceil(ws.N / 16)))
+      : pass(enc, P_mmQ1, [xb, ws.qbuf, ws.sbuf, ob, ws.uni], grid(Math.ceil(ws.N / 4))))
     : ws.e8
     ? pass(enc, P_mmE8, [xb, ws.qbuf, ws.sbuf, lutBuf, ob, ws.uni], grid(ws.N))
     : (P_mmQ3B && !rotate && ws.N * ws.K >= T2BIG)
@@ -1615,6 +1667,10 @@ export async function createQvacGPU(manifest, fetchTensor, cap = 64, eos = 2, st
     ? (t2big(ws)
       ? pass(enc, P_mmT2RBadd, [xb, ws.qbuf, ws.sbuf, r, ob, ws.uni], grid(Math.ceil(ws.N / 16)))
       : pass(enc, P_mmT2Radd, [xb, ws.qbuf, ws.sbuf, r, ob, ws.uni], grid(Math.ceil(ws.N / 4))))
+    : ws.q1
+    ? (t2big(ws)
+      ? pass(enc, P_mmQ1Badd, [xb, ws.qbuf, ws.sbuf, r, ob, ws.uni], grid(Math.ceil(ws.N / 16)))
+      : pass(enc, P_mmQ1add, [xb, ws.qbuf, ws.sbuf, r, ob, ws.uni], grid(Math.ceil(ws.N / 4))))
     : ws.e8
     ? pass(enc, P_mmE8add, [xb, ws.qbuf, ws.sbuf, lutBuf, r, ob, ws.uni], grid(ws.N))
     : pass(enc, P_mmadd, [rotate ? fwhtRotate(enc, xb, ws.K, ws.Kp) : xb, ws.qbuf, ws.sbuf, r, ob, ws.uni], grid(ws.N));
@@ -1780,7 +1836,9 @@ export async function createQvacGPU(manifest, fetchTensor, cap = 64, eos = 2, st
     // embed lookup (CPU, per-block dequant) → x
     const x = new Float32Array(d);
     const o = token * d, sb = token * (d / 32);
-    if (bits === 4) {
+    if (bits === 1) {                                         // q1 binary embed lookup (Bonsai: the embed row IS the trained sign row)
+      for (let i = 0; i < d; i++) { const g = o + i; x[i] = ((embedQ[g >> 3] >> (g & 7)) & 1 ? 1 : -1) * embedS[g >> 7]; }
+    } else if (bits === 4) {
       for (let i = 0; i < d; i++) { const gg = o + i; const nib = (embedQ[gg >> 1] >> ((gg & 1) * 4)) & 0xf; x[i] = (nib - 8) * embedS[sb + (i >> 5)]; }
     } else if (bits === 3 && q3f) {                           // Q3 FIELD embed lookup (mirrors the q3f kernel unpack)
       const eq32 = new Uint32Array(embedQ.buffer, embedQ.byteOffset, embedQ.byteLength >> 2), bb = token * (d / 32);
