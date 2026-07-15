@@ -5,8 +5,8 @@
     <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
     <title>Wallet · Hologram</title>
     <meta name="description" content="Holo Wallet. One seed reaches every chain: Ethereum and every EVM network, Bitcoin, Solana. Self custodial, serverless, no password. Reads are open; every spend is approved by your biometrics on this device." />
-    <link rel="stylesheet" href="../../../.holo/sha256/c4414e9c61a6ae6b8c19145dddbbe24c68bea83784666434a94cf033b06cc483.css" data-holo-shared="holo-theme.css" />
-    <link rel="stylesheet" href="../../../.holo/sha256/b2bfa104b9ee8e3bb631dcd0ec0e6f7017b8898c4304666f5b3dfeeebc926eb9.css" data-holo-shared="holo-mobile.css" />
+    <link rel="stylesheet" href="/.holo/sha256/c4414e9c61a6ae6b8c19145dddbbe24c68bea83784666434a94cf033b06cc483.css" data-holo-shared="holo-theme.css" />
+    <link rel="stylesheet" href="/.holo/sha256/b2bfa104b9ee8e3bb631dcd0ec0e6f7017b8898c4304666f5b3dfeeebc926eb9.css" data-holo-shared="holo-mobile.css" />
     <style>
       /* Holo Wallet — MetaMask exact, hologram native. The census, density and gestures match the
          MetaMask extension screen for screen (account pill → balance → Buy Swap Send Receive →
@@ -26,7 +26,7 @@
         /* type — bound to the Hologram-OS theme: the OS sans/mono families and the --holo-text ramp
            (16px floor, ADR-0057), so the whole wallet scales from the one --holo-font-scale lever and
            reads in the same voice as the shell. No sub-floor px/rem literals leak through. */
-        --font: var(--holo-font-sans, ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif);
+        --font: var(--font-ui, ui-sans-serif, -apple-system, "Segoe UI", "Helvetica Neue", Helvetica, Arial, sans-serif);
         --font-mono: var(--holo-font-mono, ui-monospace, "Cascadia Code", Menlo, Consolas, monospace);
         /* ONE type unit (--u, 16px floor per ADR-0057) on a φ scale, so the whole wallet reads at the
            OS desktop's size. Secondary text == body size (16px+); hierarchy comes from weight + colour,
@@ -454,7 +454,7 @@
     </div>
 
     <div class="sheet" id="sheet-bridge"><div class="grab"></div>
-      <div class="head"><h2>Bridge</h2><span class="pill">USD₮0 · LayerZero</span><button class="iconbtn sheet-x" title="Close" style="margin-left:auto"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M18 6 6 18M6 6l12 12"/></svg></button></div>
+      <div class="head"><h2>Bridge</h2><span class="pill">USD₮0 on LayerZero</span><button class="iconbtn sheet-x" title="Close" style="margin-left:auto"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M18 6 6 18M6 6l12 12"/></svg></button></div>
       <label>From</label><select id="bridgeSrc" disabled><option value="arbitrum">Arbitrum</option></select>
       <label>To</label><select id="bridgeDst"></select>
       <label>Amount (USD₮0)</label><input id="bridgeAmt" inputmode="decimal" placeholder="0.0" />
@@ -514,7 +514,7 @@
 
     <div class="toast" id="toast"></div>
 
-    <script src="../../../.holo/sha256/a0ebbc696bda5154727b76b42c11921231cbc652de3e705dd6b632456e6f34aa.js" data-holo-shared="teleport.js" defer></script>
+    <script src="/.holo/sha256/a0ebbc696bda5154727b76b42c11921231cbc652de3e705dd6b632456e6f34aa.js" data-holo-shared="teleport.js" defer></script>
     <script type="module">
       import { HoloWallet, CHAINS, deriveAddress, history, priceUsd } from "/_shared/holo-wdk.js";
       import { quote as jupQuote, MINTS } from "/_shared/holo-jupiter.js";
@@ -1389,6 +1389,6 @@
       boot();
       window.__holoWallet = wallet; // for the browser witness
     </script>
-    <script src="../../../.holo/sha256/31365b0b2f83cc3ae69f1ab91477a7cbed4fd2ab00366a84d5aea9212db0d4dc.js" data-holo-shared="holo-theme.js"></script>
+    <script src="/.holo/sha256/604b5338a1cbcadb90aba3593674d03a9b33287f109e18508396fbdd3b66825d.js" data-holo-shared="holo-theme.js"></script>
 </body>
 </html>
