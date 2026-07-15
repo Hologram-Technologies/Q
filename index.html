@@ -39,8 +39,11 @@ const refuse = (why) => { document.body.innerHTML =
   // relative-pathed → renders cold, no SW needed, so the reroute is unconditional). ?desktop=1 opts out.
   try {
     var _sp = new URLSearchParams(location.search);
-    var _phone = (navigator.userAgentData && navigator.userAgentData.mobile) ||
-                 (matchMedia("(pointer:coarse)").matches && Math.min(innerWidth, innerHeight) <= 700);
+    var _uad = navigator.userAgentData;
+    // userAgentData.mobile is AUTHORITATIVE on Chromium: a touchscreen desktop is coarse-pointer yet mobile:false,
+    // so trust it exclusively when present; only engines lacking it (Safari/Firefox) use the viewport heuristic.
+    var _phone = _uad ? !!_uad.mobile
+                      : (matchMedia("(pointer:coarse)").matches && Math.min(innerWidth, innerHeight) <= 700);
     if (_phone && !_sp.has("desktop") && !/home-screen/.test(location.pathname)) {
       location.replace(new URL("usr/share/frame/home-screen.html", location.href).href);
       return;
