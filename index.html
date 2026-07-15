@@ -35,15 +35,13 @@ const refuse = (why) => { document.body.innerHTML =
   + '<p style="color:#8696a0;margin:0">The first stage did not re-derive to its fingerprint. Reload — if it '
   + 'persists, the source you reached is tampered or corrupt.</p></main>'; console.error("seed:", why); };
 (async () => {
-  // MOBILE (HOLO-PHONE) — PHONE-HOME reroute: a phone whose SW already CONTROLS this load (so the calm home's
-  // absolute paths resolve) lands on the minimalist calm home instead of the desktop shell. Cold first visit
-  // (no controller) boots normally + installs the SW; the next visit gets the calm home. ?desktop=1 opts out.
+  // MOBILE (HOLO-PHONE) — PHONE-HOME reroute: a phone lands on the minimalist calm home (home-screen.html is
+  // relative-pathed → renders cold, no SW needed, so the reroute is unconditional). ?desktop=1 opts out.
   try {
     var _sp = new URLSearchParams(location.search);
     var _phone = (navigator.userAgentData && navigator.userAgentData.mobile) ||
                  (matchMedia("(pointer:coarse)").matches && Math.min(innerWidth, innerHeight) <= 700);
-    if (_phone && !_sp.has("desktop") && !/home-screen/.test(location.pathname) &&
-        navigator.serviceWorker && navigator.serviceWorker.controller) {
+    if (_phone && !_sp.has("desktop") && !/home-screen/.test(location.pathname)) {
       location.replace(new URL("usr/share/frame/home-screen.html", location.href).href);
       return;
     }

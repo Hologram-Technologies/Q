@@ -5,10 +5,10 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
 <!-- Pre-paint: pin the canonical palette/immersive onto <html> so the home wears the operator's chosen
      theme with no flash — one continuous appearance from login → home → app. -->
-<script src="./_shared/holo-appearance-boot.js"></script>
+<script src="../../../_shared/holo-appearance-boot.js"></script>
 <!-- map the orb's one bare dependency to the vendored same-origin copy, so Q's living orb (createOrb)
      loads exactly as it does on the desktop. Must precede any module load. -->
-<script type="importmap">{ "imports": { "simplex-noise": "/_shared/voice/lib/simplex-noise.js" } }</script>
+<script type="importmap">{ "imports": { "simplex-noise": "../../../_shared/voice/lib/simplex-noise.js" } }</script>
 <title>Hologram</title>
 <!--
   HOLOGRAM HOME — the clean, abstracted home the operator lands on after sign-in.
@@ -737,18 +737,18 @@
     immersive: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="18" height="14" rx="2.6"/><circle cx="8.6" cy="10" r="1.5"/><path d="M3.5 16.5 8 12l3 3 4-4 5.5 5.5"/></svg>'
   };
   var WALLPAPERS = [
-    { id: "mountain-lake", url: "/usr/share/wallpapers/mountain-lake.jpg" },
-    { id: "aurora",        url: "/usr/share/wallpapers/aurora.jpg" },
-    { id: "galaxy",        url: "/usr/share/wallpapers/galaxy.jpg" },
-    { id: "earth-nasa",    url: "/usr/share/wallpapers/earth-nasa.jpg" },
-    { id: "lioness",       url: "/usr/share/wallpapers/lioness.jpg" },
-    { id: "uor-native",    url: "/usr/share/wallpapers/uor-native.jpg" }
+    { id: "mountain-lake", url: "../../../usr/share/wallpapers/mountain-lake.jpg" },
+    { id: "aurora",        url: "../../../usr/share/wallpapers/aurora.jpg" },
+    { id: "galaxy",        url: "../../../usr/share/wallpapers/galaxy.jpg" },
+    { id: "earth-nasa",    url: "../../../usr/share/wallpapers/earth-nasa.jpg" },
+    { id: "lioness",       url: "../../../usr/share/wallpapers/lioness.jpg" },
+    { id: "uor-native",    url: "../../../usr/share/wallpapers/uor-native.jpg" }
   ];
   // Milky Way (Tiago Ferreira, Unsplash) — the shared OS default immersive backdrop (matches login + messenger).
   // Device-tiered like the OS `uor` default: a phone/1440p panel takes the 2560 rendition (≈1MB, instant + offline
   // via the same-origin κ store); a 4K+/retina panel takes the 24MP master. The super-res lens projects either at
   // the true device-pixel grid, so both read equally sharp.
-  var DEFAULT_WALL = "/usr/share/wallpapers/" +
+  var DEFAULT_WALL = "../../../usr/share/wallpapers/" +
     (((Math.max(screen.width || 0, screen.height || 0) * (window.devicePixelRatio || 1)) > 2560) ? "galaxy-8k.jpg" : "galaxy-2560.jpg");
 
   // Default appearance is Dark (the clean reference look) until the operator chooses otherwise.
@@ -826,7 +826,7 @@
     try { var t = JSON.parse(sessionStorage.getItem("holo.identity") || "null"); if (t && t.label) NAME = t.label; } catch (e) {}
     if (!NAME) try {
       var op = new URLSearchParams(location.search).get("operator");
-      if (op) import("/_shared/holo-identity.mjs").then(function (m) { return m.roster && m.roster(); }).then(function (rs) {
+      if (op) import("../../../_shared/holo-identity.mjs").then(function (m) { return m.roster && m.roster(); }).then(function (rs) {
         var u = (rs || []).filter(function (r) { return r.kappa === op; })[0]; if (u && u.label) { NAME = u.label; renderGreeting(); }
       }).catch(function () {});
     } catch (e) {}
@@ -858,7 +858,7 @@
   function loadThree() {
     return new Promise(function (res) {
       if (window.THREE) return res(true);
-      var s = document.createElement("script"); s.src = "/_shared/voice/lib/three.min.js";
+      var s = document.createElement("script"); s.src = "../../../_shared/voice/lib/three.min.js";
       s.onload = function () { res(!!window.THREE); }; s.onerror = function () { res(false); };
       (document.head || document.documentElement).appendChild(s);
     });
@@ -897,13 +897,13 @@
   function ensureRouter() {                                                     // route through the real mux faculties
     if (qRouterTried) return Promise.resolve(qRouter);
     qRouterTried = true;
-    return import("/_shared/voice/holo-q-route.mjs").then(function (m) { qRouter = m.createQRouter({}); return qRouter; })
+    return import("../../../_shared/voice/holo-q-route.mjs").then(function (m) { qRouter = m.createQRouter({}); return qRouter; })
       .catch(function () { qRouter = null; return null; });
   }
   function ensureLLM() {                                                        // the single-text-brain floor (if the mux can't load)
     if (qLLMTried) return Promise.resolve(qLLM);
     qLLMTried = true;
-    return import("/_shared/voice/holo-voice-llm.mjs").then(function (m) {
+    return import("../../../_shared/voice/holo-voice-llm.mjs").then(function (m) {
       // WASM, NOT WebGPU: the q8 decoder hits an ORT WebGPU kernel bug on this stack (verified gibberish) → WASM is correct.
       var llm = m.createLLM({ wasm: { model: "onnx-community/Qwen2.5-0.5B-Instruct", dtype: "q8" }, wasmFallback: { model: "onnx-community/Qwen2.5-0.5B-Instruct", dtype: "q8" }, preferWebGPU: false, maxTokens: 128 });
       return llm.load().then(function () { qLLM = llm; return llm; });
@@ -953,7 +953,7 @@
     var canvas = $("qcanvas"); if (!canvas) return;
     loadThree().then(function (ok) {
       if (!ok) return;                                                          // no THREE → keep the spectrum-disc fallback
-      import("/_shared/voice/holo-voice-orb.mjs").then(function (m) {
+      import("../../../_shared/voice/holo-voice-orb.mjs").then(function (m) {
         try {
           if (m.orbSupported && !m.orbSupported()) return;                      // no WebGL → fallback stays
           cornerOrb = m.createOrb(canvas, { detail: 8, level: liveLevel, color: liveColor,   // detail 8 = the reference wireframe density …
@@ -996,7 +996,7 @@
       var f = $h("qhero-frame"); if (!f) return;
       $h("qhero-surftitle").textContent = hit.name;
       // mount by CONTENT identity (Law L1): the κ (or id) → holospace.html resolves def+lock and mounts it.
-      f.src = "/holospace.html?app=" + encodeURIComponent(hit.ref) + "&bare=1";
+      f.src = "../../../holospace.html?app=" + encodeURIComponent(hit.ref) + "&bare=1";
       el.classList.add("composing");
       try { if (orb && orb.resize) setTimeout(function () { orb.resize(); }, 360); } catch (e) {}   // orb shrank → re-fit
     }
@@ -1047,7 +1047,7 @@
       var prCap = Math.min(window.devicePixelRatio || 2, 3);
       function webgl() {
         loadThree().then(function (ok) { if (!ok) { mounted = false; return; }
-          import("/_shared/voice/holo-voice-orb.mjs").then(function (m) {
+          import("../../../_shared/voice/holo-voice-orb.mjs").then(function (m) {
             try { if (m.orbSupported && !m.orbSupported()) { mounted = false; return; }
               orb = m.createOrb(canvas, { detail: 8, level: liveLevel, color: liveColor, maxPixelRatio: prCap });
               orb.start(); $h("qhero").classList.add("live");
@@ -1056,7 +1056,7 @@
         });
       }
       if (window.navigator && navigator.gpu) {
-        import("/_shared/voice/holo-voice-orb-gpu.mjs").then(function (g) {
+        import("../../../_shared/voice/holo-voice-orb-gpu.mjs").then(function (g) {
           if (!(g.gpuSupported && g.gpuSupported())) return webgl();
           g.createGpuOrb(canvas, { level: liveLevel, color: liveColor, maxPixelRatio: prCap })
             .then(function (o) { orb = o; o.start(); $h("qhero").classList.add("live"); }, function () { webgl(); });
@@ -1130,7 +1130,7 @@
     function ensureEngine() {
       if (qvTried) return Promise.resolve(!!qv);
       qvTried = true;
-      return import("/_shared/voice/holo-q-mobile.mjs").then(function (m) {
+      return import("../../../_shared/voice/holo-q-mobile.mjs").then(function (m) {
         return m.createQVoice({
           lang: (navigator.language || "en"),
           signalSink: Q_VOICE,                                                  // mic + Q's voice → the orb, live
@@ -1216,7 +1216,7 @@
     if ($("qhero") && $("qhero").classList.contains("on")) return;            // the hero owns the mic while it's open
     if (wakeInst) { try { wakeInst.start(); } catch (e) {} Q_VOICE.armed = true; return; }
     if (wakeStarting) return; wakeStarting = true;
-    import("/_shared/voice/holo-q-wake.mjs").then(function (m) {
+    import("../../../_shared/voice/holo-q-wake.mjs").then(function (m) {
       return m.createWakeWord({ lang: (navigator.language || "en"), onWake: function (cmd) { try { Hero.open(cmd); } catch (e) {} } });
     }).then(function (w) {
       wakeInst = w; wakeStarting = false;
@@ -1422,7 +1422,7 @@
       // ONE intent door (the SAME classifier the desktop shell uses via HoloResolve): an "open" intent LAUNCHES
       // the app; every other intent converses via the brain. So "open music" behaves identically by voice or
       // text, zero config. Falls back to converse if the classifier import or app-match misses (no regression).
-      import("/_shared/q/holo-q.js").then(function (m) {
+      import("../../../_shared/q/holo-q.js").then(function (m) {
         var it = (m && m.classifyIntent) ? m.classifyIntent(text) : null;
         if (it && it.kind === "open" && it.target && !/^(?:https?:|holo:|did:|ipfs:|www\.)/i.test(it.target)
             && typeof window.__homeLaunch === "function" && window.__homeLaunch(it.target)) { reply.textContent = ""; return; }
@@ -1433,18 +1433,18 @@
 
   // ── App catalog — the live OS directory (first 12), with a curated fallback ─────────────────────
   var CURATED = [
-    { id: "browser", name: "Browser",  landing: "/apps/browser/index.html" },
-    { id: "search",  name: "Search",   landing: "/apps/search/index.html" },
-    { id: "docs",    name: "Docs",     landing: "/apps/docs/index.html" },
-    { id: "notepad", name: "Notes",    landing: "/apps/notepad/index.html" },
-    { id: "music",   name: "Music",    landing: "/apps/music/index.html" },
-    { id: "video",   name: "Video",    landing: "/apps/video/index.html" },
+    { id: "browser", name: "Browser",  landing: "../../../apps/browser/index.html" },
+    { id: "search",  name: "Search",   landing: "../../../apps/search/index.html" },
+    { id: "docs",    name: "Docs",     landing: "../../../apps/docs/index.html" },
+    { id: "notepad", name: "Notes",    landing: "../../../apps/notepad/index.html" },
+    { id: "music",   name: "Music",    landing: "../../../apps/music/index.html" },
+    { id: "video",   name: "Video",    landing: "../../../apps/video/index.html" },
     { id: "wallet",  name: "Wallet",   landing: "/wallet.html" },
-    { id: "meet",    name: "Meet",     landing: "/apps/meet/index.html" },
-    { id: "git",     name: "Git",      landing: "/apps/git/index.html" },
-    { id: "ipfs",    name: "IPFS",     landing: "/apps/ipfs/index.html" },
-    { id: "capture", name: "Capture",  landing: "/apps/capture/index.html" },
-    { id: "player",  name: "Player",   landing: "/apps/player/index.html" }
+    { id: "meet",    name: "Meet",     landing: "../../../apps/meet/index.html" },
+    { id: "git",     name: "Git",      landing: "../../../apps/git/index.html" },
+    { id: "ipfs",    name: "IPFS",     landing: "../../../apps/ipfs/index.html" },
+    { id: "capture", name: "Capture",  landing: "../../../apps/capture/index.html" },
+    { id: "player",  name: "Player",   landing: "../../../apps/player/index.html" }
   ];
   // Float these everyday apps to the TOP of the drawer (in order); EVERY other app still lists below them,
   // so the Apps sheet is the complete app drawer — nothing is hidden. Keyed by the landing-page slug
@@ -1485,7 +1485,7 @@
   // fabric-shared. The sealed URL paints first (instant, already vector-sharp); the κ blob swaps in.
   // Fail-soft: no holo-brand / a miss → the sealed URL stays. SVG stays vector → crisp at 8K/retina.
   var _brandLib = null;
-  function brandLib() { if (!_brandLib) _brandLib = import("/usr/lib/holo/holo-brand.mjs").then(function (m) { return m.default || m; }).catch(function () { return null; }); return _brandLib; }
+  function brandLib() { if (!_brandLib) _brandLib = import("../../../usr/lib/holo/holo-brand.mjs").then(function (m) { return m.default || m; }).catch(function () { return null; }); return _brandLib; }
   function kappaStreamIcons(root) {
     brandLib().then(function (HB) {
       if (!HB || !HB.streamAsset) return;
@@ -1571,7 +1571,7 @@
   // brand set), seamless (in the drawer you already open), simple (one tap in; dismiss once → gone).
   // Every mark is κ-streamed via holo-mirror (verified, deduped, offline, vector-sharp). Fail-soft.
   function famStream(img, url, kappa) {
-    import("/usr/lib/holo/holo-mirror.mjs").then(function (m) {
+    import("../../../usr/lib/holo/holo-mirror.mjs").then(function (m) {
       var HM = m && (m.default || m); if (!HM || !HM.reflectURL) return;
       HM.reflectURL(url, { kappa: kappa }).then(function (b) { if (b) img.src = b; }).catch(function () {});
     }).catch(function () {});
@@ -1592,7 +1592,7 @@
   function renderFamiliar() {
     try { if (localStorage.getItem("holo.familiar.off")) return; } catch (e) {}
     var wrap = $("familiar"), row = $("familiar-row"); if (!wrap || !row) return;
-    fetch("/usr/share/brands/brands.json", { cache: "force-cache" }).then(function (r) { return r.ok ? r.json() : null; }).then(function (doc) {
+    fetch("../../../usr/share/brands/brands.json", { cache: "force-cache" }).then(function (r) { return r.ok ? r.json() : null; }).then(function (doc) {
       if (!doc || !doc.brands) return;
       var by = {}; doc.brands.forEach(function (b) { by[b.slug] = b; });
       var terms = []; try { terms = (window.HoloProfile && window.HoloProfile.terms && window.HoloProfile.terms()) || []; } catch (e) {}
@@ -1611,7 +1611,7 @@
       picks.forEach(function (b) {
         var a = document.createElement("a");
         a.className = "fam"; a.href = "https://" + b.domain; a.target = "_blank"; a.rel = "noopener"; a.title = b.title;
-        var sealed = "/usr/share/brands/" + b.slug + ".svg";
+        var sealed = "../../../usr/share/brands/" + b.slug + ".svg";
         a.innerHTML = '<img alt="" src="' + sealed + '" onerror="this.style.visibility=\'hidden\'"><span class="fnm">' + b.title + '</span>';
         row.appendChild(a);
         famStream(a.querySelector("img"), sealed, b.kappa);
@@ -1627,10 +1627,10 @@
     renderFamiliar();
   })();
 
-  fetch("/apps/index.jsonld", { cache: "no-store" }).then(function (r) { return r.ok ? r.json() : null; }).then(function (idx) {
+  fetch("../../../apps/index.jsonld", { cache: "no-store" }).then(function (r) { return r.ok ? r.json() : null; }).then(function (idx) {
     if (!idx) return;
     var list = (idx["dcat:dataset"] || []).map(function (a) {
-      return { id: a["schema:identifier"], name: a["schema:name"], kappa: a["@id"], kw: [].concat(a["schema:keywords"] || [], a["holo:categories"] || [], a["schema:applicationCategory"] || []).join(" ").toLowerCase(), landing: String(a["dcat:landingPage"] || "").replace(/^apps\//, "/apps/") };
+      return { id: a["schema:identifier"], name: a["schema:name"], kappa: a["@id"], kw: [].concat(a["schema:keywords"] || [], a["holo:categories"] || [], a["schema:applicationCategory"] || []).join(" ").toLowerCase(), landing: String(a["dcat:landingPage"] || "").replace(/^apps\//, "../../../apps/") };
     }).filter(function (a) { return a.id && a.landing; });
     if (list.length) {
       apps = orderApps(list); renderApps();
@@ -1718,7 +1718,7 @@
     // Open by CONTENT identity (Law L1): hand the projection the app's κ (@id) — else its id — and let
     // holospace.html resolve def+lock and mount it, every byte re-derived (Law L5). Never the raw path.
     var ref = a.kappa || a.id;
-    $("appframe").src = "/holospace.html?app=" + encodeURIComponent(ref) + "&bare=1";
+    $("appframe").src = "../../../holospace.html?app=" + encodeURIComponent(ref) + "&bare=1";
     v.classList.add("on");
     if (countdownTimer) clearInterval(countdownTimer);
     var left = $("app-left");
@@ -1755,17 +1755,17 @@
      is the persistent session, so it carries the same #<root-CID> cold-boot + IPFS/mesh recovery the
      desktop shell does. Re-derives every recovered byte (Law L5); the sealed anchor is never auto-healed.
      Guarded — can never break boot. -->
-<script type="module" src="./holo-heal-boot.mjs"></script>
+<script type="module" src="../../../holo-heal-boot.mjs"></script>
 <!-- Self-evolving personalization on the phone home: bind your encrypted memory + the profile seam so the
      mobile launcher (orderApps) floats the apps you actually use to the top — the SAME magic as the desktop launcher,
      off the SAME window.HoloProfile seam. 100% local; memory is AES-GCM at rest; nothing egresses. -->
-<script type="module" src="/_shared/holo-memory.mjs"></script>
-<script type="module" src="/_shared/holo-profile-context.mjs"></script>
-<script type="module" src="/_shared/holo-learning.mjs"></script>
+<script type="module" src="../../../_shared/holo-memory.mjs"></script>
+<script type="module" src="../../../_shared/holo-profile-context.mjs"></script>
+<script type="module" src="../../../_shared/holo-learning.mjs"></script>
 <!-- HOLO-INTENT-RENDER R0 — the block runtime: seal a self-contained block to a κ and mount it SANDBOXED.
      window.HoloRender.open(name|html) renders it full-screen; the compose/intent door calls this too. -->
 <script type="module">
-  import { sealBlock, verifyBlock, mountBlock, mountKappa, putBlock, getBlock, LIBRARY, libNames } from "/_shared/holo-render-block.mjs";
+  import { sealBlock, verifyBlock, mountBlock, mountKappa, putBlock, getBlock, LIBRARY, libNames } from "../../../_shared/holo-render-block.mjs";
   var current = null;
   function ensureOverlay() {
     var o = document.getElementById("holo-renderview");
