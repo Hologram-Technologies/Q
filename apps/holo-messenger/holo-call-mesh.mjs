@@ -7,6 +7,8 @@
 import * as Together from "./holo-together.mjs";
 import { openSignal, tunePeer } from "./holo-call.mjs?v=930599a2417d";   // THE ONE SIGNAL DOOR — origin /signal on desktop, sealed Nostr rendezvous on hosted static; ?v matches app.mjs's pin so the SW serves ONE fresh copy, never a stale bare-URL cache hit
 
+import { createBlurEffect } from "./holo-stream-effects.mjs";   // J1: lifted Jitsi background blur (segmentation to canvas composite), pure client, runs on the local camera before the mesh
+
 const ICE = [
   { urls: "stun:stun.l.google.com:19302" },
   { urls: "stun:stun1.l.google.com:19302" },
@@ -186,4 +188,28 @@ export function makeScreenShare(mesh, { media, ui, name = "You", facing = () => 
     camTrack = null; try { ui.attachLocal(media, name, facing() === "user"); ui.setSharing && ui.setSharing(false); } catch {}
   }
   return { toggle: () => (sharing ? stop() : start()), stop, sharing: () => sharing };
+}
+
+// BACKGROUND BLUR — a self-contained toggle over a joined mesh, mirroring makeScreenShare. Wrap the outgoing
+// CAMERA in the lifted Jitsi blur effect and swap it in via replaceTrack; keep the raw camera alive so toggling
+// off is instant. Pure client, serverless: the blurred frames ride the same P2P mesh, nobody's background leaks.
+export function makeBlurEffect(mesh, { media, ui, name = "You", facing = () => "user", blurRadius = 14 } = {}) {
+  let on = false, effect = null, rawCam = null;
+  async function start() {
+    if (on || !mesh) return;
+    rawCam = (media && media.getVideoTracks()[0]) || null; if (!rawCam) return;
+    try { effect = createBlurEffect(new MediaStream([rawCam]), { blurRadius }); } catch { effect = null; }
+    const blurred = effect && effect.stream.getVideoTracks()[0]; if (!blurred) { effect = null; return; }
+    try { await mesh.replaceVideoTrack(blurred, false); } catch {}
+    on = true; try { ui.attachLocal(media, name, facing() === "user"); ui.setBlurring && ui.setBlurring(true); } catch {}
+  }
+  async function stop() {
+    if (!on || !mesh) return; on = false;
+    let cam = rawCam;
+    if (!cam || cam.readyState !== "live") { try { const ns = await navigator.mediaDevices.getUserMedia({ video: { facingMode: { ideal: facing() } }, audio: false }); cam = ns.getVideoTracks()[0]; } catch {} }
+    if (cam) { try { await mesh.replaceVideoTrack(cam, true); } catch {} }
+    try { effect && effect.stop(); } catch {} effect = null; rawCam = null;
+    try { ui.attachLocal(media, name, facing() === "user"); ui.setBlurring && ui.setBlurring(false); } catch {}
+  }
+  return { toggle: () => (on ? stop() : start()), stop, on: () => on };
 }
