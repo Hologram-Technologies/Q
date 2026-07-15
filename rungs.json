@@ -1,5 +1,7 @@
 {
  "blake3": [
+  "https://cdn.jsdelivr.net/gh/Hologram-Technologies/hologram-apps@main/b/",
+  "https://raw.githubusercontent.com/Hologram-Technologies/hologram-apps/main/b/",
   "https://huggingface.co/HOLOGRAMTECH/holo-messenger-shell/resolve/main/b/",
   "https://hologram-technologies.github.io/hologram-apps/b/"
  ],

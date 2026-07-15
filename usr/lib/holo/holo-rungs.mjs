@@ -26,6 +26,13 @@ export const MIME = { js: "text/javascript", mjs: "text/javascript", css: "text/
 
 export const BUILTIN_RUNGS = {
   blake3: [
+    // FAST, ALWAYS-FRESH rungs for the hologram-apps CAS (evicted κ-apps). The GitHub-Pages mirror below
+    // publishes new blobs slowly/unreliably (the repo is >1GB, over Pages' publish cap), so a freshly-minted
+    // app blob 404s there for tens of minutes even though it is already in git. jsDelivr + raw serve it in
+    // seconds, CORS-clean — and every rung is re-derived to its κ BEFORE serving (Law L5), so a fast CDN adds
+    // speed, never trust. Tried ahead of the Pages mirror so κ-app ships resolve immediately.
+    "https://cdn.jsdelivr.net/gh/Hologram-Technologies/hologram-apps@main/b/",
+    "https://raw.githubusercontent.com/Hologram-Technologies/hologram-apps/main/b/",
     "https://huggingface.co/HOLOGRAMTECH/holo-messenger-shell/resolve/main/b/",
     "https://hologram-technologies.github.io/hologram-apps/b/",
   ],
