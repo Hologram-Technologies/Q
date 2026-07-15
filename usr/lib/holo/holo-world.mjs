@@ -26,6 +26,26 @@ export function makeWorld({ base = "", fetchFn = fetch, hashSha256 = _subtleSha2
   async function load() {
     if (_world) return _world;
     if (!_worldP) _worldP = (async () => {
+      // Z2b (BYTE-ZERO): the DEVICE PIN answers first — selfPin seats release.json + the world
+      // root in the "holo-pin" cache before traffic, so every later worker start (and OFFLINE)
+      // warms with ZERO network. Same law as any rung: re-derived (L5) or refused; a miss falls
+      // to the network path below unchanged.
+      try {
+        if (typeof caches !== "undefined") {
+          const pin = await caches.open("holo-pin");
+          const rr = await pin.match(base + "/release.json");
+          if (rr) {
+            const pk = ((JSON.parse(await rr.text()))["holstr:payload"] || {}).world;
+            if (/^[0-9a-f]{64}$/.test(String(pk || ""))) {
+              const wr = await pin.match(base + "/b/" + pk);
+              if (wr) {
+                const pbuf = new Uint8Array(await wr.arrayBuffer());
+                if ((await hashSha256(pbuf)) === pk) { _world = JSON.parse(new TextDecoder().decode(pbuf)); stats.load++; return _world; }
+              }
+            }
+          }
+        }
+      } catch {}
       try {
         const rp = await fetchFn(base + "/release.json", { cache: "no-store" });
         if (!rp.ok) return null;
@@ -52,6 +72,18 @@ export function makeWorld({ base = "", fetchFn = fetch, hashSha256 = _subtleSha2
       const w = await load();
       const nk = w && w.names && w.names.kappa;
       if (!/^[0-9a-f]{64}$/.test(String(nk || ""))) return null;
+      // Z2b: the names closure IS the sealed os-closure — when the pinned one matches the world's
+      // names κ, the whole name-subset answers from the device with zero network.
+      try {
+        if (typeof caches !== "undefined") {
+          const pin = await caches.open("holo-pin");
+          const hit = await pin.match(base + "/os-closure.json");
+          if (hit) {
+            const nbuf = new Uint8Array(await hit.arrayBuffer());
+            if ((await hashSha256(nbuf)) === nk) { _names = JSON.parse(new TextDecoder().decode(nbuf)).files || {}; return _names; }
+          }
+        }
+      } catch {}
       try {
         const r = await fetchFn(base + "/b/" + nk, { cache: "force-cache" });
         if (!r.ok) return null;

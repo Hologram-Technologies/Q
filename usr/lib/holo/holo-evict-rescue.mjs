@@ -36,16 +36,25 @@ export function makeEvictRescue({ base, blake3Import, rung } = {}) {
   const _world = makeWorld({ base }); try { _world.warm(); } catch {}
   let _reg = null;          // resolved { apps:Set, trees:[{prefix,closure}] } — sync fast path
   let _regP = null;         // in-flight (dedup)
-  const registry = () => _reg || (function () { const w = _world.registrySync(); return w ? (_reg = w) : null; })() || (_regP ||= fetch(base + "/evicted.json", { cache: "no-store" })
-    .then((r) => (r.ok ? r.json() : {}))
-    .then((j) => (_reg = { apps: new Set(j.apps || []), trees: (j.trees || []).filter((t) => t && t.prefix && t.closure) }))
-    .catch(() => { _regP = null; return { apps: new Set(), trees: [] }; }));
+  const registry = () => _reg || (function () { const w = _world.registrySync(); return w ? (_reg = w) : null; })() || (_regP ||= (async () => {
+    // Z2b (BYTE-ZERO): the WORLD answers before the legacy manifest — awaited (a rescue already
+    // awaits the network, and the root is device-pinned so this is ~0ms after the first visit).
+    // Positive-hits-only: an absent or EMPTY world registry still falls through to the loose
+    // evicted.json, which stays the honest fallthrough until Z3 deletes it.
+    try { const w = await _world.registry(); if (w && (w.apps.size || w.trees.length)) return (_reg = w); } catch {}
+    try {
+      const r = await fetch(base + "/evicted.json", { cache: "no-store" });
+      const j = r.ok ? await r.json() : {};
+      return (_reg = { apps: new Set(j.apps || []), trees: (j.trees || []).filter((t) => t && t.prefix && t.closure) });
+    } catch { _regP = null; return { apps: new Set(), trees: [] }; }
+  })());
 
   const _closures = new Map();   // closureUrl → Promise<closure|null>
-  const closure = (url) => {
-    const w = _world.closureSync(url);
-    if (w && w.files) return Promise.resolve(w);                            // monolith world (inline files) — unchanged
-    if (w && w.filesKappa) return _world.closureFilesFor(url);              // Z1: sharded world → fetch the file-list shard (κ, re-derived)
+  const closure = async (url) => {
+    let w = _world.closureSync(url);
+    if (w === undefined) { try { w = await _world.closureFor(url); } catch { w = null; } }   // Z2b: await the world (device-pinned root) before the loose map
+    if (w && w.files) return w;                                             // monolith world (inline files) — unchanged
+    if (w && w.filesKappa) { const full = await _world.closureFilesFor(url); if (full) return full; }   // Z1 sharded; a shard miss falls through
     if (!_closures.has(url)) _closures.set(url, fetch(url, { cache: "no-store" }).then((r) => (r.ok ? r.json() : null)).catch(() => null));
     return _closures.get(url);
   };

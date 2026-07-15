@@ -43,6 +43,22 @@ export function makeSelfPin({ base, ladder, rung, closure, onFresh }) {
         await pin.put(base + "/os-closure.json", new Response(bytes, { headers: { "content-type": "application/json", "x-holo-kappa": "sha256:" + want } }));
         try { onFresh && onFresh(); } catch {}
       }
+      // Z2b (BYTE-ZERO): pin THE WORLD ROOT beside the closure — the ~17.7KB sharded root that
+      // carries the rescue registry. Device-local before traffic, so the resolver (holo-world.mjs)
+      // answers from the pin with ZERO network on every later start (and offline), and the arrival
+      // manifests can die in Z3. Ladder-resolved = verified fail-closed; any miss changes nothing.
+      try {
+        const wk = (rel["holstr:payload"] || {}).world;
+        if (/^[0-9a-f]{64}$/.test(wk || "") && !(await pin.match(base + "/b/" + wk))) {
+          const wres = await ladder.resolve("sha256", wk, { ext: "json" });
+          if (wres && wres.ok) {
+            const wb = await wres.arrayBuffer();
+            // prune superseded world-root pins (κ-named; only the current one serves)
+            try { for (const k of await pin.keys()) { const u = new URL(k.url); if (/\/b\/[0-9a-f]{64}$/.test(u.pathname) && !u.pathname.endsWith("/" + wk)) await pin.delete(k); } } catch {}
+            await pin.put(base + "/b/" + wk, new Response(wb, { headers: { "content-type": "application/json", "x-holo-kappa": "sha256:" + wk } }));
+          }
+        }
+      } catch {}
       await bootPackIngest();
     } catch {}
   }
