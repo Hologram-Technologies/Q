@@ -277,6 +277,15 @@
     font-size: 1.4rem; line-height: 1; cursor: pointer; display: grid; place-items: center; }
   .x:hover { background: var(--ctl-hi); }
   .sheet-body { overflow-y: auto; -webkit-overflow-scrolling: touch; }
+  /* M1 — search-first: a calm search field atop the Apps sheet that live-filters the κ-index. 16px font
+     blocks iOS focus-zoom; ≥48px touch; quiet until focused. */
+  .app-search { display: block; width: 100%; margin: 0 0 var(--g0); padding: 0 var(--g1); min-height: var(--fab);
+    font: inherit; font-size: 16px; color: var(--ink); background: var(--ctl); border: 1px solid var(--line);
+    border-radius: var(--g0); outline: none; -webkit-appearance: none; appearance: none;
+    transition: border-color .18s var(--ease), background .18s var(--ease); }
+  .app-search::placeholder { color: var(--ink-faint); }
+  .app-search:focus { border-color: color-mix(in srgb, var(--accent) 55%, var(--line)); background: var(--ctl-hi); }
+  .app-ask .ic { opacity: .75; }
 
   /* app drawer — an enclosed list, one crisp line per holo app */
   .applist { list-style: none; margin: 0; padding: 0; }
@@ -546,6 +555,7 @@
       <div class="familiar-head"><span>Familiar</span><button class="familiar-x" data-fam-close aria-label="Hide familiar">×</button></div>
       <div class="familiar-row" id="familiar-row"></div>
     </div>
+    <input class="app-search" id="app-search" type="text" inputmode="search" enterkeyhint="search" placeholder="Search apps…" autocomplete="off" autocapitalize="off" spellcheck="false" aria-label="Search apps" />
     <button class="scanrow" id="scanrow" type="button"><span class="ic">◎</span><span class="tx"><b>Scan the world</b><span>Point your camera at a code → open it</span></span></button>
     <ul class="applist" id="applist"></ul>
   </div>
@@ -1237,7 +1247,13 @@
   scrim.addEventListener("click", closeSheets);
   document.querySelectorAll("[data-close]").forEach(function (b) { b.addEventListener("click", closeSheets); });
   document.addEventListener("keydown", function (e) { if (e.key === "Escape") closeSheets(); });
-  $("menu").addEventListener("click", function () { openSheet($("drawer")); });
+  $("menu").addEventListener("click", function () { var s = $("app-search"); if (s) s.value = ""; try { renderApps(""); } catch (e) {} openSheet($("drawer")); });
+  // M1 — search-first: type → live-filter (debounced); Enter opens the top hit (minimalist-phone search-to-open).
+  (function () {
+    var s = $("app-search"); if (!s) return; var t = null;
+    s.addEventListener("input", function () { var v = this.value; clearTimeout(t); t = setTimeout(function () { try { renderApps(v); } catch (e) {} }, 60); });
+    s.addEventListener("keydown", function (e) { if (e.key === "Enter") { var first = document.querySelector("#applist .app"); if (first) { e.preventDefault(); first.click(); } } });
+  })();
   $("open-settings").addEventListener("click", function () { openSheet($("settings")); });
 
   // ── AUTHORITY (P5) — Q never performs an irreversible or outward action silently. It classifies an
@@ -1531,13 +1547,35 @@
     b.addEventListener("click", function () { promptOpen(a); });
     li.appendChild(b); return li;
   }
-  function renderApps() {
-    var ul = $("applist"); ul.innerHTML = "";
-    casaGroups(apps).forEach(function (grp) {
-      var hd = document.createElement("li"); hd.className = "group-head"; hd.textContent = grp[0]; hd.setAttribute("aria-hidden", "true");
-      ul.appendChild(hd);
-      grp[1].forEach(function (a) { ul.appendChild(appRow(a)); });
-    });
+  // M1 — the app list IS the resolver index, SEARCH-FIRST. Empty query → the calm grouped list; typing
+  // live-filters to a flat list of matching κ-apps (fuzzy on name/id); no match offers Q (open / render / ask).
+  function renderApps(q) {
+    var ul = $("applist"); if (!ul) return; ul.innerHTML = "";
+    q = String(q == null ? (($("app-search") || {}).value || "") : q).trim().toLowerCase();
+    if (q) {
+      var hits = (apps || []).filter(Boolean).filter(function (a) {
+        return String(a.name || a.id || "").toLowerCase().indexOf(q) >= 0 || String(a.id || "").toLowerCase().indexOf(q) >= 0;
+      });
+      hits.forEach(function (a) { ul.appendChild(appRow(a)); });
+      if (!hits.length) {
+        var li = document.createElement("li");
+        var b = document.createElement("button"); b.className = "app app-ask"; b.type = "button";
+        b.innerHTML = '<span class="ic">◆</span><span class="nm">Ask Q about “' + q.replace(/[<>&"]/g, "") + '”</span>' +
+          '<span class="go"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M9 6l6 6-6 6"/></svg></span>';
+        b.addEventListener("click", function () {
+          try { if (navigator.vibrate) navigator.vibrate(8); } catch (e) {}
+          var qq = q; closeSheets();
+          var qi = $("q-input"); if (qi) { try { openSheet($("qsheet")); } catch (e) {} qi.value = qq; setTimeout(function () { try { qi.focus(); } catch (e) {} }, 240); }
+        });
+        li.appendChild(b); ul.appendChild(li);
+      }
+    } else {
+      casaGroups(apps).forEach(function (grp) {
+        var hd = document.createElement("li"); hd.className = "group-head"; hd.textContent = grp[0]; hd.setAttribute("aria-hidden", "true");
+        ul.appendChild(hd);
+        grp[1].forEach(function (a) { ul.appendChild(appRow(a)); });
+      });
+    }
     var cc = $("cp-count"); if (cc) cc.textContent = apps.length + " apps · yours";
     var _ac = $("appcount"); if (_ac) _ac.textContent = apps.length + " apps";
     kappaStreamIcons(ul);   // upgrade the sealed icons to κ-streamed objects
@@ -1720,6 +1758,12 @@
     b.addEventListener("click", function () { if (pendingApp) { var f = readFocus(); f.mins = +b.dataset.min; writeFocus(f); openApp(pendingApp, +b.dataset.min); } });
   });
 
+  // M1 — premium open: reveal the app surface via a same-doc View Transition (crossfade), feature-detected +
+  // reduce-motion-safe; instant everywhere it's unsupported. 150–300ms class of motion (L-MOTION).
+  function _withVT(fn) {
+    try { if (document.startViewTransition && !matchMedia("(prefers-reduced-motion: reduce)").matches) { document.startViewTransition(fn); return; } } catch (e) {}
+    fn();
+  }
   function openApp(a, mins) {
     closeSheets();
     var v = $("appview");
@@ -1728,7 +1772,7 @@
     // holospace.html resolve def+lock and mount it, every byte re-derived (Law L5). Never the raw path.
     var ref = a.kappa || a.id;
     $("appframe").src = "../../../holospace.html?app=" + encodeURIComponent(ref) + "&bare=1";
-    v.classList.add("on");
+    _withVT(function () { v.classList.add("on"); });
     if (countdownTimer) clearInterval(countdownTimer);
     var left = $("app-left");
     if (!mins) { left.className = "left"; left.innerHTML = ""; return; }

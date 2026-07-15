@@ -9,7 +9,7 @@
  "tiers": {
   "core": {
    "files": 616,
-   "bytes": 12735636,
+   "bytes": 12739941,
    "hf": 0
   },
   "apps": {
@@ -31151,9 +31151,9 @@
    "source": "origin"
   },
   "usr/share/frame/home-screen.html": {
-   "sha256": "35d25efdc8a652438c5e2d26c0f67484d26ab6ef1f81d3cc617427b2ea4b4aab",
-   "blake3": "e6851336c857a88047fa6e550a4ba9c2639f401d242e1a5e0a6eaab934c30469",
-   "bytes": 134870,
+   "sha256": "5f9d1bfaf1df0912fb991819b4370e5e92b9706f615915cc9e40e2a53711e83c",
+   "blake3": "1f57cbfe811a3fcf7c90ad951d2a3b7c2aa2d1d6ba6542dbc6c42d716fe688d5",
+   "bytes": 139175,
    "tier": "core",
    "source": "origin"
   },
