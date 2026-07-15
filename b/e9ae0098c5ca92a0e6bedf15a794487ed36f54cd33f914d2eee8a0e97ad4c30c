@@ -8,8 +8,8 @@
  "mirror": "https://huggingface.co/HOLOGRAMTECH/holo-messenger-shell/resolve/main/b/",
  "tiers": {
   "core": {
-   "files": 597,
-   "bytes": 11351382,
+   "files": 598,
+   "bytes": 11967246,
    "hf": 0
   },
   "apps": {
@@ -30372,9 +30372,9 @@
    "source": "origin"
   },
   "usr/lib/holo/holo-world.mjs": {
-   "sha256": "97039a7fd20c583d30f2e0320a5e23f745a69592220490ce70b8c2495e844489",
-   "blake3": "0743b6ce34357c7ae5599156838f2d2c5c5e66462517bb4b0a91ed65db7a7369",
-   "bytes": 9041,
+   "sha256": "8e289ba92f13fbfbfdcc07c53b4dcce0665c748d1cad79b32cb99af0711f4704",
+   "blake3": "5abf74e37f4b5d5bc8cb12f441078820db1c477cb6f6cb170f78f7e5c28bcde3",
+   "bytes": 9125,
    "tier": "core",
    "source": "origin"
   },
@@ -31589,6 +31589,13 @@
    "sha256": "08f51caee6b02994f3135e21cd9edcd7f705ab55812f94f6b6ed63e6d97bcafa",
    "blake3": "002a1e8e979dfa66e813dcc85de5c8ce38d38d7f032d6d8cea93d5a8d42688b4",
    "bytes": 152136,
+   "tier": "core",
+   "source": "origin"
+  },
+  "usr/share/frame/shell-main.mjs": {
+   "sha256": "acac30dfa201f28bd041032d7f4fabbf039c07667695f06bfc6c216a401dedfc",
+   "blake3": "9537c358056c1d9a122e5cc47ddb1dd4fea3eda4c487512fb5d6ed7a4b7b6534",
+   "bytes": 615780,
    "tier": "core",
    "source": "origin"
   },
