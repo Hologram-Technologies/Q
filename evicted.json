@@ -47,6 +47,10 @@
   {
    "prefix": "_shared/",
    "closure": "_shared/holo-evicted.json"
+  },
+  {
+   "prefix": "apps/holo-messenger/",
+   "closure": "apps/holo-messenger/holo-evicted.json"
   }
  ]
 }
