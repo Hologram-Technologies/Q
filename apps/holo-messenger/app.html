@@ -31,7 +31,7 @@
 <meta name="twitter:image" content="https://hologram-technologies.github.io/Q/apps/holo-messenger/og.jpg">
 <link rel="apple-touch-icon" href="./icons/apple-touch-icon.png">
 
-<link rel="stylesheet" href="./_vendor/ui/chat-ui.bundle.css?v=eb2c2b496fa0">
+<link rel="stylesheet" href="./_vendor/ui/chat-ui.bundle.css?v=7895ab1c6db3">
 <!-- BOOT GROUND — the ONE source of truth for the boot/login darkness. Every boot-time surface reads
      var(--boot-ground): the body pre-paint, the login --wall, the plymouth splash layer + its base, the
      signin wall, and the power veil (all with a matching literal fallback for bare surfaces without this
@@ -492,7 +492,7 @@ if (document.readyState === "complete") go(); else addEventListener("load", go);
 
 <script type="module">
   // ?v=N - bump on each deploy so the browser can never serve a stale cached bundle (the cause of a frozen/old build).
-  import "./_vendor/ui/chat-ui.bundle.js?v=7c0ac719466c";   // → window.HoloMessengerUI
+  import "./_vendor/ui/chat-ui.bundle.js?v=84c69ca5a2b1";   // → window.HoloMessengerUI
   // Opt-in: render the WhatsApp UX from STREAMING shadcn κ-components instead of the chatscope bundle.
   // Lazy — the module loads ONLY when opted in (?ui=shadcn or holo.ui.shadcn=1); the default boot never
   // parses it. Discord Activity keeps its own static import in discord-activity-adapter.mjs.
