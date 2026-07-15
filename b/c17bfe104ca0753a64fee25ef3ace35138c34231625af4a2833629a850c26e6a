@@ -8,13 +8,13 @@
  "mirror": "https://huggingface.co/HOLOGRAMTECH/holo-messenger-shell/resolve/main/b/",
  "tiers": {
   "core": {
-   "files": 531,
-   "bytes": 10082003,
+   "files": 597,
+   "bytes": 11325989,
    "hf": 0
   },
   "apps": {
    "files": 5459,
-   "bytes": 1770054,
+   "bytes": 1771835,
    "hf": 5396
   },
   "heavy": {
@@ -3261,9 +3261,9 @@
    "source": "hf"
   },
   "apps/holo-messenger/app.html": {
-   "sha256": "4f5b7e5bbbee8929b1eb8b96ba9567c7ed62ba66b87c693d237585cd607c8545",
-   "blake3": "58cb480ff2801a3bae3e30ef74fba37db7251fc17868555593b18beb7c0fe926",
-   "bytes": 70478,
+   "sha256": "f034d54f5428c81f65d97845625509cec96e155920e3a284f27be8d4e103b646",
+   "blake3": "61b0a0e57551d0683d692dda6df220bd5b2b3a81d6fece43f7da515fadd920d8",
+   "bytes": 71122,
    "tier": "core",
    "source": "origin"
   },
@@ -3685,8 +3685,8 @@
    "source": "origin"
   },
   "apps/holo-messenger/holo-sw.js": {
-   "sha256": "e608ac7286e6abc90333c48f9c212acbe933aac1d3ebb2dce0c238b1d3740fcf",
-   "blake3": "c607ce30d9d22996160f01016d085e22ed3bd0057a3dbbe04fdfcdabf643c9b7",
+   "sha256": "faeffbe9873300204ed2acbfa4f601e9bc8cd5cd08a5a90f8ebee383fbd36cb9",
+   "blake3": "f7f03694bd9ff61c21d5c76b3e9f32212762ccfdbc557ef53765e2610f928ad6",
    "bytes": 26338,
    "tier": "core",
    "source": "origin"
@@ -4084,8 +4084,8 @@
    "source": "origin"
   },
   "apps/holo-messenger/shell-manifest.json": {
-   "sha256": "f7f6637626bfcd4d469caac702b338df3ba2dbfb6179dc879206ac28a2824b8d",
-   "blake3": "5e563dd4e5aafba4947b77d43569a826fc2e50387ea96cd4018c304a6c5e9761",
+   "sha256": "a10f3043b062564abee863670fe752f30a1203f40331541039790463e1a90b9f",
+   "blake3": "d664516cbdf89d8d1a3e596adde01680e31d1a796d07cfb78d6df1365563b19d",
    "bytes": 6812,
    "tier": "core",
    "source": "origin"
@@ -16967,9 +16967,9 @@
    "source": "hf"
   },
   "apps/q/core/voice-out.js": {
-   "sha256": "c8c565c538621c047ca6c417f1d2297b48187621e0c97c47320e9f9af92fbcf4",
-   "blake3": "3be15ebb9b82430e9b094a3f03094da9e9106867eb76a29264b2cba30327dfe7",
-   "bytes": 12660,
+   "sha256": "9ebee7393ceb62cf1bc2ef1baa83fecfab68c1a3f5a96daa19c8c47c7cccad0f",
+   "blake3": "4cc798a89ec432bf5297784313e6df2125f55423dc2f2525cead67053d47ac1b",
+   "bytes": 14441,
    "tier": "apps",
    "source": "origin"
   },
@@ -30519,6 +30519,461 @@
    "tier": "core",
    "source": "origin"
   },
+  "usr/lib/holo/voice/atlas.json": {
+   "sha256": "e67a242e553f222c0cd4e8c783beded8c2fd1e0a25f3b015ceed25b4edaf5265",
+   "blake3": "6377a989b7dfc98f8a1c5294b2012e544b8420e115e570cf1039349963e32079",
+   "bytes": 9841,
+   "tier": "core",
+   "source": "origin"
+  },
+  "usr/lib/holo/voice/atlas/0086b847a5725172837664657ac715c55f7795b2995d94d77f6cd7994f68a213": {
+   "sha256": "0086b847a5725172837664657ac715c55f7795b2995d94d77f6cd7994f68a213",
+   "blake3": "b0e8e76f5f759b62c598ced40711f83ff1a8c206cc38f5dd7676fa7bcf1262d3",
+   "bytes": 9990,
+   "tier": "core",
+   "source": "origin"
+  },
+  "usr/lib/holo/voice/atlas/00ed8e979deea91f8daaba91e0cf1866cabbef189aa5740c7a19831cb7c41f67": {
+   "sha256": "00ed8e979deea91f8daaba91e0cf1866cabbef189aa5740c7a19831cb7c41f67",
+   "blake3": "6f9590f4f79d266fa40adf6f859285b28b9d26b55af55388847194e6fe663869",
+   "bytes": 8928,
+   "tier": "core",
+   "source": "origin"
+  },
+  "usr/lib/holo/voice/atlas/07be08371bec4f7b230ee3dfbface9519b626463e4301ed407e16965d612be90": {
+   "sha256": "07be08371bec4f7b230ee3dfbface9519b626463e4301ed407e16965d612be90",
+   "blake3": "3b42e88426b7e79d7da5c536a7b09b9aaf0aa923a52754130d7733057b91f0b7",
+   "bytes": 20135,
+   "tier": "core",
+   "source": "origin"
+  },
+  "usr/lib/holo/voice/atlas/09534eab50d9407f5b688686cd6abff78618ece66f81fa71f403d377c377f323": {
+   "sha256": "09534eab50d9407f5b688686cd6abff78618ece66f81fa71f403d377c377f323",
+   "blake3": "96f8f5d69216b9ddfb5cb3eb82e36f3efc5acb6f3505cbf8870adf02d44f3bd0",
+   "bytes": 7782,
+   "tier": "core",
+   "source": "origin"
+  },
+  "usr/lib/holo/voice/atlas/0b5a890577d97bcd91ebf97815d2e75b9b3cfaf9b9d76616810d8a37f131abc2": {
+   "sha256": "0b5a890577d97bcd91ebf97815d2e75b9b3cfaf9b9d76616810d8a37f131abc2",
+   "blake3": "915eeecf76bf3ee07775aeb3b82ca9e6e5117cd0f4a206d0c44a492ea2a4794e",
+   "bytes": 10188,
+   "tier": "core",
+   "source": "origin"
+  },
+  "usr/lib/holo/voice/atlas/12d00199bc954d1eb5b1b96a61c09e302867341294cdb36507ef9135da5ecda7": {
+   "sha256": "12d00199bc954d1eb5b1b96a61c09e302867341294cdb36507ef9135da5ecda7",
+   "blake3": "ffe89bf4f63ce399e8e41b75020df209e4789fad6e87cb1ea0bff6b5f9ca7a17",
+   "bytes": 9071,
+   "tier": "core",
+   "source": "origin"
+  },
+  "usr/lib/holo/voice/atlas/146d2027c896eb387659f3a3aab9550ab218c0a29b304b8d16def4554a6510fa": {
+   "sha256": "146d2027c896eb387659f3a3aab9550ab218c0a29b304b8d16def4554a6510fa",
+   "blake3": "a267231f36c17b0face6ed7bc6ddeea27f9c0c7a280be793edd8897db91e6e44",
+   "bytes": 8842,
+   "tier": "core",
+   "source": "origin"
+  },
+  "usr/lib/holo/voice/atlas/1470b954ff564a200a0d8bcd9b45178134ee4782ee29f2cf0bb14a9a3ebdd2e7": {
+   "sha256": "1470b954ff564a200a0d8bcd9b45178134ee4782ee29f2cf0bb14a9a3ebdd2e7",
+   "blake3": "4797c26e38460a0e2f93eeac4f214ad940550f35796392e19d11e2cc4659514d",
+   "bytes": 19811,
+   "tier": "core",
+   "source": "origin"
+  },
+  "usr/lib/holo/voice/atlas/17acc9d38fb744edf9f9b815ab032e108e97f0b9a2b8a1bfc8c367d351964d98": {
+   "sha256": "17acc9d38fb744edf9f9b815ab032e108e97f0b9a2b8a1bfc8c367d351964d98",
+   "blake3": "7ea2a7b338adf5f00ab7e6524905995b98b4b061a933dd0f3b2305789f81c25f",
+   "bytes": 49239,
+   "tier": "core",
+   "source": "origin"
+  },
+  "usr/lib/holo/voice/atlas/1f67648a0b4e07f9c9cd98605a3e3a361f1c6167f74d7e905fc0468fc82f0cd0": {
+   "sha256": "1f67648a0b4e07f9c9cd98605a3e3a361f1c6167f74d7e905fc0468fc82f0cd0",
+   "blake3": "651d1cf34d0b3fca0e6fea11aac99cd3b518b7eeb32732dcd9c9e3e9d14d138a",
+   "bytes": 9152,
+   "tier": "core",
+   "source": "origin"
+  },
+  "usr/lib/holo/voice/atlas/211d5aa7379b394abc32e8a1fa0293e09ee0807bda3b7acfae7943b31355ddbd": {
+   "sha256": "211d5aa7379b394abc32e8a1fa0293e09ee0807bda3b7acfae7943b31355ddbd",
+   "blake3": "7938d06d9ef864c385084b5484c81a9d09ad0ec67a618a09ebbdd6d0d528319d",
+   "bytes": 8566,
+   "tier": "core",
+   "source": "origin"
+  },
+  "usr/lib/holo/voice/atlas/233103b46fec5c4acfe8b4a4756881b15cc918fcdbaf9f238abe0d86192bc221": {
+   "sha256": "233103b46fec5c4acfe8b4a4756881b15cc918fcdbaf9f238abe0d86192bc221",
+   "blake3": "413a60c358094648c9a3782b40292159f594f611a521f38f09e96cc7afe2a5d5",
+   "bytes": 12211,
+   "tier": "core",
+   "source": "origin"
+  },
+  "usr/lib/holo/voice/atlas/26e9746c59e264ab21069cfa3b55bb88b07f05ce816528002302f016a048e928": {
+   "sha256": "26e9746c59e264ab21069cfa3b55bb88b07f05ce816528002302f016a048e928",
+   "blake3": "a5ab5f0a7338f49fec7fd8f813ed272b2ed129e8427df7544892919ebc26964f",
+   "bytes": 28975,
+   "tier": "core",
+   "source": "origin"
+  },
+  "usr/lib/holo/voice/atlas/2b7a5a24850dc0dd168653600db87743a6dc1af674f9b33f5c91cb5a1f0962b4": {
+   "sha256": "2b7a5a24850dc0dd168653600db87743a6dc1af674f9b33f5c91cb5a1f0962b4",
+   "blake3": "5610d8aada3ccc0d361a91b4d5c218cf519035d89280e7dc8fc10a44b461080c",
+   "bytes": 8960,
+   "tier": "core",
+   "source": "origin"
+  },
+  "usr/lib/holo/voice/atlas/2d8eeac6e686cc9758ab512f4b352587c6860eb665844aa36393e4807d7d7c09": {
+   "sha256": "2d8eeac6e686cc9758ab512f4b352587c6860eb665844aa36393e4807d7d7c09",
+   "blake3": "3d583b13894edb96766eed85cf06d73b9d899b9d42a92d986d78e88478a9a1b7",
+   "bytes": 39860,
+   "tier": "core",
+   "source": "origin"
+  },
+  "usr/lib/holo/voice/atlas/32d6d88863b82b80aff10698d85f29ed3dbe6431e4cd4c85fa0b48058b5635bd": {
+   "sha256": "32d6d88863b82b80aff10698d85f29ed3dbe6431e4cd4c85fa0b48058b5635bd",
+   "blake3": "ea8d471146ca99b79e18d2828b1dfdcf51ef8d5ed7e3ab5eb02c2cc5e34de826",
+   "bytes": 8249,
+   "tier": "core",
+   "source": "origin"
+  },
+  "usr/lib/holo/voice/atlas/3638607d8fbee0397ac765ce60b6e1c41122337bf46dbfafe303d8fdbbcc7851": {
+   "sha256": "3638607d8fbee0397ac765ce60b6e1c41122337bf46dbfafe303d8fdbbcc7851",
+   "blake3": "1b6264093903d437323222bac273c409239c08de98e62af7e67893b82ecb7816",
+   "bytes": 103770,
+   "tier": "core",
+   "source": "origin"
+  },
+  "usr/lib/holo/voice/atlas/39fb629e691369e7f6a34cdbb5894186d8f1c93fd34da42741cdf6a609e8bab2": {
+   "sha256": "39fb629e691369e7f6a34cdbb5894186d8f1c93fd34da42741cdf6a609e8bab2",
+   "blake3": "0ca02bd8355470d36b4b470405cb1566b2addcfaa80ae47021674d249ccc4ccc",
+   "bytes": 9286,
+   "tier": "core",
+   "source": "origin"
+  },
+  "usr/lib/holo/voice/atlas/3f5f2a7d5a330b14c3e936d488a18015d9a120a8918728f1b1cf59812eb18b40": {
+   "sha256": "3f5f2a7d5a330b14c3e936d488a18015d9a120a8918728f1b1cf59812eb18b40",
+   "blake3": "9b60f759074726cdb1c5ce52c7359957713248c9a8fcadfe10273f1f70f20093",
+   "bytes": 32124,
+   "tier": "core",
+   "source": "origin"
+  },
+  "usr/lib/holo/voice/atlas/490755f25c2e045dcf5d012319d47410dcd0567729467e15cf27e701c0fa8cd0": {
+   "sha256": "490755f25c2e045dcf5d012319d47410dcd0567729467e15cf27e701c0fa8cd0",
+   "blake3": "099e61273b70674f9773d079ec5d601150e987c6acb32b07078c7155afda5469",
+   "bytes": 30474,
+   "tier": "core",
+   "source": "origin"
+  },
+  "usr/lib/holo/voice/atlas/4a8698aefd72e5d9c854892800131dc3b9be149c7999b83458d69ebb3856a10f": {
+   "sha256": "4a8698aefd72e5d9c854892800131dc3b9be149c7999b83458d69ebb3856a10f",
+   "blake3": "c7e0674d6f151302ae673f6f05542716135e662863c7f59a076924fb35aae764",
+   "bytes": 43034,
+   "tier": "core",
+   "source": "origin"
+  },
+  "usr/lib/holo/voice/atlas/4cc564b63fcaa091e76fb43d69cab6a8478c341ce02691d6cc40b3dc8ca9c6a1": {
+   "sha256": "4cc564b63fcaa091e76fb43d69cab6a8478c341ce02691d6cc40b3dc8ca9c6a1",
+   "blake3": "75294b6af70adcc4a9175ca837ad00f3bf5cc1c8a43ce9a53dbbccdd9e9c88cb",
+   "bytes": 9228,
+   "tier": "core",
+   "source": "origin"
+  },
+  "usr/lib/holo/voice/atlas/5892934dd0b392708e9db83c9d09d702d71c783feb18e6b33d8024dc1bed8c7f": {
+   "sha256": "5892934dd0b392708e9db83c9d09d702d71c783feb18e6b33d8024dc1bed8c7f",
+   "blake3": "53416e8c501021ba894afd2c6e1162e203598a03db3ad1ce26d00c3acef11a93",
+   "bytes": 9705,
+   "tier": "core",
+   "source": "origin"
+  },
+  "usr/lib/holo/voice/atlas/5d4e09c4fc2c08988072a66eda2a8f79702e4e790d41cf112b9748af4e0febee": {
+   "sha256": "5d4e09c4fc2c08988072a66eda2a8f79702e4e790d41cf112b9748af4e0febee",
+   "blake3": "69ac2e99e84e7af6770cae996158b51801a883702cb3173019cfc1f03bc1e6f6",
+   "bytes": 9533,
+   "tier": "core",
+   "source": "origin"
+  },
+  "usr/lib/holo/voice/atlas/634f0c6ac7a9c0e2a1a41a54a444144676014f0782bf3964920621c6de4cfae8": {
+   "sha256": "634f0c6ac7a9c0e2a1a41a54a444144676014f0782bf3964920621c6de4cfae8",
+   "blake3": "2499c620142fa715799b16bddd4b83e098c9e73927169d823940638bd479d2b6",
+   "bytes": 32934,
+   "tier": "core",
+   "source": "origin"
+  },
+  "usr/lib/holo/voice/atlas/64675f9128add5269cb4af1191d2df07a1d4eb9957dd9bf96f4c2200681591b2": {
+   "sha256": "64675f9128add5269cb4af1191d2df07a1d4eb9957dd9bf96f4c2200681591b2",
+   "blake3": "c4fdb5f334c04fc90c67d8079c67103691cce67f1cacaa575dcb7c6b46221b3b",
+   "bytes": 12647,
+   "tier": "core",
+   "source": "origin"
+  },
+  "usr/lib/holo/voice/atlas/67ada1c3060482632079b11b74a3c5dfc9bb044ea9fe167b1712fc5c263c4094": {
+   "sha256": "67ada1c3060482632079b11b74a3c5dfc9bb044ea9fe167b1712fc5c263c4094",
+   "blake3": "3fc996d2077eda9cf67e5f2deda572b27d7eb21185b12a5702f16e0694efa4c9",
+   "bytes": 9664,
+   "tier": "core",
+   "source": "origin"
+  },
+  "usr/lib/holo/voice/atlas/67ef4e61fca5e6df090f1197524640e8e3ede969de40b868661553686ad95c1e": {
+   "sha256": "67ef4e61fca5e6df090f1197524640e8e3ede969de40b868661553686ad95c1e",
+   "blake3": "4177694ff2a75b87401987508ef94dd9bd9e41d00d303aef6113c577417b349d",
+   "bytes": 7107,
+   "tier": "core",
+   "source": "origin"
+  },
+  "usr/lib/holo/voice/atlas/6e4418b450bd1dbed1f0bdbba107fd040148db57aebb86992a0d5d0a6fc11466": {
+   "sha256": "6e4418b450bd1dbed1f0bdbba107fd040148db57aebb86992a0d5d0a6fc11466",
+   "blake3": "5b16fff126e7f842d5cfdb79ab61d023f433301fb603157ffb87f0bdf87b097e",
+   "bytes": 9848,
+   "tier": "core",
+   "source": "origin"
+  },
+  "usr/lib/holo/voice/atlas/759c10e2ade9e47e57319d097db1a62ac7396ee0f2dff9615d908aec4be95e86": {
+   "sha256": "759c10e2ade9e47e57319d097db1a62ac7396ee0f2dff9615d908aec4be95e86",
+   "blake3": "e9c1d8003fdc02daee9134e2c80a74ef81697c461310517030b244764fc63304",
+   "bytes": 43199,
+   "tier": "core",
+   "source": "origin"
+  },
+  "usr/lib/holo/voice/atlas/75e6481cbd6a98cbcbe2163d22a40fd0230888b38e31630a7c6ebca2ea971671": {
+   "sha256": "75e6481cbd6a98cbcbe2163d22a40fd0230888b38e31630a7c6ebca2ea971671",
+   "blake3": "753f037f22d66a27fe645ffde710067986c8b680a2734e802454e305880f2301",
+   "bytes": 43538,
+   "tier": "core",
+   "source": "origin"
+  },
+  "usr/lib/holo/voice/atlas/79390607d197067eb78f7be1c8f38eaf8c493808e07a9bdd67499ab8e145b558": {
+   "sha256": "79390607d197067eb78f7be1c8f38eaf8c493808e07a9bdd67499ab8e145b558",
+   "blake3": "cf0aa82177a939c78ee7840be5958af9cca610efd73804b8c3350b842380bc10",
+   "bytes": 15745,
+   "tier": "core",
+   "source": "origin"
+  },
+  "usr/lib/holo/voice/atlas/7ee7301fc2fee1c2a320b8e1c11ede15e60e4d6476fa6cba81b583ed95353352": {
+   "sha256": "7ee7301fc2fee1c2a320b8e1c11ede15e60e4d6476fa6cba81b583ed95353352",
+   "blake3": "83d268ac8ec0105d893aa74dc78212fb5af93ff79b3b0952fe6cf5a489c349cf",
+   "bytes": 9169,
+   "tier": "core",
+   "source": "origin"
+  },
+  "usr/lib/holo/voice/atlas/7f4253c361e157d705ea4375c559f4e329522b8e005f165e0bda82f2ae5a2354": {
+   "sha256": "7f4253c361e157d705ea4375c559f4e329522b8e005f165e0bda82f2ae5a2354",
+   "blake3": "4e319edada2c4c273cc79230a1e4e738c0d9932d567b7310333ad8dbd73f9c15",
+   "bytes": 23516,
+   "tier": "core",
+   "source": "origin"
+  },
+  "usr/lib/holo/voice/atlas/80c1fdc42340ea35c35ca9dc53a9f141a6836dd95d259bc29ee1200cb922b3d3": {
+   "sha256": "80c1fdc42340ea35c35ca9dc53a9f141a6836dd95d259bc29ee1200cb922b3d3",
+   "blake3": "f51cc95a9bcf433991dd314607f1e92a16ae23e1245fb762fda96033a731e8f7",
+   "bytes": 9050,
+   "tier": "core",
+   "source": "origin"
+  },
+  "usr/lib/holo/voice/atlas/82c8afab6026e33e3acac1b6058a2c8f203e1a8686f486558727508e62c65a20": {
+   "sha256": "82c8afab6026e33e3acac1b6058a2c8f203e1a8686f486558727508e62c65a20",
+   "blake3": "ee31601d3b86b8cf182922acbdf531aa5999109522f3e196ba13df43f3dd0492",
+   "bytes": 17722,
+   "tier": "core",
+   "source": "origin"
+  },
+  "usr/lib/holo/voice/atlas/86adec7c29e5f3409a5ba79b0740c58db02499d97ada68ee2681d7f5504f3727": {
+   "sha256": "86adec7c29e5f3409a5ba79b0740c58db02499d97ada68ee2681d7f5504f3727",
+   "blake3": "1fdc6812866b6ea87a974347c2b1e3332bb52d0f15b2b7ccc68f3bae1f3d474c",
+   "bytes": 9128,
+   "tier": "core",
+   "source": "origin"
+  },
+  "usr/lib/holo/voice/atlas/8d555241d24527b8492ef32e97c3fd25502d227b5539a25f8156bcb938230ce2": {
+   "sha256": "8d555241d24527b8492ef32e97c3fd25502d227b5539a25f8156bcb938230ce2",
+   "blake3": "3ab9fa5d640575bbe6a77c4417292a10a7e48afd6d7eed2546c8761c1f3a8495",
+   "bytes": 12761,
+   "tier": "core",
+   "source": "origin"
+  },
+  "usr/lib/holo/voice/atlas/8dbcb66681014bbfd0e354cecbee58e85636908ebde95a299e9b68e6f474fb29": {
+   "sha256": "8dbcb66681014bbfd0e354cecbee58e85636908ebde95a299e9b68e6f474fb29",
+   "blake3": "83cf43bb78b3ad0f03d6c6b0ddcc56c5c6f06be1958ad8618e67411acf4008de",
+   "bytes": 19546,
+   "tier": "core",
+   "source": "origin"
+  },
+  "usr/lib/holo/voice/atlas/940d86ba750aa04a05f6fc59f2d69827f1227ea99585a17a9fecbcd15d01b767": {
+   "sha256": "940d86ba750aa04a05f6fc59f2d69827f1227ea99585a17a9fecbcd15d01b767",
+   "blake3": "05e107273b447b07531cd373070db406b3fa3f5ed90c3e17031c729fdc612ec5",
+   "bytes": 64154,
+   "tier": "core",
+   "source": "origin"
+  },
+  "usr/lib/holo/voice/atlas/98b62660ee9273657fe32ff8f51d598e53e2780b3a376af375f01f32bf5074bf": {
+   "sha256": "98b62660ee9273657fe32ff8f51d598e53e2780b3a376af375f01f32bf5074bf",
+   "blake3": "cec9ce702ff9de2b38e92d4bee4327c95cd11e43f63c52acea14c709f8e027b7",
+   "bytes": 9850,
+   "tier": "core",
+   "source": "origin"
+  },
+  "usr/lib/holo/voice/atlas/9eb3159f5be37d1dbce499b3c21c0d0331ae11696e8f2856492c7968bcf14619": {
+   "sha256": "9eb3159f5be37d1dbce499b3c21c0d0331ae11696e8f2856492c7968bcf14619",
+   "blake3": "0ac09a981b55302f491aac7d27f83ecab914c32d9a187532ca34924f9c1c347c",
+   "bytes": 22953,
+   "tier": "core",
+   "source": "origin"
+  },
+  "usr/lib/holo/voice/atlas/ab449628943e9a5b7b05f175caa408fdc6e30149ea9b2e59930773b458d262e0": {
+   "sha256": "ab449628943e9a5b7b05f175caa408fdc6e30149ea9b2e59930773b458d262e0",
+   "blake3": "39e0c988bc3a9119c1feb16d1da5452383eaf1ab06a00c059cacbbb88e942ecc",
+   "bytes": 11903,
+   "tier": "core",
+   "source": "origin"
+  },
+  "usr/lib/holo/voice/atlas/af4de3867a2d6981407d908a26fa58fd35c8569790f2f47367a99b720861f31a": {
+   "sha256": "af4de3867a2d6981407d908a26fa58fd35c8569790f2f47367a99b720861f31a",
+   "blake3": "2c487377097f943d5c55a560b076c5327fc9d07a46e17728dca6ff55cf52882f",
+   "bytes": 9256,
+   "tier": "core",
+   "source": "origin"
+  },
+  "usr/lib/holo/voice/atlas/b7092c3534eba73c323ee56b20e35009928b551651ccb039d507d86868654205": {
+   "sha256": "b7092c3534eba73c323ee56b20e35009928b551651ccb039d507d86868654205",
+   "blake3": "db0278406587b67e383bf687bab427d1b720aee3308182801bfbdb41898a9881",
+   "bytes": 14227,
+   "tier": "core",
+   "source": "origin"
+  },
+  "usr/lib/holo/voice/atlas/bae35e00d3bdfe73fca1e575ae177adc9ae8dcc3602f5aca3c707234385adb38": {
+   "sha256": "bae35e00d3bdfe73fca1e575ae177adc9ae8dcc3602f5aca3c707234385adb38",
+   "blake3": "aee51606fb6d046c7252900136ad5a45693c894843b10e547366b453ce73e553",
+   "bytes": 12883,
+   "tier": "core",
+   "source": "origin"
+  },
+  "usr/lib/holo/voice/atlas/bca56f6be83507bd9d2637b866e15e35a13048313677e967ba91d73b9941a55c": {
+   "sha256": "bca56f6be83507bd9d2637b866e15e35a13048313677e967ba91d73b9941a55c",
+   "blake3": "31163cf67c42314df651f8059a21b3dbda28de1a59fc86431731c21fda713a0e",
+   "bytes": 8687,
+   "tier": "core",
+   "source": "origin"
+  },
+  "usr/lib/holo/voice/atlas/c169c1f9d8cea1804a20a25b381bb559fce701b1cce557440918b7bac6e0739a": {
+   "sha256": "c169c1f9d8cea1804a20a25b381bb559fce701b1cce557440918b7bac6e0739a",
+   "blake3": "94a9292c28a66057d6bbb0d26110be32c1a54bbdbce3274e91138d771a896a38",
+   "bytes": 14752,
+   "tier": "core",
+   "source": "origin"
+  },
+  "usr/lib/holo/voice/atlas/c2183303e8229fa35746581d4a75e674711b57aa72c3d62a5a0e6528640e8c87": {
+   "sha256": "c2183303e8229fa35746581d4a75e674711b57aa72c3d62a5a0e6528640e8c87",
+   "blake3": "09feff26e784a5b6d78afde7aaa60e7a148b9f4c0fa3c39d3806e9266ac4c5ba",
+   "bytes": 8650,
+   "tier": "core",
+   "source": "origin"
+  },
+  "usr/lib/holo/voice/atlas/c4559909b92df1cfc39c11d2788ec5dc721da8a6c0ed23eba530432f0018ad5d": {
+   "sha256": "c4559909b92df1cfc39c11d2788ec5dc721da8a6c0ed23eba530432f0018ad5d",
+   "blake3": "596a7771dec5ce958c78c219f086dd9d69a89375ff2ea285979afa2a8fb67597",
+   "bytes": 13219,
+   "tier": "core",
+   "source": "origin"
+  },
+  "usr/lib/holo/voice/atlas/c73179193180f94766ad5dc296ebca695f64b376b2672ca02d931023de4b662d": {
+   "sha256": "c73179193180f94766ad5dc296ebca695f64b376b2672ca02d931023de4b662d",
+   "blake3": "1431a3789c7d9ddfd59ea05bee6890a2de9e463e0eb04d7399c10746717eee99",
+   "bytes": 41105,
+   "tier": "core",
+   "source": "origin"
+  },
+  "usr/lib/holo/voice/atlas/ca008deb68d3af49c4dbb8924eeacb190c44e890bcb230545e6cf9a2011b1712": {
+   "sha256": "ca008deb68d3af49c4dbb8924eeacb190c44e890bcb230545e6cf9a2011b1712",
+   "blake3": "165fd1ec76f1130879a26d47874fdb3699cebe49981c9e6ed620c26b3e8096ba",
+   "bytes": 8447,
+   "tier": "core",
+   "source": "origin"
+  },
+  "usr/lib/holo/voice/atlas/cc68f9504d0dd62cf87194b108124c9652458e9b396aab00613e9969e94c7a91": {
+   "sha256": "cc68f9504d0dd62cf87194b108124c9652458e9b396aab00613e9969e94c7a91",
+   "blake3": "2d6fdb0789b22fc66ecd6edbf4e86afb9013725dff0a2bc796980bfc330f89b5",
+   "bytes": 13376,
+   "tier": "core",
+   "source": "origin"
+  },
+  "usr/lib/holo/voice/atlas/d26df4e646839e2ab51481532aa44173971d78c5d36909075fb785ef173db37a": {
+   "sha256": "d26df4e646839e2ab51481532aa44173971d78c5d36909075fb785ef173db37a",
+   "blake3": "a1162cdf5e6bc27cd52e53944893fe2c018731b738c1035f60a695a165367d86",
+   "bytes": 26020,
+   "tier": "core",
+   "source": "origin"
+  },
+  "usr/lib/holo/voice/atlas/d29a49a77d8af1472def6ab05ea752d87143586a4656e7252ed9a28fcc7dd262": {
+   "sha256": "d29a49a77d8af1472def6ab05ea752d87143586a4656e7252ed9a28fcc7dd262",
+   "blake3": "03398bee80c281f2f05fddce51e44f540fceb4c067af60c9c71a3c76ab3e945d",
+   "bytes": 9898,
+   "tier": "core",
+   "source": "origin"
+  },
+  "usr/lib/holo/voice/atlas/dfa8c4b504c0cd7136cca90789567e2aea318999cf4535136b1d8237374418a5": {
+   "sha256": "dfa8c4b504c0cd7136cca90789567e2aea318999cf4535136b1d8237374418a5",
+   "blake3": "f033421d4f22929975a113a569b365626fed20db6acc71c79e2473c082ce9b35",
+   "bytes": 9005,
+   "tier": "core",
+   "source": "origin"
+  },
+  "usr/lib/holo/voice/atlas/e1b5cd99a989f55347b92f3caa639265e7f5104dbaa629d4718ebdc5198e2f03": {
+   "sha256": "e1b5cd99a989f55347b92f3caa639265e7f5104dbaa629d4718ebdc5198e2f03",
+   "blake3": "cb5cf8a3266e7c90fd11d2621755759aa837d4417566e02bfddc2365754f7a97",
+   "bytes": 46665,
+   "tier": "core",
+   "source": "origin"
+  },
+  "usr/lib/holo/voice/atlas/e42adccf773622abca25bbe72da46a6649269c33d682e6f93bbce05292239483": {
+   "sha256": "e42adccf773622abca25bbe72da46a6649269c33d682e6f93bbce05292239483",
+   "blake3": "f5db43c4a45dfc44ab6d502f0ed3d18c058df02ecdaf3dcbd102cb683035bc90",
+   "bytes": 11849,
+   "tier": "core",
+   "source": "origin"
+  },
+  "usr/lib/holo/voice/atlas/ee062b88a3ada8c3180ba5af75e4170b446734532b85e759dfd5d940c67ba6a0": {
+   "sha256": "ee062b88a3ada8c3180ba5af75e4170b446734532b85e759dfd5d940c67ba6a0",
+   "blake3": "1658974ec4da4d90153a0ca6de6c46fa4e77668343a1e98a8f0b6ff8baaf44f7",
+   "bytes": 30372,
+   "tier": "core",
+   "source": "origin"
+  },
+  "usr/lib/holo/voice/atlas/f289d1b3e0ebb1f7777672166431a30e2dad978a556eae9406bb8d4d2e9d8007": {
+   "sha256": "f289d1b3e0ebb1f7777672166431a30e2dad978a556eae9406bb8d4d2e9d8007",
+   "blake3": "e24d65ccb69380a916f5e0087208cefb36f07609818b59fd87c74c43b7474273",
+   "bytes": 10288,
+   "tier": "core",
+   "source": "origin"
+  },
+  "usr/lib/holo/voice/atlas/f2e5a40b1d274220593be2ea8405ebc00de5a1ba16358351f7b92cb937bd2e2b": {
+   "sha256": "f2e5a40b1d274220593be2ea8405ebc00de5a1ba16358351f7b92cb937bd2e2b",
+   "blake3": "6a77d6c0c7df0f2f1603a198381ab9673d80d4cf61e2fea998e55b17fd8bf397",
+   "bytes": 11124,
+   "tier": "core",
+   "source": "origin"
+  },
+  "usr/lib/holo/voice/atlas/f9e09d0ca92c2e90a0556e8cba10a23cc510a64e367d18538df25fd8a549eb32": {
+   "sha256": "f9e09d0ca92c2e90a0556e8cba10a23cc510a64e367d18538df25fd8a549eb32",
+   "blake3": "c71ccbaaf47bcd3c1f9367a0abed0f3717c275ed590a8de330d8b75abc341aa3",
+   "bytes": 17860,
+   "tier": "core",
+   "source": "origin"
+  },
+  "usr/lib/holo/voice/atlas/fb8da81f2bdc8cbea4bd16790bade8f14a928d641986e1db3f1e72a63fa0c60c": {
+   "sha256": "fb8da81f2bdc8cbea4bd16790bade8f14a928d641986e1db3f1e72a63fa0c60c",
+   "blake3": "db1f49be3967c3075c5dad8cc0e35231c63ef2ede41bb52c3f11318649ee040d",
+   "bytes": 9560,
+   "tier": "core",
+   "source": "origin"
+  },
+  "usr/lib/holo/voice/atlas/fc7efcff8dbfc3fc130b37bf4b160b238083afe51bfab85d72da6fe5091898bd": {
+   "sha256": "fc7efcff8dbfc3fc130b37bf4b160b238083afe51bfab85d72da6fe5091898bd",
+   "blake3": "02aceb623524ec42f913b36bf5578b8f34041eafefc2b5a6132d380334b9127d",
+   "bytes": 10783,
+   "tier": "core",
+   "source": "origin"
+  },
   "usr/lib/holo/voice/holo-q-faculty-models.mjs": {
    "sha256": "b6b95a5cee8757a202f367cb9bd1d5c8e4a3f76970e1d8d576d9b017e0f3eebc",
    "blake3": "9640624d3ad92f083a57bf11abdc758320f4186252cf8a12d9f48736689b552c",
@@ -30530,6 +30985,13 @@
    "sha256": "33e5f29c10559e203c867f1e3347a2f09d9298b6cf904e38c8074476ccb211bd",
    "blake3": "ca365f2632252a1091933b1ea5bfa5c539309157026f6edd3eebf70504fdb79b",
    "bytes": 11819,
+   "tier": "core",
+   "source": "origin"
+  },
+  "usr/lib/holo/voice/holo-voice-atlas.mjs": {
+   "sha256": "6bf1dbfe0292cd929dfb9a49835f014cc35c2120f10197121351d67fe545334c",
+   "blake3": "20196cacf25de90cc1eaef4317e2e66500d122c20aeb48fc3bad32f97928fab1",
+   "bytes": 3928,
    "tier": "core",
    "source": "origin"
   },

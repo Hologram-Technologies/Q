@@ -522,8 +522,13 @@ if (document.readyState === "complete") go(); else addEventListener("load", go);
     else { window.HoloMailOpen = () => _loadMail().then((m) => { if (m && m.default) m.default.openMail(); }); window.HoloMailClose = () => {}; } }
   // HoloChat, woven into THIS messenger — one canonical surface. Enable: localStorage["holo.chat.enabled"]="1" or ?chat=1.
   import("./holo-messenger-weave.mjs").catch(() => {});
-  // REACH-YOU: background Web Push (installable app rings your closed phone). Gated ?push=1. Content-blind relay.
-  import("./holo-push-mount.mjs?v=ec33515d").catch(() => {});
+  // REACH-YOU: background Web Push — LAZY (ARRIVAL-DIET A2 push): flag-off boots pay ZERO push bytes.
+  // Loads when enabled (?push=1 / localStorage["holo.push"]="1"); window.HoloPush stub loads-then-delegates.
+  { const _pushOn = (() => { try { return new URLSearchParams(location.search).get("push") === "1" || localStorage.getItem("holo.push") === "1"; } catch { return false; } })();
+    const _loadPush = () => import("./holo-push-mount.mjs?v=ec33515d").catch(() => null);
+    if (_pushOn) _loadPush();
+    else { const _d = (m) => (...a) => _loadPush().then(() => (window.HoloPush && window.HoloPush[m] ? window.HoloPush[m](...a) : undefined));
+      window.HoloPush = { subscribe: _d("subscribe"), test: _d("test"), notify: _d("notify"), status: _d("status"), tag: _d("tag"), showLocal: _d("showLocal") }; } }
   // Colour re-tone picker — colours only, all features intact. Gated: ?skins=1 or localStorage["holo.skins"]="1".
   import("./messenger-skin.mjs?v=970e7ec3151a").catch(() => {});
   // Asset cache (service worker) — repeat opens serve the shell NETWORK-FREE. Escape hatch: open with ?nosw=1.
