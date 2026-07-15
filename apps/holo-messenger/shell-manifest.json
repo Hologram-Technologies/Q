@@ -1,7 +1,7 @@
 {
  "v": 1,
  "created": 1783953980938,
- "aggregate": "5c2802a464b563a96a0ab050c7e88ff4381de6b9e52bff46c0ebaa25510183ac",
+ "aggregate": "790d82dd06f150df3c8dbe85714ebcd51e19fdcd8c62a78c7e94cd7ec4e3f4c1",
  "assets": [
   {
    "path": "/apps/holo-messenger/app.html",
@@ -25,8 +25,8 @@
   },
   {
    "path": "/apps/holo-messenger/holo-messenger-app.mjs",
-   "kappa": "c7f994c9e55fb6406adb1850f3791fc59782fc251a36937009f421ec44f7a5b3",
-   "bytes": 348917
+   "kappa": "b791e0002e66c372aa1f0ffc6b7aa5c1d8b6a274fe5118e3b284447c14232630",
+   "bytes": 353955
   },
   {
    "path": "/apps/holo-messenger/messenger-shadcn-ui.mjs",
