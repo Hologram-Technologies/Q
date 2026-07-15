@@ -8,13 +8,13 @@
  "mirror": "https://huggingface.co/HOLOGRAMTECH/holo-messenger-shell/resolve/main/b/",
  "tiers": {
   "core": {
-   "files": 598,
-   "bytes": 11348179,
+   "files": 597,
+   "bytes": 11348225,
    "hf": 0
   },
   "apps": {
    "files": 5462,
-   "bytes": 2377452,
+   "bytes": 2381194,
    "hf": 5409
   },
   "heavy": {
@@ -1428,9 +1428,9 @@
    "source": "origin"
   },
   "apps/bonsai/holospace.lock.json": {
-   "sha256": "e813ec1ab5fc727d53a87626977639e736f9c78f91cc1a59b1ee06c96edf8488",
-   "blake3": "af705a7fb57893766722fbf54bbd6c20d06122eeca47c303f40e115acc00469f",
-   "bytes": 3788,
+   "sha256": "b787dc641fc5c67013d0f96586f44bb1ce94c79628446e92a592cc84e6376847",
+   "blake3": "4c1d7ec1a49a70beb77ee66477fcb0cbb286939fba98d0c6e18b10f3d4809819",
+   "bytes": 3792,
    "tier": "apps",
    "source": "origin"
   },
@@ -1442,9 +1442,9 @@
    "source": "origin"
   },
   "apps/bonsai/index.html": {
-   "sha256": "084ffe7f687c3a3ea081a102e10a82d5496af5ad9da86fbd54b767130a122149",
-   "blake3": "aaf1a90fd9852dd464741dfdbca2753e7db35ecbdfbb099691a384280297c033",
-   "bytes": 25656,
+   "sha256": "85be07b7411283d43c035f9c98980ff63f76bd9e12df153d75e7712efaae2f3a",
+   "blake3": "cf106a15405abd03c6670ab40c4594d4f3938e3d2a3c0601b933f93570e3f009",
+   "bytes": 29394,
    "tier": "apps",
    "source": "origin"
   },
@@ -4223,9 +4223,9 @@
    "source": "hf"
   },
   "apps/index.jsonld": {
-   "sha256": "e9a0ca8c99b01912786a6fe3dfd2090da1b932870691147dce05e9c60a7fbf8d",
-   "blake3": "3e65a3e11c1be6948a8ff0bc46d9cd6b618e8f5322a0f177b8a4c08e3cc407d0",
-   "bytes": 21593,
+   "sha256": "db4f1b08d41c6ed43aab32735edaab1025df2ea9b5c8a108e6732c5b95bdee6f",
+   "blake3": "fe7c5a800e2042778d934c946bd1f84da6fdd07549e4b18468f93e7cca6ca67c",
+   "bytes": 21599,
    "tier": "core",
    "source": "origin"
   },
@@ -29237,13 +29237,6 @@
    "tier": "core",
    "source": "origin"
   },
-  "rungs.json": {
-   "sha256": "58d9e21b944a05fadad55f80b80322139e0786a1783b839dd7f815148e63954a",
-   "blake3": "a0e916a9307b4399a684dcd7431a32c58f8570ac979a917bc7a0ba15c0d7cd1c",
-   "bytes": 418,
-   "tier": "core",
-   "source": "origin"
-  },
   "sbin/holo-fabric-webgpu.mjs": {
    "sha256": "525f9519ec5a666648bdfea195c716a48936006eab00ae870eb4e26ad6505d69",
    "blake3": "715e3fa3f1137980a4b1fadbcf2fdf7abb2c9662aa3522ed9b2d8390cb801079",
@@ -30148,9 +30141,9 @@
    "source": "origin"
   },
   "usr/lib/holo/holo-rungs.mjs": {
-   "sha256": "81d7b27922e55e5cdcd3cce93b7ad8bc0d81ef5f084604842f62c6f96a50222e",
-   "blake3": "42f6e42682edc9251870e07806987d018e3cbd9f976347afa5fdd0c7f9843fa6",
-   "bytes": 9948,
+   "sha256": "3543fdde0790b1b6561d3ba04c73037fe27a962ab996a26ade77ec5dfb794942",
+   "blake3": "f3b58d19aa3c035fa6296bc77e0fb4f8bcf81eeda3d0cec7d75d1c7e82bc26c1",
+   "bytes": 10406,
    "tier": "core",
    "source": "origin"
   },

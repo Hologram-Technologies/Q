@@ -44,7 +44,9 @@
   #hello h2 { display:inline; font-family:var(--serif); font-weight:500; font-size:clamp(30px,4.4vw,44px); letter-spacing:-.01em; }
   .col.started #hello { display:none; }
   #log { display:none; }
-  .col.started #log { display:block; flex:1; overflow-y:auto; padding:30px 4px 16px; }
+  .col.started #log { display:block; flex:1; overflow-y:auto; padding:30px 4px 16px;
+                      scrollbar-width:none; -ms-overflow-style:none; }   /* the content scrolls; no chrome */
+  #log::-webkit-scrollbar { width:0; height:0; }
   .msg { margin:0 0 20px; }
   .msg .who { font-size:15px; color:var(--faint); margin-bottom:4px; }
   .msg.user .who { color:var(--muted); }
@@ -70,11 +72,29 @@
   #err { color:#f87171; font-size:15px; padding:0 0 18px; text-align:center; white-space:pre-wrap; }
   .spn { display:inline-block; width:1.1ch; font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
          color:var(--coral-hi); margin-right:7px; }
+  /* CSS hologram (fallback when WebGL is unavailable/blocked): layered orb + scanlines + drift */
+  #holofb { position:absolute; width:min(46vw,520px); aspect-ratio:1; right:4vw; top:50%;
+            transform:translateY(-50%); border-radius:50%; pointer-events:none;
+            background:radial-gradient(circle at 38% 34%, rgba(232,152,122,.55), rgba(217,119,87,.28) 42%, rgba(196,181,253,.16) 72%, transparent 76%);
+            box-shadow:0 0 90px rgba(217,119,87,.25), inset 0 0 60px rgba(196,181,253,.18);
+            animation:holofloat 7s ease-in-out infinite; }
+  #holofb::before { content:""; position:absolute; inset:0; border-radius:50%;
+            background:repeating-linear-gradient(to bottom, rgba(255,255,255,.09) 0 2px, transparent 2px 7px);
+            mix-blend-mode:screen; animation:holoscan 2.6s linear infinite;
+            -webkit-mask:radial-gradient(circle, #000 70%, transparent 74%); mask:radial-gradient(circle, #000 70%, transparent 74%); }
+  #holofb::after { content:""; position:absolute; inset:-2%; border-radius:50%;
+            border:1px solid rgba(196,181,253,.30); filter:blur(.4px); }
+  @keyframes holofloat { 50% { transform:translateY(calc(-50% - 14px)); } }
+  @keyframes holoscan { to { background-position:0 7px; } }
+  @media (max-width:760px){ #holofb { right:50%; top:26%; transform:translate(50%,-50%); width:min(62vw,300px); }
+                            @keyframes holofloat { 50% { transform:translate(50%,calc(-50% - 10px)); } } }
+  @media (prefers-reduced-motion: reduce){ #holofb, #holofb::before { animation:none; } }
 </style>
 <body>
 
 <div class="stage on" id="arrive">
   <canvas id="holo"></canvas>
+  <div id="holofb" hidden></div>
   <div class="copy">
     <h1>An AI<br>that&rsquo;s yours.</h1>
     <p class="sub">Bonsai streams into your browser like a film. Every piece is checked before it runs. After one visit it answers on your device, even offline.</p>
@@ -119,6 +139,7 @@ try {
   if (!document.getElementById("arrive").classList.contains("on")) throw new Error("past landing");
   const THREE = await import("./vendor/three.module.min.js");
   const renderer = new THREE.WebGLRenderer({ canvas: cv, antialias: true, alpha: true, powerPreference: "high-performance" });
+  if (!renderer.getContext() || renderer.getContext().isContextLost()) throw new Error("webgl unavailable");
   renderer.setPixelRatio(Math.min(devicePixelRatio || 1, 2));
   const scene = new THREE.Scene();
   const cam = new THREE.PerspectiveCamera(45, 1, 0.1, 30); cam.position.z = 5;
@@ -158,9 +179,12 @@ try {
       }`,
   });
   const mesh = new THREE.Mesh(new THREE.IcosahedronGeometry(1.35, 12), mat);
+  const core = new THREE.Mesh(new THREE.IcosahedronGeometry(0.92, 8), mat);   // inner shell: same material, real depth
+  mesh.add(core);
   scene.add(mesh);
+  addEventListener("pointerdown", () => { tPulse = performance.now(); }, { passive: true });   // click: the hologram answers back
   // pointer parallax: mesh tilts toward the cursor (eased); stripes speed up when the cursor is near.
-  let tx = 0, ty = 0, rx = 0, ry = 0, boost = 0, tBoost = 0;
+  let tx = 0, ty = 0, rx = 0, ry = 0, boost = 0, tBoost = 0, tPulse = -9e9;
   if (!reduced) addEventListener("pointermove", (e) => {
     const nx = e.clientX / innerWidth * 2 - 1, ny = e.clientY / innerHeight * 2 - 1;
     tx = nx * 0.45; ty = ny * 0.35;
@@ -180,7 +204,9 @@ try {
     const t = performance.now() / 1000;
     uni.uTime.value = t;
     boost += (tBoost - boost) * 0.06;
-    uni.uSpeed.value = 0.35 + boost * 1.1;
+    const pulse = Math.max(0, 1 - (performance.now() - tPulse) / 700);        // click pulse decays over 0.7s
+    uni.uSpeed.value = 0.35 + boost * 1.1 + pulse * 2.4;
+    uni.uGlitch.value = reduced ? 0 : 1 + pulse * 2.0;
     rx += (ty - rx) * 0.05; ry += (tx - ry) * 0.05;                          // eased parallax
     mesh.rotation.x = rx * 0.6; mesh.rotation.y = t * 0.12 + ry;             // + constant slow spin
     renderer.render(scene, cam);
@@ -200,7 +226,12 @@ try {
     try { renderer.getContext().getExtension("WEBGL_lose_context").loseContext(); } catch {}
     cv.remove();
   };
-} catch {}                                                                    // no WebGL / past landing → hero still perfect
+} catch (e) {                                                                 // no WebGL (Brave shields, GPU-less) / past landing
+  if (document.getElementById("arrive").classList.contains("on")) {
+    try { cv.remove(); } catch {}
+    const fb = document.getElementById("holofb"); if (fb) fb.hidden = false;   // the CSS hologram stands in
+  }
+}
 </script>
 
 <script type="module">
@@ -399,6 +430,26 @@ $("go").addEventListener("click", () => {
   if (!streamStarted) { streamStarted = true; stream(); }
 });
 $("send").disabled = true;                                  // until the mind is resident (early questions queue)
+(async () => {
+  try {
+    if (navigator.connection && navigator.connection.saveData) return;        // respect data saver
+    if (SRC) return;                                                          // dev override: no background pulls
+    const B27 = "https://huggingface.co/HOLOGRAMTECH/q-bonsai-27b/resolve/main";
+    const cache = await caches.open("holo-kappa-v1");
+    const man = await (await fetch(B27 + "/manifest.json")).json();
+    const urls = Object.values(man.tensors || {}).map((r) => B27 + "/b/" + String(r.kappa).replace(":", "_") + ".gz");
+    let i = 0;
+    const worker = async () => {
+      while (i < urls.length) {
+        const u = urls[i++];
+        if (await cache.match(u)) continue;
+        while (streamStarted && !ready) await new Promise((r) => setTimeout(r, 1500));   // the live stream owns the wire
+        try { const b = await (await fetch(u, { cache: "no-store" })).arrayBuffer(); await cache.put(u, new Response(b, { headers: { "Content-Type": "application/octet-stream" } })); } catch {}
+      }
+    };
+    Promise.all(Array.from({ length: 3 }, worker)).catch(() => {});
+  } catch {}
+})();
 (async () => {                                              // returning visitor: the mind wakes BEHIND the welcome screen
   try { const c = await caches.open("holo-kappa-v1"); if (await c.match(BASE + "/manifest.json")) { streamStarted = true; stream(); } } catch {}
 })();
