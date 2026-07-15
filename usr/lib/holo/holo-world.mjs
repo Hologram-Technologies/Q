@@ -63,9 +63,37 @@ export function makeWorld({ base = "", fetchFn = fetch, hashSha256 = _subtleSha2
     return _namesP;
   }
 
+  // Z0 SHARDS: a heavy facet (a rescue file-list, the catalog, compositions) is a κ-ref (`*Kappa`);
+  // fetch its shard by κ from the ladder, re-derive (L5), parse. Memoized. Backward-compatible: a
+  // monolith world (inline `files`/`entries`) needs no shard.
+  const _shards = new Map();
+  async function shardFetch(kappa) {
+    if (!/^[0-9a-f]{64}$/.test(String(kappa || ""))) return null;
+    if (!_shards.has(kappa)) _shards.set(kappa, (async () => {
+      // shards are sha256-named. Try same-origin b/<κ> (present in Z1, or a warm cache), then the
+      // world's own sha256 rungs (retired-to-mirror in Z2). Re-derive every candidate (L5) — a
+      // wrong-byte rung is refused and the next tried; a miss everywhere → null → caller falls back.
+      const w = _world || {};
+      const rungs = (w.rungs && Array.isArray(w.rungs.sha256)) ? w.rungs.sha256 : [];
+      const urls = [base + "/b/" + kappa, ...rungs.map((m) => m.replace(/\/$/, "") + "/" + kappa)];
+      for (const u of urls) {
+        try {
+          const r = await fetchFn(u, { cache: "force-cache" });
+          if (!r.ok) continue;
+          const buf = new Uint8Array(await r.arrayBuffer());
+          if ((await hashSha256(buf)) !== kappa) continue;    // poisoned rung → try next
+          return JSON.parse(new TextDecoder().decode(buf));
+        } catch { /* try next */ }
+      }
+      _shards.delete(kappa); return null;
+    })());
+    return _shards.get(kappa);
+  }
+
   // most-specific closure match (exact prefix/path/app wins; else longest containing prefix — never
-  // a narrow closure answering a broad query, the bug the W1b coverage proof caught).
-  const wrap = (x) => ({ axis: x.axis, mirror: x.mirror, files: x.files || {}, ...(x.bootFloor ? { bootFloor: x.bootFloor } : {}) });
+  // a narrow closure answering a broad query, the bug the W1b coverage proof caught). Preserves
+  // filesKappa (sharded) or files (monolith); callers resolve the file-list via closureFilesFor.
+  const wrap = (x) => ({ axis: x.axis, mirror: x.mirror, ...(x.filesKappa ? { filesKappa: x.filesKappa } : { files: x.files || {} }), ...(x.bootFloor ? { bootFloor: x.bootFloor } : {}) });
   function closureFromWorld(w, key) {
     const k = String(key).replace(base, "").replace(/^\//, "");
     const trees = w.rescue.trees || [];
@@ -91,8 +119,27 @@ export function makeWorld({ base = "", fetchFn = fetch, hashSha256 = _subtleSha2
     // ASYNC accessors (W2 consumers): load-then-answer, for paths that can await.
     async registry() { const w = await load(); if (!w || !w.rescue) { bump("registry", false); return null; } bump("registry", true); return registryFromWorld(w); },
     async closureFor(key) { const w = await load(); if (!w || !w.rescue) { bump("closure", false); return null; } const c = closureFromWorld(w, key); bump("closure", !!c); return c; },
+    // closureFilesFor resolves the FULL {axis,mirror,files} — fetching the shard if sharded (Z0). This
+    // is what the rescue path needs (it reads files[rel]); off the paint path, may await.
+    async closureFilesFor(key) {
+      const c = await this.closureFor(key);
+      if (!c) return null;
+      if (c.files) return c;
+      const files = await shardFetch(c.filesKappa);
+      return files ? { axis: c.axis, mirror: c.mirror, files, ...(c.bootFloor ? { bootFloor: c.bootFloor } : {}) } : null;
+    },
     async rungs() { const w = await load(); if (!w || !w.rungs) { bump("rungs", false); return null; } bump("rungs", true); return w.rungs; },
     async name(rel) { const n = await names(); const e = n && n[String(rel).replace(/^\//, "")]; bump("name", !!e); return e ? { sha256: e.sha256, blake3: e.blake3, bytes: e.bytes } : null; },
-    async appEntry(dir) { const w = await load(); if (!w) { bump("app", false); return null; } const e = (w.apps.entries || []).find((x) => x.dir === dir); const hex = (e && e.blake3Entry) || (w.rescue.appIndex && w.rescue.appIndex.extra && w.rescue.appIndex.extra[dir]) || null; bump("app", !!hex); return hex; },
+    async appEntry(dir) {
+      const w = await load(); if (!w) { bump("app", false); return null; }
+      // sharded → the catalog entries live in a κ-shard; monolith → inline.
+      const entries = w.apps.entries || (w.apps.entriesKappa ? await shardFetch(w.apps.entriesKappa) : []) || [];
+      const e = entries.find((x) => x.dir === dir);
+      const hex = (e && e.blake3Entry) || (w.rescue.appIndex && w.rescue.appIndex.extra && w.rescue.appIndex.extra[dir]) || null;
+      bump("app", !!hex); return hex;
+    },
+    // compositions / catalog entries (launcher, await-able): monolith inline or sharded by κ.
+    async compositions() { const w = await load(); if (!w) return null; return w.apps.compositions || (w.apps.compositionsKappa ? await shardFetch(w.apps.compositionsKappa) : null); },
+    async catalogEntries() { const w = await load(); if (!w) return null; return w.apps.entries || (w.apps.entriesKappa ? await shardFetch(w.apps.entriesKappa) : null); },
   };
 }

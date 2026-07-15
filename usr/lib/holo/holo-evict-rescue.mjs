@@ -43,7 +43,9 @@ export function makeEvictRescue({ base, blake3Import, rung } = {}) {
 
   const _closures = new Map();   // closureUrl → Promise<closure|null>
   const closure = (url) => {
-    const w = _world.closureSync(url); if (w) return Promise.resolve(w);   // W1b-live world dual-run: world-first-if-warm
+    const w = _world.closureSync(url);
+    if (w && w.files) return Promise.resolve(w);                            // monolith world (inline files) — unchanged
+    if (w && w.filesKappa) return _world.closureFilesFor(url);              // Z1: sharded world → fetch the file-list shard (κ, re-derived)
     if (!_closures.has(url)) _closures.set(url, fetch(url, { cache: "no-store" }).then((r) => (r.ok ? r.json() : null)).catch(() => null));
     return _closures.get(url);
   };

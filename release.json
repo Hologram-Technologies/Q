@@ -20,8 +20,8 @@
   "prov:Entity",
   "holstr:Entry"
  ],
- "holstr:seq": 393,
- "holstr:prev": "did:holo:sha256:1c1f193f9986841ae45fc6738492092ab755119667416891447bd1d9cf508404",
+ "holstr:seq": 394,
+ "holstr:prev": "did:holo:sha256:4131072a2b44363543c86975f44a018841d1b4d71fc5771ded9391ef8e569298",
  "holstr:kind": "release",
  "holstr:payload": {
   "shell": "0e8ac9d7dd55694dcc30ce1cdcb688a2b624ba54eb90619bdf7251d123ba17b5",
@@ -48,13 +48,13 @@
    "entry": "holo-portal.mjs",
    "sha256": "caeb3e57b6eeab09bee6d67c022145a8e2dae610c929a7f51bc169898625e7e8"
   },
-  "closure": "a7ce9af4b67be63de0c579a428a8b299eb5de0e7df4e6224325341d7a0e09d09",
-  "world": "59ba77929faddd2fae7526d587ec67a5dd510a17a1b13d6a4a0fade90cf4992b"
+  "closure": "a9b7e0bb03f2d6571f7230d79b7b9fb1923c4fe387ced0fe025ac467c6ed0b5b",
+  "world": "862de496de1aebae9929f2bfcba6bb286d0571fa240baba79d3219a82353c9ac"
  },
- "prov:generatedAtTime": "2026-07-15T21:36:46.001Z",
+ "prov:generatedAtTime": "2026-07-15T21:45:06.554Z",
  "holstr:op": "did:holo:sha256:87599792c7b13fad9d6c57d3b89d2cef35e4715869f5cde597ab60ca92699f0b",
- "id": "did:holo:sha256:4131072a2b44363543c86975f44a018841d1b4d71fc5771ded9391ef8e569298",
- "holstr:sig": "kGVFcIIGxlsI5ZSCwtenPolKxvEOABf+xkd9E6ZlETBEDm/cvlffarEiBlLVzkqc3xxRmAgAl2nXaVazBeItAQ==",
+ "id": "did:holo:sha256:211ff06c14a404369f42700ef027e4772b95817f427fc4ca584f98e407267ac0",
+ "holstr:sig": "98ktHbEsc1PPDz7rpeSJaw3mI5dsbh6mMWm8Sf4JIP+IOEorG0yokeT0MKXdggtujxaeO5OCOcIa8ZcMRxpoCQ==",
  "holstr:alg": "Ed25519",
  "holstr:pub": "snYY6y35gdZ1ngOE5E+G1BGFjlTo2MfpfP8h6yc7r+M="
 }
