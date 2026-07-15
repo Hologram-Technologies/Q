@@ -18,6 +18,33 @@
 // and spoken the instant the HD voice warms, so the first thing you ever hear from Q is already gorgeous.
 const _OS_FLOOR = (() => { try { return /[?&]osvoice=1/.test(location.search); } catch (e) { return false; } })();
 
+// HOLO VOICE ATLAS: resolve Q's deterministic phrases to pre-baked premium κ-audio (instant, no model warm). Fail-soft:
+// a missing module/manifest, a miss, a tampered body (L5 sha256 re-derive fails), or a decode error → null, and
+// speak() falls through to the live HD path exactly as before. Assets live in the NON-evicted usr/lib/holo/voice.
+let _atlas = null, _atlasLoad = null;
+function _ensureAtlas() {
+  if (_atlas) return Promise.resolve(_atlas);
+  if (_atlasLoad) return _atlasLoad;
+  const urls = ["/usr/lib/holo/voice/holo-voice-atlas.mjs"];
+  try { urls.push(new URL("../../../usr/lib/holo/voice/holo-voice-atlas.mjs", import.meta.url).href); } catch (e) {}
+  const bases = ["/usr/lib/holo/voice/"];
+  try { bases.push(new URL("../../../usr/lib/holo/voice/", import.meta.url).href); } catch (e) {}
+  _atlasLoad = (async () => {
+    for (let i = 0; i < urls.length; i++) {
+      try {
+        const m = await import(/* @vite-ignore */ urls[i]);
+        const mk = m && (m.makeAtlas || m.default);
+        if (mk) { const a = mk({ base: bases[i] || bases[0], verify: true }); await a.ensure(); if (a.size && a.size() > 0) { _atlas = a; return a; } }
+      } catch (e) {}
+    }
+    return null;
+  })().catch(() => null);
+  return _atlasLoad;
+}
+async function _atlasGet(text) { try { const a = await _ensureAtlas(); if (!a || !a.has(text)) return null; return await a.get(text); } catch (e) { return null; } }
+try { _ensureAtlas(); } catch (e) {}
+
+
 export function createVoice(opts = {}) {
   const onLevel = typeof opts.onLevel === "function" ? opts.onLevel : function () {};
   let raf = 0, lvl = 0, tgt = 0, active = false, cur = null, hd = null, ac = null, node = null, curSrc = null, parked = null;
@@ -97,6 +124,8 @@ export function createVoice(opts = {}) {
   async function speak(text) {
     text = String(text || "").trim(); if (!text) return false;
     stop();
+    /* HOLO VOICE ATLAS rung: pre-baked premium audio → instant, even before HD warms (else Q holds silent). */
+    try { const _bk = await _atlasGet(text); if (_bk && _bk.audio && _bk.audio.length) { begin(); await playBuffer({ audio: _bk.audio, sampling_rate: _bk.rate }); finish(); return true; } } catch (e) {}
     if (hd) { try { return await speakHD(text); } catch (e) { /* HD errored mid-utterance → floor only if opted in */ } }
     if (_OS_FLOOR) return speakSpeech(text);   // accessibility floor, explicit opt-in only
     parked = text; return false;               // HQ-or-hold: spoken beautifully the moment HD warms (latest wins)
