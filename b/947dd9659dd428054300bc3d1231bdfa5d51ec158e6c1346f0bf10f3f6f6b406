@@ -14,7 +14,7 @@
   },
   "apps": {
    "files": 5459,
-   "bytes": 1771835,
+   "bytes": 1769627,
    "hf": 5396
   },
   "heavy": {
@@ -16088,7 +16088,7 @@
    "source": "hf"
   },
   "apps/player/feed/books-index.json": {
-   "blake3": "b397b23c5701cb0c31e013063b0996a78fb11c946324412aa4daf6c80dfa0256",
+   "blake3": "f612130e0698d4f42bed576390443e0bd52100c29ebf0d0b5167e980b1c428f3",
    "tier": "apps",
    "source": "hf"
   },
@@ -16253,8 +16253,8 @@
    "source": "hf"
   },
   "apps/player/holo-evicted.json": {
-   "sha256": "aeefe3d7bcf031b266f57a98b3102755f4c5d54839736a96ab70ca11bfc09d09",
-   "blake3": "b2e4c0bff3cb7209e5c8a2b70cb03135f62748f80d4cf09a0a69844c0bacac0f",
+   "sha256": "09b91e07ce85d68cb1acf2eb9ecc997e92f1a0483c417af179aa603035b94a04",
+   "blake3": "3611dd3ee4a08382c81c62350d04732849705c761f250400e0cc76ccb2cf53ad",
    "bytes": 13486,
    "tier": "apps",
    "source": "origin"
@@ -16680,7 +16680,7 @@
    "source": "hf"
   },
   "apps/player/index.html": {
-   "blake3": "92d1ab5ba7f647eb91ca6b285bdbe4614633ba04a0e52757a77e906ffc542f3d",
+   "blake3": "eb0e39c7da4f2886a089a371197260b07876298d62701948ca8cb9e958bcc6f7",
    "tier": "apps",
    "source": "hf"
   },
@@ -19070,9 +19070,9 @@
    "source": "origin"
   },
   "apps/q/holo-evicted.json": {
-   "sha256": "1ea09fb1e8e4618241967fb923d1598c24c8645bf2225a75932f499c0a4865ab",
-   "blake3": "96c779b1285ebe66dcf311cf73bf437b453ede483c80af0bc937cf4f04d7d012",
-   "bytes": 56894,
+   "sha256": "9952d9a0b3925f83e556dd5daa2ae9a480af0193b432f4637475f8410d3f251c",
+   "blake3": "35b43949ee25962ffc96cce6fb2ee4e3c4bcdffb2cdbd37b292587a05352e20f",
+   "bytes": 54686,
    "tier": "apps",
    "source": "origin"
   },
