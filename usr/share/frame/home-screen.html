@@ -478,7 +478,10 @@
     display: inline-flex; align-items: center; gap: calc(var(--u) * .4); }
   .appbar .left.warn { color: #ffcf8f; }
   .appbar .left svg { width: calc(var(--u) * 1.05); height: calc(var(--u) * 1.05); }
-  #appframe { flex: 1 1 auto; width: 100%; border: 0; background: #fff; }
+  /* S1 — the holospace STACK: iframes stack here, the top rendered, the rest parked (not composited). */
+  .app-frames { position: relative; flex: 1 1 auto; width: 100%; min-height: 0; }
+  .app-frame { position: absolute; inset: 0; width: 100%; height: 100%; border: 0; background: #fff; }
+  .app-frame.parked { content-visibility: hidden; pointer-events: none; }   /* L-TEARDOWN: beneath the top = not rendered */
   .nudge { position: fixed; left: 50%; bottom: calc(var(--g2) + env(safe-area-inset-bottom)); transform: translateX(-50%) translateY(20px);
     z-index: 22; max-width: 90vw; opacity: 0; pointer-events: none; transition: opacity .3s, transform .3s;
     background: var(--card); color: var(--ink); border: 1px solid var(--line); border-radius: var(--g1);
@@ -693,7 +696,7 @@
     <span class="title" id="app-title"></span>
     <span class="left" id="app-left"></span>
   </div>
-  <iframe id="appframe" title="App" referrerpolicy="no-referrer"></iframe>
+  <div class="app-frames" id="app-frames"></div>
   <div class="app-edge" id="app-edge" aria-hidden="true"></div>
 </section>
 
@@ -984,7 +987,14 @@
   // MOBILE-LEAN (HOLO-PHONE): on phones/data-saver, DON'T eager-load Three.js + the voice-orb module at boot
   // just to upgrade the corner wireframe — the animated SVG spectrum sphere (the fallback floor) is already
   // beautiful and costs zero JS. Keeps the calm home's boot lean so it's fit to be the default phone home.
-  var _homeLeanMobile = (function () { try { return (typeof navigator !== "undefined" && navigator.userAgentData && navigator.userAgentData.mobile) || (matchMedia("(pointer:coarse)").matches && Math.min(innerWidth, innerHeight) <= 700) || (navigator.connection && navigator.connection.saveData === true); } catch (e) { return false; } })();
+  // Device-class truth: userAgentData.mobile is authoritative on Chromium — a touchscreen DESKTOP is
+  // coarse-pointer yet mobile:false, so trust it exclusively when present (only Safari/Firefox use the
+  // coarse+viewport fallback). data-saver stays an independent lean trigger — a metered desktop wants lean too.
+  var _homeLeanMobile = (function () { try {
+    var uad = (typeof navigator !== "undefined") ? navigator.userAgentData : null;
+    var dev = uad ? !!uad.mobile : (matchMedia("(pointer:coarse)").matches && Math.min(innerWidth, innerHeight) <= 700);
+    return dev || (typeof navigator !== "undefined" && navigator.connection && navigator.connection.saveData === true);
+  } catch (e) { return false; } })();
   (function bootOrb() {
     if (_homeLeanMobile) return;   // keep the SVG spectrum-disc; no Three.js on the phone home boot
     var canvas = $("qcanvas"); if (!canvas) return;
@@ -1825,42 +1835,80 @@
     try { if (document.startViewTransition && !matchMedia("(prefers-reduced-motion: reduce)").matches) { document.startViewTransition(fn); return; } } catch (e) {}
     fn();
   }
-  function openApp(a, mins) {
-    closeSheets();
-    var v = $("appview");
-    $("app-title").textContent = a.name || a.id;
-    // Open by CONTENT identity (Law L1): hand the projection the app's κ (@id) — else its id — and let
-    // holospace.html resolve def+lock and mount it, every byte re-derived (Law L5). Never the raw path.
-    var ref = a.kappa || a.id;
-    mountHolospace(ref, $("appframe"));   // S0: the one door — holospace.html sandboxes the app
-    _withVT(function () { v.classList.add("on"); });
-    if (countdownTimer) clearInterval(countdownTimer);
-    var left = $("app-left");
-    if (!mins) { left.className = "left"; left.innerHTML = ""; return; }
-    var end = Date.now() + mins * 60000;
-    var clockSvg = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>';
-    function paint() {
-      var ms = end - Date.now();
-      if (ms <= 0) { clearInterval(countdownTimer); left.className = "left warn"; left.innerHTML = clockSvg + "time's up"; showNudge(a); return; }
-      var s = Math.ceil(ms / 1000), mm = Math.floor(s / 60), ss = s % 60;
-      left.className = "left" + (ms < 60000 ? " warn" : ""); left.innerHTML = clockSvg + mm + ":" + pad(ss) + " left";
-    }
-    paint(); countdownTimer = setInterval(paint, 1000);
+  // ── S1 (HOLO-HOLOSPACE-STACK) — the holospace STACK. Every app opens as its OWN sandboxed surface pushed onto
+  //    a back-stack; only the TOP is rendered (the ones beneath PARK — content-visibility:hidden: state kept, not
+  //    composited); pop tears the top down and reveals the one beneath (L-TEARDOWN). Back button, edge swipe-back
+  //    and the OS back button each pop one level. An app may open a child κ (postMessage "holo:open") → same stack.
+  var appStack = [], STACK_MAX = 5, _ignoreNextPop = false;
+  var _clockSvg = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>';
+  function stackTop() { return appStack[appStack.length - 1] || null; }
+  function paintTimer() {
+    var t = stackTop(), left = $("app-left"); if (!left) return;
+    if (!t || !t.end) { left.className = "left"; left.innerHTML = ""; return; }
+    var ms = t.end - Date.now();
+    if (ms <= 0) { left.className = "left warn"; left.innerHTML = _clockSvg + "time's up"; if (!t._nudged) { t._nudged = true; showNudge({ name: t.name }); } return; }
+    var s = Math.ceil(ms / 1000), mm = Math.floor(s / 60), ss = s % 60;
+    left.className = "left" + (ms < 60000 ? " warn" : ""); left.innerHTML = _clockSvg + mm + ":" + pad(ss) + " left";
   }
+  if (countdownTimer) clearInterval(countdownTimer);
+  countdownTimer = setInterval(paintTimer, 1000);   // ONE interval paints the top surface's timer
+  function stackSync() {
+    for (var i = 0; i < appStack.length; i++) {
+      var e = appStack[i], top = (i === appStack.length - 1);
+      e.frame.classList.toggle("parked", !top);   // only the top renders; the rest are parked (state kept)
+      if (!top && (appStack.length - 1 - i) >= STACK_MAX && !e.freed) { try { e.frame.src = "about:blank"; e.freed = true; } catch (er) {} }
+    }
+    var t = stackTop(); $("app-title").textContent = t ? (t.name || "") : "";
+    paintTimer();
+  }
+  function stackPush(a, mins) {
+    closeSheets();
+    var ref = a.kappa || a.id, name = a.name || a.id;
+    var frame = document.createElement("iframe"); frame.className = "app-frame"; frame.setAttribute("title", name); frame.setAttribute("referrerpolicy", "no-referrer");
+    mountHolospace(ref, frame);                    // S0: the one door — holospace.html sandboxes each surface
+    $("app-frames").appendChild(frame);
+    appStack.push({ ref: ref, name: name, frame: frame, end: mins ? Date.now() + mins * 60000 : 0 });
+    try { history.pushState({ holoDepth: appStack.length }, ""); } catch (e) {}
+    // guard the async View-Transition callback: if a fast pop emptied the stack before it runs, stay closed
+    _withVT(function () { if (!appStack.length) { $("appview").classList.remove("on"); return; } $("appview").classList.add("on"); stackSync(); });
+  }
+  function stackPop() {
+    var e = appStack.pop(); if (!e) return false;
+    try { e.frame.src = "about:blank"; } catch (er) {}
+    try { e.frame.remove(); } catch (er) {}        // L-TEARDOWN: the popped surface is freed, not parked
+    if (!appStack.length) { $("appview").classList.remove("on"); $("nudge").classList.remove("on"); }
+    else stackSync();
+    return true;
+  }
+  function userPop() {                              // person tapped back / swiped / finished → pop + consume history
+    if (!appStack.length) return;
+    stackPop();
+    try { _ignoreNextPop = true; history.back(); } catch (e) { _ignoreNextPop = false; }
+  }
+  window.addEventListener("popstate", function () {
+    if (_ignoreNextPop) { _ignoreNextPop = false; return; }   // our own userPop's history.back — already popped
+    if (appStack.length) stackPop();                          // real OS back → pop one level
+  });
+  // an app may open a child κ — ONLY messages from our OWN mounted holospaces are honoured (a sandboxed capability).
+  window.addEventListener("message", function (e) {
+    try {
+      var d = e.data || {}; if (!d || (d.type !== "holo:open" && d.type !== "holo-open")) return;
+      var ref = d.ref || d.kappa || d.app; if (!ref) return;
+      if (!appStack.some(function (x) { return x.frame && x.frame.contentWindow === e.source; })) return;
+      stackPush({ kappa: ref, id: ref, name: d.name || "App" });
+    } catch (er) {}
+  });
+  function openApp(a, mins) { stackPush(a, mins); }   // every open = a push onto the stack
   function showNudge(a) {
     var n = $("nudge");
     $("nudge-msg").textContent = "Your time on " + (a.name || "this app") + " is up.";
     n.classList.add("on");
     try { if (navigator.vibrate) navigator.vibrate([40, 60, 40]); } catch (e) {}
   }
-  $("nudge-stay").addEventListener("click", function () { $("nudge").classList.remove("on"); });
-  $("nudge-done").addEventListener("click", function () { $("nudge").classList.remove("on"); backHome(); });
-  function backHome() {
-    if (countdownTimer) clearInterval(countdownTimer);
-    $("appview").classList.remove("on"); $("appframe").src = "about:blank";
-    $("nudge").classList.remove("on");
-  }
-  $("app-back").addEventListener("click", backHome);
+  $("nudge-stay").addEventListener("click", function () { var t = stackTop(); if (t) { t.end = Date.now() + 5 * 60000; t._nudged = false; } $("nudge").classList.remove("on"); paintTimer(); });
+  $("nudge-done").addEventListener("click", function () { $("nudge").classList.remove("on"); userPop(); });
+  function backHome() { while (appStack.length) stackPop(); $("appview").classList.remove("on"); $("nudge").classList.remove("on"); }
+  $("app-back").addEventListener("click", userPop);
   // S2 (HOLO-HOLOSPACE-STACK) — edge swipe-back: drag from the left edge to leave the app; past a threshold it
   // closes (View-Transition class of motion + a soft haptic), else it springs back. The thin edge strip captures
   // the gesture above the app iframe. Reduce-motion → an instant close, no drag.
@@ -1886,10 +1934,10 @@
       var clear = function () { setT(""); view.style.transform = ""; view.style.opacity = ""; };
       if (over) {
         try { if (navigator.vibrate) navigator.vibrate(8); } catch (er) {}   // L-HAPTIC: one tick on the pop
-        if (reduce()) { backHome(); clear(); return; }
+        if (reduce()) { userPop(); clear(); return; }
         setT("transform .19s var(--ease), opacity .19s var(--ease)");
         view.style.transform = "translateX(100%)"; view.style.opacity = "0";
-        setTimeout(function () { backHome(); clear(); }, 185);
+        setTimeout(function () { userPop(); clear(); }, 185);
       } else {
         setT("transform .2s var(--ease), opacity .2s var(--ease)");
         view.style.transform = ""; view.style.opacity = "";
