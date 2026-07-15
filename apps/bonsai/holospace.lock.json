@@ -3,18 +3,18 @@
     "dcterms": "http://purl.org/dc/terms/",
     "holo": "https://hologram.os/ns#"
   },
-  "root": "did:holo:sha256:2667cbd3d1f31759fecbc669a23ba7a9f4c7833b9c4959dec40c870c7fdb594a",
+  "root": "did:holo:sha256:549cbc47edc756ae9acf02305a0e282bc2b1821a467fe73db070cf751adb79d3",
   "identifier": "org.hologram.Bonsai",
   "algo": "sha256",
   "holo:within": "did:holo:sha256:f82435dab0215aa6695797d5e9ef4809f1905c015c419f085b2d42346441aad0",
   "holo:atlasCoordinate": {
     "space": "Φ-Atlas-12288",
     "within": "did:holo:sha256:f82435dab0215aa6695797d5e9ef4809f1905c015c419f085b2d42346441aad0",
-    "cell": 6474,
+    "cell": 6611,
     "page": 25,
-    "byte": 74,
-    "r96": 74,
-    "phi": 6474
+    "byte": 211,
+    "r96": 19,
+    "phi": 6611
   },
   "files": 6,
   "closure": {
@@ -39,13 +39,13 @@
       ]
     },
     "apps/bonsai/index.html": {
-      "blake3": "did:holo:blake3:0d3fbba0eb71790e165becf48cf4c9097597adc0a819fb3bfc1a88e84bece996",
-      "kappa": "did:holo:sha256:36da31e3e35bee518360dccc573f3f97cfaec70a004de7ee6324b0343df0c25c",
-      "sri": "sha256-Ntox4+Nb7lGDYNzMVz8/l8+uxwoATefuYySwND3wwlw=",
-      "multibase": "uEiA22jHj41vuUYNg3MxXPz-Xz67HCgBN5-5jJLA0PfDCXA",
-      "bytes": 25167,
+      "blake3": "did:holo:blake3:2b7926d8c9d472b478129241bb852f2999419434a873d5f54669a2002cc2aa6e",
+      "kappa": "did:holo:sha256:7b6331297875eef1a8766fa88360a5dc02990fd547ad0b6d8d0ee7d443e9288d",
+      "sri": "sha256-e2MxKXh17vGodm+og2Cl3AKZD9VHrQttjQ7n1EPpKI0=",
+      "multibase": "uEiB7YzEpeHXu8ah2b6iDYKXcApkP1UetC22NDufUQ-kojQ",
+      "bytes": 24109,
       "alsoKnownAs": [
-        "did:holo:blake3:0d3fbba0eb71790e165becf48cf4c9097597adc0a819fb3bfc1a88e84bece996"
+        "did:holo:blake3:2b7926d8c9d472b478129241bb852f2999419434a873d5f54669a2002cc2aa6e"
       ]
     },
     "apps/bonsai/vendor/three.core.min.js": {
