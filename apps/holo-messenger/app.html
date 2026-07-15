@@ -556,6 +556,10 @@ if (document.readyState === "complete") go(); else addEventListener("load", go);
   // IMMERSIVE VIDEO — chromeless YouTube embed + a hover-only Holo control bar (play/pause · seek · time ·
   // fullscreen). Additive + fail-soft.
   import("./holo-video-immersive.mjs?v=22eef34f49d2").catch(() => {});
+  // HOLO HALO — leave Holo TV while something plays and the SAME living app iframe (never reparented)
+  // morphs into a floating mini-theatre pill over the whole OS: drag · resize · hover controls · morph
+  // back to fullscreen through the holo-open-space door. Additive + fail-soft.
+  import("./holo-halo.mjs?v=1").catch(() => {});
 </script>
 <style id="hl-fontsize-uniform">/* CLAUDE-FONTSIZE ⤵ — login: one uniform text size (var(--u)), larger */
 #holo-login{--u:clamp(19px,2vmin,23px)}

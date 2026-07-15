@@ -513,8 +513,13 @@ if (document.readyState === "complete") go(); else addEventListener("load", go);
     document.body.innerHTML = "<pre style='color:#f88;padding:16px;white-space:pre-wrap'>boot error: " + (e && e.stack || e) + "</pre>";
   });
 
-  // Intelligent Inbox (holo-mail) - additive, OFF by default. Enable per-operator: localStorage["holo.mail.enabled"]="1".
-  import("./mail/holo-mail-attach.mjs").catch(() => {});
+  // Intelligent Inbox (holo-mail) — LAZY (ARRIVAL-DIET A2 mail): flag-OFF operators pay ZERO mail bytes at boot.
+  // The 15-module suite loads only when enabled (localStorage["holo.mail.enabled"]="1" / ?mail=1) or via
+  // the documented manual door window.HoloMailOpen(), which self-replaces with the real opener on load.
+  { const _mailOn = (() => { try { return localStorage.getItem("holo.mail.enabled") === "1" || /(?:^|[?&])mail=1(?:&|$)/.test(location.search); } catch { return false; } })();
+    const _loadMail = () => import("./mail/holo-mail-attach.mjs").catch(() => null);
+    if (_mailOn) _loadMail();
+    else { window.HoloMailOpen = () => _loadMail().then((m) => { if (m && m.default) m.default.openMail(); }); window.HoloMailClose = () => {}; } }
   // HoloChat, woven into THIS messenger — one canonical surface. Enable: localStorage["holo.chat.enabled"]="1" or ?chat=1.
   import("./holo-messenger-weave.mjs").catch(() => {});
   // REACH-YOU: background Web Push (installable app rings your closed phone). Gated ?push=1. Content-blind relay.
@@ -551,6 +556,10 @@ if (document.readyState === "complete") go(); else addEventListener("load", go);
   // IMMERSIVE VIDEO — chromeless YouTube embed + a hover-only Holo control bar (play/pause · seek · time ·
   // fullscreen). Additive + fail-soft.
   import("./holo-video-immersive.mjs?v=22eef34f49d2").catch(() => {});
+  // HOLO HALO — leave Holo TV while something plays and the SAME living app iframe (never reparented)
+  // morphs into a floating mini-theatre pill over the whole OS: drag · resize · hover controls · morph
+  // back to fullscreen through the holo-open-space door. Additive + fail-soft.
+  import("./holo-halo.mjs?v=1").catch(() => {});
 </script>
 <style id="hl-fontsize-uniform">/* CLAUDE-FONTSIZE ⤵ — login: one uniform text size (var(--u)), larger */
 #holo-login{--u:clamp(19px,2vmin,23px)}
