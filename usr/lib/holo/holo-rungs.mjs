@@ -19,6 +19,7 @@
 // independent of where bytes came from. Fetch trouble → BUILTIN (fail-soft), lazy + memoized,
 // restart-safe (no activate-time state; a restarted worker re-fetches once).
 import { createBlake3 } from "./holo-blake3.mjs";
+import { makeWorld } from "./holo-world.mjs";   // W2 rungs-from-world: rungs are a WORLD facet, not a loose file
 
 export const MIME = { js: "text/javascript", mjs: "text/javascript", css: "text/css", json: "application/json",
   svg: "image/svg+xml", wasm: "application/wasm", html: "text/html", png: "image/png", jpg: "image/jpeg",
@@ -68,12 +69,14 @@ export function blake3ToCid(hex) {
 const CAP = 64 * 1024 * 1024;   // buffered-verify ceiling — everything in today's closures fits
 const IPFS_TIMEOUT = 4000;      // a decentralized-web gateway is best-effort — never hang the ladder on it
 
-export function makeLadder({ base = "", rung = null } = {}) {
-  let _rungs = null, _rungsP = null;
-  const rungs = () => _rungs || (_rungsP ||= fetch(base + "/rungs.json", { cache: "no-store" })
-    .then((r) => (r.ok ? r.json() : null))
-    .then((j) => (_rungs = { ...BUILTIN_RUNGS, ...(j && typeof j === "object" && !Array.isArray(j) ? j : {}) }))
-    .catch(() => { _rungsP = null; return BUILTIN_RUNGS; }));
+export function makeLadder({ base = "", rung = null, world = null } = {}) {
+  // W2 rungs-from-world: rungs come from the signed world (payload.world.rungs), merged over BUILTIN_RUNGS.
+  // Share a passed world (rescue path) or build one (SW direct calls); background-warm, non-blocking.
+  const _world = world || makeWorld({ base }); try { _world.warm(); } catch {}
+  let _rungs = null;
+  // SYNC, no rungs.json fetch: warm world → full signed set (memoized); cold → BUILTIN (re-checked
+  // next call, so it upgrades to the world the moment it warms). BUILTIN alone resolves every object.
+  const rungs = () => { const w = _world.rungsSync && _world.rungsSync(); if (w) return (_rungs = { ...BUILTIN_RUNGS, ...w }); return _rungs || BUILTIN_RUNGS; };
 
   async function sha256hex(u8) {
     const d = await crypto.subtle.digest("SHA-256", u8);
