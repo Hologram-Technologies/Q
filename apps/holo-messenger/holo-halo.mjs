@@ -83,7 +83,7 @@ function dress(w) {
         "html.halo #top,html.halo nav,html.halo .player-top,html.halo .enhud,html.halo .skipbtn,html.halo .upnext,html.halo .watchpanel,html.halo .music-bar{display:none !important}",
         "html.halo main{width:100% !important;margin:0 !important}",
         "html.halo body{overflow:hidden}",
-        "#haloFace{position:fixed;inset:0;z-index:940;display:none;align-items:center;justify-content:center;background:#101012;overflow:hidden}",
+        "#haloFace{position:fixed;inset:0;z-index:940;display:none;align-items:center;justify-content:center;background:#1a1918;overflow:hidden}",
         "html.halo.halo-music #haloFace{display:flex}",
         "#haloFace .hfBg{position:absolute;inset:-14%;background-size:cover;background-position:center;filter:blur(46px) saturate(1.2) brightness(.5);transform:scale(1.15)}",
         "#haloFace .hfArt{position:relative;height:60%;aspect-ratio:1/1;border-radius:10px;background-size:cover;background-position:center;box-shadow:0 14px 44px rgba(0,0,0,.6);background-color:#1f1f1e}",
@@ -148,29 +148,29 @@ function buildUI() {
     ".holo-space-layer[data-halo]:not(.space-open):before{display:none}",
     ".holo-space-layer[data-halo]:not(.space-open) .holo-space-bar{display:none}",
     ".holo-space-layer[data-halo]:not(.space-open) .holo-space-stage{background:transparent}",
-    "#holoHalo{position:fixed;z-index:64;border-radius:12px;border:1px solid rgba(255,255,255,.13);box-shadow:0 18px 48px rgba(0,0,0,.55);overflow:hidden;user-select:none;touch-action:none;opacity:0;pointer-events:none;transition:opacity .24s ease;cursor:grab;font:500 13px/1.35 inherit}",
+    "#holoHalo{position:fixed;z-index:64;border-radius:14px;border:1px solid rgba(255,255,255,.11);box-shadow:0 24px 64px rgba(0,0,0,.6),0 2px 10px rgba(0,0,0,.38);overflow:hidden;user-select:none;touch-action:none;opacity:0;pointer-events:none;transition:opacity .24s ease;cursor:grab;font:500 13px/1.35 inherit}",
     "#holoHalo.on{opacity:1;pointer-events:auto}",
     "#holoHalo.drag{cursor:grabbing}",
     "#holoHalo .hhS{position:absolute;left:0;right:0;pointer-events:none;opacity:0;transition:opacity .22s ease}",
-    "#holoHalo .hhST{top:0;height:34%;background:linear-gradient(to bottom,rgba(0,0,0,.58),transparent)}",
-    "#holoHalo .hhSB{bottom:0;height:42%;background:linear-gradient(to top,rgba(0,0,0,.62),transparent)}",
+    "#holoHalo .hhST{top:0;height:34%;background:linear-gradient(to bottom,rgba(20,19,18,.62),transparent)}",
+    "#holoHalo .hhSB{bottom:0;height:42%;background:linear-gradient(to top,rgba(20,19,18,.68),transparent)}",
     "#holoHalo:hover .hhS,#holoHalo.show .hhS,#holoHalo:hover .hhC,#holoHalo.show .hhC{opacity:1}",
     "#holoHalo .hhC{opacity:0;transition:opacity .22s ease}",
-    "#holoHalo .hhBtn{position:absolute;display:flex;align-items:center;justify-content:center;width:30px;height:30px;border-radius:50%;background:rgba(20,20,22,.55);backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);color:#fff;border:0;cursor:pointer;pointer-events:auto}",
-    "#holoHalo .hhBtn:hover{background:rgba(50,50,56,.75)}",
+    "#holoHalo .hhBtn{position:absolute;display:flex;align-items:center;justify-content:center;width:30px;height:30px;border-radius:50%;background:rgba(31,31,30,.78);backdrop-filter:blur(10px) saturate(1.1);-webkit-backdrop-filter:blur(10px) saturate(1.1);color:#f5f4ef;border:1px solid rgba(255,255,255,.11);cursor:pointer;pointer-events:auto;transition:background .16s ease,border-color .16s ease}",
+    "#holoHalo .hhBtn:hover{background:rgba(48,48,46,.92);border-color:rgba(255,255,255,.18)}",
     "#holoHalo .hhBtn svg{width:15px;height:15px}",
     "#holoHalo .hhX{top:10px;right:10px}",
     "#holoHalo .hhE{top:10px;right:48px}",
     "#holoHalo .hhP{width:46px;height:46px;top:50%;left:50%;transform:translate(-50%,-50%)}",
     "#holoHalo .hhP svg{width:20px;height:20px}",
     "#holoHalo .hhMeta{position:absolute;left:14px;right:14px;bottom:12px;color:#fff;text-shadow:0 1px 8px rgba(0,0,0,.7);pointer-events:none}",
-    "#holoHalo .hhT{font-weight:600;font-size:13px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}",
-    "#holoHalo .hhA{font-weight:500;font-size:11.5px;color:rgba(255,255,255,.72);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}",
-    "#holoHalo .hhProg{position:absolute;left:0;right:0;bottom:0;height:3px;background:rgba(255,255,255,.14);display:none}",
+    "#holoHalo .hhT{font-weight:600;font-size:13px;letter-spacing:.01em;color:#f5f4ef;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}",
+    "#holoHalo .hhA{font-weight:500;font-size:11.5px;color:rgba(245,244,239,.64);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}",
+    "#holoHalo .hhProg{position:absolute;left:0;right:0;bottom:0;height:3px;background:rgba(255,255,255,.12);display:none}",
     "#holoHalo .hhProg i{display:block;height:100%;width:0;background:#8b5cf6}",
     "#holoHalo .hhGrip{position:absolute;right:2px;bottom:2px;width:18px;height:18px;cursor:nwse-resize;pointer-events:auto;opacity:0;transition:opacity .22s ease}",
     "#holoHalo:hover .hhGrip,#holoHalo.show .hhGrip{opacity:.8}",
-    "#holoHalo .hhGrip:before{content:'';position:absolute;right:4px;bottom:4px;width:8px;height:8px;border-right:2px solid rgba(255,255,255,.75);border-bottom:2px solid rgba(255,255,255,.75);border-radius:1px}",
+    "#holoHalo .hhGrip:before{content:'';position:absolute;right:4px;bottom:4px;width:8px;height:8px;border-right:2px solid rgba(245,244,239,.7);border-bottom:2px solid rgba(245,244,239,.7);border-radius:1px}",
   ].join("\n");
   document.head.appendChild(css);
   ui = document.createElement("div"); ui.id = "holoHalo";
@@ -259,7 +259,7 @@ function engage(f, st) {
   void f.offsetWidth;   // commit the start frame synchronously (rAF starves in hidden/embedded panes)
   s.transition = MORPH;
   ui.style.transition = "opacity .24s ease," + MORPH;
-  s.left = g.x + "px"; s.top = g.y + "px"; s.width = g.w + "px"; s.height = g.h + "px"; s.borderRadius = "12px";
+  s.left = g.x + "px"; s.top = g.y + "px"; s.width = g.w + "px"; s.height = g.h + "px"; s.borderRadius = "14px";
   ui.style.left = g.x + "px"; ui.style.top = g.y + "px"; ui.style.width = g.w + "px"; ui.style.height = g.h + "px";
   ui.classList.add("on", "show");
   setTimeout(() => ui.classList.remove("show"), 2600);
