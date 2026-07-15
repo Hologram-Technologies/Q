@@ -151,10 +151,21 @@ function buildUI() {
     "#holoHalo{position:fixed;z-index:64;border-radius:14px;border:1px solid rgba(255,255,255,.11);box-shadow:0 24px 64px rgba(0,0,0,.6),0 2px 10px rgba(0,0,0,.38);overflow:hidden;user-select:none;touch-action:none;opacity:0;pointer-events:none;transition:opacity .24s ease;cursor:grab;font:500 13px/1.35 inherit}",
     "#holoHalo.on{opacity:1;pointer-events:auto}",
     "#holoHalo.drag{cursor:grabbing}",
+    // ── the now-playing FACE: for music we paint the art here, in the pill's OWN chrome (never inside the
+    //    iframe) so no app UI can ever leak through — only the cover art shows. Video leaves this hidden and
+    //    the living video frame shows through underneath.
+    "#holoHalo .hhFace{position:absolute;inset:0;display:none;overflow:hidden;background:#0e0e10}",
+    "#holoHalo.music .hhFace{display:block}",
+    "#holoHalo .hhBg{position:absolute;inset:-18%;background:#0e0e10 center/cover no-repeat;filter:blur(52px) saturate(1.35) brightness(.48);transform:scale(1.18)}",
+    "#holoHalo .hhVeil{position:absolute;inset:0;background:radial-gradient(120% 92% at 50% 40%,rgba(8,8,10,0),rgba(8,8,10,.44)),linear-gradient(180deg,rgba(8,8,10,.24),rgba(8,8,10,.62))}",
+    "#holoHalo .hhCover{position:absolute;top:47%;left:50%;transform:translate(-50%,-50%);height:60%;aspect-ratio:1;border-radius:11px;background:#1f1f1e center/cover no-repeat;box-shadow:0 18px 46px rgba(0,0,0,.55),inset 0 0 0 1px rgba(255,255,255,.06);transition:transform .34s cubic-bezier(.32,.72,.28,1),box-shadow .34s ease}",
+    "#holoHalo.music:hover .hhCover,#holoHalo.music.show .hhCover{transform:translate(-50%,-50%) scale(.965);box-shadow:0 22px 54px rgba(0,0,0,.62),inset 0 0 0 1px rgba(255,255,255,.06)}",
     "#holoHalo .hhS{position:absolute;left:0;right:0;pointer-events:none;opacity:0;transition:opacity .22s ease}",
-    "#holoHalo .hhST{top:0;height:34%;background:linear-gradient(to bottom,rgba(20,19,18,.62),transparent)}",
-    "#holoHalo .hhSB{bottom:0;height:42%;background:linear-gradient(to top,rgba(20,19,18,.68),transparent)}",
+    "#holoHalo .hhST{top:0;height:34%;background:linear-gradient(to bottom,rgba(14,13,12,.6),transparent)}",
+    "#holoHalo .hhSB{bottom:0;height:46%;background:linear-gradient(to top,rgba(14,13,12,.72),transparent)}",
     "#holoHalo:hover .hhS,#holoHalo.show .hhS,#holoHalo:hover .hhC,#holoHalo.show .hhC{opacity:1}",
+    // for music the title/artist + its scrim stay lit at rest (there is nothing else on the surface to read)
+    "#holoHalo.music .hhSB,#holoHalo.music .hhMeta{opacity:1}",
     "#holoHalo .hhC{opacity:0;transition:opacity .22s ease}",
     "#holoHalo .hhBtn{position:absolute;display:flex;align-items:center;justify-content:center;width:30px;height:30px;border-radius:50%;background:rgba(31,31,30,.78);backdrop-filter:blur(10px) saturate(1.1);-webkit-backdrop-filter:blur(10px) saturate(1.1);color:#f5f4ef;border:1px solid rgba(255,255,255,.11);cursor:pointer;pointer-events:auto;transition:background .16s ease,border-color .16s ease}",
     "#holoHalo .hhBtn:hover{background:rgba(48,48,46,.92);border-color:rgba(255,255,255,.18)}",
@@ -175,6 +186,7 @@ function buildUI() {
   document.head.appendChild(css);
   ui = document.createElement("div"); ui.id = "holoHalo";
   ui.innerHTML =
+    '<div class="hhFace"><div class="hhBg"></div><div class="hhVeil"></div><div class="hhCover"></div></div>' +
     '<div class="hhS hhST"></div><div class="hhS hhSB"></div>' +
     '<button class="hhBtn hhP hhC" title="Play / pause" aria-label="Play or pause"></button>' +
     '<button class="hhBtn hhE hhC" title="Back to fullscreen" aria-label="Back to fullscreen">' + I.expand + "</button>" +
@@ -182,7 +194,7 @@ function buildUI() {
     '<div class="hhMeta hhC"><div class="hhT"></div><div class="hhA"></div></div>' +
     '<div class="hhProg"><i></i></div><div class="hhGrip hhC" title="Resize"></div>';
   document.body.appendChild(ui);
-  els = { play: ui.querySelector(".hhP"), exp: ui.querySelector(".hhE"), x: ui.querySelector(".hhX"), t: ui.querySelector(".hhT"), a: ui.querySelector(".hhA"), prog: ui.querySelector(".hhProg"), fill: ui.querySelector(".hhProg i"), grip: ui.querySelector(".hhGrip") };
+  els = { play: ui.querySelector(".hhP"), exp: ui.querySelector(".hhE"), x: ui.querySelector(".hhX"), t: ui.querySelector(".hhT"), a: ui.querySelector(".hhA"), prog: ui.querySelector(".hhProg"), fill: ui.querySelector(".hhProg i"), grip: ui.querySelector(".hhGrip"), bg: ui.querySelector(".hhBg"), cover: ui.querySelector(".hhCover") };
   els.play.innerHTML = I.pause;
   els.play.addEventListener("click", (e) => { e.stopPropagation(); const f = frameEl(); f && togglePlay(f); });
   els.exp.addEventListener("click", (e) => { e.stopPropagation(); expand(); });
@@ -232,9 +244,16 @@ function buildUI() {
 }
 function paint(st) {
   if (!ui) return;
+  const music = !!st && st.kind === "music";
+  ui.classList.toggle("music", music);
   if (st) {
     els.t.textContent = st.title || ""; els.a.textContent = st.sub || "";
     els.play.innerHTML = st.playing ? I.pause : I.play;
+    if (music) {   // paint the cover into the pill's own face — bulletproof, never touches the iframe
+      const a = artWrap(st.art || "");
+      if (a && els.bg.dataset.u !== a) { els.bg.dataset.u = a; els.bg.style.backgroundImage = 'url("' + a + '")'; }
+      if (a && els.cover.dataset.u !== a) { els.cover.dataset.u = a; els.cover.style.backgroundImage = 'url("' + a + '")'; }
+    }
     const p = st.dur > 0 ? Math.min(1, st.time / st.dur) : 0;
     els.prog.style.display = st.kind === "video" && st.dur > 0 ? "block" : "none";
     els.fill.style.width = (p * 100).toFixed(2) + "%";

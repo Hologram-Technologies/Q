@@ -9,12 +9,12 @@
  "tiers": {
   "core": {
    "files": 598,
-   "bytes": 11346045,
+   "bytes": 11348179,
    "hf": 0
   },
   "apps": {
    "files": 5462,
-   "bytes": 2376289,
+   "bytes": 2377452,
    "hf": 5409
   },
   "heavy": {
@@ -1428,9 +1428,9 @@
    "source": "origin"
   },
   "apps/bonsai/holospace.lock.json": {
-   "sha256": "afd5fc6634405b032780a553bc94b02c587f89f5f00d8157b8ad9d5c1c601d17",
-   "blake3": "a7f5def28856aa48aceb794c6d35d6f6ef27cbe204d56c69ce01f90e9beab78a",
-   "bytes": 3786,
+   "sha256": "e813ec1ab5fc727d53a87626977639e736f9c78f91cc1a59b1ee06c96edf8488",
+   "blake3": "af705a7fb57893766722fbf54bbd6c20d06122eeca47c303f40e115acc00469f",
+   "bytes": 3788,
    "tier": "apps",
    "source": "origin"
   },
@@ -1442,9 +1442,9 @@
    "source": "origin"
   },
   "apps/bonsai/index.html": {
-   "sha256": "65db14cfa6babda596fc86899af776758261de011b9929fab3f5fe36dc055ff5",
-   "blake3": "66ee29d5e86f3e714a33f61db0bd0d1b2e4e9339b2363b0c5be2f34a105f6196",
-   "bytes": 24495,
+   "sha256": "084ffe7f687c3a3ea081a102e10a82d5496af5ad9da86fbd54b767130a122149",
+   "blake3": "aaf1a90fd9852dd464741dfdbca2753e7db35ecbdfbb099691a384280297c033",
+   "bytes": 25656,
    "tier": "apps",
    "source": "origin"
   },
@@ -3457,9 +3457,9 @@
    "source": "origin"
   },
   "apps/holo-messenger/holo-halo.mjs": {
-   "sha256": "4c38ec4df5a2bd6a257be9af0084163cd6228c0572a7440392835e621b6c0160",
-   "blake3": "5569071ba99839fae52e2c823e577e26899d766af8c2750b747a7a571abb4991",
-   "bytes": 21960,
+   "sha256": "d0ae999211110b6cf6650e2d22dff5d3ccec09488e8b0a5e049d3b6f169c9ea7",
+   "blake3": "9b50354b71a7d1d5357b2348b3b753f553bc98eaf189fda6c887bc7275f84dcb",
+   "bytes": 24094,
    "tier": "core",
    "source": "origin"
   },
@@ -4223,8 +4223,8 @@
    "source": "hf"
   },
   "apps/index.jsonld": {
-   "sha256": "c811a9ee483087c43424e23a353ec3e8706b190aee31d401fdffd21055b13cee",
-   "blake3": "830a7863156be2551cbdf68d666d412ed9bd996fc17912340566f18df608de6e",
+   "sha256": "e9a0ca8c99b01912786a6fe3dfd2090da1b932870691147dce05e9c60a7fbf8d",
+   "blake3": "3e65a3e11c1be6948a8ff0bc46d9cd6b618e8f5322a0f177b8a4c08e3cc407d0",
    "bytes": 21593,
    "tier": "core",
    "source": "origin"
