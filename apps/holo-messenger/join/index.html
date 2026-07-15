@@ -12,14 +12,14 @@
 <meta property="og:site_name" content="Hologram">
 <meta property="og:title" content="You're invited to Hologram">
 <meta property="og:description" content="A private, end-to-end encrypted space. One link — no signup, no server. Tap to connect.">
-<meta property="og:image" content="https://hologram-technologies.github.io/Q/apps/holo-messenger/og.jpg">
+<meta property="og:image" content="https://hologram-technologies.github.io/hologram-os/apps/holo-messenger/og.jpg">
 <meta property="og:image:width" content="1200">
 <meta property="og:image:height" content="630">
-<meta property="og:url" content="https://hologram-technologies.github.io/Q/apps/holo-messenger/join/">
+<meta property="og:url" content="https://hologram-technologies.github.io/hologram-os/apps/holo-messenger/join/">
 <meta name="twitter:card" content="summary_large_image">
 <meta name="twitter:title" content="You're invited to Hologram">
 <meta name="twitter:description" content="A private, end-to-end encrypted space. One link — no signup, no server. Tap to connect.">
-<meta name="twitter:image" content="https://hologram-technologies.github.io/Q/apps/holo-messenger/og.jpg">
+<meta name="twitter:image" content="https://hologram-technologies.github.io/hologram-os/apps/holo-messenger/og.jpg">
 <style>
   :root { color-scheme: dark; }
   * { margin: 0; padding: 0; box-sizing: border-box; }
@@ -72,6 +72,14 @@
     var isRoom = /(^|[#&])room=/.test(hash);
     if (isRoom) { document.getElementById("title").textContent = "You're invited to a room";
       document.getElementById("sub").textContent = "A private, forward-secret team space. Tap to join — no signup, no server."; }
+    // v2 compact invite carries the room name in-fragment (after 142 bytes of room+keys) — greet by name.
+    // The name is peer-controlled: textContent only, never markup. Crawlers run no JS → the card above stands.
+    try {
+      var rm = /[#&]room=v2\.([A-Za-z0-9_-]+)/.exec(hash);
+      if (rm) { var rs = atob(rm[1].replace(/-/g, "+").replace(/_/g, "/"));
+        var nm = rs.length > 142 ? decodeURIComponent(escape(rs.slice(142))) : "";
+        if (nm) document.getElementById("title").textContent = "You're invited to " + nm; }
+    } catch (e) {}
     // ../app.html relative to /apps/holo-messenger/join/ → the messenger, fragment + query preserved.
     var target = "../app.html" + (location.search || "") + hash;
     var go = document.getElementById("go"); go.setAttribute("href", target);

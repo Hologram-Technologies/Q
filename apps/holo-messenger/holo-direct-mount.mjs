@@ -30,7 +30,7 @@ async function _boot() {
   if (direct) return direct;
   if (bootP) return bootP;
   bootP = (async () => {
-    const { makeDirect } = await import("./holo-direct.mjs?v=aim1s");   // aim1: presence + away (A1/A3)
+    const { makeDirect } = await import("./holo-direct.mjs?v=aim1sk");   // aim1: presence + away (A1/A3)
     const { getIdentity } = await import("./holo-direct-id.mjs");
     // the operator namespace: the signed-in identity's stable id when the gate resolved one, else "guest"
     // (ONE stable identity per device+origin — never per session). 3 s race: Direct must not hang on auth.
@@ -317,6 +317,47 @@ function _sheet() {
   close.onclick = () => ov.remove();
   card.append(theirs, start, err, close); ov.append(card); DOC.body.append(ov);
 }
+// ── v2 compact room invite — b64url( room(12B) ∥ sign(65B raw P-256) ∥ box(65B) ∥ name-utf8 ). Decoded back
+// to the exact payload shape v1 carried (keys re-encoded with btoa = holo-seal's own _b64, padding included),
+// so joinRoom and the roster maps never know which wire the invite rode.
+function _roomV2(b64u) {
+  const s = atob(b64u.replace(/-/g, "+").replace(/_/g, "/"));
+  if (s.length < 142 || s.charCodeAt(12) !== 4 || s.charCodeAt(77) !== 4) throw new Error("bad v2 invite");
+  const u = new Uint8Array(s.length); for (let i = 0; i < s.length; i++) u[i] = s.charCodeAt(i) & 255;
+  const hex = Array.from(u.subarray(0, 12), (b) => b.toString(16).padStart(2, "0")).join("");
+  const b64 = (a) => btoa(Array.from(a, (b) => String.fromCharCode(b)).join(""));
+  return { v: 2, room: "room:" + hex, name: new TextDecoder().decode(u.subarray(142)) || null, creator: b64(u.subarray(12, 77)), creatorBox: b64(u.subarray(77, 142)) };
+}
+// ── the invite QR sheet — every minted room link is instantly scannable. Paints over the OS's OWN encoder
+// (_shared/holo-qr-encode.mjs, self-contained ISO QR — no library, no network) as rounded-module SVG on a
+// white card, Claude-desk framing (#1f1f1e, 11% hairlines). Fail-soft: no encoder → no sheet, link still flows.
+async function _inviteQRSheet(link, roomName) {
+  let enc; try { enc = await import(new URL("../../_shared/holo-qr-encode.mjs", import.meta.url).href); } catch { return; }
+  let q; try { q = enc.encode(String(link), { ecc: "M" }); } catch { return; }
+  const m = 3, dim = q.size + m * 2, r = 0.32;   // quiet zone 3 modules; corner radius as a fraction of a module
+  let d = "";
+  for (let y = 0; y < q.size; y++) for (let x = 0; x < q.size; x++) if (q.modules[y][x]) {
+    const px = x + m, py = y + m;
+    d += `M${px + r},${py} h${1 - 2 * r} a${r},${r} 0 0 1 ${r},${r} v${1 - 2 * r} a${r},${r} 0 0 1 -${r},${r} h-${1 - 2 * r} a${r},${r} 0 0 1 -${r},-${r} v-${1 - 2 * r} a${r},${r} 0 0 1 ${r},-${r} z`;
+  }
+  const svg = `<svg viewBox="0 0 ${dim} ${dim}" xmlns="http://www.w3.org/2000/svg" shape-rendering="geometricPrecision"><rect width="${dim}" height="${dim}" fill="#fff" rx="${m}"/><path d="${d}" fill="#141413"/></svg>`;
+  const old = DOC.querySelector(".holo-invite-qr-sheet"); if (old) old.remove();
+  const ov = el("div", "position:fixed;inset:0;z-index:2147483000;display:grid;place-items:center;background:rgba(10,10,10,.55);backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px)");
+  ov.className = "holo-invite-qr-sheet";
+  const card = el("div", "background:#1f1f1e;border:1px solid rgba(255,255,255,.11);border-radius:14px;padding:24px 22px 18px;width:min(340px,92vw);display:flex;flex-direction:column;align-items:center;gap:12px;box-shadow:0 24px 80px rgba(0,0,0,.5);font-family:inherit");
+  card.append(el("div", "font-weight:600;font-size:16px;color:#ececea;letter-spacing:-.1px", roomName ? "Invite to " + roomName : "Invite link"));
+  card.append(el("div", "font-size:12.5px;color:#9c9a94;margin-top:-6px", "Scan to join · end-to-end encrypted"));
+  const qr = el("div", "width:216px;height:216px;border-radius:12px;overflow:hidden;box-shadow:0 1px 0 rgba(255,255,255,.06)"); qr.innerHTML = svg; card.append(qr);
+  const chip = el("div", "font-size:12px;color:#c4b5fd;background:rgba(124,58,237,.14);border:1px solid rgba(124,58,237,.35);border-radius:999px;padding:4px 12px", "✓ Link copied");
+  card.append(chip);
+  const lk = el("div", "max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font:11px ui-monospace,monospace;color:#8a8880", String(link)); card.append(lk);
+  const close = el("button", "margin-top:2px;background:transparent;border:0;color:#9c9a94;font-size:13px;cursor:pointer;padding:6px 10px", "Close");
+  close.onclick = () => ov.remove(); card.append(close);
+  ov.addEventListener("click", (e) => { if (e.target === ov) ov.remove(); });
+  DOC.addEventListener("keydown", function esc(e) { if (e.key === "Escape") { ov.remove(); DOC.removeEventListener("keydown", esc); } });
+  card.addEventListener("click", (e) => e.stopPropagation());
+  ov.append(card); DOC.body.append(ov);
+}
 function _attach() {
   // Holo Direct rail icon removed by request. The 🔐 left-rail button is no longer mounted;
   // Direct stays fully reachable via the main-list "Holo Direct · sealed" section and the
@@ -335,7 +376,7 @@ function start() {
     //   fresh page can create/join without a manual boot() first.
     createRoom: async (name) => { await _boot(); return direct.createRoom(name); },
     joinRoom: async (payload) => { await _boot(); return direct.joinRoom(payload); },
-    roomLink: async (id) => { await _boot(); return direct.roomLink(id); },
+    roomLink: async (id) => { await _boot(); const l = direct.roomLink(id); try { if (l) _inviteQRSheet(l, ((direct.roomView && direct.roomView(id)) || {}).name); } catch {} return l; },
     roomSend: async (id, text) => { await _boot(); return direct.roomSend(id, text); },
     roomKick: async (id, memberSign) => { await _boot(); return direct.roomKick(id, memberSign); },
     rooms: async () => { await _boot(); return direct.rooms(); },
@@ -365,11 +406,11 @@ function start() {
     getMeta: async (k) => { await _boot(); return direct.getMeta(k); },
     setMeta: async (k, v) => { await _boot(); return direct.setMeta(k, v); },
     // if opened from a #room invite, auto-join once booted (fail-soft). Returns the parsed room or null.
-    joinFromFragment: async () => { await _boot(); const m = /[#&]room=v1\.([A-Za-z0-9_-]+)/.exec(location.hash || ""); if (!m) return null;
-      try { const p = JSON.parse(decodeURIComponent(escape(atob(m[1].replace(/-/g, "+").replace(/_/g, "/"))))); const r = await direct.joinRoom(p); return { ...r, invite: p }; } catch { return null; } } };
+    joinFromFragment: async () => { await _boot(); const m = /[#&]room=v([12])\.([A-Za-z0-9_-]+)/.exec(location.hash || ""); if (!m) return null;
+      try { const p = m[1] === "2" ? _roomV2(m[2]) : JSON.parse(decodeURIComponent(escape(atob(m[2].replace(/-/g, "+").replace(/_/g, "/"))))); const r = await direct.joinRoom(p); return { ...r, invite: p }; } catch { return null; } } };
   // auto-join a room invite the moment Direct is up (mirrors the #direct auto-open). Gated so it never fires
   // on a normal boot; the fragment is scrubbed by the room parse path the same way #direct is.
-  try { if (/[#&]room=v1\./.test(location.hash || "")) { window.HoloDirect.joinFromFragment().catch(() => {}); } } catch {}
+  try { if (/[#&]room=v[12]\./.test(location.hash || "")) { window.HoloDirect.joinFromFragment().catch(() => {}); } } catch {}
   setInterval(() => { _attach(); _renderSection(); }, 2000); _attach();
   // returning operator: if the sealed store already exists, boot in the background so the Direct threads
   // are VISIBLE in the main list without any click (the 3 MB spine cost is deferred past first paint;

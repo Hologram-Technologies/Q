@@ -9,7 +9,7 @@
  "tiers": {
   "core": {
    "files": 597,
-   "bytes": 11325989,
+   "bytes": 11331851,
    "hf": 0
   },
   "apps": {
@@ -3261,8 +3261,8 @@
    "source": "hf"
   },
   "apps/holo-messenger/app.html": {
-   "sha256": "f034d54f5428c81f65d97845625509cec96e155920e3a284f27be8d4e103b646",
-   "blake3": "61b0a0e57551d0683d692dda6df220bd5b2b3a81d6fece43f7da515fadd920d8",
+   "sha256": "4cb496dc7c079319c7d3e5df16e606655148309aa6bbaadf1d93076ab1045070",
+   "blake3": "ea40229b73a259372471f4a76942ace0717ae8e754fa1e1439adf32ba52da686",
    "bytes": 71122,
    "tier": "core",
    "source": "origin"
@@ -3275,9 +3275,9 @@
    "source": "origin"
   },
   "apps/holo-messenger/chat-view.html": {
-   "sha256": "fb28ea5f9587d3bd26d0a01c6ee494ffe9f03ff4a2abca8c0b30ec9bbfe32f77",
-   "blake3": "c5e984c02f859fce72fd88ed6fd852b9f01278d8c245967a36595ec0b53dba89",
-   "bytes": 5419,
+   "sha256": "f80a9bd0606ea5f23e2290a439f259d3f3fb4b8e67dfb754c65ba854a92c133e",
+   "blake3": "898d73f2a047ca0114521b3ef46665d4c75a5f21a1e2bad274deee497abd4f07",
+   "bytes": 6526,
    "tier": "core",
    "source": "origin"
   },
@@ -3385,9 +3385,9 @@
    "source": "hf"
   },
   "apps/holo-messenger/holo-direct-mount.mjs": {
-   "sha256": "b69460736681f54fbec0d22975dc9243e8f8d5032e89423fee18ba808e041e30",
-   "blake3": "27b78d2eefa93b275cbebcaf10c9a92c715f5fabcd9e7cd7274227d1c9798f85",
-   "bytes": 30885,
+   "sha256": "09c840c6c2a6f6fa0fc660d05721a8488abe4756aa77741639bba2b382c1e74d",
+   "blake3": "0ea4454a098ac65d32262520a48e0a6ca602a242e18d15b40d3cda61e97c567a",
+   "bytes": 35180,
    "tier": "core",
    "source": "origin"
   },
@@ -3402,7 +3402,7 @@
    "source": "hf"
   },
   "apps/holo-messenger/holo-direct.mjs": {
-   "blake3": "13fa1822c622e0015282da25a0705bcd043324dac425162a3d7320ccf0f6cbae",
+   "blake3": "bafaeff8a7ce9b81d1ebbfbfee54c79968d23ceda35fa734e0ca6529525da76d",
    "tier": "apps",
    "source": "hf"
   },
@@ -3436,9 +3436,9 @@
    "source": "origin"
   },
   "apps/holo-messenger/holo-evicted.json": {
-   "sha256": "ebd8adaf4f3de237e0403e2afee8eef8b1e8392e538e5a9b19c4820a16b68203",
-   "blake3": "2a54be0c711671fb8c96b61147d567e66bc4f44af2c2676e80c3f31d20aa36fb",
-   "bytes": 8791,
+   "sha256": "dbad9444f4d8a7c507ed7e2880620199d9a219145800ef12f8385e175bbef096",
+   "blake3": "5cef6626b183ed3496d4b4c5efb896cb31b2a1e8c365d5f8c54c337b6a70c6d9",
+   "bytes": 8426,
    "tier": "core",
    "source": "origin"
   },
@@ -3495,9 +3495,9 @@
    "source": "origin"
   },
   "apps/holo-messenger/holo-messenger-app.mjs": {
-   "sha256": "72c9b3a0292ec44a99e3a1f2b6ec8467f639c61e473557a0f50d09acc1e145a6",
-   "blake3": "9858449e786cbae23d31dd13017daf8ac546c94069259733631a70567a1312da",
-   "bytes": 354494,
+   "sha256": "1a25fd1826968339089f25813df3c9e5fd61aad6e365a7db9d2f58578ff7abc3",
+   "blake3": "0b18937e2af23ff65b3218cf9fe926d571eecbed95eae10609ae85344791d78a",
+   "bytes": 354727,
    "tier": "core",
    "source": "origin"
   },
@@ -3685,8 +3685,8 @@
    "source": "origin"
   },
   "apps/holo-messenger/holo-sw.js": {
-   "sha256": "faeffbe9873300204ed2acbfa4f601e9bc8cd5cd08a5a90f8ebee383fbd36cb9",
-   "blake3": "f7f03694bd9ff61c21d5c76b3e9f32212762ccfdbc557ef53765e2610f928ad6",
+   "sha256": "5a4191d9255382adc2803d4d5c27b776dfdc568039db60ce22ff2aff2b4fd5b4",
+   "blake3": "b992024ee0c6a439116fa753dae72028a7201db9e47f2e3435935cabcb36dcbd",
    "bytes": 26338,
    "tier": "core",
    "source": "origin"
@@ -3828,9 +3828,9 @@
    "source": "origin"
   },
   "apps/holo-messenger/join/index.html": {
-   "sha256": "9c163a648bb7c8f95d47899e11c3c4308b220a0419a922aee47cfd4fda7a139a",
-   "blake3": "e3ba1db6e5f4ea6cfba5ee9f6cfcb079eaf5129701a8765027a52e042a31c471",
-   "bytes": 5874,
+   "sha256": "56aa9f021a79dc172e2100ff9940af46775c2f313f0c0e7fd9dfd384af0e6a66",
+   "blake3": "2d962793823c5b09ecd3d4f6c2f4b338a5706ce427815b01639367c670afd9be",
+   "bytes": 6466,
    "tier": "core",
    "source": "origin"
   },
@@ -4084,8 +4084,8 @@
    "source": "origin"
   },
   "apps/holo-messenger/shell-manifest.json": {
-   "sha256": "a10f3043b062564abee863670fe752f30a1203f40331541039790463e1a90b9f",
-   "blake3": "d664516cbdf89d8d1a3e596adde01680e31d1a796d07cfb78d6df1365563b19d",
+   "sha256": "483a04f41e64ffe147ccdef854e367288e4e367b523c11b3c6e0d4ec072406df",
+   "blake3": "740027357052ba131f9d2ca2da8bebb448cb97675f9606ad7d582f40d4c221e2",
    "bytes": 6812,
    "tier": "core",
    "source": "origin"
