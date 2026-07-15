@@ -1,3 +1,4 @@
+// Z2a: world sharded live (root ~17.7KB; heavy facets are κ-shards on the mirror)
 // holo-world.mjs — THE ONE resolver over THE WORLD (HOLO-ONE-OBJECT W1b/W2).
 //
 // The OS's whole object graph is one signed κ-object (payload.world in the release pointer). This
