@@ -9,13 +9,13 @@
  "tiers": {
   "core": {
    "files": 529,
-   "bytes": 10415492,
+   "bytes": 10415470,
    "hf": 0
   },
   "apps": {
-   "files": 5433,
-   "bytes": 1734253,
-   "hf": 5374
+   "files": 5434,
+   "bytes": 1734338,
+   "hf": 5375
   },
   "heavy": {
    "files": 20,
@@ -16111,9 +16111,9 @@
    "source": "hf"
   },
   "apps/player/holo-evicted.json": {
-   "sha256": "45fe6cae4a3d8c1666b755917ea324d5815a136e9cc1987c325303842e81dbbc",
-   "blake3": "35b1fb8516727b2bfe86043e7939bf98a070dbfad0109bba420232607d00d6d7",
-   "bytes": 11559,
+   "sha256": "134c9876f1d43e9c7118786d201f05ea6a7c6783e414b6c844fb925513d6d639",
+   "blake3": "a37129b8f2a04e1591303181631905ba863aa3e96e0ca7e7a93701654d3ab50b",
+   "bytes": 11644,
    "tier": "apps",
    "source": "origin"
   },
@@ -16304,6 +16304,11 @@
   },
   "apps/player/holo-resolvers.mjs": {
    "blake3": "c61e2bb5c6182892da07e472fcc7691af8cb9327497d3f99fbf0399e586e7b27",
+   "tier": "apps",
+   "source": "hf"
+  },
+  "apps/player/holo-rt.mjs": {
+   "blake3": "47d5eaad1940aeefdead5c1a21068941688e6925f4df0c6c2b5f498b903662fc",
    "tier": "apps",
    "source": "hf"
   },
@@ -16533,7 +16538,7 @@
    "source": "hf"
   },
   "apps/player/index.html": {
-   "blake3": "670b5047eedfd443e557e0beba6989a7cf2dd81cae7f5319c6b73af5f1c5d1b3",
+   "blake3": "9be7a01a6312503c46cfc9103311d681840e45ee07c097f21cf13db2d25ac00c",
    "tier": "apps",
    "source": "hf"
   },
@@ -30989,9 +30994,9 @@
    "source": "origin"
   },
   "usr/share/frame/wallet.html": {
-   "sha256": "7b1bc1cc01caa4525f32d32a1022e59b0f8dd4bc3d79b992ddcce39b808e1979",
-   "blake3": "4bd99e461a63afeb2b27616ac4159d2fb8f5549f5b7a5218ad975f6f899d0eb5",
-   "bytes": 122642,
+   "sha256": "d284cf8b581c3c9430a0f15ef924beb71a9f296ce04bf42d7af9d2ad0568a7b6",
+   "blake3": "1c60eef2a75d2fc234a8c6b47edcd9b79602d2542abb9bdb269957a6904c8b67",
+   "bytes": 122620,
    "tier": "core",
    "source": "origin"
   },
