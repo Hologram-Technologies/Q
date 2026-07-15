@@ -112,6 +112,12 @@
     -webkit-backdrop-filter: grayscale(1) contrast(1.015); backdrop-filter: grayscale(1) contrast(1.015); }
   :root[data-holo-calm="on"] .holo-calm-veil { display: block; }
 
+  /* BOOT GATE — an opaque cover shown from the first paint so the calm home never flashes before the boot
+     ceremony + sign-in (signIn's own overlay takes over, then defogs onto the home). Removed instantly when a
+     session already exists (returning visitor → straight to the calm home). */
+  #boot-cover { position: fixed; inset: 0; z-index: 2147483644; background: var(--bg, #09090b); display: none; }
+  :root[data-boot-gate="on"] #boot-cover { display: block; }   /* shown only while the boot ceremony/login gates */
+
   /* ── Favourites — the minimalist-phone calm list, under the greeting: plain text names, no icons, thumb
      targets, tap to open (the session-timer friction is honoured via promptOpen). Your most-used apps by
      default; edit persists in holo.favs.v1. ── */
@@ -765,6 +771,30 @@
   })();
   // one small handle the phone (and Q) drive: window.HoloCalm.toggle() / .set(bool) / .get()
   window.HoloCalm = { get: calmGet, set: calmSet, toggle: function () { return calmSet(!calmGet()); } };
+
+  // ── BOOT + SIGN-IN GATE — bring back the arrival ceremony + login before the calm home. The sovereign
+  //    signIn() renders the plymouth BOOT SPLASH + the "Sign in / Continue as guest" door and resolves once the
+  //    operator enters; then it defogs onto the calm home (already painted behind the glass). SKIPPED when a
+  //    session already exists → the returning visitor lands on the calm home instantly (lean). Fail-open: any
+  //    trouble loading the sign-in module just reveals the calm home. ?nogate / ?desktop opts out. ──────────────
+  (function bootGate() {
+    // Drive the cover via a SYNCHRONOUS <html> attribute — set before #boot-cover (end of <body>) is even parsed,
+    // so a returning visitor NEVER flashes the cover, and a first visitor is covered from the very first paint.
+    var off = function () { try { root.setAttribute("data-boot-gate", "off"); } catch (e) {} };
+    var params, inSession = false;
+    try { params = new URLSearchParams(location.search); } catch (e) { params = { has: function () { return false; } }; }
+    try { inSession = !!sessionStorage.getItem("holo.identity"); } catch (e) {}
+    if (inSession || params.has("nogate") || params.has("desktop")) { off(); return; }   // already in → calm home now
+    try { root.setAttribute("data-boot-gate", "on"); } catch (e) {}   // cover the calm home until the ceremony/login takes over
+    try {
+      import("../../../usr/lib/holo/holo-signin.mjs").then(function (m) {
+        if (!m || !m.signIn) { off(); return; }
+        var p; try { p = m.signIn({ app: "home", appName: "Hologram", nextPath: location.pathname }); } catch (e) { off(); return; }
+        off();   // signIn mounts its own overlay synchronously — its glass now covers, drop ours
+        p.then(function () { try { var t = JSON.parse(sessionStorage.getItem("holo.identity") || "null"); if (t && t.label) { NAME = t.label; renderGreeting(); } } catch (e) {} }).catch(function () {});
+      }).catch(function () { off(); });   // no sign-in module → just show the calm home
+    } catch (e) { off(); }
+  })();
 
   // ── Appearance (Dark · Light · Immersive) ───────────────────────────────────────────────────
   // Mirrors login's standalone logic and the canonical holo.theme.v1 the boot bootstrap reads, so
@@ -1995,6 +2025,8 @@
   }
   window.HoloRender = { sealBlock: sealBlock, verifyBlock: verifyBlock, mountBlock: mountBlock, mountKappa: mountKappa, putBlock: putBlock, getBlock: getBlock, open: open, close: closeRender, LIBRARY: LIBRARY, libNames: libNames };
 </script>
+<!-- Boot gate: opaque cover shown until the boot ceremony + sign-in take over (or a session already exists) -->
+<div id="boot-cover" aria-hidden="true"></div>
 <!-- Calm mode: pointer-through backdrop veil that desaturates the whole phone (see .holo-calm-veil) -->
 <div class="holo-calm-veil" aria-hidden="true"></div>
 </body>

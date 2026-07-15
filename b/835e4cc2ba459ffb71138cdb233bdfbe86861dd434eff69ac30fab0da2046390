@@ -9,7 +9,7 @@
  "tiers": {
   "core": {
    "files": 531,
-   "bytes": 10077917,
+   "bytes": 10082003,
    "hf": 0
   },
   "apps": {
@@ -539,9 +539,9 @@
    "source": "origin"
   },
   "_shared/holo-mobile.css": {
-   "sha256": "b2bfa104b9ee8e3bb631dcd0ec0e6f7017b8898c4304666f5b3dfeeebc926eb9",
-   "blake3": "cbd96db3883014eb0d951b8ff2bf69796bf4027edb314fed868e3ae5f9e9ad3a",
-   "bytes": 8471,
+   "sha256": "2e771fcbcca3ba3c9ba594008ddcef854bddb6bf9f4f875a27e80c92d66b4834",
+   "blake3": "9732c360fbde0670af532bc9da805edd35f43ebd47af7633b2bb2d787cb252aa",
+   "bytes": 9105,
    "tier": "core",
    "source": "origin"
   },
@@ -888,9 +888,9 @@
    "source": "origin"
   },
   "_shared/holo-theme.css": {
-   "sha256": "c4414e9c61a6ae6b8c19145dddbbe24c68bea83784666434a94cf033b06cc483",
-   "blake3": "1f29a13bf488c4bef3ad0f8a9c1335f15c968afbdc277b9527b500b39dff0ce4",
-   "bytes": 17631,
+   "sha256": "92e2d08cf51f61c4b25818a716bc08c663b419eac5a30c68556d56e821e26209",
+   "blake3": "085dd5792caed917da206171d2808ee35b75db011081413de616c4e959fbbd72",
+   "bytes": 18267,
    "tier": "core",
    "source": "origin"
   },
@@ -31129,9 +31129,9 @@
    "source": "origin"
   },
   "usr/share/frame/home-screen.html": {
-   "sha256": "d06c6100159c638a5abb78440b96963af34f24eab0f06f33cab0fb832983dabc",
-   "blake3": "42c41294c1fec65c0db979afea088834b442647d7f0183a93e0e92458a9ee23f",
-   "bytes": 149320,
+   "sha256": "08f51caee6b02994f3135e21cd9edcd7f705ab55812f94f6b6ed63e6d97bcafa",
+   "blake3": "002a1e8e979dfa66e813dcc85de5c8ce38d38d7f032d6d8cea93d5a8d42688b4",
+   "bytes": 152136,
    "tier": "core",
    "source": "origin"
   },
