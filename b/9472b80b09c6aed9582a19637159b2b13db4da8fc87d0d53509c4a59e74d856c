@@ -71,12 +71,13 @@
   .acts button:hover { background:rgba(255,255,255,.06); color:var(--ink); }
   .acts button svg { width:16px; height:16px; stroke:currentColor; fill:none; stroke-width:1.7; }
   .acts .ok { color:var(--coral-hi); }
-  /* follow-up chips (locally suggested, never fabricated sources) */
-  #followups { display:flex; flex-wrap:wrap; gap:8px; padding:2px 0 14px; }
-  #followups button { background:none; border:1px solid var(--hair); border-radius:999px; color:var(--muted);
-                      font-size:15px; padding:8px 15px; cursor:pointer; transition:border-color .15s, color .15s; }
-  #followups button:hover { border-color:rgba(217,119,87,.5); color:var(--ink); }
-  #followups .arr { color:var(--faint); margin-right:7px; }
+  /* follow-up suggestions: Grok's placement — borderless rows stacked in the conversation flow */
+  .fu { display:flex; flex-direction:column; margin:14px 0 4px; }
+  .fu button { display:flex; align-items:center; gap:12px; background:none; border:none; border-top:1px solid transparent;
+               color:var(--muted); font-size:16px; text-align:left; padding:11px 6px; cursor:pointer;
+               border-radius:10px; transition:background .15s, color .15s; }
+  .fu button:hover { background:rgba(255,255,255,.045); color:var(--ink); }
+  .fu .arr { color:var(--faint); font-size:15px; flex:none; }
   .note { text-align:center; font-size:15px; color:var(--faint); margin:6px 0 12px; }
   #card { background:rgba(255,255,255,.03); border:1px solid var(--hair); border-radius:18px; padding:6px 8px 8px; }
   #card:focus-within { border-color:rgba(217,119,87,.5); }
@@ -139,7 +140,6 @@
         <button id="send" aria-label="Send">&uarr;</button>
       </div>
     </div>
-    <div id="followups"></div>
     <div id="metrics">on your device</div>
     <div id="err" hidden></div>
   </div>
@@ -253,7 +253,7 @@ const DEFAULT_27B = false;                                 // flips true the mom
 const M27 = QS.get("m") === "27b" || (DEFAULT_27B && QS.get("m") !== "8b");
 const BASE = SRC || (M27 ? "https://huggingface.co/HOLOGRAMTECH/q-bonsai-27b/resolve/main" : "https://huggingface.co/HOLOGRAMTECH/q-bonsai-8b/resolve/main");
 const PIN = M27 ? "did:holo:sha256:00beea03509a79f6567879f019c04bb15dda8721f6320f8295d9ea1dd9ba54af" : "did:holo:sha256:a0dc81f26ec5ce98b28ee9c1fab620e91c20720f777e1de6bc416317f54d27e2";
-const CTX = 640;
+const CTX = 2048;   // room for the reasoning trace + the answer on open-ended questions
 
 let engine = null, gpu = null, rootK = "", warm = false, mind = [], thinkOpen = -1, thinkClose = -1;
 let modelName = "Bonsai";                                  // set from the manifest once loaded
@@ -372,16 +372,34 @@ function fitActions(ui, text, regen) {
   if (regen) ui.acts.appendChild(iconBtn(ICON.regen, "Regenerate", regen));
   ui.acts.classList.add("shown");
 }
-// three follow-ups the model itself would suggest — asked locally, one cheap generation, no web/sources
-function offerFollowups(lastQ, lastA) {
-  const box = $("followups"); box.innerHTML = "";
-  const seeds = ["Go deeper on that", "Explain it simply", "Give me an example"];
-  for (const label of seeds) {
-    const b = document.createElement("button"); b.type = "button";
-    b.innerHTML = `<span class="arr">↳</span>${label}`;
-    b.onclick = () => { box.innerHTML = ""; $("inp").value = label + " — about your last answer"; send(); };
-    box.appendChild(b);
-  }
+// follow-ups AUTHORED BY THE MODEL about the actual exchange (Grok's behavior, done locally):
+// one bounded extra generation right after the answer; killed instantly if the user starts typing.
+let sugCtl = null;
+async function offerFollowups(lastQ, lastA, host) {
+  try { if (sugCtl) sugCtl.abort(); } catch {}
+  sugCtl = new AbortController();
+  const ask = `Here is a conversation:
+Question: ${lastQ}
+Answer: ${lastA.slice(0, 600)}
+
+Write exactly two short, sharp follow-up questions a curious person would ask next. One per line. No numbering, no preamble.`;
+  try {
+    const ids = engine.tokenize(engine.frameTurn(ask, false));
+    const res = await engine.generate(ids, { maxNew: 180, signal: sugCtl.signal });
+    const seg = splitThink(res.outIds || []);
+    const text = seg.ans.length ? engine.detokenize(seg.ans) : (res.text || "");
+    const qs = text.split(/\n+/).map((l) => l.replace(/^[-*\d.\s]+/, "").trim()).filter((l) => l.length > 8 && l.length < 140).slice(0, 2);
+    if (!qs.length || busy) return;
+    const box = document.createElement("div"); box.className = "fu";
+    for (const label of qs) {
+      const b = document.createElement("button"); b.type = "button";
+      b.innerHTML = `<span class="arr">↳</span>${label.replace(/[<>&]/g, "")}`;
+      b.onclick = () => { box.remove(); $("inp").value = label; send(); };
+      box.appendChild(b);
+    }
+    host.appendChild(box);
+    log.scrollTop = log.scrollHeight;
+  } catch {}                                              // aborted / out of room → no suggestions, no noise
 }
 function note(s) { const d = document.createElement("div"); d.className = "note"; d.textContent = s; log.appendChild(d); }
 
@@ -411,7 +429,8 @@ async function send() {
   const turn = engine.tokenize(engine.frameTurn(q, mind.length > 0));
   if (mind.length + turn.length + 256 > CTX) { mind = []; note("fresh context"); }   // keep ≥256 tokens of room (thinking model)
   const ids = mind.concat(mind.length ? turn : engine.tokenize(engine.frameTurn(q, false)));
-  $("followups").innerHTML = "";
+  try { if (sugCtl) sugCtl.abort(); } catch {}
+  document.querySelectorAll(".fu").forEach((n) => n.remove());
   const mindBefore = mind.slice();
   const ui = msg(modelName, "bot"); ui.body.innerHTML = spn();
   ui.think.querySelector("summary").innerHTML = spn() + `<span class="sum">thinking</span>`;
@@ -443,7 +462,7 @@ async function send() {
       ui.body.textContent = answer;
       mind = ids.concat(s.ans);                            // history carries the ANSWER only (Qwen3 convention: prior-turn thinking dropped)
       fitActions(ui, answer, () => { if (!busy) { mind = mindBefore; $("inp").value = q; send(); } });   // regenerate: rewind history, re-ask
-      offerFollowups(q, answer);
+      offerFollowups(q, answer, ui.d);                     // the model writes its own follow-ups, in place
     } else if (s.think.length) {
       ui.body.textContent = "I ran out of room while thinking. Ask again, a bit shorter.";   // unclosed <think> at the window edge; turn not kept
     } else {
