@@ -73,8 +73,13 @@
   @keyframes rise { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: none; } }
   @keyframes fade { from { opacity: 0; } to { opacity: 1; } }
   .clock { animation: rise .7s var(--ease) .05s both; }
+  /* M0 premium entrance — a calm cascade: clock → greeting → favourites settle one after another (each ≤300ms
+     of its own; the whole surface arrives in well under a second), reduce-motion turns it all off. */
+  .greeting { animation: rise .6s var(--ease) .16s both; }
+  .favs { animation: fade .5s var(--ease) .3s both; }
+  .fav-row { animation: rise .42s var(--ease) both; animation-delay: calc(.34s + var(--i, 0) * .05s); }
   .corner { animation: fade .8s var(--ease) .28s both; }
-  @media (prefers-reduced-motion: reduce) { .clock, .corner { animation: none; } }
+  @media (prefers-reduced-motion: reduce) { .clock, .greeting, .favs, .fav-row, .corner { animation: none !important; } }
 
   /* ── CLOCK — sits high on the surface; the only adornment is a thin arc = the share of today elapsed.
      Nothing else competes: time, then a short date. Crisp white on black (the reference). ─────────── */
@@ -1553,10 +1558,14 @@
     try {
       var host = $("favs"); if (!host) return;
       host.innerHTML = "";
-      favApps().forEach(function (a) {
+      favApps().forEach(function (a, i) {
         var b = document.createElement("button"); b.type = "button"; b.className = "fav-row";
+        b.style.setProperty("--i", i);   // M0: drives the calm entrance stagger
         b.textContent = a.name || a.id;
-        b.addEventListener("click", function () { try { promptOpen(a); } catch (e) {} });
+        b.addEventListener("click", function () {
+          try { if (navigator.vibrate) navigator.vibrate(8); } catch (e) {}   // L-HAPTIC: one soft tick on a launch (a meaningful action, not every tap)
+          try { promptOpen(a); } catch (e) {}
+        });
         host.appendChild(b);
       });
       host.hidden = !host.children.length;
