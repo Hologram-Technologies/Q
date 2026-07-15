@@ -166,15 +166,27 @@ try {
   renderer.setPixelRatio(Math.min(devicePixelRatio || 1, 2));
   const scene = new THREE.Scene();
   const cam = new THREE.PerspectiveCamera(45, 1, 0.1, 30); cam.position.z = 5;
-  // stock-primitive hologram: a fine wireframe torus (lavender grid) over a faint coral shell —
-  // the gethologram.ai form, recolored to the Claude palette. Zero custom GLSL.
-  const wire = new THREE.MeshBasicMaterial({ color: new THREE.Color("#c4b5fd"), wireframe: true, transparent: true, opacity: 0.5, blending: THREE.AdditiveBlending, depthWrite: false });
-  const wire2 = new THREE.MeshBasicMaterial({ color: new THREE.Color("#d97757"), wireframe: true, transparent: true, opacity: 0.16, blending: THREE.AdditiveBlending, depthWrite: false });
-  const mat = wire;                                                            // dispose handle below
-  const mesh = new THREE.Mesh(new THREE.TorusGeometry(1.28, 0.62, 28, 44), wire);      // the grid torus
-  const core = new THREE.Mesh(new THREE.TorusGeometry(1.28, 0.56, 18, 30), wire2);      // faint coral shell inside
-  mesh.add(core);
-  mesh.rotation.x = 1.05;                                                                // the gethologram tilt
+  // the OS site's sphere-torus, rebuilt from stock primitives: ~700 instanced spheres laid on a
+  // torus lattice, lit by two lights — glossy beads, ONE draw call (fast on any phone). Claude tint.
+  const wire = new THREE.MeshStandardMaterial({ color: new THREE.Color("#3a3330"), roughness: 0.25, metalness: 0.55,
+    emissive: new THREE.Color("#d97757"), emissiveIntensity: 0.06 });
+  const wire2 = wire;                                                          // dispose handle below
+  const mat = wire;
+  scene.add(new THREE.AmbientLight(0xffffff, 0.35));
+  const key = new THREE.DirectionalLight(0xffd9c4, 1.5); key.position.set(2.5, 3, 4); scene.add(key);
+  const rim = new THREE.DirectionalLight(0xc4b5fd, 0.9); rim.position.set(-3, -1.5, -2); scene.add(rim);
+  const SEG_U = 36, SEG_V = 19, R = 1.22, r = 0.56, BEAD = 0.088;                        // the bead lattice
+  const geo = new THREE.SphereGeometry(BEAD, 12, 10);
+  const mesh = new THREE.InstancedMesh(geo, wire, SEG_U * SEG_V);
+  const m4 = new THREE.Matrix4();
+  let bi = 0;
+  for (let iu = 0; iu < SEG_U; iu++) for (let iv = 0; iv < SEG_V; iv++) {
+    const u = iu / SEG_U * Math.PI * 2, v = (iv / SEG_V + (iu % 2) * 0.5 / SEG_V) * Math.PI * 2;   // staggered rows: the woven look
+    m4.setPosition((R + r * Math.cos(v)) * Math.cos(u), (R + r * Math.cos(v)) * Math.sin(u), r * Math.sin(v));
+    mesh.setMatrixAt(bi++, m4);
+  }
+  const core = mesh;                                                                     // dispose handle
+  mesh.rotation.x = 0.9;                                                                 // the OS-site tilt
   scene.add(mesh);
   addEventListener("pointerdown", () => { tPulse = performance.now(); }, { passive: true });   // click: the hologram answers back
   // pointer parallax: mesh tilts toward the cursor (eased); stripes speed up when the cursor is near.
@@ -198,10 +210,9 @@ try {
     const t = performance.now() / 1000;
     boost += (tBoost - boost) * 0.06;
     const pulse = Math.max(0, 1 - (performance.now() - tPulse) / 700);        // click pulse decays over 0.7s
-    wire.opacity = 0.42 + Math.sin(t * 1.4) * 0.06 + boost * 0.22 + pulse * 0.35;   // the grid breathes; hover/click brighten
-    wire2.opacity = 0.13 + pulse * 0.2;
+    wire.emissiveIntensity = 0.05 + Math.sin(t * 1.3) * 0.02 + boost * 0.12 + pulse * 0.35;   // the beads glow to attention
     rx += (ty - rx) * 0.05; ry += (tx - ry) * 0.05;                           // eased parallax
-    mesh.rotation.x = 1.05 + rx * 0.35; mesh.rotation.z = t * 0.1 + ry * 0.5; // slow ring spin + tilt toward the cursor
+    mesh.rotation.x = 0.9 + rx * 0.35; mesh.rotation.z = t * 0.09 + ry * 0.5; // slow ring spin + tilt toward the cursor
     renderer.render(scene, cam);
     raf = requestAnimationFrame(loop);
   };
@@ -210,12 +221,15 @@ try {
     if (document.hidden) cancelAnimationFrame(raf); else raf = requestAnimationFrame(loop);
   });
   loop();
+  setTimeout(() => {
+    try { if (!dead && cv.toDataURL("image/png").length < 4000) { window.__holoOff && window.__holoOff(); const fb = document.getElementById("holofb"); if (fb) fb.hidden = false; } } catch {}
+  }, 900);
   // verification hook: force one frame at time t and return it as a PNG (rAF is starved in
   // hidden/embedded panes — this is how an agent proves the hologram actually draws pixels).
   window.__holoFrame = (t) => { renderer.render(scene, cam); return cv.toDataURL("image/png"); };
   window.__holoOff = () => {                                                 // MANDATORY before the engine loads
     dead = true; cancelAnimationFrame(raf); window.__holoFrame = null;
-    mesh.geometry.dispose(); core.geometry.dispose(); wire.dispose(); wire2.dispose(); renderer.dispose();
+    mesh.geometry.dispose(); wire.dispose(); renderer.dispose();
     try { renderer.getContext().getExtension("WEBGL_lose_context").loseContext(); } catch {}
     cv.remove();
   };
@@ -257,6 +271,24 @@ const CTX = 2048;   // room for the reasoning trace + the answer on open-ended q
 
 let engine = null, gpu = null, rootK = "", warm = false, mind = [], thinkOpen = -1, thinkClose = -1;
 let modelName = "Bonsai";                                  // set from the manifest once loaded
+let story = [], memoryNote = "";                           // the WHOLE conversation + the folded memory of its older part
+const STORE = "bonsai.story.v1";
+function persistStory() {
+  try { localStorage.setItem(STORE, JSON.stringify({ story: story.slice(-200), memoryNote })); } catch {}
+}
+// fold everything so far into a compact memory the model writes for itself (bounded, abortable-free:
+// runs inside send() before the next turn, with the braille pulse narrating it)
+async function foldMemory() {
+  const recent = story.slice(-8).map((t) => `Q: ${t.q}
+A: ${t.a.slice(0, 300)}`).join("\n");
+  const prior = memoryNote ? "Earlier memory: " + memoryNote + "\n\n" : "";
+  const ask = prior + "Recent conversation:\n" + recent + "\n\nFold ALL of the above into one memory note under 130 words. Keep every name, number, decision and open question. Write only the note.";
+  const ids = engine.tokenize(engine.frameTurn(ask, false));
+  const res = await engine.generate(ids, { maxNew: 300 });
+  const seg = splitThink(res.outIds || []);
+  const text = (seg.ans.length ? engine.detokenize(seg.ans) : res.text || "").trim();
+  return text.slice(0, 1200);
+}
 
 let entered = false, streamStarted = false;
 async function stream() {
@@ -334,9 +366,25 @@ function metrics(state) {
   if (!lastTTFT && !lastTokps) bits.push(state || (warm ? "from your disk · works offline" : "on your device"));
   $("metrics").innerHTML = bits.join(" &nbsp;&middot;&nbsp; ");
 }
-let pendingQ = null;
+let pendingQ = null, restored = false;
+function restoreStory() {
+  if (restored) return; restored = true;
+  try {
+    const saved = JSON.parse(localStorage.getItem(STORE) || "null");
+    if (!saved || !saved.story || !saved.story.length) return;
+    story = saved.story; memoryNote = saved.memoryNote || "";
+    $("col").classList.add("started");
+    for (const t of story.slice(-12)) {                    // the room re-fills; the model remembers ALL of it via the fold
+      msg("You", "user").body.textContent = t.q;
+      msg(modelName, "bot").body.textContent = t.a;
+    }
+    if (!memoryNote && story.length) memoryNote = story.slice(-6).map((t) => `${t.q} → ${t.a.slice(0, 120)}`).join("; ").slice(0, 1200);
+    note("picked up where you left off");
+    log.scrollTop = log.scrollHeight;
+  } catch {}
+}
 function enterChat() {
-  ready = true; $("send").disabled = false; metrics();
+  ready = true; $("send").disabled = false; restoreStory(); metrics();
   if (pendingQ) { $("inp").value = pendingQ; pendingQ = null; send(); }
   else if (entered) $("inp").focus();
 }
@@ -426,9 +474,18 @@ async function send() {
   busy = true; $("inp").value = ""; $("send").disabled = true;
   $("col").classList.add("started");                       // the greeting yields to the conversation (Claude-room transition)
   msg("You", "user").body.textContent = q;
-  const turn = engine.tokenize(engine.frameTurn(q, mind.length > 0));
-  if (mind.length + turn.length + 256 > CTX) { mind = []; note("fresh context"); }   // keep ≥256 tokens of room (thinking model)
-  const ids = mind.concat(mind.length ? turn : engine.tokenize(engine.frameTurn(q, false)));
+  let turn = engine.tokenize(engine.frameTurn(q, mind.length > 0));
+  if (mind.length + turn.length + 384 > CTX) {                                 // the window fills: the mind FOLDS its history, never drops it
+    $("metrics").innerHTML = spn() + "folding memory · nothing is forgotten";
+    try { memoryNote = await foldMemory(); persistStory(); } catch {}
+    mind = [];
+  }
+  let qEff = q;
+  if (!mind.length && memoryNote) qEff = `(What you remember of our conversation so far: ${memoryNote})
+
+${q}`;
+  if (!mind.length) turn = engine.tokenize(engine.frameTurn(qEff, false));
+  const ids = mind.concat(turn);
   try { if (sugCtl) sugCtl.abort(); } catch {}
   document.querySelectorAll(".fu").forEach((n) => n.remove());
   const mindBefore = mind.slice();
@@ -461,6 +518,7 @@ async function send() {
       const answer = engine.detokenize(s.ans);
       ui.body.textContent = answer;
       mind = ids.concat(s.ans);                            // history carries the ANSWER only (Qwen3 convention: prior-turn thinking dropped)
+      story.push({ q, a: answer }); persistStory();
       fitActions(ui, answer, () => { if (!busy) { mind = mindBefore; $("inp").value = q; send(); } });   // regenerate: rewind history, re-ask
       offerFollowups(q, answer, ui.d);                     // the model writes its own follow-ups, in place
     } else if (s.think.length) {
