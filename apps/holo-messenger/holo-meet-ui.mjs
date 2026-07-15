@@ -19,13 +19,14 @@ const IC = {
   camOff: '<path d="M16 16v1a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V7a2 2 0 0 1 2-2h2m5.7 0H14a2 2 0 0 1 2 2v3.3l1 1L23 7v10"/><line x1="3" y1="3" x2="21" y2="21"/>',
   flip: '<polyline points="22 5 22 10 17 10"/><polyline points="2 19 2 14 7 14"/><path d="M4 9a8 8 0 0 1 13.3-3L22 10M2 14l4.7 4A8 8 0 0 0 20 15"/>',
   link: '<path d="M10 13a5 5 0 0 0 7.5.5l3-3a5 5 0 0 0-7-7l-1.7 1.7"/><path d="M14 11a5 5 0 0 0-7.5-.5l-3 3a5 5 0 0 0 7 7l1.7-1.7"/>',
+  present: '<rect x="2" y="3" width="20" height="14" rx="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/>',
   end: '<path d="M22 16.9v3a2 2 0 0 1-2.2 2 19.8 19.8 0 0 1-8.6-3.1 19.5 19.5 0 0 1-6-6A19.8 19.8 0 0 1 2.1 4.2 2 2 0 0 1 4.1 2h3a2 2 0 0 1 2 1.7c.1 1 .4 1.9.7 2.8a2 2 0 0 1-.5 2.1L8.1 9.9a16 16 0 0 0 6 6l1.3-1.3a2 2 0 0 1 2.1-.4c.9.3 1.8.6 2.8.7a2 2 0 0 1 1.7 2z"/>',
   check: '<polyline points="20 6 9 17 4 12"/>',
 };
 const svg = (name, sz = 21) => `<svg viewBox="0 0 24 24" width="${sz}" height="${sz}" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">${IC[name]}</svg>`;
 
-export function openMeetUI({ name = "Call", video = true, inviteLink = "", onLeave = () => {}, onToggleMute = () => {}, onToggleCamera = () => {}, onFlipCamera = null } = {}) {
-  if (typeof document === "undefined") return { addParticipant() {}, removeParticipant() {}, setActiveSpeaker() {}, setLabel() {}, attachLocal() {}, setSelfMirror() {}, setPhase() {}, close() {}, tileCount: () => 0 };
+export function openMeetUI({ name = "Call", video = true, inviteLink = "", onLeave = () => {}, onToggleMute = () => {}, onToggleCamera = () => {}, onFlipCamera = null, onShareScreen = null } = {}) {
+  if (typeof document === "undefined") return { addParticipant() {}, removeParticipant() {}, setActiveSpeaker() {}, setLabel() {}, attachLocal() {}, setSelfMirror() {}, setSharing() {}, setPeerState() {}, setPhase() {}, close() {}, tileCount: () => 0 };
   const el = (t, css, html) => { const n = document.createElement(t); if (css) n.style.cssText = css; if (html != null) n.innerHTML = html; return n; };
   const coarse = (typeof matchMedia !== "undefined" && matchMedia("(pointer:coarse)").matches) || (typeof window !== "undefined" && "ontouchstart" in window);
   const ini = (s) => (String(s || "").trim()[0] || "·").toUpperCase();
@@ -66,7 +67,7 @@ export function openMeetUI({ name = "Call", video = true, inviteLink = "", onLea
   controls.append(pill);
   const btn = (icon, title, danger) => { const b = el("button", `border:0;border-radius:50%;width:52px;height:52px;cursor:pointer;background:${danger ? DANGER : GLASS2};color:${danger ? "#fff" : INK};display:grid;place-items:center;transition:background .15s,transform .08s`, svg(icon)); b.title = title; b.onpointerdown = (e) => e.stopPropagation(); b.onmousedown = (e) => e.stopPropagation(); b.onmouseenter = () => { if (!danger) b.style.background = "rgba(255,255,255,.16)"; }; b.onmouseleave = () => { if (!danger) b.style.background = GLASS2; }; return b; };
 
-  let muted = false, camOff = false;
+  let muted = false, camOff = false, _bShare = null;
   const bMute = btn("mic", "Mute");
   bMute.onclick = () => { muted = !muted; onToggleMute(muted); bMute.innerHTML = svg(muted ? "micOff" : "mic"); bMute.style.background = muted ? DANGER : GLASS2; bMute.style.color = muted ? "#fff" : INK; };
   pill.append(bMute);
@@ -75,6 +76,7 @@ export function openMeetUI({ name = "Call", video = true, inviteLink = "", onLea
     bCam.onclick = () => { camOff = !camOff; onToggleCamera(camOff); bCam.innerHTML = svg(camOff ? "camOff" : "cam"); bCam.style.background = camOff ? DANGER : GLASS2; bCam.style.color = camOff ? "#fff" : INK; pip.style.opacity = camOff ? ".35" : "1"; };
     pill.append(bCam);
     if (onFlipCamera) { const bFlip = btn("flip", "Flip camera"); bFlip.onclick = () => { try { onFlipCamera(); } catch {} }; pill.append(bFlip); }
+    if (onShareScreen) { _bShare = btn("present", "Share screen"); _bShare.onclick = () => { try { onShareScreen(); } catch {} }; pill.append(_bShare); }
   }
   if (inviteLink) {
     const bInv = btn("link", "Invite");
@@ -154,6 +156,7 @@ export function openMeetUI({ name = "Call", video = true, inviteLink = "", onLea
       paintStage();
     },
     setSelfMirror(on) { pipVideo.style.transform = on ? "scaleX(-1)" : "none"; },
+    setSharing(on) { if (_bShare) { _bShare.style.background = on ? LIVE : GLASS2; _bShare.style.color = on ? "#0a0a0a" : INK; _bShare.title = on ? "Stop sharing" : "Share screen"; } titleEl.textContent = on ? "You're presenting" : name; },
     addParticipant(id, stream, label = "Guest") {
       const r = remotes.get(id) || {}; r.stream = stream; if (label) r.label = label; remotes.set(id, r);
       playAudio(id, stream);

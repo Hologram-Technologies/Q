@@ -60,7 +60,7 @@
   <script type="module">
     // ?v pins: this page is never SW-cached (new path), but these modules ARE cache-first — the pins force the
     // exact shipped bytes. Keep them in lockstep with app.html's pins (the pin step of every ship).
-    import { parseMeet } from "./holo-call-mesh.mjs?v=5cc68afe953e";
+    import { parseMeet } from "./holo-call-mesh.mjs?v=f66ee9f7ce0f";
     const $ = (id) => document.getElementById(id);
     const setStatus = (t, cls = "") => { const s = $("status"); s.textContent = t; s.className = "pill " + cls; };
     const show = (id, on = true) => $(id).classList.toggle("hide", !on);
@@ -106,11 +106,12 @@
     async function enter(it) {
       $("join").disabled = true;
       let facing = "user";   // front camera default; flip toggles to the back on mobile
+      let _share = null;   // screen share — created once the mesh joins
       const myName = ($("myName").value || "Guest").trim().slice(0, 40) || "Guest";
       try { localStorage.setItem("holo.call.name", myName); } catch {}
-      const [{ joinMesh }, { openMeetUI }] = await Promise.all([
-        import("./holo-call-mesh.mjs?v=5cc68afe953e"),
-        import("./holo-meet-ui.mjs?v=cfd22bc662a6"),
+      const [{ joinMesh, canShareScreen, makeScreenShare }, { openMeetUI }] = await Promise.all([
+        import("./holo-call-mesh.mjs?v=f66ee9f7ce0f"),
+        import("./holo-meet-ui.mjs?v=84c8749a9751"),
       ]);
       $("lobby").classList.add("hide");
       try { $("pv").srcObject = null; } catch {}   // release the lobby preview — the grid's self-tile is the ONE live view now
@@ -128,6 +129,7 @@
           if (mesh && mesh.replaceVideoTrack) { try { await mesh.replaceVideoTrack(track); } catch {} }
           ui.attachLocal(media, myName, facing === "user");
         } : null,
+        onShareScreen: (video && canShareScreen()) ? () => _share && _share.toggle() : null,
       });
       ui.attachLocal(media, myName);
       if (media) { media.getAudioTracks().forEach((t) => (t.enabled = micOn)); media.getVideoTracks().forEach((t) => (t.enabled = camOn)); }
@@ -141,6 +143,7 @@
         onActiveSpeaker: (id) => ui.setActiveSpeaker(id),
         onState: (st) => { if (st && st.phase) ui.setPhase(st.phase); else if (st && st.peer && st.state) ui.setPeerState(st.peer, st.state === "reconnecting" ? "reconnecting" : "connected"); },
       });
+      if (video && canShareScreen()) _share = makeScreenShare(mesh, { media, ui, name: myName, facing: () => facing });
       window.__holoCallMesh = mesh;   // witness/debug handle
     }
 
