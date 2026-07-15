@@ -341,24 +341,27 @@ async function _inviteQRSheet(link, roomName) {
     d += `M${px + r},${py} h${1 - 2 * r} a${r},${r} 0 0 1 ${r},${r} v${1 - 2 * r} a${r},${r} 0 0 1 -${r},${r} h-${1 - 2 * r} a${r},${r} 0 0 1 -${r},-${r} v-${1 - 2 * r} a${r},${r} 0 0 1 ${r},-${r} z`;
   }
   const svg = `<svg viewBox="0 0 ${dim} ${dim}" xmlns="http://www.w3.org/2000/svg" shape-rendering="geometricPrecision"><rect width="${dim}" height="${dim}" fill="#fff" rx="${m}"/><path d="${d}" fill="#141413"/></svg>`;
+  // OWN safe maker — module scope has no `el` (the sheet helpers are function-scoped; an implicit dependency
+  // here died as a silent ReferenceError), and text lands via textContent: roomName is peer-controlled.
+  const mk = (tag, style, text) => { const n = DOC.createElement(tag); if (style) n.style.cssText = style; if (text != null) n.textContent = text; return n; };
   const old = DOC.querySelector(".holo-invite-qr-sheet"); if (old) old.remove();
-  const ov = el("div", "position:fixed;inset:0;z-index:2147483000;display:grid;place-items:center;background:rgba(10,10,10,.55);backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px)");
+  const ov = mk("div", "position:fixed;inset:0;z-index:2147483000;display:grid;place-items:center;background:rgba(10,10,10,.55);backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px)");
   ov.className = "holo-invite-qr-sheet";
-  const card = el("div", "background:#1f1f1e;border:1px solid rgba(255,255,255,.11);border-radius:14px;padding:24px 22px 18px;width:min(340px,92vw);display:flex;flex-direction:column;align-items:center;gap:12px;box-shadow:0 24px 80px rgba(0,0,0,.5);font-family:inherit");
-  card.append(el("div", "font-weight:600;font-size:16px;color:#ececea;letter-spacing:-.1px", roomName ? "Invite to " + roomName : "Invite link"));
-  card.append(el("div", "font-size:12.5px;color:#9c9a94;margin-top:-6px", "Scan to join · end-to-end encrypted"));
-  const qr = el("div", "width:216px;height:216px;border-radius:12px;overflow:hidden;box-shadow:0 1px 0 rgba(255,255,255,.06)"); qr.innerHTML = svg; card.append(qr);
-  const lk = el("div", "max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font:11px ui-monospace,monospace;color:#8a8880", String(link)); card.append(lk);
+  const card = mk("div", "background:#1f1f1e;border:1px solid rgba(255,255,255,.11);border-radius:14px;padding:24px 22px 18px;width:min(340px,92vw);display:flex;flex-direction:column;align-items:center;gap:12px;box-shadow:0 24px 80px rgba(0,0,0,.5);font-family:inherit");
+  card.append(mk("div", "font-weight:600;font-size:16px;color:#ececea;letter-spacing:-.1px", roomName ? "Invite to " + roomName : "Invite link"));
+  card.append(mk("div", "font-size:12.5px;color:#9c9a94;margin-top:-6px", "Scan to join · end-to-end encrypted"));
+  const qr = mk("div", "width:216px;height:216px;border-radius:12px;overflow:hidden;box-shadow:0 1px 0 rgba(255,255,255,.06)"); qr.innerHTML = svg; card.append(qr);   // svg = OUR bytes, never peer input
+  const lk = mk("div", "max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font:11px ui-monospace,monospace;color:#8a8880", String(link)); card.append(lk);
   // WhatsApp-clean: the sheet OWNS the share — QR to scan, Copy to paste anywhere, Share for the OS/social share
   // sheet. One surface, no pre-copy assumption, no separate step. (Replaces the old static "copied" chip.)
-  const row = el("div", "display:flex;gap:8px;width:100%;margin-top:4px");
-  const actBtn = (label, primary) => el("button", "flex:1;padding:10px 8px;border-radius:10px;border:1px solid rgba(255,255,255,.11);background:" + (primary ? "#7c3aed" : "rgba(255,255,255,.06)") + ";color:" + (primary ? "#fff" : "#ececea") + ";font-family:inherit;font-size:13px;font-weight:600;cursor:pointer", label);
+  const row = mk("div", "display:flex;gap:8px;width:100%;margin-top:4px");
+  const actBtn = (label, primary) => mk("button", "flex:1;padding:10px 8px;border-radius:10px;border:1px solid rgba(255,255,255,.11);background:" + (primary ? "#7c3aed" : "rgba(255,255,255,.06)") + ";color:" + (primary ? "#fff" : "#ececea") + ";font-family:inherit;font-size:13px;font-weight:600;cursor:pointer", label);
   const bCopy = actBtn("Copy link", false);
   bCopy.onclick = async () => { try { await navigator.clipboard.writeText(String(link)); } catch {} bCopy.textContent = "✓ Copied"; setTimeout(() => { bCopy.textContent = "Copy link"; }, 1600); };
   row.append(bCopy);
   try { if (typeof navigator !== "undefined" && navigator.share) { const bShare = actBtn("Share", true); bShare.onclick = async () => { try { await navigator.share({ title: roomName ? ("Join " + roomName + " on Hologram") : "Join me on Hologram", text: "Open this link to join the group — message and video call, no app needed.", url: String(link) }); } catch {} }; row.append(bShare); } } catch {}
   card.append(row);
-  const close = el("button", "margin-top:2px;background:transparent;border:0;color:#9c9a94;font-size:13px;cursor:pointer;padding:6px 10px", "Close");
+  const close = mk("button", "margin-top:2px;background:transparent;border:0;color:#9c9a94;font-size:13px;cursor:pointer;padding:6px 10px", "Close");
   close.onclick = () => ov.remove(); card.append(close);
   ov.addEventListener("click", (e) => { if (e.target === ov) ov.remove(); });
   DOC.addEventListener("keydown", function esc(e) { if (e.key === "Escape") { ov.remove(); DOC.removeEventListener("keydown", esc); } });

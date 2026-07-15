@@ -557,7 +557,7 @@ if (document.readyState === "complete") go(); else addEventListener("load", go);
   // HOLO DIRECT — the NATIVE holospace↔holospace sealed chat (dual-path engine: P2P WebRtcLink fast-path via
   // sealed-SDP rendezvous over the blind mailbox, mailbox fallback; TOFU + safety number + key-change). One 🔐
   // rail button; the 3 MB spine wasm loads on FIRST use only (cold boot pays nothing). Additive + fail-soft.
-  import("./holo-direct-mount.mjs?v=09c840c6c2a6").catch(() => {});
+  import("./holo-direct-mount.mjs?v=9c4eb1fa72cd").catch(() => {});
   // IMMERSIVE VIDEO — chromeless YouTube embed + a hover-only Holo control bar (play/pause · seek · time ·
   // fullscreen). Additive + fail-soft.
   import("./holo-video-immersive.mjs?v=22eef34f49d2").catch(() => {});
