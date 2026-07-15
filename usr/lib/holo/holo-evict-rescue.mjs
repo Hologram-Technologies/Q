@@ -22,6 +22,7 @@
 // scope worker (the messenger's) rescues /apps/ui/* with the same module.
 
 import { makeLadder } from "./holo-rungs.mjs";
+import { makeWorld } from "./holo-world.mjs";   // W1b-live world dual-run: the ONE resolver over payload.world
 
 export function makeEvictRescue({ base, blake3Import, rung } = {}) {
   // base = bundle-root pathname, no trailing slash ("" at a root mount, "/Q" on Pages subpath)
@@ -30,15 +31,19 @@ export function makeEvictRescue({ base, blake3Import, rung } = {}) {
   // are INDEPENDENTLY re-derived (their own verifier pass) before entering the store. No rung, or any
   // rung trouble → exactly the pre-O2 behavior (fail-soft).
   const ladder = makeLadder({ base, rung });
+  // W1b-live world dual-run: build + background-warm the world (non-blocking). Positive-hits-only below → a cold or
+  // absent world costs nothing and falls through to the legacy fetch (regression-proof dual-run).
+  const _world = makeWorld({ base }); try { _world.warm(); } catch {}
   let _reg = null;          // resolved { apps:Set, trees:[{prefix,closure}] } — sync fast path
   let _regP = null;         // in-flight (dedup)
-  const registry = () => _reg || (_regP ||= fetch(base + "/evicted.json", { cache: "no-store" })
+  const registry = () => _reg || (function () { const w = _world.registrySync(); return w ? (_reg = w) : null; })() || (_regP ||= fetch(base + "/evicted.json", { cache: "no-store" })
     .then((r) => (r.ok ? r.json() : {}))
     .then((j) => (_reg = { apps: new Set(j.apps || []), trees: (j.trees || []).filter((t) => t && t.prefix && t.closure) }))
     .catch(() => { _regP = null; return { apps: new Set(), trees: [] }; }));
 
   const _closures = new Map();   // closureUrl → Promise<closure|null>
   const closure = (url) => {
+    const w = _world.closureSync(url); if (w) return Promise.resolve(w);   // W1b-live world dual-run: world-first-if-warm
     if (!_closures.has(url)) _closures.set(url, fetch(url, { cache: "no-store" }).then((r) => (r.ok ? r.json() : null)).catch(() => null));
     return _closures.get(url);
   };

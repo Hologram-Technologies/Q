@@ -8,14 +8,14 @@
  "mirror": "https://huggingface.co/HOLOGRAMTECH/holo-messenger-shell/resolve/main/b/",
  "tiers": {
   "core": {
-   "files": 597,
-   "bytes": 11334596,
+   "files": 598,
+   "bytes": 11341445,
    "hf": 0
   },
   "apps": {
-   "files": 5459,
-   "bytes": 1616049,
-   "hf": 5408
+   "files": 5460,
+   "bytes": 1616148,
+   "hf": 5409
   },
   "heavy": {
    "files": 20,
@@ -16107,6 +16107,11 @@
    "tier": "apps",
    "source": "hf"
   },
+  "apps/player/feed/readalong-index.json": {
+   "blake3": "4145122288f7a9692d66ef3c1210db1602b06fb17d5ecb0d09371d32db1642a4",
+   "tier": "apps",
+   "source": "hf"
+  },
   "apps/player/feed/tmdb-seed.json": {
    "blake3": "7ebd737e91193f4aa2412554ac6f366fbc35d53f5878b6ddf46dfa6645184fb5",
    "tier": "apps",
@@ -16253,9 +16258,9 @@
    "source": "hf"
   },
   "apps/player/holo-evicted.json": {
-   "sha256": "3de5359c9a45a8ef1367760a5f8486efb942d7861840f2c8cec57a776819d9c1",
-   "blake3": "23db625d2963f63adcbc0f48b7fec1e475133858e1cda67842957b42ea390a99",
-   "bytes": 13486,
+   "sha256": "8608848d00a5185db83be39f65bb13a1c48ed7e4337690a1f399d2375f5183e9",
+   "blake3": "cfaf58dd21e5bbc0eb7b0fbb171e9fc8c0c0165b5883336f7e70b443d11ed929",
+   "bytes": 13585,
    "tier": "apps",
    "source": "origin"
   },
@@ -16680,7 +16685,7 @@
    "source": "hf"
   },
   "apps/player/index.html": {
-   "blake3": "a4db8a27af898fc8fc8dc054d878f72fb0003cfdc6f640a4aea096fbfb3325b1",
+   "blake3": "1370ac31733c3c7ef068ba0c98d7c073e71ca8e287a7cbbb105ea7a133c63423",
    "tier": "apps",
    "source": "hf"
   },
@@ -29555,9 +29560,9 @@
    "source": "origin"
   },
   "usr/lib/holo/holo-evict-rescue.mjs": {
-   "sha256": "d4cbd27a630f42aa3e504f6dee3b2321cd19b53a9718ef1425133f3a7c830ae1",
-   "blake3": "078f6268d02139223ea11d91cf463048d9b9d6043d1923b6f87ee164271197ad",
-   "bytes": 5888,
+   "sha256": "53ef572af7dfb976051d008174d6be179767e1361b123c62390f113a3c5b6729",
+   "blake3": "fe4b5565fe90b9f85be9456f41212b3e52d2db0dc55d7a73ef0958c538fe38ce",
+   "bytes": 6497,
    "tier": "core",
    "source": "origin"
   },
@@ -30356,6 +30361,13 @@
    "sha256": "6498a32694e55f9d61591d43fa5ba63d00e04ecaa48c9536b4fc48209c0ada8f",
    "blake3": "5cf4f440f5cc3b9cdeac5dab6a5a123b99cfb804f3f164e034e2c6b16c6fe3f7",
    "bytes": 8351,
+   "tier": "core",
+   "source": "origin"
+  },
+  "usr/lib/holo/holo-world.mjs": {
+   "sha256": "15c0c309482f119b094fd123ead668b23d1f1a14cb7f8e7740ed5f61edc1278b",
+   "blake3": "9ee7e70abddc71c4c10cd03e6bffda9f62318482b605339590e23b5e359ff3b8",
+   "bytes": 6240,
    "tier": "core",
    "source": "origin"
   },
