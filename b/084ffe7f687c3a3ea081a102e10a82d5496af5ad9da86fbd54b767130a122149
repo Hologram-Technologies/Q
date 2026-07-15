@@ -68,6 +68,8 @@
   #metrics { text-align:center; font-size:15px; color:var(--faint); padding:12px 0 16px; min-height:22px; }
   #metrics b { color:var(--muted); font-weight:500; }
   #err { color:#f87171; font-size:15px; padding:0 0 18px; text-align:center; white-space:pre-wrap; }
+  .spn { display:inline-block; width:1.1ch; font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
+         color:var(--coral-hi); margin-right:7px; }
 </style>
 <body>
 
@@ -208,6 +210,12 @@ import { createQvacGPU } from "../q/qvac-gpu.js?v=68";
 import { createEngine } from "../q/core/engine.js";
 
 const $ = (id) => document.getElementById(id);
+// braille pulse: one 80ms ticker animates every [data-spin] slot (loading, waking, thinking) —
+// a single interval, zero layout work, stops mattering the instant the last spinner is removed.
+const SPIN = ["⠋","⠙","⠹","⠸","⠼","⠴","⠦","⠧","⠇","⠏"];
+let _sf = 0;
+setInterval(() => { const els = document.querySelectorAll("[data-spin]"); if (!els.length) return; const f = SPIN[_sf = (_sf + 1) % SPIN.length]; for (const el of els) el.textContent = f; }, 80);
+const spn = () => `<span class="spn" data-spin>${SPIN[0]}</span>`;
 const show = (id) => { for (const s of document.querySelectorAll(".stage")) s.classList.toggle("on", s.id === id); };
 const short = (k) => String(k).replace(/^(did:holo:)?sha256:/, "").slice(0, 12) + "…";
 
@@ -236,7 +244,7 @@ async function stream() {
     if (!navigator.gpu) throw new Error("This browser has no WebGPU. Chrome or Edge 113+ required.");
     // warm-load detect (honest offline copy): the κ-cache already holds the manifest → this visit is disk-speed.
     try { const c = await caches.open("holo-kappa-v1"); warm = !!(await c.match(BASE + "/manifest.json")); } catch {}
-    phase(warm ? "waking up · from your disk" : "streaming the mind · every piece verified on arrival");
+    phase(spn() + (warm ? "waking up · from your disk" : "streaming the mind · every piece verified on arrival"));
     await init();
     // PARALLEL κ-BLOCKS FIRST (the measured Netflix path on CDN origins): 399 content-addressed
     // blocks race over 12 connections (HF cdn-lfs caps a single stream ~2 MB/s; the parallel parts
@@ -262,8 +270,8 @@ async function stream() {
     let done = 0, bytes = 0;
     const tick = () => {
       const dt = (performance.now() - t0) / 1000;
-      if (warm) phase(`waking up · ${Math.round(done / Math.max(total, 1) * 100)}%`);
-      else phase(`streaming the mind · <b>${(bytes / 1e6).toFixed(0)} MB</b> · ${(bytes / 1e6 / Math.max(dt, .1)).toFixed(1)} MB/s · every piece verified on arrival`);
+      if (warm) phase(`${spn()}waking up · ${Math.round(done / Math.max(total, 1) * 100)}%`);
+      else phase(`${spn()}streaming the mind · <b>${(bytes / 1e6).toFixed(0)} MB</b> · ${(bytes / 1e6 / Math.max(dt, .1)).toFixed(1)} MB/s · every piece verified on arrival`);
     };
     const iv = setInterval(tick, 400);
     const fetchT = async (name) => {                       // wrap fetchTensor: the progress driver
@@ -279,7 +287,7 @@ async function stream() {
     r.manifest.kv4 = false;                                // exact f32 KV (the proven first-light config)
     gpu = await createQvacGPU(r.manifest, fetchT, CTX, lr.eos ?? 2, false);
     clearInterval(iv);
-    phase("waking the mind");
+    phase(spn() + "waking the mind");
     const m = { fam: "Bonsai", name: modelName, size: "1.16 GB", fmt: "q1 1-bit κ", cap: 200, ctx: CTX, qwen: true, chat: true, rep: 1.05, gpu: true, gpuOnly: true };
     engine = await createEngine(m, { gpu, info: lr, imageKappa: r.info.root });
     // Qwen3 thinking markers are atomic tokens and clean() strips them from text — split by token id instead.
@@ -314,7 +322,7 @@ function msg(who, cls) {
   const d = document.createElement("div"); d.className = "msg " + cls;
   d.innerHTML = `<div class="who">${who}</div>`;
   const think = document.createElement("details"); think.className = "think"; think.hidden = true;
-  think.innerHTML = `<summary>thinking…</summary><div class="t"></div>`;
+  think.innerHTML = `<summary><span class="sum">thinking…</span></summary><div class="t"></div>`;
   const body = document.createElement("div"); body.className = "body";
   d.appendChild(think); d.appendChild(body); log.appendChild(d);
   log.scrollTop = log.scrollHeight;
@@ -348,9 +356,11 @@ async function send() {
   const turn = engine.tokenize(engine.frameTurn(q, mind.length > 0));
   if (mind.length + turn.length + 256 > CTX) { mind = []; note("fresh context"); }   // keep ≥256 tokens of room (thinking model)
   const ids = mind.concat(mind.length ? turn : engine.tokenize(engine.frameTurn(q, false)));
-  const ui = msg(modelName, "bot"); ui.body.textContent = "…";
+  const ui = msg(modelName, "bot"); ui.body.innerHTML = spn();
+  ui.think.querySelector("summary").innerHTML = spn() + `<span class="sum">thinking</span>`;
   const tSend = performance.now(); let ttftSet = false;
-  lastTTFT = null; lastTokps = null; metrics("thinking");
+  lastTTFT = null; lastTokps = null;
+  $("metrics").innerHTML = spn() + `<b>${modelName}</b> is thinking`;
   try {
     const res = await engine.generate(ids, {
       maxNew: CTX - ids.length - 8,                        // the whole remaining KV window (eos stops early)
@@ -360,11 +370,13 @@ async function send() {
         metrics();
         const s = splitThink(t.outIds);
         if (s.think.length) { ui.think.hidden = false; ui.t.textContent = engine.detokenize(s.think); }
+        if (s.ans.length) ui.think.querySelector("summary").innerHTML = `<span class="sum">thinking…</span>`;   // answer flowing: the pulse retires
         ui.body.textContent = s.ans.length ? engine.detokenize(s.ans) : (s.think.length ? "" : t.text);
         log.scrollTop = log.scrollHeight;
       },
     });
     const s = splitThink(res.outIds || []);
+    ui.think.querySelector("summary").innerHTML = `<span class="sum">thinking…</span>`;
     if (s.think.length) { ui.think.hidden = false; ui.t.textContent = engine.detokenize(s.think); }
     if (s.ans.length) {
       ui.body.textContent = engine.detokenize(s.ans);

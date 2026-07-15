@@ -626,16 +626,16 @@
    "holo:entry": "sha256:3fd2a00105ad0e8f01109dce52ff4c7a0cc6c9444532b0453ed9d770cce2d3a4"
   },
   {
-   "@id": "did:holo:sha256:6e3ee5d5fce3a39375e732e0930bce72baf8287d1809bd1f3766bfaa9e109019",
-   "holo:root": "did:holo:sha256:6e3ee5d5fce3a39375e732e0930bce72baf8287d1809bd1f3766bfaa9e109019",
+   "@id": "did:holo:sha256:0ba60762708477ad2885c1637a9557f592ae3229fc2c5d23accca5665e5fb12b",
+   "holo:root": "did:holo:sha256:0ba60762708477ad2885c1637a9557f592ae3229fc2c5d23accca5665e5fb12b",
    "@type": [
     "schema:SoftwareApplication",
     "schema:WebApplication"
    ],
    "schema:name": "Bonsai",
    "schema:identifier": "org.hologram.Bonsai",
-   "holo:words": "sauce.nuclear.buyer",
-   "schema:alternateName": "sauce.nuclear.buyer",
+   "holo:words": "evoke.budget.spread",
+   "schema:alternateName": "evoke.budget.spread",
    "schema:description": "A 27B-class 1-bit mind that streams into your browser like a film — serverless, content-addressed, yours offline forever.",
    "schema:applicationCategory": "ProductivityApplication",
    "holo:categories": [
