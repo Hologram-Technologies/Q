@@ -9,7 +9,7 @@
  "tiers": {
   "core": {
    "files": 597,
-   "bytes": 11332589,
+   "bytes": 11333882,
    "hf": 0
   },
   "apps": {
@@ -3217,9 +3217,9 @@
    "source": "origin"
   },
   "apps/holo-messenger/_vendor/vodozemac/holo-evicted.json": {
-   "sha256": "e28d37a96e6a18b5b3d80261d708d42f3d0f2d7151798ae2021126fd3bcf6636",
-   "blake3": "6dc90c897581ca8d6649376434e0b0036d9859def6614109e6301a4081f06266",
-   "bytes": 310,
+   "sha256": "7b70c06db6df8e79c2266de0268a16faaeb17a6d6a62673f0bcb9a3e60fd9b0d",
+   "blake3": "15c6120fd6f8fb77d231114ee165560d065631a0ae43356e08a3420e37d0e6bd",
+   "bytes": 503,
    "tier": "core",
    "source": "origin"
   },
@@ -3385,9 +3385,9 @@
    "source": "hf"
   },
   "apps/holo-messenger/holo-direct-mount.mjs": {
-   "sha256": "09c840c6c2a6f6fa0fc660d05721a8488abe4756aa77741639bba2b382c1e74d",
-   "blake3": "0ea4454a098ac65d32262520a48e0a6ca602a242e18d15b40d3cda61e97c567a",
-   "bytes": 35180,
+   "sha256": "18b4ee818719366de38161e51ca6145e4cdb1488ddd062272bf1a632c2e70c9c",
+   "blake3": "2a0c9ef767102839f2cd8b8ab38f5c3a5578f51f9ef1085a7149d4727cfafba6",
+   "bytes": 36280,
    "tier": "core",
    "source": "origin"
   },
