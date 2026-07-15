@@ -20,8 +20,8 @@
   "prov:Entity",
   "holstr:Entry"
  ],
- "holstr:seq": 390,
- "holstr:prev": "did:holo:sha256:2cc65275ca0cca65fc77a47bfd7cf1ce6e79d9b1fedb22f9eada6a6b31dfcab3",
+ "holstr:seq": 391,
+ "holstr:prev": "did:holo:sha256:265cdb604b871539a99a21f66bd96e8eb01cb4033732405a1c5864a12e91d827",
  "holstr:kind": "release",
  "holstr:payload": {
   "shell": "0e8ac9d7dd55694dcc30ce1cdcb688a2b624ba54eb90619bdf7251d123ba17b5",
@@ -36,7 +36,7 @@
    "usr/lib/pkg/holospaces_web_bg.wasm": "3370b22070b56218a57df6406e2e4ba7cc171e942d4d1f2ae4297ea2c4c08d9c"
   },
   "apps": {
-   "bonsai": "5787982a4f4f07f91f195743b942bf0fc4e3af23bb4821e4b13615eacfd36d13",
+   "bonsai": "11604f9f023e919da7f37abf6bbdbf76ce12e6c27217e6de7398646643bf0d79",
    "carry": "9f44164b17e6b7e37f39623bb445d49b6608da5f2b04cef8b1a8b183362a6b9a",
    "hello": "66c1ada5ac08a2d4f73851bbe7458ad5fb6e2226c5a131c3829abfe715900fed",
    "holo-messenger": "01e2db1e847e73881b7ce6f251677a4c0f9629203d0bc913053ffb4047b1df2d",
@@ -48,13 +48,13 @@
    "entry": "holo-portal.mjs",
    "sha256": "caeb3e57b6eeab09bee6d67c022145a8e2dae610c929a7f51bc169898625e7e8"
   },
-  "closure": "add8b4f75333e865b907fbf751a6c58eb65bc2b6395e626b1f7a93e85585f243",
-  "world": "be4c15a47f4b40d54cbea98b72a3a28b28b41fd6810f55bca5ec61eb2f3f68b8"
+  "closure": "164acf530fe4cc2bbc77c8a69d9e7351d0c48c58ce7970b8c32bd22bfe477414",
+  "world": "6af07ac587c6bcf774aad738b82499b762265536c02991074060a5b0dd76eefc"
  },
- "prov:generatedAtTime": "2026-07-15T21:09:29.019Z",
+ "prov:generatedAtTime": "2026-07-15T21:16:24.715Z",
  "holstr:op": "did:holo:sha256:87599792c7b13fad9d6c57d3b89d2cef35e4715869f5cde597ab60ca92699f0b",
- "id": "did:holo:sha256:265cdb604b871539a99a21f66bd96e8eb01cb4033732405a1c5864a12e91d827",
- "holstr:sig": "AJZzFVsGehSdi3OZnmFDGGYCyR8o9cAIzTDipB0ZPMDU9ibv7n/MNreIGTxmvgR5LkiaMFuNLTRteUFkW/63Cw==",
+ "id": "did:holo:sha256:a60493927827eea6168a7c336465a24391171eabe408470f5a83de4d05a4895b",
+ "holstr:sig": "vyVoRJY1rUMcujSbcI7YraurSuje/Ici2iuukJcyV/lIg0iUxLTWZN2/A2sSrJ0Fa5gewk4e5ZJJLxKWEKDgBw==",
  "holstr:alg": "Ed25519",
  "holstr:pub": "snYY6y35gdZ1ngOE5E+G1BGFjlTo2MfpfP8h6yc7r+M="
 }

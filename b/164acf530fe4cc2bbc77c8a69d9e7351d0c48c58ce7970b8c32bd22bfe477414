@@ -9,12 +9,12 @@
  "tiers": {
   "core": {
    "files": 597,
-   "bytes": 11348225,
+   "bytes": 11348217,
    "hf": 0
   },
   "apps": {
    "files": 5462,
-   "bytes": 2381194,
+   "bytes": 2384541,
    "hf": 5409
   },
   "heavy": {
@@ -1428,9 +1428,9 @@
    "source": "origin"
   },
   "apps/bonsai/holospace.lock.json": {
-   "sha256": "b787dc641fc5c67013d0f96586f44bb1ce94c79628446e92a592cc84e6376847",
-   "blake3": "4c1d7ec1a49a70beb77ee66477fcb0cbb286939fba98d0c6e18b10f3d4809819",
-   "bytes": 3792,
+   "sha256": "7e680c3922cf137d8adecf639d7395ce1b867fe3f99d0a8013ea49ca423eb8e5",
+   "blake3": "fcb55afb493ed00243a87ea910d6c9a45071995b5b0cc4faf3af295f9c5812ef",
+   "bytes": 3794,
    "tier": "apps",
    "source": "origin"
   },
@@ -1442,9 +1442,9 @@
    "source": "origin"
   },
   "apps/bonsai/index.html": {
-   "sha256": "85be07b7411283d43c035f9c98980ff63f76bd9e12df153d75e7712efaae2f3a",
-   "blake3": "cf106a15405abd03c6670ab40c4594d4f3938e3d2a3c0601b933f93570e3f009",
-   "bytes": 29394,
+   "sha256": "11604f9f023e919da7f37abf6bbdbf76ce12e6c27217e6de7398646643bf0d79",
+   "blake3": "051bd709579e6847b2265c91725f8ad70fce16056d0fc9480037086b18e00b18",
+   "bytes": 32739,
    "tier": "apps",
    "source": "origin"
   },
@@ -4223,9 +4223,9 @@
    "source": "hf"
   },
   "apps/index.jsonld": {
-   "sha256": "db4f1b08d41c6ed43aab32735edaab1025df2ea9b5c8a108e6732c5b95bdee6f",
-   "blake3": "fe7c5a800e2042778d934c946bd1f84da6fdd07549e4b18468f93e7cca6ca67c",
-   "bytes": 21599,
+   "sha256": "14a90bcf06f53b517c8c45dffdc9b57101867a387a5f7afbb5d8dc815f348647",
+   "blake3": "68f0d9ef8df06857b9188624d4cf3cc72a7fddc4a3808ec8993e632c7a6ad16e",
+   "bytes": 21591,
    "tier": "core",
    "source": "origin"
   },

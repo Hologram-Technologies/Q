@@ -626,16 +626,16 @@
    "holo:entry": "sha256:3fd2a00105ad0e8f01109dce52ff4c7a0cc6c9444532b0453ed9d770cce2d3a4"
   },
   {
-   "@id": "did:holo:sha256:53a28332fe5547b0c4b587ff4cbafce4edb302ae814d577e0b38a00f2b2dd8a2",
-   "holo:root": "did:holo:sha256:53a28332fe5547b0c4b587ff4cbafce4edb302ae814d577e0b38a00f2b2dd8a2",
+   "@id": "did:holo:sha256:e105cbfee83d83a24f6e77565df9385cabf5a2878866584e949a165f735aae96",
+   "holo:root": "did:holo:sha256:e105cbfee83d83a24f6e77565df9385cabf5a2878866584e949a165f735aae96",
    "@type": [
     "schema:SoftwareApplication",
     "schema:WebApplication"
    ],
    "schema:name": "Bonsai",
    "schema:identifier": "org.hologram.Bonsai",
-   "holo:words": "garlic.art.spend",
-   "schema:alternateName": "garlic.art.spend",
+   "holo:words": "tackle.copper.load",
+   "schema:alternateName": "tackle.copper.load",
    "schema:description": "A 27B-class 1-bit mind that streams into your browser like a film — serverless, content-addressed, yours offline forever.",
    "schema:applicationCategory": "ProductivityApplication",
    "holo:categories": [

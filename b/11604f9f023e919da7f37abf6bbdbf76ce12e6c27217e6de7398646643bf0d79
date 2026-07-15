@@ -166,44 +166,15 @@ try {
   renderer.setPixelRatio(Math.min(devicePixelRatio || 1, 2));
   const scene = new THREE.Scene();
   const cam = new THREE.PerspectiveCamera(45, 1, 0.1, 30); cam.position.z = 5;
-  const uni = {
-    uTime:   { value: 0 },
-    uSpeed:  { value: 0.35 },                                  // stripe scroll; boosted on hover
-    uGlitch: { value: reduced ? 0 : 1 },
-    uBase:   { value: new THREE.Color("#d97757") },            // Claude coral core
-    uRim:    { value: new THREE.Color("#c4b5fd") },            // lavender at the fresnel rim
-  };
-  const mat = new THREE.ShaderMaterial({
-    uniforms: uni, transparent: true, blending: THREE.AdditiveBlending, side: THREE.DoubleSide, depthWrite: false,
-    vertexShader: /* glsl */`
-      uniform float uTime; uniform float uGlitch;
-      varying vec3 vN; varying vec3 vW;
-      float rnd(float n){ return fract(sin(n)*43758.5453123); }
-      void main(){
-        vec3 p = position;
-        float gate = step(0.72, rnd(floor(uTime*1.8))) * uGlitch;            // a burst every few seconds
-        float band = step(0.94, rnd(floor(p.y*9.0) + floor(uTime*7.0)));     // thin horizontal slices
-        float g = gate * band;
-        p.x += (rnd(p.y*13.7 + floor(uTime*7.0)) - 0.5) * 0.22 * g;
-        p.z += (rnd(p.y*7.1  - floor(uTime*7.0)) - 0.5) * 0.22 * g;
-        vec4 w = modelMatrix * vec4(p, 1.0);
-        vW = w.xyz; vN = normalize(mat3(modelMatrix) * normal);
-        gl_Position = projectionMatrix * viewMatrix * w;
-      }`,
-    fragmentShader: /* glsl */`
-      uniform float uTime; uniform float uSpeed; uniform vec3 uBase; uniform vec3 uRim;
-      varying vec3 vN; varying vec3 vW;
-      void main(){
-        vec3 V = normalize(cameraPosition - vW);
-        vec3 N = normalize(vN); if (!gl_FrontFacing) N = -N;
-        float f = pow(1.0 - clamp(dot(V, N), 0.0, 1.0), 2.2);               // fresnel rim
-        float s = pow(fract(vW.y * 6.0 - uTime * uSpeed), 3.0);             // scan stripes
-        gl_FragColor = vec4(mix(uBase, uRim, f), f * 0.85 + s * 0.28 + 0.03);
-      }`,
-  });
-  const mesh = new THREE.Mesh(new THREE.IcosahedronGeometry(1.35, 12), mat);
-  const core = new THREE.Mesh(new THREE.IcosahedronGeometry(0.92, 8), mat);   // inner shell: same material, real depth
+  // stock-primitive hologram: a fine wireframe torus (lavender grid) over a faint coral shell —
+  // the gethologram.ai form, recolored to the Claude palette. Zero custom GLSL.
+  const wire = new THREE.MeshBasicMaterial({ color: new THREE.Color("#c4b5fd"), wireframe: true, transparent: true, opacity: 0.5, blending: THREE.AdditiveBlending, depthWrite: false });
+  const wire2 = new THREE.MeshBasicMaterial({ color: new THREE.Color("#d97757"), wireframe: true, transparent: true, opacity: 0.16, blending: THREE.AdditiveBlending, depthWrite: false });
+  const mat = wire;                                                            // dispose handle below
+  const mesh = new THREE.Mesh(new THREE.TorusGeometry(1.28, 0.62, 28, 44), wire);      // the grid torus
+  const core = new THREE.Mesh(new THREE.TorusGeometry(1.28, 0.56, 18, 30), wire2);      // faint coral shell inside
   mesh.add(core);
+  mesh.rotation.x = 1.05;                                                                // the gethologram tilt
   scene.add(mesh);
   addEventListener("pointerdown", () => { tPulse = performance.now(); }, { passive: true });   // click: the hologram answers back
   // pointer parallax: mesh tilts toward the cursor (eased); stripes speed up when the cursor is near.
@@ -225,13 +196,12 @@ try {
   let raf = 0, dead = false;
   const loop = () => {
     const t = performance.now() / 1000;
-    uni.uTime.value = t;
     boost += (tBoost - boost) * 0.06;
     const pulse = Math.max(0, 1 - (performance.now() - tPulse) / 700);        // click pulse decays over 0.7s
-    uni.uSpeed.value = 0.35 + boost * 1.1 + pulse * 2.4;
-    uni.uGlitch.value = reduced ? 0 : 1 + pulse * 2.0;
-    rx += (ty - rx) * 0.05; ry += (tx - ry) * 0.05;                          // eased parallax
-    mesh.rotation.x = rx * 0.6; mesh.rotation.y = t * 0.12 + ry;             // + constant slow spin
+    wire.opacity = 0.42 + Math.sin(t * 1.4) * 0.06 + boost * 0.22 + pulse * 0.35;   // the grid breathes; hover/click brighten
+    wire2.opacity = 0.13 + pulse * 0.2;
+    rx += (ty - rx) * 0.05; ry += (tx - ry) * 0.05;                           // eased parallax
+    mesh.rotation.x = 1.05 + rx * 0.35; mesh.rotation.z = t * 0.1 + ry * 0.5; // slow ring spin + tilt toward the cursor
     renderer.render(scene, cam);
     raf = requestAnimationFrame(loop);
   };
@@ -242,10 +212,10 @@ try {
   loop();
   // verification hook: force one frame at time t and return it as a PNG (rAF is starved in
   // hidden/embedded panes — this is how an agent proves the hologram actually draws pixels).
-  window.__holoFrame = (t) => { uni.uTime.value = t || 0; renderer.render(scene, cam); return cv.toDataURL("image/png"); };
+  window.__holoFrame = (t) => { renderer.render(scene, cam); return cv.toDataURL("image/png"); };
   window.__holoOff = () => {                                                 // MANDATORY before the engine loads
     dead = true; cancelAnimationFrame(raf); window.__holoFrame = null;
-    mesh.geometry.dispose(); mat.dispose(); renderer.dispose();
+    mesh.geometry.dispose(); core.geometry.dispose(); wire.dispose(); wire2.dispose(); renderer.dispose();
     try { renderer.getContext().getExtension("WEBGL_lose_context").loseContext(); } catch {}
     cv.remove();
   };
