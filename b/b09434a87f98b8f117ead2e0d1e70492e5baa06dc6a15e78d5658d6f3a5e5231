@@ -9,13 +9,13 @@
  "tiers": {
   "core": {
    "files": 531,
-   "bytes": 10077917,
+   "bytes": 10079187,
    "hf": 0
   },
   "apps": {
-   "files": 5439,
-   "bytes": 1768212,
-   "hf": 5376
+   "files": 5459,
+   "bytes": 1770054,
+   "hf": 5396
   },
   "heavy": {
    "files": 20,
@@ -539,9 +539,9 @@
    "source": "origin"
   },
   "_shared/holo-mobile.css": {
-   "sha256": "b2bfa104b9ee8e3bb631dcd0ec0e6f7017b8898c4304666f5b3dfeeebc926eb9",
-   "blake3": "cbd96db3883014eb0d951b8ff2bf69796bf4027edb314fed868e3ae5f9e9ad3a",
-   "bytes": 8471,
+   "sha256": "2e771fcbcca3ba3c9ba594008ddcef854bddb6bf9f4f875a27e80c92d66b4834",
+   "blake3": "9732c360fbde0670af532bc9da805edd35f43ebd47af7633b2bb2d787cb252aa",
+   "bytes": 9105,
    "tier": "core",
    "source": "origin"
   },
@@ -888,9 +888,9 @@
    "source": "origin"
   },
   "_shared/holo-theme.css": {
-   "sha256": "c4414e9c61a6ae6b8c19145dddbbe24c68bea83784666434a94cf033b06cc483",
-   "blake3": "1f29a13bf488c4bef3ad0f8a9c1335f15c968afbdc277b9527b500b39dff0ce4",
-   "bytes": 17631,
+   "sha256": "92e2d08cf51f61c4b25818a716bc08c663b419eac5a30c68556d56e821e26209",
+   "blake3": "085dd5792caed917da206171d2808ee35b75db011081413de616c4e959fbbd72",
+   "bytes": 18267,
    "tier": "core",
    "source": "origin"
   },
@@ -16087,6 +16087,11 @@
    "tier": "apps",
    "source": "hf"
   },
+  "apps/player/feed/books-index.json": {
+   "blake3": "b397b23c5701cb0c31e013063b0996a78fb11c946324412aa4daf6c80dfa0256",
+   "tier": "apps",
+   "source": "hf"
+  },
   "apps/player/feed/catalog.json": {
    "blake3": "391b5487b1ea161f001c35bfe921d71a1f4f21ca95f795600cdaa63ff1f3af11",
    "tier": "apps",
@@ -16104,6 +16109,96 @@
   },
   "apps/player/feed/tmdb-seed.json": {
    "blake3": "7ebd737e91193f4aa2412554ac6f366fbc35d53f5878b6ddf46dfa6645184fb5",
+   "tier": "apps",
+   "source": "hf"
+  },
+  "apps/player/foliate/LICENSE": {
+   "blake3": "3c42f4169e1bb7c508819c51012205b29f601e777739e709261fe2c688da01cd",
+   "tier": "apps",
+   "source": "hf"
+  },
+  "apps/player/foliate/comic-book.js": {
+   "blake3": "903683b60e026d3e1d31bbef55d557c5c6e8fe24d5da49660127d0252286256c",
+   "tier": "apps",
+   "source": "hf"
+  },
+  "apps/player/foliate/epub.js": {
+   "blake3": "c1bb4c50dc390e546dadd9b4a8b84b90ea828729834e25f3c3ad3d43bb1ab544",
+   "tier": "apps",
+   "source": "hf"
+  },
+  "apps/player/foliate/epubcfi.js": {
+   "blake3": "1220663c2c156f472d4a3bb23103870764540ac61427ae5a64f42d36fcedd34c",
+   "tier": "apps",
+   "source": "hf"
+  },
+  "apps/player/foliate/fb2.js": {
+   "blake3": "0510421190a1b52eff3b33975034aacf188398ab10aec6366991fe494d4ada1b",
+   "tier": "apps",
+   "source": "hf"
+  },
+  "apps/player/foliate/fixed-layout.js": {
+   "blake3": "51681b29e4ec84d7fe1e2bde04a756f1a8787e39a8e4179ee865667cb7eb9e91",
+   "tier": "apps",
+   "source": "hf"
+  },
+  "apps/player/foliate/footnotes.js": {
+   "blake3": "a8d23ff9ff48ffd0f4d15184db8a6e5fc6ae869529d65661c06d3665b03510df",
+   "tier": "apps",
+   "source": "hf"
+  },
+  "apps/player/foliate/mobi.js": {
+   "blake3": "5900df4d96a1e8c485cf53264c52f5a63e351cbbbacaebd13626d0a06bc4d337",
+   "tier": "apps",
+   "source": "hf"
+  },
+  "apps/player/foliate/overlayer.js": {
+   "blake3": "db404e68d3c06554a52808bcdcb11dc25e035207749aceb9675fef7ff2c4883c",
+   "tier": "apps",
+   "source": "hf"
+  },
+  "apps/player/foliate/paginator.js": {
+   "blake3": "0f15940f67ffde52782c283e9ceb72dc08a9f7d37a67231cbc8e074d7e6de12f",
+   "tier": "apps",
+   "source": "hf"
+  },
+  "apps/player/foliate/pdf.js": {
+   "blake3": "183606ed63a8e609471f26dccc758200d62de2575faf10f7dea131285e550d2d",
+   "tier": "apps",
+   "source": "hf"
+  },
+  "apps/player/foliate/progress.js": {
+   "blake3": "92aea9da08a3b1c88bf02c9a8b480032d70c63b6162fc9536d5f33ba3e25c619",
+   "tier": "apps",
+   "source": "hf"
+  },
+  "apps/player/foliate/search.js": {
+   "blake3": "0b76927b2a93566ac34369bd572fd98ed1fb848deab6f86517183c67fd5d7658",
+   "tier": "apps",
+   "source": "hf"
+  },
+  "apps/player/foliate/text-walker.js": {
+   "blake3": "8047076e1be04139d9eef981d618e1866993a7b3da17a65751544dcb8a55121c",
+   "tier": "apps",
+   "source": "hf"
+  },
+  "apps/player/foliate/tts.js": {
+   "blake3": "e4c28f1536b0d98a1f2587680dd97f6e667088d3c645345cc5f3cd400cf14b6d",
+   "tier": "apps",
+   "source": "hf"
+  },
+  "apps/player/foliate/vendor/fflate.js": {
+   "blake3": "ab939ef86dc01fda39d43823c556c52697dc67a917d565a60f128e8efe049619",
+   "tier": "apps",
+   "source": "hf"
+  },
+  "apps/player/foliate/vendor/zip.js": {
+   "blake3": "4c97e539f37fc1550de8e620a7a951dc0aaf893f25a5563c61ff54ca3bcb060a",
+   "tier": "apps",
+   "source": "hf"
+  },
+  "apps/player/foliate/view.js": {
+   "blake3": "9c6c07d04e4e71f21e92659e0b865ecee7761d87d9aa313e0cc2bbc569e1b2ba",
    "tier": "apps",
    "source": "hf"
   },
@@ -16137,6 +16232,11 @@
    "tier": "apps",
    "source": "hf"
   },
+  "apps/player/holo-books.mjs": {
+   "blake3": "c5a6b8a75951a34fae06c5ab48c30041251455f9b89aa6534ac3de518a5c5f9d",
+   "tier": "apps",
+   "source": "hf"
+  },
   "apps/player/holo-chapters.mjs": {
    "blake3": "362148d3ecaabd71460e10f06bb75bb6b13535f17924fe4ea7ef8d73f9fe7c54",
    "tier": "apps",
@@ -16153,9 +16253,9 @@
    "source": "hf"
   },
   "apps/player/holo-evicted.json": {
-   "sha256": "1bb0ed9fc07bfd692345242ec728e7d14f27546a6dc12ed356b4df64c7a159a9",
-   "blake3": "d9cd686b669f722a5207a49c21511eef40e7921120b7015fca84970a6ea74fee",
-   "bytes": 11644,
+   "sha256": "aeefe3d7bcf031b266f57a98b3102755f4c5d54839736a96ab70ca11bfc09d09",
+   "blake3": "b2e4c0bff3cb7209e5c8a2b70cb03135f62748f80d4cf09a0a69844c0bacac0f",
+   "bytes": 13486,
    "tier": "apps",
    "source": "origin"
   },
