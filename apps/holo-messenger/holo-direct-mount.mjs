@@ -297,9 +297,15 @@ function _sheet() {
   const mine = el("textarea", "background:#0a1119;border:1px solid #1f2c35;border-radius:10px;color:#9fd;padding:8px;font:11px ui-monospace,monospace;height:64px;resize:none");
   mine.readOnly = true; mine.className = "holo-direct-mylink"; mine.value = "…";
   myLink().then((l) => { mine.value = l; });
-  const copy = el("button", "align-self:flex-start;background:rgba(255,255,255,.06);border:1px solid #1f2c35;border-radius:9px;color:#e9f1f5;padding:6px 10px;font-size:12px;cursor:pointer", "Copy link");
+  const btnRow = el("div", "display:flex;gap:8px;align-self:flex-start");
+  const copy = el("button", "background:rgba(255,255,255,.06);border:1px solid #1f2c35;border-radius:9px;color:#e9f1f5;padding:6px 10px;font-size:12px;cursor:pointer", "Copy link");
   copy.onclick = () => { try { navigator.clipboard.writeText(mine.value); copy.textContent = "Copied ✓"; } catch {} };
-  card.append(mine, copy);
+  // S1 — the personal invite is scannable too (the WhatsApp "my code" pattern): the SAME premium sheet the
+  // group invite shows, through the one shared primitive. Fail-soft while the link is still minting.
+  const qr = el("button", "background:rgba(124,58,237,.14);border:1px solid rgba(124,58,237,.35);border-radius:9px;color:#c4b5fd;padding:6px 10px;font-size:12px;cursor:pointer", "Show QR");
+  qr.onclick = () => { const l = mine.value; if (l && l !== "…" && window.HoloShare) window.HoloShare.present(l); };
+  btnRow.append(copy, qr);
+  card.append(mine, btnRow);
   card.append(el("div", "font-size:12px;color:#8aa0ad;margin-top:4px", "Have someone's invite link? Paste it here:"));
   const theirs = el("textarea", "background:#0a1119;border:1px solid #1f2c35;border-radius:10px;color:#e9f1f5;padding:8px;font:11px ui-monospace,monospace;height:48px;resize:none");
   const start = el("button", "background:linear-gradient(90deg,#00d09c,#1fd6ac);color:#04110d;border:0;border-radius:11px;padding:10px;font-weight:700;cursor:pointer", "Start chat");
@@ -331,16 +337,22 @@ function _roomV2(b64u) {
 // ── the invite QR sheet — every minted room link is instantly scannable. Paints over the OS's OWN encoder
 // (_shared/holo-qr-encode.mjs, self-contained ISO QR — no library, no network) as rounded-module SVG on a
 // white card, Claude-desk framing (#1f1f1e, 11% hairlines). Fail-soft: no encoder → no sheet, link still flows.
-async function _inviteQRSheet(link, roomName) {
-  let enc; try { enc = await import(new URL("../../_shared/holo-qr-encode.mjs", import.meta.url).href); } catch { return; }
-  let q; try { q = enc.encode(String(link), { ecc: "M" }); } catch { return; }
+// _qrSVG — the rounded-module branded QR as an SVG string, painted over the OS's OWN encoder
+// (_shared/holo-qr-encode.mjs, self-contained ISO QR — no library, no network). The ONE QR renderer the
+// whole messenger shares; returns "" if the encoder can't be reached (fail-soft — the link still flows).
+async function _qrSVG(link) {
+  let enc; try { enc = await import(new URL("../../_shared/holo-qr-encode.mjs", import.meta.url).href); } catch { return ""; }
+  let q; try { q = enc.encode(String(link), { ecc: "M" }); } catch { return ""; }
   const m = 3, dim = q.size + m * 2, r = 0.32;   // quiet zone 3 modules; corner radius as a fraction of a module
   let d = "";
   for (let y = 0; y < q.size; y++) for (let x = 0; x < q.size; x++) if (q.modules[y][x]) {
     const px = x + m, py = y + m;
     d += `M${px + r},${py} h${1 - 2 * r} a${r},${r} 0 0 1 ${r},${r} v${1 - 2 * r} a${r},${r} 0 0 1 -${r},${r} h-${1 - 2 * r} a${r},${r} 0 0 1 -${r},-${r} v-${1 - 2 * r} a${r},${r} 0 0 1 ${r},-${r} z`;
   }
-  const svg = `<svg viewBox="0 0 ${dim} ${dim}" xmlns="http://www.w3.org/2000/svg" shape-rendering="geometricPrecision"><rect width="${dim}" height="${dim}" fill="#fff" rx="${m}"/><path d="${d}" fill="#141413"/></svg>`;
+  return `<svg viewBox="0 0 ${dim} ${dim}" xmlns="http://www.w3.org/2000/svg" shape-rendering="geometricPrecision"><rect width="${dim}" height="${dim}" fill="#fff" rx="${m}"/><path d="${d}" fill="#141413"/></svg>`;
+}
+async function _inviteQRSheet(link, roomName) {
+  const svg = await _qrSVG(link); if (!svg) return;
   // OWN safe maker — module scope has no `el` (the sheet helpers are function-scoped; an implicit dependency
   // here died as a silent ReferenceError), and text lands via textContent: roomName is peer-controlled.
   const mk = (tag, style, text) => { const n = DOC.createElement(tag); if (style) n.style.cssText = style; if (text != null) n.textContent = text; return n; };
@@ -368,6 +380,15 @@ async function _inviteQRSheet(link, roomName) {
   card.addEventListener("click", (e) => e.stopPropagation());
   ov.append(card); DOC.body.append(ov);
 }
+// ── HoloShare (S0) — the ONE share primitive every messenger surface calls. A link in, and { qrSVG, present }
+// out: the identical premium sheet (QR + Copy + native Share), same brand, everywhere. `mint()` returns the
+// object shape the cross-app contract promises; today messenger links are minted by their own paths (roomLink
+// / myLink), so mint wraps a ready link — S2 (named doors) + S4 (a shared module for ALL apps) back this next.
+if (typeof window !== "undefined") window.HoloShare = {
+  qrSVG: (link) => _qrSVG(link),                                   // → Promise<svg string> ("" if no encoder)
+  present: (link, opts = {}) => _inviteQRSheet(link, (opts && opts.title) || null),   // → the share sheet
+  mint: (link, opts = {}) => ({ link, qrSVG: _qrSVG(link), card: null, present: () => _inviteQRSheet(link, (opts && opts.title) || null) }),
+};
 function _attach() {
   // Holo Direct rail icon removed by request. The 🔐 left-rail button is no longer mounted;
   // Direct stays fully reachable via the main-list "Holo Direct · sealed" section and the
