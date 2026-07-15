@@ -246,6 +246,22 @@ function warmWhenIdle() {
 const _qLeanMobile = (() => { try { return (matchMedia("(pointer:coarse)").matches && Math.min(innerWidth, innerHeight) <= 700) || navigator.connection?.saveData === true; } catch { return false; } })();
 if (!_qLeanMobile) warmWhenIdle();
 
+// INSTANT-Q hover+prefetch (2026-07-15): warm Q the instant the cursor reaches the orb (desktop head-start, before the tap) so
+// "waking Q up" is gone by open-time; and prefetch the q-chat drawer resource at idle so the FIRST orb tap
+// boots its iframe from cache (the hero+iframe then persist → every later open is a 0ms reveal). Additive.
+let _hoverWarmed = 0;
+DOC.addEventListener("pointerover", (e) => {
+  try {
+    const t = e.target; if (!t || !t.closest || !t.closest(".holo-home-orb, .holo-global-orb")) return;
+    const now = Date.now(); if (now - _hoverWarmed < 5000) return; _hoverWarmed = now; warm();
+  } catch (x) {}
+}, { capture: true, passive: true });
+function _prefetchChat() {
+  try { const u = new URL("../q/q-chat.html?guest=1&embed=1", import.meta.url).href; fetch(u, { credentials: "same-origin" }).then((r) => r && r.text()).catch(() => {}); } catch (x) {}
+}
+if (!_qLeanMobile) { if ("requestIdleCallback" in window) requestIdleCallback(_prefetchChat, { timeout: 5000 }); else setTimeout(_prefetchChat, 3000); }
+
+
 let greeting = false;
 function speakGreeting() { greeting = true; Promise.resolve(voice.speak(greetLine())).catch(() => {}).then(() => { greeting = false; }); }
 function bargeIn() { if (greeting) { greeting = false; try { voice.stop(); } catch {} } }
