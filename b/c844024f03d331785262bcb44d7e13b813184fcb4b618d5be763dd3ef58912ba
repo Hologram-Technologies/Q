@@ -8,13 +8,13 @@
  "mirror": "https://huggingface.co/HOLOGRAMTECH/holo-messenger-shell/resolve/main/b/",
  "tiers": {
   "core": {
-   "files": 597,
-   "bytes": 11351466,
+   "files": 598,
+   "bytes": 11967244,
    "hf": 0
   },
   "apps": {
    "files": 5462,
-   "bytes": 2389236,
+   "bytes": 2387057,
    "hf": 5409
   },
   "heavy": {
@@ -1428,9 +1428,9 @@
    "source": "origin"
   },
   "apps/bonsai/holospace.lock.json": {
-   "sha256": "4febbcaf99a392cb76733b92e9cc453d3434323663f57e4f144f6127fa8a6f4c",
-   "blake3": "f54cf23f76f13da12405ee681a0d9011352fd695d244692675ebbe2c9c15563e",
-   "bytes": 3789,
+   "sha256": "46d0c2358926e932e1c64644df6372228b51d47c340e7d24611430d90a384bca",
+   "blake3": "5963320c1fa95f9d93c3db49048407c781edfbc14c1969dd695a3ea3400f3ada",
+   "bytes": 3792,
    "tier": "apps",
    "source": "origin"
   },
@@ -1442,9 +1442,9 @@
    "source": "origin"
   },
   "apps/bonsai/index.html": {
-   "sha256": "3e475a984692e4542e13c7efefeff7454e76121873717880da1fef8ab56ddeda",
-   "blake3": "2b89b91cdef39018d5d6312c14081ae88f3f294164fa99501dee64d6da8a8100",
-   "bytes": 37165,
+   "sha256": "2a18cc07373595a4c89911410c2419e8519bc40f2d76670d43db286cdf166802",
+   "blake3": "e9c08ebfcbb2c816d17df02be522d07151143de8c1606ab12e2ec037fc5c09a2",
+   "bytes": 34983,
    "tier": "apps",
    "source": "origin"
   },
@@ -4223,9 +4223,9 @@
    "source": "hf"
   },
   "apps/index.jsonld": {
-   "sha256": "0e161bb292bd048a1bc1ce4b3dd2d1b0a6b6e0005186a5e57eedaa8cf67ac21f",
-   "blake3": "4ee500913fffa37b1e9588b7266a3321db7ba196c0cda479c92f11b0c8b463b2",
-   "bytes": 21593,
+   "sha256": "ace1699698cbe851e6f87ac82a471d9653305ebf37dfd8a1ce4ee58ef9c570f3",
+   "blake3": "ae50f31e650767681b0ba080860b436100fc6f6c01b72b1af1be6931d09677ed",
+   "bytes": 21591,
    "tier": "core",
    "source": "origin"
   },
@@ -31589,6 +31589,13 @@
    "sha256": "08f51caee6b02994f3135e21cd9edcd7f705ab55812f94f6b6ed63e6d97bcafa",
    "blake3": "002a1e8e979dfa66e813dcc85de5c8ce38d38d7f032d6d8cea93d5a8d42688b4",
    "bytes": 152136,
+   "tier": "core",
+   "source": "origin"
+  },
+  "usr/share/frame/shell-main.mjs": {
+   "sha256": "acac30dfa201f28bd041032d7f4fabbf039c07667695f06bfc6c216a401dedfc",
+   "blake3": "9537c358056c1d9a122e5cc47ddb1dd4fea3eda4c487512fb5d6ed7a4b7b6534",
+   "bytes": 615780,
    "tier": "core",
    "source": "origin"
   },
