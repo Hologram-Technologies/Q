@@ -331,6 +331,21 @@
   .app .nm { font-size: calc(var(--u) * 1.02); font-weight: 500; }
   .app .go { margin-left: auto; color: var(--ink-faint); opacity: 0; transition: opacity .12s; }
   .app:hover .go { opacity: 1; }
+  /* Minimalist-phone app list: pure TEXT, airy, A-Z — no icons or chevrons (reduce visual stimulation). */
+  .applist .app .ic, .applist .app .go { display: none; }
+  .applist .app { padding: calc(var(--u) * .92) calc(var(--u) * .4); }
+  .applist .app .nm { font-size: calc(var(--u) * 1.24); font-weight: 400; letter-spacing: .004em; }
+  .applist .app.app-ask .ic { display: inline-flex; opacity: .7; margin-right: var(--g0); }
+  .alpha-head { padding: calc(var(--u) * 1.1) calc(var(--u) * .4) calc(var(--u) * .3); font-size: calc(var(--u) * .82);
+    font-weight: 600; color: var(--ink-faint); letter-spacing: .09em; }
+  /* A-Z fast-scroll strip on the right edge of the Apps sheet (tap a letter → jump to its section) */
+  .alpha-scrub { position: absolute; right: max(2px, env(safe-area-inset-right)); top: 50%; transform: translateY(-50%);
+    z-index: 3; display: flex; flex-direction: column; align-items: center; padding: 4px 6px; gap: 0;
+    font-size: calc(var(--u) * .72); color: var(--ink-dim); user-select: none; -webkit-user-select: none; touch-action: manipulation; }
+  .alpha-scrub[hidden] { display: none; }
+  .alpha-l { line-height: 1.04; padding: 1px 4px; cursor: pointer; font-weight: 500; }
+  .alpha-l.off { opacity: .26; pointer-events: none; }
+  .alpha-l:active { color: var(--accent); }
   .drawer-foot { display: flex; align-items: center; justify-content: space-between; gap: var(--u);
     margin-top: var(--u); padding-top: var(--u); border-top: 1px solid var(--line); flex: 0 0 auto; }
   .ghost { display: inline-flex; align-items: center; gap: calc(var(--u) * .5); border: 0; background: transparent;
@@ -559,6 +574,7 @@
     <button class="scanrow" id="scanrow" type="button"><span class="ic">◎</span><span class="tx"><b>Scan the world</b><span>Point your camera at a code → open it</span></span></button>
     <ul class="applist" id="applist"></ul>
   </div>
+  <div class="alpha-scrub" id="alpha-scrub" hidden aria-hidden="true"></div>
   <div class="drawer-foot">
     <button class="ghost" id="open-settings"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.6 1.6 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.6 1.6 0 0 0-2.7 1.1V21a2 2 0 1 1-4 0v-.1a1.6 1.6 0 0 0-2.7-1.1l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1A1.6 1.6 0 0 0 4 15a1.6 1.6 0 0 0-1.5-1H2a2 2 0 1 1 0-4h.1A1.6 1.6 0 0 0 4 8.6a1.6 1.6 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1A1.6 1.6 0 0 0 9 4.6V4a2 2 0 1 1 4 0v.1a1.6 1.6 0 0 0 2.7 1.1l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.6 1.6 0 0 0-.3 1.8 1.6 1.6 0 0 0 1.5 1h.1a2 2 0 1 1 0 4h-.1a1.6 1.6 0 0 0-1.5 1z"/></svg> Settings</button>
     <button class="ghost" id="open-inbox"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12h5l2 3h4l2-3h5"/><path d="M5 6h14a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2z"/></svg> Inbox<span class="badge" id="inbox-badge"></span></button>
@@ -1547,12 +1563,39 @@
     b.addEventListener("click", function () { promptOpen(a); });
     li.appendChild(b); return li;
   }
-  // M1 — the app list IS the resolver index, SEARCH-FIRST. Empty query → the calm grouped list; typing
+  // Minimalist-phone feel — the app list is a clean A-Z index; an alphabet strip on the right fast-scrolls it.
+  function alphaGroups(list) {
+    var by = {};
+    (list || []).filter(Boolean).forEach(function (a) {
+      var nm = String(a.name || a.id || "").trim(); if (!nm) return;
+      var c = nm.charAt(0).toUpperCase(); if (!/[A-Z]/.test(c)) c = "#";
+      (by[c] = by[c] || []).push(a);
+    });
+    return Object.keys(by).sort(function (x, y) { return x === "#" ? 1 : y === "#" ? -1 : (x < y ? -1 : 1); })
+      .map(function (c) { return [c, by[c].sort(function (a, b) { var an = String(a.name || a.id).toLowerCase(), bn = String(b.name || b.id).toLowerCase(); return an < bn ? -1 : an > bn ? 1 : 0; })]; });
+  }
+  function buildScrubber(present) {
+    var s = $("alpha-scrub"); if (!s) return;
+    var set = {}; (present || []).forEach(function (c) { set[c] = 1; });
+    s.innerHTML = "";
+    "ABCDEFGHIJKLMNOPQRSTUVWXYZ#".split("").forEach(function (c) {
+      var e = document.createElement("span"); e.className = "alpha-l" + (set[c] ? "" : " off"); e.textContent = c;
+      if (set[c]) e.addEventListener("click", function () {
+        var t = $("alpha-" + c); if (!t) return;
+        try { if (navigator.vibrate) navigator.vibrate(5); } catch (e2) {}
+        t.scrollIntoView({ block: "start", behavior: matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth" });
+      });
+      s.appendChild(e);
+    });
+    s.hidden = false;
+  }
+  // M1 — the app list IS the resolver index, SEARCH-FIRST. Empty query → the calm A-Z list; typing
   // live-filters to a flat list of matching κ-apps (fuzzy on name/id); no match offers Q (open / render / ask).
   function renderApps(q) {
     var ul = $("applist"); if (!ul) return; ul.innerHTML = "";
     q = String(q == null ? (($("app-search") || {}).value || "") : q).trim().toLowerCase();
     if (q) {
+      var _sc = $("alpha-scrub"); if (_sc) _sc.hidden = true;   // no A-Z scrubber while searching
       var hits = (apps || []).filter(Boolean).filter(function (a) {
         return String(a.name || a.id || "").toLowerCase().indexOf(q) >= 0 || String(a.id || "").toLowerCase().indexOf(q) >= 0;
       });
@@ -1570,11 +1613,13 @@
         li.appendChild(b); ul.appendChild(li);
       }
     } else {
-      casaGroups(apps).forEach(function (grp) {
-        var hd = document.createElement("li"); hd.className = "group-head"; hd.textContent = grp[0]; hd.setAttribute("aria-hidden", "true");
+      var groups = alphaGroups(apps);
+      groups.forEach(function (grp) {
+        var hd = document.createElement("li"); hd.className = "group-head alpha-head"; hd.id = "alpha-" + grp[0]; hd.textContent = grp[0]; hd.setAttribute("aria-hidden", "true");
         ul.appendChild(hd);
         grp[1].forEach(function (a) { ul.appendChild(appRow(a)); });
       });
+      buildScrubber(groups.map(function (g) { return g[0]; }));
     }
     var cc = $("cp-count"); if (cc) cc.textContent = apps.length + " apps · yours";
     var _ac = $("appcount"); if (_ac) _ac.textContent = apps.length + " apps";
