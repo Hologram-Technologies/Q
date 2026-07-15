@@ -217,7 +217,8 @@ const short = (k) => String(k).replace(/^(did:holo:)?sha256:/, "").slice(0, 12) 
 // zero-code model change. The manifest pin is the Law-L5 anchor.
 const QS = new URLSearchParams(location.search);
 const SRC = QS.get("src");
-const M27 = QS.get("m") === "27b";
+const DEFAULT_27B = false;                                 // flips true the moment the hybrid engine passes parity (κ-object already published)
+const M27 = QS.get("m") === "27b" || (DEFAULT_27B && QS.get("m") !== "8b");
 const BASE = SRC || (M27 ? "https://huggingface.co/HOLOGRAMTECH/q-bonsai-27b/resolve/main" : "https://huggingface.co/HOLOGRAMTECH/q-bonsai-8b/resolve/main");
 const PIN = M27 ? "did:holo:sha256:00beea03509a79f6567879f019c04bb15dda8721f6320f8295d9ea1dd9ba54af" : "did:holo:sha256:a0dc81f26ec5ce98b28ee9c1fab620e91c20720f777e1de6bc416317f54d27e2";
 const CTX = 640;
@@ -225,9 +226,10 @@ const CTX = 640;
 let engine = null, gpu = null, rootK = "", warm = false, mind = [], thinkOpen = -1, thinkClose = -1;
 let modelName = "Bonsai";                                  // set from the manifest once loaded
 
+let entered = false, streamStarted = false;
 async function stream() {
   try { if (window.__holoOff) { window.__holoOff(); window.__holoOff = null; } } catch {}   // hand the GPU to the engine
-  show("chat"); $("inp").focus();                          // the chat IS the app — the mind arrives behind it
+  if (entered) { show("chat"); $("inp").focus(); }         // welcome stays until the visitor chooses to enter
   const t0 = performance.now();
   const phase = (s) => { $("metrics").innerHTML = s; };
   try {
@@ -304,7 +306,7 @@ let pendingQ = null;
 function enterChat() {
   ready = true; $("send").disabled = false; metrics();
   if (pendingQ) { $("inp").value = pendingQ; pendingQ = null; send(); }
-  else $("inp").focus();
+  else if (entered) $("inp").focus();
 }
 
 const log = $("log");
@@ -380,10 +382,13 @@ async function send() {
   log.scrollTop = log.scrollHeight;
 }
 
-$("go").addEventListener("click", stream);
+$("go").addEventListener("click", () => {
+  entered = true; show("chat"); $("inp").focus();
+  if (!streamStarted) { streamStarted = true; stream(); }
+});
 $("send").disabled = true;                                  // until the mind is resident (early questions queue)
-(async () => {                                              // returning visitor: no pitch, no film — the room, waking
-  try { const c = await caches.open("holo-kappa-v1"); if (await c.match(BASE + "/manifest.json")) stream(); } catch {}
+(async () => {                                              // returning visitor: the mind wakes BEHIND the welcome screen
+  try { const c = await caches.open("holo-kappa-v1"); if (await c.match(BASE + "/manifest.json")) { streamStarted = true; stream(); } } catch {}
 })();
 $("send").addEventListener("click", send);
 $("inp").addEventListener("keydown", (e) => { if (e.key === "Enter") send(); });
