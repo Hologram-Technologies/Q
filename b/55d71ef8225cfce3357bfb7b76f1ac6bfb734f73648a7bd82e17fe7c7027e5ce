@@ -9,13 +9,13 @@
  "tiers": {
   "core": {
    "files": 597,
-   "bytes": 11332290,
+   "bytes": 11332589,
    "hf": 0
   },
   "apps": {
    "files": 5459,
-   "bytes": 1769627,
-   "hf": 5396
+   "bytes": 1616049,
+   "hf": 5408
   },
   "heavy": {
    "files": 20,
@@ -3084,9 +3084,9 @@
    "source": "origin"
   },
   "apps/holo-messenger/_vendor/ui/chat-ui.bundle.js": {
-   "sha256": "84c69ca5a2b1f8aa8cda11808ca995a8b1ae90dd87e49c30c71891d13854b910",
-   "blake3": "77240b1dc95f2d2999af3e821ee91e358399f83107eb6978834bd303f37a9925",
-   "bytes": 428184,
+   "sha256": "5679c6fd83b1ef6ec9c87837255a22a085ed8b1f7cb8051226c281ad674f43c1",
+   "blake3": "459b2d6d4c26ef0a1c25ba32024cd62cf8ead4c08ba109e60e4ac217652157bc",
+   "bytes": 428483,
    "tier": "core",
    "source": "origin"
   },
@@ -3261,8 +3261,8 @@
    "source": "hf"
   },
   "apps/holo-messenger/app.html": {
-   "sha256": "4140eab957696427dfdb6ffb3d9ea8e15b6281b4c2aa7a180e3ec8faf29f8265",
-   "blake3": "a76988cc38fd9b41b09fe8f10dca0cbcc3dbb48c934aad8bd4f1c5723b6774c6",
+   "sha256": "f12d22b9a28879f4fa88461dd92933f678bb89402812787899858cd4b5609390",
+   "blake3": "75591ba2ea7ed774fb89368f4816a81521c4b0c37bea143e928fada338cadc2b",
    "bytes": 71122,
    "tier": "core",
    "source": "origin"
@@ -3685,8 +3685,8 @@
    "source": "origin"
   },
   "apps/holo-messenger/holo-sw.js": {
-   "sha256": "8895d820f13c80441c78f79aef23590922f8c0588a4cddc19b2dcdc996925a7a",
-   "blake3": "306a0e2328934b24c1937d88c3f3c4497a6bcafd4e1acf399d4fa1d8e17e13b4",
+   "sha256": "82e69563dd2cabe0a828f2a723d2e8163f5b81cd53ac69f8e40ba26c1bfe4b9f",
+   "blake3": "15ceecfe08dffbfe58c6962662d67c3dedff11f4062601dcf92602473afca4ff",
    "bytes": 26338,
    "tier": "core",
    "source": "origin"
@@ -4084,8 +4084,8 @@
    "source": "origin"
   },
   "apps/holo-messenger/shell-manifest.json": {
-   "sha256": "4441c9ff9c93410d73f2f700121840bd9b5887ab1ac4065fa96c4e7a93728776",
-   "blake3": "311df9d45727717f1f6015ebc33e10778789e0deae084108fb396f96a47de5f5",
+   "sha256": "3d979481d3cc154915ab34934f71e6f0fbbadc773ded20749b2ef74cda904f7e",
+   "blake3": "ba39e9d4744575d844e90016d9555622d03dc9328ca00ee8c012fbddea2ca995",
    "bytes": 6812,
    "tier": "core",
    "source": "origin"
@@ -16846,11 +16846,9 @@
    "source": "origin"
   },
   "apps/q/core/holo-stream-load.mjs": {
-   "sha256": "0c62853f84c0510ac70a9bcfabe0cd6cd51f1ed659f80d23c1024d402302392d",
    "blake3": "0f0b3c111ca3dba42b6141c4feed97b7fa87e8caf0a93559ea652b642fb59dff",
-   "bytes": 13125,
    "tier": "apps",
-   "source": "origin"
+   "source": "hf"
   },
   "apps/q/core/kappa.js": {
    "sha256": "08294ce5d214685d8aefd06917d6f22175635fbbf9f447bd6adf997cae634b83",
@@ -16865,18 +16863,14 @@
    "source": "hf"
   },
   "apps/q/core/kv-commons.mjs": {
-   "sha256": "9b86277419a90118b994c512d54192a0beee1434b42d1a7ffce0bc6d3ad2cab5",
    "blake3": "32c9ef2f711e28db8d9e269fe2e456c2e4ac4a2e7c3e42fdeba88b903b576781",
-   "bytes": 2664,
    "tier": "apps",
-   "source": "origin"
+   "source": "hf"
   },
   "apps/q/core/listen.js": {
-   "sha256": "13c7ba1d5a054fa1b386111b2a9840e263deb346920974d6a6b811295d26d3de",
    "blake3": "a10c857e888295984f007fc178c9d44e3e191f60cb46c77527d6f4dcb27eebc0",
-   "bytes": 11442,
    "tier": "apps",
-   "source": "origin"
+   "source": "hf"
   },
   "apps/q/core/loader.js": {
    "sha256": "d49aeedfc34f4fc6a63422f087a873633be1a0df7b9b9c29d313528c139700a0",
@@ -16901,11 +16895,9 @@
    "source": "hf"
   },
   "apps/q/core/parts-cache.mjs": {
-   "sha256": "87ad4e893627fd9d12a27f0a125e920daffa13258a9d82f252ac13de7243f97c",
    "blake3": "7125d6d489bf8649e5021f7c0da4f2751cfa1f79bbff18c47afb97658d7a322d",
-   "bytes": 2613,
    "tier": "apps",
-   "source": "origin"
+   "source": "hf"
   },
   "apps/q/core/presets.js": {
    "blake3": "cf2ead1f344ebc25d5e19bd30a65d083793c9c6df3323a49b087aaf682162750",
@@ -17294,18 +17286,14 @@
    "source": "hf"
   },
   "apps/q/forge/gguf-forge-iq-dequant.mjs": {
-   "sha256": "8d80347eeb0d71ddd2a4ea11b63cff46ed202dba7a41772cbd1c6a341e6ae9d8",
    "blake3": "213e24bdc3ce4c6da25d4eebc96e103b2190292595c3074dd32b2a408a62b79c",
-   "bytes": 11568,
    "tier": "apps",
-   "source": "origin"
+   "source": "hf"
   },
   "apps/q/forge/gguf-forge-iq-grids.mjs": {
-   "sha256": "8c64149d0987499961778a53273f95774a40c71f4a7916a9e46a8645b238d70a",
    "blake3": "87880133b512c20baf3cfc78dec9f37d24233c70d1a6ff88cec8f5c16ba7fc8b",
-   "bytes": 46068,
    "tier": "apps",
-   "source": "origin"
+   "source": "hf"
   },
   "apps/q/forge/gguf-forge-iq.test.mjs": {
    "blake3": "0ac1dba553d5460a209ab91ba562c0353ff42528e8b038128926fa8035362b05",
@@ -19063,39 +19051,31 @@
    "source": "hf"
   },
   "apps/q/holo-delta.mjs": {
-   "sha256": "2f23f53d099addaca60a6b9b53002af6a182eb8f9f329843e72b7d49a8c0f66e",
    "blake3": "28b845c09b34d8bca7c2c2889e00a5ec19a4daf7d7f8a1d2f2b2336b54e49b3c",
-   "bytes": 10781,
    "tier": "apps",
-   "source": "origin"
+   "source": "hf"
   },
   "apps/q/holo-evicted.json": {
-   "sha256": "9952d9a0b3925f83e556dd5daa2ae9a480af0193b432f4637475f8410d3f251c",
-   "blake3": "35b43949ee25962ffc96cce6fb2ee4e3c4bcdffb2cdbd37b292587a05352e20f",
-   "bytes": 54686,
+   "sha256": "4a3ee15ef9613f573b4c20560bb186d1eb6a8053f1f95f21186517c4e32d83b0",
+   "blake3": "1dd6c6c06039330087059c0dcb7205008cb7df776232503c5f46f7c0cc00a6ed",
+   "bytes": 56895,
    "tier": "apps",
    "source": "origin"
   },
   "apps/q/holo-load-delta.mjs": {
-   "sha256": "e61e122e645c3e1998801ff8cd3008bdcb9253dc6a81f0f5085f403b3f40bf3b",
    "blake3": "20858f7b5361ed90eeeffbd854595eee3436c019d88bb27775e5da7defc12672",
-   "bytes": 3805,
    "tier": "apps",
-   "source": "origin"
+   "source": "hf"
   },
   "apps/q/holo-load2bit.mjs": {
-   "sha256": "f44c9e3b703fcdba2f0792720f68fe45e0f147892e2c17b71d2c8570d509b993",
    "blake3": "fceb85935cad9c4a728c4e6965cb05802cb0746c886316e34514d299057e1d98",
-   "bytes": 11618,
    "tier": "apps",
-   "source": "origin"
+   "source": "hf"
   },
   "apps/q/holo-model-frame.mjs": {
-   "sha256": "2ca8430190e7c31e5c831792f1f32907a0b7cbf0f8a43530ea4495b4a22141f1",
    "blake3": "e55fbef3d5779c8b09464ad673d4f3a3efe694bd13db5e856e3511e1213f2305",
-   "bytes": 6480,
    "tier": "apps",
-   "source": "origin"
+   "source": "hf"
   },
   "apps/q/holo-splash.js": {
    "blake3": "69e9bfc55ac61137f83090028126b4484b19bd3075a74e9cd0c77aaf1e489bc3",
@@ -19201,18 +19181,14 @@
    "source": "origin"
   },
   "apps/q/qvac-ingest.mjs": {
-   "sha256": "e01af72dfc17b4638e72026fbb79b6ec7dc3af333a37eeff356cc74bfca422ef",
    "blake3": "598bd95b2bb16d5bff61aae814c0f39f40339dbe9dc2bfefe2073b351ba8d323",
-   "bytes": 28560,
    "tier": "apps",
-   "source": "origin"
+   "source": "hf"
   },
   "apps/q/qvac-kdisk.mjs": {
-   "sha256": "a83e882c2cbb49278a239dc70df4026841e9a5185c84871e9f049b6a45890176",
    "blake3": "05d5d96082c0baec31176021759fcadb2645f11a124f9e0c03441cf38bd691d4",
-   "bytes": 7242,
    "tier": "apps",
-   "source": "origin"
+   "source": "hf"
   },
   "apps/q/qvac-kstore.mjs": {
    "blake3": "d24c843bfb6e306b08dac4918537c0c6dc89d127a236921eded52d72882b7ddc",
@@ -29041,9 +29017,9 @@
    "source": "origin"
   },
   "apps/yourspace/holo-evicted.json": {
-   "sha256": "48a5d814b728769da95b88fce68bfcaa4db9cad77a03d24b470f60f87ed4619a",
-   "blake3": "0575c602c90d887d9709e60cf628ea5f0223794bf45a9159163f1b588bebc326",
-   "bytes": 917,
+   "sha256": "8e5f2759b2190dd4db63363a79124403b58597915ce4221fdf425c5854729cca",
+   "blake3": "cde03a6ab36e1b0375b483482bd376b7a610e77d7aa84c0e030e88fb8c485b73",
+   "bytes": 1096,
    "tier": "apps",
    "source": "origin"
   },
