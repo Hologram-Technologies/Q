@@ -596,6 +596,7 @@ function mountQChat() {
   if (!hero || hero.querySelector(".q-chat-iframe")) return;
   const f = DOC.createElement("iframe");
   f.className = "q-chat-iframe";
+  try { f.allow = "microphone; camera; autoplay"; } catch (e) {}   // delegate mic/cam/autoplay into the iframe (else getUserMedia is blocked → "couldn't reach the microphone")
   try { f.src = new URL("../q/q-chat.html?guest=1&embed=1", import.meta.url).href; } catch { f.src = "/apps/q/q-chat.html?guest=1&embed=1"; }
   f.addEventListener("load", () => { try {
     const d = f.contentDocument; if (!d) return;                       // same-origin → we can style it plain

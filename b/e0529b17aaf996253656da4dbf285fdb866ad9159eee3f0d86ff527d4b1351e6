@@ -9,12 +9,12 @@
  "tiers": {
   "core": {
    "files": 597,
-   "bytes": 11351209,
+   "bytes": 11351382,
    "hf": 0
   },
   "apps": {
    "files": 5462,
-   "bytes": 2385949,
+   "bytes": 2389236,
    "hf": 5409
   },
   "heavy": {
@@ -1428,9 +1428,9 @@
    "source": "origin"
   },
   "apps/bonsai/holospace.lock.json": {
-   "sha256": "e5c195dd463f170a7bc289a01329112609ccd5c6006ac21df9d1e2f085047a98",
-   "blake3": "c837fbcb1d311c391cd33c0ffe558c192c7b76132ed0be90abd90759b5312432",
-   "bytes": 3790,
+   "sha256": "4febbcaf99a392cb76733b92e9cc453d3434323663f57e4f144f6127fa8a6f4c",
+   "blake3": "f54cf23f76f13da12405ee681a0d9011352fd695d244692675ebbe2c9c15563e",
+   "bytes": 3789,
    "tier": "apps",
    "source": "origin"
   },
@@ -1442,9 +1442,9 @@
    "source": "origin"
   },
   "apps/bonsai/index.html": {
-   "sha256": "9472b80b09c6aed9582a19637159b2b13db4da8fc87d0d53509c4a59e74d856c",
-   "blake3": "23dbdc041ae7b2ed3304aae326c261f548e78a997668b5bed65e722232300c8b",
-   "bytes": 34026,
+   "sha256": "3e475a984692e4542e13c7efefeff7454e76121873717880da1fef8ab56ddeda",
+   "blake3": "2b89b91cdef39018d5d6312c14081ae88f3f294164fa99501dee64d6da8a8100",
+   "bytes": 37165,
    "tier": "apps",
    "source": "origin"
   },
@@ -4084,9 +4084,9 @@
    "source": "origin"
   },
   "apps/holo-messenger/q-summon.mjs": {
-   "sha256": "aa4e4e9c480cecc2c88a1c4cdac2145a54de3d96c0eafd3905aa4de3ee68dce8",
-   "blake3": "2ac7b302a3f509878005022eef56006f65850cb5dabfa25b419ad31267df4024",
-   "bytes": 59196,
+   "sha256": "11c0fbc4e9ec42f4a985f2f356c86182690e10efbe7b484057b5b32d01275b88",
+   "blake3": "78a49c75a7ec990ea8b33a4f46451e4fd53ef3456d5a138a3dfb40fa0d7f740e",
+   "bytes": 59375,
    "tier": "core",
    "source": "origin"
   },
@@ -4223,9 +4223,9 @@
    "source": "hf"
   },
   "apps/index.jsonld": {
-   "sha256": "03def4019b5133524327bcdbec9ee0d6056408b37b45f89aebfa812f02141b09",
-   "blake3": "c21b653891cdabd9e621b4ac45222b36529be0321d50c795a82b42d6dea89c9f",
-   "bytes": 21599,
+   "sha256": "0e161bb292bd048a1bc1ce4b3dd2d1b0a6b6e0005186a5e57eedaa8cf67ac21f",
+   "blake3": "4ee500913fffa37b1e9588b7266a3321db7ba196c0cda479c92f11b0c8b463b2",
+   "bytes": 21593,
    "tier": "core",
    "source": "origin"
   },
@@ -19164,9 +19164,9 @@
    "source": "hf"
   },
   "apps/q/q-chat.html": {
-   "sha256": "511c25f390b4b4c9d8ee904cb9fd1143ca222bac64afb8a2e816e864a2b9ea11",
-   "blake3": "10c840fe1f16848bb7f07e54d589e99c475251d177fccf4d559f741dff9992c3",
-   "bytes": 98520,
+   "sha256": "e39ca56ea45116dc4df2027fa729f65f9050cf699dd972cb713891e1ed536774",
+   "blake3": "2e97277be67e55c77753a9f59a371452a4a18c5563cf5d9dff7ad7a484adaa19",
+   "bytes": 98669,
    "tier": "apps",
    "source": "origin"
   },

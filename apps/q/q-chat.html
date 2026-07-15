@@ -699,6 +699,7 @@ async function warmKokoro() {
   if (_kokoro || _kokoroTried) return; _kokoroTried = true;   // HQ-ONLY GUARANTEE: always warm THIS frame's neural voice (never depend on a parent voice that might use an OS floor)
   try {
     const mod = await import("./core/voice-out.js");
+    _kokoro = mod;   // set at import → speak() reaches the pre-baked ATLAS (instant, no HD/COI) before HD warms
     mod.loadVoice((p) => { if (p && p.status === "progress" && p.file) { try { console.debug("[Q voice] kokoro", p.file, Math.round(p.progress || 0) + "%"); } catch {} } })
       .then(() => { _kokoro = mod; _voiceErr = null; try { console.info("[Q voice] Kokoro ready — natural voice active"); } catch {} _speakGreeting(false); try { _flushVoiceQ(); } catch (e) {} })
       .catch((e) => { _kokoro = null; _voiceErr = String((e && e.message) || e); try { console.warn("[Q voice] Kokoro FAILED, using system voice:", e); } catch {} });
@@ -716,9 +717,9 @@ function _flushVoiceQ() { const t = _voiceQ; if (t && _kokoro && _kokoro.ready &
 function speak(text) {
   if (!voiceOn || !text) return;
   text = _spokenText(text); if (!text) return;   // Q says human words — markdown/code/urls stay on screen only
-  if (_kokoro && _kokoro.ready && _kokoro.ready()) {   // beautiful neural voice — the ONLY voice Q uses
+  if (_kokoro && _kokoro.speak) {   // voice-out.speak tries the pre-baked ATLAS first (instant, no HD/COI) → HD → park
     qOrb("speaking"); _qSpeaking++;
-    _kokoro.speak(text).then(() => { _qSpeaking = Math.max(0, _qSpeaking - 1); if (!_qSpeaking) qOrb("idle"); }).catch(() => { _qSpeaking = Math.max(0, _qSpeaking - 1); if (!_qSpeaking) qOrb("idle"); if (_OS_VOICE_OK) _osSpeak(text); });
+    Promise.resolve(_kokoro.speak(text)).then(() => { _qSpeaking = Math.max(0, _qSpeaking - 1); if (!_qSpeaking) qOrb("idle"); }).catch(() => { _qSpeaking = Math.max(0, _qSpeaking - 1); if (!_qSpeaking) qOrb("idle"); if (_OS_VOICE_OK) _osSpeak(text); });
     return;
   }
   if (_OS_VOICE_OK) { _osSpeak(text); return; }   // opt-in accessibility floor only
