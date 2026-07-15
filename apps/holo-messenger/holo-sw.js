@@ -33,7 +33,7 @@ import { createBlake3 } from "../../usr/lib/holo/holo-blake3.mjs";
 import { makeSelfPin } from "../../usr/lib/holo/holo-self-pin.mjs";
 const _RUNG = (() => { try { return makeStoreRung(); } catch { return null; } })();
 
-const CACHE = "holo-msgr-shell-b5c6efd4ad85";                     // bump → old (unverified) caches are purged on activate
+const CACHE = "holo-msgr-shell-c6f9b5003fed";                     // bump → old (unverified) caches are purged on activate
 // BASE-RELOCATABLE: the worker may be served under ANY prefix (OS root, a GitHub Pages /<repo>/ subpath, a
 // static mirror). Every location below derives from where THIS script actually lives; at the OS root BASE is ""
 // and behavior is byte-identical. Manifest paths stay CANONICAL ("/apps/holo-messenger/…" — they are identity,
