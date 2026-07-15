@@ -138,7 +138,7 @@ fn aces(x: vec3f) -> vec3f { let a=2.51; let b=0.03; let c=2.43; let d=0.59; let
 const WORKER_BODY = [
   "const WGSL = __WGSL__;",
   "let dev=null, ctx=null, pipeline=null, bind=null, ubuf=null, uf=null, raf=0, running=false, dead=false, canvas=null;",
-  "let dpr=1, ssMax=1, scale=1, cssW=64, cssH=64;",   // backing = css × dpr × scale; scale climbs to ssMax (SSAA) with headroom, drops under load — the native orb's ladder
+  "let dpr=1, ssMax=1, scale=1, minScale=0.5, cssW=64, cssH=64;",   // backing = css × dpr × scale; scale climbs to ssMax (SSAA) with headroom, drops under load — the native orb's ladder
   "let mode=0, extLevel=-1, cur=0.0, gcur=0.0, dbg=false, fc=0, lastT=0, emaDt=0;",   // mode: 0 idle · 1 listening · 2 thinking · 3 speaking. cur = eased base level; gcur = eased gold (mind-flare) wash; extLevel = live speech amplitude (0..1) or -1.
   "const NOW=function(){return (typeof performance!=='undefined')?performance.now():Date.now();};",
   "const RAF=(typeof requestAnimationFrame==='function')?requestAnimationFrame:function(f){return setTimeout(function(){f(NOW());},16);};",
@@ -157,7 +157,7 @@ const WORKER_BODY = [
   "  cur+=(base-cur)*0.06; gcur+=(gold-gcur)*0.08; var lvl=Math.max(0.0, cur+osc+live);",
   "  var now=NOW(); if(lastT){ emaDt=emaDt?emaDt*0.9+(now-lastT)*0.1:(now-lastT); } lastT=now;",
   "  if(((++fc)%24)===0&&emaDt>0){ var fps=1000/emaDt;",   // frame-time adaptive resolution (the native ladder): drop fast under load, climb slow into SSAA headroom → sharp AND never laggy
-  "    if(fps<50&&scale>0.5){ scale=Math.max(0.5,scale-0.25); resize(); }",
+  "    if(fps<50&&scale>minScale){ scale=Math.max(minScale,scale-0.25); resize(); }",
   "    else if(fps>58&&scale<ssMax){ scale=Math.min(ssMax,scale+0.25); resize(); } }",
   "  if(dbg&&(fc%15)===0){ try{ self.postMessage({t:'lvl', v:lvl, mode:mode}); }catch(e){} }",
   "  uf[0]=canvas.width; uf[1]=canvas.height; uf[2]=t; uf[3]=lvl;",
@@ -166,7 +166,7 @@ const WORKER_BODY = [
   "self.onmessage=async function(e){ var m=e.data||{}; try{",
   "  if(m.t==='probe'){ try{ if(!navigator.gpu) throw new Error('no gpu'); var a=await navigator.gpu.requestAdapter({powerPreference:'high-performance'}); if(!a) throw new Error('no adapter'); var d=await a.requestDevice(); if(d.destroy) d.destroy(); self.postMessage({t:'probe-ok'}); }catch(err){ self.postMessage({t:'fail',err:'probe: '+String(err&&err.message||err)}); } return; }",
   "  if(m.t==='init'){ try{",
-  "    canvas=m.canvas; dpr=m.dpr||1; ssMax=m.ss||1; scale=1; cssW=m.cssW||64; cssH=m.cssH||64; dbg=!!m.debug;",
+  "    canvas=m.canvas; dpr=m.dpr||1; ssMax=m.ss||1; scale=Math.min(ssMax,Math.max(1,(m.minPR||1)/dpr)); minScale=scale; cssW=m.cssW||64; cssH=m.cssH||64; dbg=!!m.debug;",
   "    var a=await navigator.gpu.requestAdapter({powerPreference:'high-performance'}); if(!a) throw new Error('no adapter'); dev=await a.requestDevice(); if(dev.lost) dev.lost.then(function(){dead=true;});",
   "    ctx=canvas.getContext('webgpu'); if(!ctx) throw new Error('no webgpu ctx'); var fmt=navigator.gpu.getPreferredCanvasFormat(); ctx.configure({device:dev,format:fmt,alphaMode:'premultiplied'});",
   "    uf=new Float32Array(12); ubuf=dev.createBuffer({size:48,usage:GPUBufferUsage.UNIFORM|GPUBufferUsage.COPY_DST});",
@@ -236,7 +236,7 @@ function mountGpuOrb(canvas, opts) {
       if (stopped) return;
       let off; try { off = canvas.transferControlToOffscreen(); transferred = true; }
       catch (err) { toWebgl(); return; }
-      try { worker.postMessage({ t: "init", canvas: off, dpr: dpr(), ss: 2, cssW: cw(), cssH: ch(), debug: !!opts.debug }, [off]); }   // ss = the SSAA ceiling the worker's ladder climbs to with fps headroom (starts at 1× — instant first paint)
+      try { worker.postMessage({ t: "init", canvas: off, dpr: dpr(), ss: Math.max(2, Math.ceil(2 / dpr())), minPR: 2, cssW: cw(), cssH: ch(), debug: !!opts.debug }, [off]); }   // ss = the SSAA ceiling the worker's ladder climbs to with fps headroom (starts at 1× — instant first paint)
       catch (err) { toWebgl(); }
     } else if (m.t === "ready") { if (timer) { clearTimeout(timer); timer = 0; } if (pendingSig) { forwardSig(pendingSig.mode, pendingSig.level); pendingSig = null; } }   // painting on the worker
     else if (m.t === "lvl") { handle.level = m.v; handle.stateMode = m.mode; if (typeof handle.onLevel === "function") { try { handle.onLevel(m.v, m.mode); } catch (e) {} } }   // optional debug readback (opts.debug)

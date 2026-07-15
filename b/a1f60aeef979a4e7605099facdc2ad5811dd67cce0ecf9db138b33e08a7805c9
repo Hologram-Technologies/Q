@@ -9,12 +9,12 @@
  "tiers": {
   "core": {
    "files": 597,
-   "bytes": 11348213,
+   "bytes": 11348217,
    "hf": 0
   },
   "apps": {
    "files": 5462,
-   "bytes": 2385578,
+   "bytes": 2384666,
    "hf": 5409
   },
   "heavy": {
@@ -1428,8 +1428,8 @@
    "source": "origin"
   },
   "apps/bonsai/holospace.lock.json": {
-   "sha256": "200d27023b0932100ab18adf70ae782e403d8762e18b035822158f376306f7ba",
-   "blake3": "7abde19d4726ef267f165e0ed7e8b768f1e5800a316b062c2e6b9a783cd45b8b",
+   "sha256": "7e680c3922cf137d8adecf639d7395ce1b867fe3f99d0a8013ea49ca423eb8e5",
+   "blake3": "fcb55afb493ed00243a87ea910d6c9a45071995b5b0cc4faf3af295f9c5812ef",
    "bytes": 3794,
    "tier": "apps",
    "source": "origin"
@@ -1442,9 +1442,9 @@
    "source": "origin"
   },
   "apps/bonsai/index.html": {
-   "sha256": "5787982a4f4f07f91f195743b942bf0fc4e3af23bb4821e4b13615eacfd36d13",
-   "blake3": "07e43b46c090451b8b74c06aee0e358af03d3505625a4d908057966c648b2741",
-   "bytes": 33776,
+   "sha256": "11604f9f023e919da7f37abf6bbdbf76ce12e6c27217e6de7398646643bf0d79",
+   "blake3": "051bd709579e6847b2265c91725f8ad70fce16056d0fc9480037086b18e00b18",
+   "bytes": 32739,
    "tier": "apps",
    "source": "origin"
   },
@@ -4223,9 +4223,9 @@
    "source": "hf"
   },
   "apps/index.jsonld": {
-   "sha256": "b00b7ae12020d861fbab88803b89f0524e41f40b82f5b35eee7d5d2f7f34d6bd",
-   "blake3": "94491d7efd4abc2a7e5003b95b050c0ea8cd1b8510a19f4544d45770e15bb7c7",
-   "bytes": 21587,
+   "sha256": "14a90bcf06f53b517c8c45dffdc9b57101867a387a5f7afbb5d8dc815f348647",
+   "blake3": "68f0d9ef8df06857b9188624d4cf3cc72a7fddc4a3808ec8993e632c7a6ad16e",
+   "bytes": 21591,
    "tier": "core",
    "source": "origin"
   },
@@ -16846,9 +16846,9 @@
    "source": "origin"
   },
   "apps/q/core/holo-orb.js": {
-   "sha256": "bdb559bd0dec93fd70e9c1ed515bbd483ff4cadc8ce38df946983adca29c604e",
-   "blake3": "02dfec6079bdcd279cb71737b29ef556a6532f36ed8e159c13ebfadf4bed4e7a",
-   "bytes": 28939,
+   "sha256": "b2822e1a4a254a9c7baef5ed893452ec556c5ca218735b2d73d7bd1d39f57951",
+   "blake3": "a96d0a013d32eaf61a5c3165995312bd948d85639519452446087be2c73cea3c",
+   "bytes": 29064,
    "tier": "apps",
    "source": "origin"
   },
