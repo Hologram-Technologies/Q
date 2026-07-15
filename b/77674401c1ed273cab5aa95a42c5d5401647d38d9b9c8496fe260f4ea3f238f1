@@ -9,7 +9,7 @@
  "tiers": {
   "core": {
    "files": 530,
-   "bytes": 10063803,
+   "bytes": 10067588,
    "hf": 0
   },
   "apps": {
@@ -31022,16 +31022,16 @@
    "source": "origin"
   },
   "usr/share/frame/home-screen.html": {
-   "sha256": "fb12ef01804f58ace473b1a03e931a2f0cb31b843b5a34bc57449d483ec57142",
-   "blake3": "88415b4c819878814a9df2b57d8a8b9bc4a5882fe2a9ecf5385748287987f87a",
-   "bytes": 145543,
+   "sha256": "d06c6100159c638a5abb78440b96963af34f24eab0f06f33cab0fb832983dabc",
+   "blake3": "42c41294c1fec65c0db979afea088834b442647d7f0183a93e0e92458a9ee23f",
+   "bytes": 149320,
    "tier": "core",
    "source": "origin"
   },
   "usr/share/frame/wallet.html": {
-   "sha256": "d284cf8b581c3c9430a0f15ef924beb71a9f296ce04bf42d7af9d2ad0568a7b6",
-   "blake3": "1c60eef2a75d2fc234a8c6b47edcd9b79602d2542abb9bdb269957a6904c8b67",
-   "bytes": 122620,
+   "sha256": "a46027120dafe31ed01761b8279990dce763182211100885349b3d5141ba4bbb",
+   "blake3": "ab6bcf39b2595a4104776b470de3ab2f75a3311246c142c268af11e02c6b3dc8",
+   "bytes": 122628,
    "tier": "core",
    "source": "origin"
   },
