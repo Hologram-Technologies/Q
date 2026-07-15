@@ -119,7 +119,27 @@
   "music-universe.json": "ef46ff2f80b591a59cffc80fd0a3f3bd343cfca266ada2c2f1fe16d4dd2360ba",
   "holo-jf-bridge.mjs": "de0c40bbc1830e4e6b81121989c070e18f85b0451e6830149b93ac22512a21d3",
   "holo-podcasts.mjs": "b37004b9d0ce6fcd860fbd6be703ec3e4d223b6ef470e4745449725c3ded5105",
-  "holo-rt.mjs": "47d5eaad1940aeefdead5c1a21068941688e6925f4df0c6c2b5f498b903662fc"
+  "holo-rt.mjs": "47d5eaad1940aeefdead5c1a21068941688e6925f4df0c6c2b5f498b903662fc",
+  "holo-books.mjs": "c5a6b8a75951a34fae06c5ab48c30041251455f9b89aa6534ac3de518a5c5f9d",
+  "feed/books-index.json": "b397b23c5701cb0c31e013063b0996a78fb11c946324412aa4daf6c80dfa0256",
+  "foliate/view.js": "9c6c07d04e4e71f21e92659e0b865ecee7761d87d9aa313e0cc2bbc569e1b2ba",
+  "foliate/paginator.js": "0f15940f67ffde52782c283e9ceb72dc08a9f7d37a67231cbc8e074d7e6de12f",
+  "foliate/epub.js": "c1bb4c50dc390e546dadd9b4a8b84b90ea828729834e25f3c3ad3d43bb1ab544",
+  "foliate/epubcfi.js": "1220663c2c156f472d4a3bb23103870764540ac61427ae5a64f42d36fcedd34c",
+  "foliate/fixed-layout.js": "51681b29e4ec84d7fe1e2bde04a756f1a8787e39a8e4179ee865667cb7eb9e91",
+  "foliate/comic-book.js": "903683b60e026d3e1d31bbef55d557c5c6e8fe24d5da49660127d0252286256c",
+  "foliate/fb2.js": "0510421190a1b52eff3b33975034aacf188398ab10aec6366991fe494d4ada1b",
+  "foliate/mobi.js": "5900df4d96a1e8c485cf53264c52f5a63e351cbbbacaebd13626d0a06bc4d337",
+  "foliate/pdf.js": "183606ed63a8e609471f26dccc758200d62de2575faf10f7dea131285e550d2d",
+  "foliate/overlayer.js": "db404e68d3c06554a52808bcdcb11dc25e035207749aceb9675fef7ff2c4883c",
+  "foliate/progress.js": "92aea9da08a3b1c88bf02c9a8b480032d70c63b6162fc9536d5f33ba3e25c619",
+  "foliate/search.js": "0b76927b2a93566ac34369bd572fd98ed1fb848deab6f86517183c67fd5d7658",
+  "foliate/text-walker.js": "8047076e1be04139d9eef981d618e1866993a7b3da17a65751544dcb8a55121c",
+  "foliate/tts.js": "e4c28f1536b0d98a1f2587680dd97f6e667088d3c645345cc5f3cd400cf14b6d",
+  "foliate/footnotes.js": "a8d23ff9ff48ffd0f4d15184db8a6e5fc6ae869529d65661c06d3665b03510df",
+  "foliate/LICENSE": "3c42f4169e1bb7c508819c51012205b29f601e777739e709261fe2c688da01cd",
+  "foliate/vendor/zip.js": "4c97e539f37fc1550de8e620a7a951dc0aaf893f25a5563c61ff54ca3bcb060a",
+  "foliate/vendor/fflate.js": "ab939ef86dc01fda39d43823c556c52697dc67a917d565a60f128e8efe049619"
  },
  "keep": []
 }
