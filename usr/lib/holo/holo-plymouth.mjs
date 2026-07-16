@@ -348,6 +348,28 @@ const beat = (n) => {
   try { performance.mark("holo:ceremony:" + n); } catch {}
   try { const L = window.HoloLife; if (L && L.mark) L.mark("ceremony:" + n); } catch {}
 };
+// FIRST-PACKET (P2): the hero pays for the device — watch the holo-pin cache from module eval; when a
+// worker CONTROLS and the SIGNED release + closure + world root are all device-pinned, this device boots
+// offline forever after -> beat "device-provisioned". Observability only: read-only probes, fail-soft,
+// the poller dies quietly at 60s; it never gates the reveal.
+(() => { try {
+  if (!("caches" in window) || !("serviceWorker" in navigator)) return;
+  let n = 0;
+  const iv = setInterval(async () => { try {
+    if (++n > 120) { clearInterval(iv); return; }
+    if (!navigator.serviceWorker.controller) return;
+    const pin = await caches.open("holo-pin");
+    const keys = await pin.keys();
+    const path = (k) => { try { return new URL(k.url).pathname; } catch { return ""; } };
+    const relKey = keys.find((k) => path(k).endsWith("/release.json"));
+    if (!relKey || !keys.some((k) => path(k).endsWith("/os-closure.json"))) return;
+    const rel = await (await pin.match(relKey)).json();
+    const wk = (rel["holstr:payload"] || {}).world;
+    if (/^[0-9a-f]{64}$/.test(wk || "") && !keys.some((k) => path(k).endsWith("/b/" + wk))) return;
+    clearInterval(iv);
+    beat("device-provisioned");
+  } catch {} }, 500);
+} catch {} })();
 
 // ── the player: ONE facade, two backends, the same choreography ────────────────────────────────────────
 // Poses are draw-space (crisp at any scale — CSS transforms would blur the canvas):
