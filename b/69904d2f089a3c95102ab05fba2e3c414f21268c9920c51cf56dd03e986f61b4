@@ -3,10 +3,13 @@
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Bonsai</title>
 <style>
-  /* Claude-desktop look: warm charcoal stage, 11% hairlines, 12-14px radii, serif display, coral accent.
+  /* Claude-desktop look: warm charcoal stage, 11% hairlines, 12-14px radii, serif display.
+     NEUTRAL accent (was Claude coral): a premium bone fill on the charcoal — mono, sharp, calm.
      Type floor is 15px everywhere. Everything fits ONE viewport at 1280×800 AND 375×812 (dvh + clamp). */
   :root { --bg:#262624; --ink:#eceae4; --muted:#b8b5ad; --faint:rgba(232,230,224,.45);
-          --hair:rgba(255,255,255,.11); --coral:#d97757; --coral-hi:#e8987a; --lav:#c4b5fd; --r:13px;
+          --hair:rgba(255,255,255,.11);
+          --accent:#ece9e3; --accent-ink:#20201e; --accent-hi:#f7f5ef; --focus:rgba(255,255,255,.4);
+          --coral:var(--accent); --coral-hi:var(--muted); --lav:rgba(255,255,255,.5); --r:13px;
           --serif:"Tiempos Text","Charter","Iowan Old Style",Georgia,serif; }
   * { box-sizing:border-box; margin:0; padding:0; }
   html,body { height:100%; }
@@ -24,12 +27,21 @@
   #arrive h1 { font-family:var(--serif); font-weight:500; font-size:clamp(40px,7vw,84px); line-height:1.06;
                letter-spacing:-.015em; text-wrap:balance; }
   #arrive .sub { margin-top:22px; font-size:clamp(18px,1.6vw,20px); line-height:1.5; color:var(--muted); max-width:46ch; }
-  #arrive button { margin-top:34px; background:var(--coral); border:none; color:#faf9f5; border-radius:999px;
-                   padding:16px 34px; font:500 17px/1 system-ui,sans-serif; cursor:pointer;
-                   transition:transform .2s ease, filter .2s ease; }
-  #arrive button:hover { filter:brightness(1.08); transform:translateY(-1px); }
+  #arrive button { margin-top:34px; background:var(--accent); border:none; color:var(--accent-ink); border-radius:999px;
+                   padding:16px 34px; font:600 16px/1 system-ui,sans-serif; letter-spacing:-.01em; cursor:pointer;
+                   transition:transform .2s ease, background .2s ease; }
+  #arrive button:hover { background:var(--accent-hi); transform:translateY(-1px); }
   #arrive button:disabled { filter:saturate(.3) brightness(.8); cursor:default; transform:none; }
   #arrive .fine { margin-top:16px; font-size:15px; color:var(--faint); }
+  /* model picker: two pills on the welcome wall — the default 27B mind, or the fast 8B. Switching reloads. */
+  #arrive .pick { margin-top:22px; display:inline-flex; gap:6px; background:rgba(255,255,255,.04);
+                  border:1px solid var(--hair); border-radius:999px; padding:4px; }
+  #arrive .pick button { background:none; border:none; color:var(--muted); cursor:pointer; border-radius:999px;
+                         font:500 15px/1 system-ui,sans-serif; letter-spacing:-.005em; padding:10px 18px;
+                         transition:background .18s ease, color .18s ease; }
+  #arrive .pick button[aria-pressed="true"] { background:var(--accent); color:var(--accent-ink); }
+  #arrive .pick button:hover:not([aria-pressed="true"]) { color:var(--ink); }
+  #arrive .picknote { margin-top:12px; font-size:15px; color:var(--faint); max-width:44ch; }
   @media (max-width:760px) {          /* stacked: hologram floats in the upper half, copy anchors low */
     #arrive { align-items:flex-end; }
     #arrive .copy { padding-bottom:max(44px, env(safe-area-inset-bottom, 0px) + 36px); }
@@ -80,15 +92,15 @@
   .fu .arr { color:var(--faint); font-size:15px; flex:none; }
   .note { text-align:center; font-size:15px; color:var(--faint); margin:6px 0 12px; }
   #card { background:rgba(255,255,255,.03); border:1px solid var(--hair); border-radius:18px; padding:6px 8px 8px; }
-  #card:focus-within { border-color:rgba(217,119,87,.5); }
+  #card:focus-within { border-color:var(--focus); }
   #inp { width:100%; background:none; border:none; color:var(--ink); padding:14px 12px 10px;
          font:16px/1.45 system-ui,sans-serif; outline:none; }
   #cardrow { display:flex; align-items:center; gap:12px; padding:0 8px 4px 12px; }
   #modelname { font-size:15px; color:var(--muted); }
   #cardrow .grow { flex:1; }
-  #send { background:var(--coral); border:none; color:#faf9f5; border-radius:999px; width:38px; height:38px;
-          font:500 17px/1 system-ui,sans-serif; cursor:pointer; transition:filter .2s ease; }
-  #send:hover { filter:brightness(1.08); }
+  #send { background:var(--accent); border:none; color:var(--accent-ink); border-radius:999px; width:38px; height:38px;
+          font:500 17px/1 system-ui,sans-serif; cursor:pointer; transition:background .2s ease; }
+  #send:hover { background:var(--accent-hi); }
   #send:disabled { background:rgba(255,255,255,.06); color:var(--faint); cursor:default; }
   #metrics { text-align:center; font-size:15px; color:var(--faint); padding:12px 0 16px; min-height:22px; }
   #metrics b { color:var(--muted); font-weight:500; }
@@ -98,15 +110,15 @@
   /* CSS hologram (fallback when WebGL is unavailable/blocked): layered orb + scanlines + drift */
   #holofb { position:absolute; width:min(46vw,520px); aspect-ratio:1; right:4vw; top:50%;
             transform:translateY(-50%); border-radius:50%; pointer-events:none;
-            background:radial-gradient(circle at 38% 34%, rgba(232,152,122,.55), rgba(217,119,87,.28) 42%, rgba(196,181,253,.16) 72%, transparent 76%);
-            box-shadow:0 0 90px rgba(217,119,87,.25), inset 0 0 60px rgba(196,181,253,.18);
+            background:radial-gradient(circle at 38% 34%, rgba(255,255,255,.5), rgba(206,204,198,.22) 42%, rgba(255,255,255,.1) 72%, transparent 76%);
+            box-shadow:0 0 90px rgba(255,255,255,.14), inset 0 0 60px rgba(255,255,255,.12);
             animation:holofloat 7s ease-in-out infinite; }
   #holofb::before { content:""; position:absolute; inset:0; border-radius:50%;
             background:repeating-linear-gradient(to bottom, rgba(255,255,255,.09) 0 2px, transparent 2px 7px);
             mix-blend-mode:screen; animation:holoscan 2.6s linear infinite;
             -webkit-mask:radial-gradient(circle, #000 70%, transparent 74%); mask:radial-gradient(circle, #000 70%, transparent 74%); }
   #holofb::after { content:""; position:absolute; inset:-2%; border-radius:50%;
-            border:1px solid rgba(196,181,253,.30); filter:blur(.4px); }
+            border:1px solid rgba(255,255,255,.25); filter:blur(.4px); }
   @keyframes holofloat { 50% { transform:translateY(calc(-50% - 14px)); } }
   @keyframes holoscan { to { background-position:0 7px; } }
   @media (max-width:760px){ #holofb { right:50%; top:26%; transform:translate(50%,-50%); width:min(62vw,300px); }
@@ -120,9 +132,14 @@
   <div id="holofb" hidden></div>
   <div class="copy">
     <h1>An AI<br>that&rsquo;s yours.</h1>
-    <p class="sub">Bonsai streams into your browser like a film. Every piece is checked before it runs. After one visit it answers on your device, even offline.</p>
-    <button id="go">Stream the mind</button>
-    <div class="fine" id="fine">Free &middot; open weights by Prism ML &middot; nothing leaves your device</div>
+    <p class="sub">It runs entirely on your device. Private, and works offline.</p>
+    <button id="go">Start chatting</button>
+    <div class="fine" id="fine">Free. No account, nothing to install.</div>
+    <div class="pick" id="pick" role="group" aria-label="Choose the model">
+      <button type="button" data-m="27b">Bonsai 27B</button>
+      <button type="button" data-m="8b">Bonsai 8B &middot; faster</button>
+    </div>
+    <p class="picknote" id="picknote"></p>
   </div>
 </div>
 
@@ -133,7 +150,7 @@
     </div>
     <div id="log"></div>
     <div id="card">
-      <input id="inp" placeholder="Ask Bonsai anything" autocomplete="off">
+      <input id="inp" placeholder="Ask anything" autocomplete="off">
       <div id="cardrow">
         <span id="modelname">Bonsai</span>
         <span class="grow"></span>
@@ -208,7 +225,7 @@ try {
     if (!img) return;
     ctx.clearRect(0, 0, cv.width, cv.height);
     const desktop = cv.width / cv.height > 0.92;
-    const s = Math.min(cv.width, cv.height) * (desktop ? 0.72 : 0.6) / Math.max(img.width, img.height);
+    const s = Math.min(cv.width, cv.height) * (desktop ? 0.84 : 0.72) / Math.max(img.width, img.height);
     const w = img.width * s, h = img.height * s;
     const x = desktop ? cv.width * 0.72 - w / 2 : cv.width / 2 - w / 2;
     const y = desktop ? cv.height / 2 - h / 2 : cv.height * 0.28 - h / 2;
@@ -229,6 +246,7 @@ import init, { qvac_load_gpu, qvac_gpu_free } from "../q/pkg/holospaces_web.js";
 import { loadKappaObject } from "../q/holo-load2bit.mjs";
 import { createQvacGPU } from "../q/qvac-gpu.js?v=68";
 import { createEngine } from "../q/core/engine.js";
+import { loadBridge } from "./bonsai27-bridge.mjs";   // 27B hybrid engine, wrapped in the 8B engine shape
 
 const $ = (id) => document.getElementById(id);
 // braille pulse: one 80ms ticker animates every [data-spin] slot (loading, waking, thinking) —
@@ -246,16 +264,44 @@ const short = (k) => String(k).replace(/^(did:holo:)?sha256:/, "").slice(0, 12) 
 // zero-code model change. The manifest pin is the Law-L5 anchor.
 const QS = new URLSearchParams(location.search);
 const SRC = QS.get("src");
-const DEFAULT_27B = false;                                 // flips true the moment the hybrid engine passes parity (κ-object already published)
-const M27 = QS.get("m") === "27b" || (DEFAULT_27B && QS.get("m") !== "8b");
+const DEFAULT_27B = true;                                  // the full 27B hybrid mind is the default (parity-verified via bonsai27-bridge.mjs)
+const MODEL_KEY = "bonsai.model.v1";                       // persisted user choice — "27b" | "8b"
+// choose the model: an explicit ?m= wins (and is remembered), else the saved choice, else the default.
+function pickModel() {
+  const q = QS.get("m");
+  if (q === "27b" || q === "8b") { try { localStorage.setItem(MODEL_KEY, q); } catch {} return q; }
+  let saved = null; try { saved = localStorage.getItem(MODEL_KEY); } catch {}
+  if (saved === "27b" || saved === "8b") return saved;
+  return DEFAULT_27B ? "27b" : "8b";
+}
+const MODEL = pickModel();
+const M27 = MODEL === "27b";
 const BASE = SRC || (M27 ? "https://huggingface.co/HOLOGRAMTECH/q-bonsai-27b/resolve/main" : "https://huggingface.co/HOLOGRAMTECH/q-bonsai-8b/resolve/main");
 const PIN = M27 ? "did:holo:sha256:00beea03509a79f6567879f019c04bb15dda8721f6320f8295d9ea1dd9ba54af" : "did:holo:sha256:a0dc81f26ec5ce98b28ee9c1fab620e91c20720f777e1de6bc416317f54d27e2";
-const CTX = 2048;   // room for the reasoning trace + the answer on open-ended questions
+const CTX = M27 ? 1024 : 2048;   // the 27B ring-decode head caps context at 1024 (KV VRAM); the 8B keeps 2048
 
 let engine = null, gpu = null, rootK = "", warm = false, mind = [], thinkOpen = -1, thinkClose = -1;
 let modelName = "Bonsai";                                  // set from the manifest once loaded
 let story = [], memoryNote = "";                           // the WHOLE conversation + the folded memory of its older part
 const STORE = "bonsai.story.v1";
+// ── O(1) κ-ANSWER MEMO (the hologram-runtime thesis, applied honestly) ────────────────────────
+// Greedy decode is deterministic: the answer is a PURE FUNCTION of (model root κ, exact input token
+// ids). So the answer is itself content-addressable. Key = sha256(rootκ · ids) → cached reply. A hit
+// streams instantly and is BYTE-IDENTICAL to recomputing — repeated questions, and the model-authored
+// follow-ups other visitors also click, become 0-latency. Persisted; survives reloads and works offline.
+const MEMO = "bonsai.memo.v1";
+let memoMap = null;
+function memoLoad() { if (memoMap) return memoMap; try { memoMap = JSON.parse(localStorage.getItem(MEMO) || "{}"); } catch { memoMap = {}; } return memoMap; }
+async function memoKey(ids) {
+  const b = new TextEncoder().encode(rootK + ":" + ids.join(","));
+  const h = await crypto.subtle.digest("SHA-256", b);
+  return [...new Uint8Array(h)].slice(0, 16).map((x) => x.toString(16).padStart(2, "0")).join("");
+}
+function memoSave(key, val) {
+  const m = memoLoad(); m[key] = val;
+  const ks = Object.keys(m); if (ks.length > 400) delete m[ks[0]];       // bounded FIFO
+  try { localStorage.setItem(MEMO, JSON.stringify(m)); } catch {}
+}
 function persistStory() {
   try { localStorage.setItem(STORE, JSON.stringify({ story: story.slice(-200), memoryNote })); } catch {}
 }
@@ -274,17 +320,43 @@ A: ${t.a.slice(0, 300)}`).join("\n");
 }
 
 let entered = false, streamStarted = false;
+// ── 27B path: the hybrid engine behind the SAME engine shape send() consumes (bonsai27-bridge.mjs). ──
+// The bridge does its own κ-verified load (loadKappaObject) and hands back { engine, modelName, rootK };
+// its engine.{tokenize,detokenize,frameTurn,generate} match the 8B contract, so send() is unchanged.
+async function stream27(t0, phase) {
+  let bytes = 0, done = 0, label = "";
+  const tick = () => {
+    const dt = (performance.now() - t0) / 1000;
+    if (warm) phase(`${spn()}Waking up · ${label || "loading"} · from your device`);
+    else phase(`${spn()}Loading <b>Bonsai 27B</b> · <b>${(bytes / 1e6).toFixed(0)} MB</b> · ${(bytes / 1e6 / Math.max(dt, .1)).toFixed(1)} MB/s · verified as it arrives`);
+  };
+  const iv = setInterval(tick, 400);
+  try {
+    const b = await loadBridge({
+      base: BASE, pin: SRC ? null : PIN,                    // ?src = loose dev object → unpinned; HF = κ-pinned
+      onProgress: (name, delta) => { bytes += delta || 0; done++; },
+      onStatus: (s) => { label = s; },
+    });
+    engine = b.engine;
+    modelName = String(b.modelName || "Bonsai 27B");
+    rootK = b.rootK || PIN;
+    $("modelname").textContent = modelName;
+    thinkOpen = engine.thinkOpen ?? -1; thinkClose = engine.thinkClose ?? -1;   // atomic <think>/</think> (248068/248069)
+  } finally { clearInterval(iv); }
+  phase(spn() + "Almost ready");
+  enterChat();
+}
 async function stream() {
-  try { if (window.__holoOff) { window.__holoOff(); window.__holoOff = null; } } catch {}   // hand the GPU to the engine
-  if (entered) { show("chat"); $("inp").focus(); }         // welcome stays until the visitor chooses to enter
+  if (entered) { show("chat"); $("inp").focus(); }         // welcome (and its living hologram) stays until the visitor enters
   const t0 = performance.now();
   const phase = (s) => { $("metrics").innerHTML = s; };
   try {
     if (!navigator.gpu) throw new Error("This browser has no WebGPU. Chrome or Edge 113+ required.");
     // warm-load detect (honest offline copy): the κ-cache already holds the manifest → this visit is disk-speed.
     try { const c = await caches.open("holo-kappa-v1"); warm = !!(await c.match(BASE + "/manifest.json")); } catch {}
-    phase(spn() + (warm ? "waking up · from your disk" : "streaming the mind · every piece verified on arrival"));
+    phase(spn() + (warm ? "Waking up · from your device" : "Loading · verified as it arrives"));
     await init();
+    if (M27) { await stream27(t0, phase); return; }   // the 27B hybrid mind loads through the bridge (its own engine + ring decode)
     // PARALLEL κ-BLOCKS FIRST (the measured Netflix path on CDN origins): 399 content-addressed
     // blocks race over 12 connections (HF cdn-lfs caps a single stream ~2 MB/s; the parallel parts
     // path measured 6.8 MB/s on the same line). The ONE-file .holo stays as the fallback for
@@ -309,8 +381,8 @@ async function stream() {
     let done = 0, bytes = 0;
     const tick = () => {
       const dt = (performance.now() - t0) / 1000;
-      if (warm) phase(`${spn()}waking up · ${Math.round(done / Math.max(total, 1) * 100)}%`);
-      else phase(`${spn()}streaming the mind · <b>${(bytes / 1e6).toFixed(0)} MB</b> · ${(bytes / 1e6 / Math.max(dt, .1)).toFixed(1)} MB/s · every piece verified on arrival`);
+      if (warm) phase(`${spn()}Waking up · ${Math.round(done / Math.max(total, 1) * 100)}%`);
+      else phase(`${spn()}Loading · <b>${(bytes / 1e6).toFixed(0)} MB</b> · ${(bytes / 1e6 / Math.max(dt, .1)).toFixed(1)} MB/s · verified as it arrives`);
     };
     const iv = setInterval(tick, 400);
     const fetchT = async (name) => {                       // wrap fetchTensor: the progress driver
@@ -326,7 +398,7 @@ async function stream() {
     r.manifest.kv4 = false;                                // exact f32 KV (the proven first-light config)
     gpu = await createQvacGPU(r.manifest, fetchT, CTX, lr.eos ?? 2, false);
     clearInterval(iv);
-    phase(spn() + "waking the mind");
+    phase(spn() + "Almost ready");
     const m = { fam: "Bonsai", name: modelName, size: "1.16 GB", fmt: "q1 1-bit κ", cap: 200, ctx: CTX, qwen: true, chat: true, rep: 1.05, gpu: true, gpuOnly: true };
     engine = await createEngine(m, { gpu, info: lr, imageKappa: r.info.root });
     // Qwen3 thinking markers are atomic tokens and clean() strips them from text — split by token id instead.
@@ -346,7 +418,7 @@ function metrics(state) {
   const bits = [`<b>${modelName}</b>`];
   if (lastTTFT != null) bits.push(`${lastTTFT.toFixed(1)}s to first word`);
   if (lastTokps != null) bits.push(`<b>${lastTokps.toFixed(0)}</b> tokens a second`);
-  if (!lastTTFT && !lastTokps) bits.push(state || (warm ? "from your disk · works offline" : "on your device"));
+  if (!lastTTFT && !lastTokps) bits.push(state || (warm ? "on your device · works offline" : "on your device"));
   $("metrics").innerHTML = bits.join(" &nbsp;&middot;&nbsp; ");
 }
 let pendingQ = null, restored = false;
@@ -451,7 +523,7 @@ async function send() {
     pendingQ = q; $("inp").value = "";
     $("col").classList.add("started");
     msg("You", "user").body.textContent = q;
-    note("your question will send itself the moment the mind arrives");
+    note("This sends as soon as Bonsai is ready.");
     return;
   }
   busy = true; $("inp").value = ""; $("send").disabled = true;
@@ -476,6 +548,24 @@ ${q}`;
   ui.think.querySelector("summary").innerHTML = spn() + `<span class="sum">thinking</span>`;
   const tSend = performance.now(); let ttftSet = false, thoughtMs = 0;
   lastTTFT = null; lastTokps = null;
+  // κ-MEMO HIT: identical (model, input) seen before → replay the exact answer, instantly. Honest:
+  // greedy is deterministic, so this is the same bytes recompute would produce, at O(1).
+  const mkey = await memoKey(ids);
+  const hit = memoLoad()[mkey];
+  if (hit) {
+    if (hit.think) { ui.think.hidden = false; ui.t.textContent = hit.think; }
+    ui.think.querySelector("summary").innerHTML = `<span class="chev">▸</span><span class="sum">Thought for ${hit.secs || 1}s</span>`;
+    ui.body.textContent = hit.ans;
+    mind = ids.concat(hit.ansIds || engine.tokenize(hit.ans));
+    story.push({ q, a: hit.ans }); persistStory();
+    lastTTFT = (performance.now() - tSend) / 1000; lastTokps = null;
+    $("metrics").innerHTML = `<b>${modelName}</b> &nbsp;&middot;&nbsp; from memory &nbsp;&middot;&nbsp; content-addressed &nbsp;&middot;&nbsp; instant`;
+    fitActions(ui, hit.ans, () => { if (!busy) { mind = mindBefore; $("inp").value = q; send(); } });
+    offerFollowups(q, hit.ans, ui.d);
+    busy = false; $("send").disabled = false; $("inp").focus();
+    log.scrollTop = log.scrollHeight;
+    return;
+  }
   $("metrics").innerHTML = spn() + `<b>${modelName}</b> is thinking`;
   try {
     const res = await engine.generate(ids, {
@@ -502,6 +592,7 @@ ${q}`;
       ui.body.textContent = answer;
       mind = ids.concat(s.ans);                            // history carries the ANSWER only (Qwen3 convention: prior-turn thinking dropped)
       story.push({ q, a: answer }); persistStory();
+      memoSave(mkey, { ans: answer, ansIds: s.ans, think: s.think.length ? engine.detokenize(s.think) : "", secs });   // κ-memo: this exact (model,input)→answer is now O(1)
       fitActions(ui, answer, () => { if (!busy) { mind = mindBefore; $("inp").value = q; send(); } });   // regenerate: rewind history, re-ask
       offerFollowups(q, answer, ui.d);                     // the model writes its own follow-ups, in place
     } else if (s.think.length) {
@@ -518,14 +609,36 @@ ${q}`;
 }
 
 $("go").addEventListener("click", () => {
-  entered = true; show("chat"); $("inp").focus();
+  entered = true;
+  try { if (window.__holoOff) { window.__holoOff(); window.__holoOff = null; } } catch {}   // hand the hologram off — ONLY now, as the visitor enters (a warm engine load must never kill the welcome ring)
+  show("chat"); $("inp").focus();
   if (!streamStarted) { streamStarted = true; stream(); }
 });
+// model picker (welcome wall): reflect the active model; a switch persists the choice and reloads with it.
+(function initPicker() {
+  const pick = $("pick"), noteEl = $("picknote");
+  if (!pick) return;
+  const NOTE = {
+    "27b": "The full 27B mind. Deliberate and deep — watch 27 billion parameters think, on your device. Switch to 8B for speed.",
+    "8b": "Bonsai 8B. Fast and light — answers in a snap.",
+  };
+  for (const b of pick.querySelectorAll("button")) {
+    const m = b.dataset.m;
+    b.setAttribute("aria-pressed", String(m === MODEL));
+    b.addEventListener("click", () => {
+      if (m === MODEL) return;
+      try { localStorage.setItem(MODEL_KEY, m); } catch {}
+      const u = new URL(location.href); u.searchParams.set("m", m); location.href = u.toString();   // reload into the chosen model
+    });
+  }
+  if (noteEl) noteEl.textContent = NOTE[MODEL] || NOTE["27b"];
+})();
 $("send").disabled = true;                                  // until the mind is resident (early questions queue)
 (async () => {
   try {
     if (navigator.connection && navigator.connection.saveData) return;        // respect data saver
     if (SRC) return;                                                          // dev override: no background pulls
+    if (M27) return;                                                          // 27B is resident — the live stream already owns it; only warm it from the 8B
     const B27 = "https://huggingface.co/HOLOGRAMTECH/q-bonsai-27b/resolve/main";
     const cache = await caches.open("holo-kappa-v1");
     const man = await (await fetch(B27 + "/manifest.json")).json();

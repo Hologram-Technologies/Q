@@ -3,21 +3,31 @@
     "dcterms": "http://purl.org/dc/terms/",
     "holo": "https://hologram.os/ns#"
   },
-  "root": "did:holo:sha256:654c668faea49909268dcd047e80ba854bfda3a3c316ff5c043a803ea9630bad",
+  "root": "did:holo:sha256:afd19e8d12bee51b77f2499e942f254d9dfb6154a2353ef78fccd176fa0b52e9",
   "identifier": "org.hologram.Bonsai",
   "algo": "sha256",
   "holo:within": "did:holo:sha256:f82435dab0215aa6695797d5e9ef4809f1905c015c419f085b2d42346441aad0",
   "holo:atlasCoordinate": {
     "space": "Φ-Atlas-12288",
     "within": "did:holo:sha256:f82435dab0215aa6695797d5e9ef4809f1905c015c419f085b2d42346441aad0",
-    "cell": 2989,
-    "page": 11,
-    "byte": 173,
-    "r96": 77,
-    "phi": 2989
+    "cell": 745,
+    "page": 2,
+    "byte": 233,
+    "r96": 41,
+    "phi": 745
   },
-  "files": 6,
+  "files": 7,
   "closure": {
+    "apps/bonsai/bonsai27-bridge.mjs": {
+      "blake3": "did:holo:blake3:fe8d75ba06502cf6d1b5f6737a560dd58d2447dbc2432b1fbaa1020021bb6ebd",
+      "kappa": "did:holo:sha256:555546a90695d93a155250549855d979b91dc4e272ede74325bebef1133f8435",
+      "sri": "sha256-VVVGqQaV2ToVUlBUmFXZebkdxOJy7edDJb6+8RM/hDU=",
+      "multibase": "uEiBVVUapBpXZOhVSUFSYVdl5uR3E4nLt50Mlvr7xEz-ENQ",
+      "bytes": 5401,
+      "alsoKnownAs": [
+        "did:holo:blake3:fe8d75ba06502cf6d1b5f6737a560dd58d2447dbc2432b1fbaa1020021bb6ebd"
+      ]
+    },
     "apps/bonsai/holospace.json": {
       "blake3": "did:holo:blake3:93848ec6adb7b85746de88d9729612ffdab22d210facc28fe796c39c48e98a4a",
       "kappa": "did:holo:sha256:c8d08ddd57a6ec66357defc1f15bcd4326f33748d24a43d1ed16a9efced365af",
@@ -39,13 +49,13 @@
       ]
     },
     "apps/bonsai/index.html": {
-      "blake3": "did:holo:blake3:2ba9ed4590270d2c062ff30a44e43ec79092f7ef3d4a952ff7b98aeb752ee65f",
-      "kappa": "did:holo:sha256:b5d2093e6c5e3eb814d8ef775b8afe0f6df316deedc09cc2b19554d5478bf150",
-      "sri": "sha256-tdIJPmxePrgU2O93W4r+D23zFt7twJzCsZVU1UeL8VA=",
-      "multibase": "uEiC10gk-bF4-uBTY73dbiv4PbfMW3u3AnMKxlVTVR4vxUA",
-      "bytes": 33813,
+      "blake3": "did:holo:blake3:bdea373a7400aa67d378df0b8c2fa9849291d27b2201dd6d61b45ad60447ec85",
+      "kappa": "did:holo:sha256:69904d2f089a3c95102ab05fba2e3c414f21268c9920c51cf56dd03e986f61b4",
+      "sri": "sha256-aZBNLwiaPJUQKrBfui48QU8hJoyZIMUc9W3QPphvYbQ=",
+      "multibase": "uEiBpkE0vCJo8lRAqsF-6LjxBTyEmjJkgxRz1bdA-mG9htA",
+      "bytes": 42191,
       "alsoKnownAs": [
-        "did:holo:blake3:2ba9ed4590270d2c062ff30a44e43ec79092f7ef3d4a952ff7b98aeb752ee65f"
+        "did:holo:blake3:bdea373a7400aa67d378df0b8c2fa9849291d27b2201dd6d61b45ad60447ec85"
       ]
     },
     "apps/bonsai/vendor/three.core.min.js": {
