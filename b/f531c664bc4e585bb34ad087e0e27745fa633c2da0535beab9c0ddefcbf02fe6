@@ -9,12 +9,12 @@
  "tiers": {
   "core": {
    "files": 601,
-   "bytes": 13744912,
+   "bytes": 13744910,
    "hf": 0
   },
   "apps": {
-   "files": 53,
-   "bytes": 2393251,
+   "files": 54,
+   "bytes": 2404629,
    "hf": 0
   }
  },
@@ -880,6 +880,13 @@
    "tier": "apps",
    "source": "origin"
   },
+  "apps/bonsai/bonsai27-bridge.mjs": {
+   "sha256": "555546a90695d93a155250549855d979b91dc4e272ede74325bebef1133f8435",
+   "blake3": "fe8d75ba06502cf6d1b5f6737a560dd58d2447dbc2432b1fbaa1020021bb6ebd",
+   "bytes": 5401,
+   "tier": "apps",
+   "source": "origin"
+  },
   "apps/bonsai/holospace.json": {
    "sha256": "c8d08ddd57a6ec66357defc1f15bcd4326f33748d24a43d1ed16a9efced365af",
    "blake3": "93848ec6adb7b85746de88d9729612ffdab22d210facc28fe796c39c48e98a4a",
@@ -888,9 +895,9 @@
    "source": "origin"
   },
   "apps/bonsai/holospace.lock.json": {
-   "sha256": "46d0c2358926e932e1c64644df6372228b51d47c340e7d24611430d90a384bca",
-   "blake3": "5963320c1fa95f9d93c3db49048407c781edfbc14c1969dd695a3ea3400f3ada",
-   "bytes": 3792,
+   "sha256": "18dee8a324db861835f294a1d3ca308baf44d50cbbeb12ef94bc122556087939",
+   "blake3": "30e2e29a6b84e8e00977e797d4966bdcceac42bf467726afd596c2e21f4afe7a",
+   "bytes": 4317,
    "tier": "apps",
    "source": "origin"
   },
@@ -902,9 +909,9 @@
    "source": "origin"
   },
   "apps/bonsai/index.html": {
-   "sha256": "2a18cc07373595a4c89911410c2419e8519bc40f2d76670d43db286cdf166802",
-   "blake3": "e9c08ebfcbb2c816d17df02be522d07151143de8c1606ab12e2ec037fc5c09a2",
-   "bytes": 34983,
+   "sha256": "69904d2f089a3c95102ab05fba2e3c414f21268c9920c51cf56dd03e986f61b4",
+   "blake3": "bdea373a7400aa67d378df0b8c2fa9849291d27b2201dd6d61b45ad60447ec85",
+   "bytes": 42191,
    "tier": "apps",
    "source": "origin"
   },
@@ -1798,9 +1805,9 @@
    "source": "origin"
   },
   "apps/index.jsonld": {
-   "sha256": "ace1699698cbe851e6f87ac82a471d9653305ebf37dfd8a1ce4ee58ef9c570f3",
-   "blake3": "ae50f31e650767681b0ba080860b436100fc6f6c01b72b1af1be6931d09677ed",
-   "bytes": 21591,
+   "sha256": "396edb844b9d59f0d49ec2ff8273334266294d3cfa37ac97aea7dc2e16d0f84b",
+   "blake3": "41526f40c7639824f7715dbb87663d80185d6d3d5d6326377092a806694eee7c",
+   "bytes": 21589,
    "tier": "core",
    "source": "origin"
   },
@@ -1910,9 +1917,9 @@
    "source": "origin"
   },
   "apps/q/holo-evicted.json": {
-   "sha256": "4a3ee15ef9613f573b4c20560bb186d1eb6a8053f1f95f21186517c4e32d83b0",
-   "blake3": "1dd6c6c06039330087059c0dcb7205008cb7df776232503c5f46f7c0cc00a6ed",
-   "bytes": 56895,
+   "sha256": "e6e977cbfba4e93ba001f3756380ffbd5990b4c94c99a8860070785a3d39322f",
+   "blake3": "f46a4e26617105462256db29d4200da547cc2d6c5d1e0b335d1f9313df264a1f",
+   "bytes": 54891,
    "tier": "apps",
    "source": "origin"
   },
@@ -1924,9 +1931,9 @@
    "source": "origin"
   },
   "apps/q/q-chat.html": {
-   "sha256": "71f57795edcb170dcf9ffd6b3f8cef70484f089cc4e7a1dfbcb0b3cdd4b82883",
-   "blake3": "0990974bc4088f414110fc4e7e3cef6cb5022ae16f2c1838dc670fa3a2a6dec5",
-   "bytes": 100351,
+   "sha256": "bb5fef58aa4c1c38adedb982afd606b10b3ca85fca8cc896061901f154b53896",
+   "blake3": "eda11fdb3a84458ca9c8fa9d83828ededbbc426d87e7a5db241134f8430468db",
+   "bytes": 100599,
    "tier": "apps",
    "source": "origin"
   },

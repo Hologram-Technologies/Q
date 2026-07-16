@@ -826,7 +826,9 @@ let _listenMod = null, _hf = null;
 async function ensureHF() {
   if (!_listenMod) _listenMod = await import("./core/listen.js");
   if (!_hf) _hf = _listenMod.createHandsFree({
-    gate: () => !busy && _qSpeaking === 0,
+    /* HOLO-DUPLEX: under ?duplex=1 the mic stays open while Q speaks — VAD onset (existing "speech"
+       handler) stops Q instantly = barge-in. AEC (already on) suppresses Q's own voice in the mic. */
+    gate: () => !busy && (/[?&]duplex=1/.test(location.search) || _qSpeaking === 0),
     onState: (s) => {
       if (s === "speech") { stopSpeak(); setStatus("loading", "listening…"); }
       else if (s === "thinking") setStatus("loading", "getting your words…");
