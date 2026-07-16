@@ -1052,6 +1052,11 @@ export function attachPlymouth(overlay, host) {
   // still get the cinematic 3s; the same-tab Lock & Sign Out handshake stays short too.
   try { if (!shortHero && (localStorage.getItem("holo.lastOperator") || localStorage.getItem("holo-messenger/id-secret"))) shortHero = true; } catch {}
   const BOOT_MIN = shortHero ? 1200 : 3000, BOOT_MAX = shortHero ? 1600 : 3400;
+  // PHONE-INSTANT: a returning device on a PHONE compresses the hold further (500–900ms from the seed's
+  // first paint) — with a warm SW the hero effectively reveals at once. First visit keeps the full hold;
+  // desktop keeps the canonical clock above (witness law L2) on every path.
+  let _phFast = false; try { _phFast = shortHero && document.documentElement.hasAttribute("data-holo-phone"); } catch {}
+  const HOLD_MIN = _phFast ? 500 : BOOT_MIN, HOLD_MAX = _phFast ? 900 : BOOT_MAX;
   // FIRST-PACKET (P1): the hero clock starts at the SEED's first paint (sessionStorage handshake) — the
   // welcome already watched during the network chain counts toward the hold. Consume-on-read; a stamp that
   // is stale (>15s) or from the future is ignored, so a direct app.html open keeps today's clock exactly.
@@ -1074,8 +1079,8 @@ export function attachPlymouth(overlay, host) {
     // the module OWNS the beat from here — the host baseline's module-never-arrived fallback must not
     // lift hl-boot mid-hero (it fired at 1.5s and popped the panel while the emblem was still centre-stage)
     try { clearTimeout(window.__hlBootFallback); } catch {}
-    bootTimer = setTimeout(endBoot, Math.max(250, BOOT_MAX - (Date.now() - bootT0)));   // hard cap — never stall on a slow network
-    onEmblemLive = () => { if (bootDone) return; clearTimeout(bootTimer); bootTimer = setTimeout(endBoot, Math.max(0, BOOT_MIN - (Date.now() - bootT0))); };   // alive → hold the hero, then one reveal
+    bootTimer = setTimeout(endBoot, Math.max(250, HOLD_MAX - (Date.now() - bootT0)));   // hard cap — never stall on a slow network
+    onEmblemLive = () => { if (bootDone) return; clearTimeout(bootTimer); bootTimer = setTimeout(endBoot, Math.max(0, HOLD_MIN - (Date.now() - bootT0))); };   // alive → hold the hero, then one reveal
     overlay.addEventListener("pointerdown", endBoot, { once: true, capture: true });
     document.addEventListener("keydown", endBoot, { once: true, capture: true });
   } else if (state.on) { setTimeout(endBoot, 0); }
