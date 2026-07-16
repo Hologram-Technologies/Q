@@ -1030,7 +1030,15 @@ export function attachPlymouth(overlay, host) {
   // still get the cinematic 3s; the same-tab Lock & Sign Out handshake stays short too.
   try { if (!shortHero && (localStorage.getItem("holo.lastOperator") || localStorage.getItem("holo-messenger/id-secret"))) shortHero = true; } catch {}
   const BOOT_MIN = shortHero ? 1200 : 3000, BOOT_MAX = shortHero ? 1600 : 3400;
-  const bootT0 = (() => { try { return window.__hlBootT0 || Date.now(); } catch { return Date.now(); } })();
+  // FIRST-PACKET (P1): the hero clock starts at the SEED's first paint (sessionStorage handshake) — the
+  // welcome already watched during the network chain counts toward the hold. Consume-on-read; a stamp that
+  // is stale (>15s) or from the future is ignored, so a direct app.html open keeps today's clock exactly.
+  const bootT0 = (() => { try {
+    let t0 = window.__hlBootT0 || Date.now();
+    try { const s = Number(sessionStorage.getItem("holo.ceremony.t0")); sessionStorage.removeItem("holo.ceremony.t0");
+      if (s > 0 && s <= t0 && (t0 - s) < 15000) t0 = s; } catch {}
+    return t0;
+  } catch { return Date.now(); } })();
   let bootDone = false, bootTimer = 0;
   const endBoot = () => {
     if (bootDone) return; bootDone = true; clearTimeout(bootTimer);
