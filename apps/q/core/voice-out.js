@@ -44,6 +44,26 @@ function _ensureAtlas() {
 async function _atlasGet(text) { try { const a = await _ensureAtlas(); if (!a || !a.has(text)) return null; return await a.get(text); } catch (e) { return null; } }
 try { _ensureAtlas(); } catch (e) {}
 
+/* HOLO-POCKET-VOICE */
+// kyutai pocket-tts 100M — Q's DEFAULT live voice: streams on-device in real time (first audio
+// ~240-900ms warm, no COI needed; webgpu when present, wasm else). Weights stream once from the
+// HOLOGRAMTECH HF mirror and persist in the Cache API. Fail-soft: any failure → the pre-pocket ladder.
+let _pocket = null, _pocketLoad = null;
+function _ensurePocket() {
+  if (_pocket) return Promise.resolve(_pocket);
+  if (_pocketLoad) return _pocketLoad;
+  const urls = ["/usr/lib/holo/voice/pocket/holo-pocket-voice.mjs"];
+  try { urls.push(new URL("../../../usr/lib/holo/voice/pocket/holo-pocket-voice.mjs", import.meta.url).href); } catch (e) {}
+  _pocketLoad = (async () => {
+    for (const u of urls) {
+      try { const m = await import(/* @vite-ignore */ u); const mk = m && (m.createPocketVoice || m.default); if (mk) { _pocket = mk({}); return _pocket; } } catch (e) {}
+    }
+    return null;
+  })().catch(() => null);
+  return _pocketLoad;
+}
+function _pocketReady() { try { return !!(_pocket && _pocket.isReady()); } catch (e) { return false; } }
+
 
 export function createVoice(opts = {}) {
   const onLevel = typeof opts.onLevel === "function" ? opts.onLevel : function () {};
@@ -116,6 +136,7 @@ export function createVoice(opts = {}) {
   function stop() {
     active = false;
     try { if (typeof window !== "undefined" && window.speechSynthesis) window.speechSynthesis.cancel(); } catch (e) {}
+    try { if (_pocket && _pocket.stop) _pocket.stop(); } catch (e) {} /* HOLO-POCKET-STOP */
     try { if (curSrc) curSrc.stop(); } catch (e) {} curSrc = null;
     try { if (node) node.disconnect(); } catch (e) {}
     finish(); cur = null;
@@ -126,6 +147,8 @@ export function createVoice(opts = {}) {
     stop();
     /* HOLO VOICE ATLAS rung: pre-baked premium audio → instant, even before HD warms (else Q holds silent). */
     try { const _bk = await _atlasGet(text); if (_bk && _bk.audio && _bk.audio.length) { begin(); await playBuffer({ audio: _bk.audio, sampling_rate: _bk.rate }); finish(); return true; } } catch (e) {}
+    /* HOLO-POCKET-RUNG: the default live voice — stream pocket-tts when warm (real-time, on-device). */
+    if (_pocketReady()) { try { begin(); ac = ac || new (window.AudioContext || window.webkitAudioContext)(); const _ok = await _pocket.speak(text, { ctx: ac, onLevel: (v) => { tgt = v; } }); finish(); if (_ok) return true; } catch (e) { finish(); } }
     if (hd) { try { return await speakHD(text); } catch (e) { /* HD errored mid-utterance → floor only if opted in */ } }
     if (_OS_FLOOR) return speakSpeech(text);   // accessibility floor, explicit opt-in only
     parked = text; return false;               // HQ-or-hold: spoken beautifully the moment HD warms (latest wins)
@@ -141,6 +164,8 @@ export function createVoice(opts = {}) {
     if (warming) return warming;
     warming = (async () => {
       const gpu = typeof navigator !== "undefined" && !!navigator.gpu;
+      /* HOLO-POCKET-WARM: Plan A0 — the default engine. Success = HQ voice armed (kokoro stays fallback). */
+      try { const _pv = await _ensurePocket(); if (_pv) { const _ok = await _pv.warm(o.onProgress); if (_ok) return true; } } catch (e) {}
       // Plan A — vendored createTTS (holo-voice-tts.mjs), fully local
       try {
         // subpath-robust import: the web deploy serves this module under /Q/… so a ROOT-absolute
@@ -198,7 +223,7 @@ export function createVoice(opts = {}) {
     return warming;
   }
 
-  return { speak, stop, warmHD, attachHD(engine) { hd = engine || null; }, hasHD() { return !!hd; }, get speaking() { return active; } };
+  return { speak, stop, warmHD, attachHD(engine) { hd = engine || null; }, hasHD() { return !!hd || _pocketReady(); }, get speaking() { return active; } };
 }
 
 // ── backward-compatible SINGLETON API (apps/q q-chat.html, make-chat-space.mjs). Progressive enhancement: warms
@@ -214,6 +239,6 @@ export function ready() { return _s().hasHD(); }
 export async function loadVoice(onProgress) { return _s().warmHD({ onProgress }); }
 export function speak(text, voice) { return _s().speak(text); }   // voice arg accepted for compat (default af_heart)
 export function stop() { try { if (_singleton) _singleton.stop(); } catch (e) {} }
-export function engine() { return _s().hasHD() ? "kokoro" : "speechSynthesis"; }
+export function engine() { return _pocketReady() ? "pocket-tts" : _s().hasHD() ? "kokoro" : "speechSynthesis"; }
 
 export default createVoice;
