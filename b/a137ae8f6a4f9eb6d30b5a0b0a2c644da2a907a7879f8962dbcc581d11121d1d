@@ -9,7 +9,7 @@
  "tiers": {
   "core": {
    "files": 601,
-   "bytes": 13744910,
+   "bytes": 13748645,
    "hf": 0
   },
   "apps": {
@@ -349,9 +349,9 @@
    "source": "origin"
   },
   "_shared/holo-forge/holo-kstore.mjs": {
-   "sha256": "e85309b51dd4dcf9ca211409aff28dbc2ab0d7c4503cbd022742810c4d6330a7",
-   "blake3": "568ad5cd298977821ee30388702c6e25796d4728a1f64a65fd74133fc91f3022",
-   "bytes": 3146,
+   "sha256": "28c4d4f43306fe9cc88a0290b04088a70a3b0dfe3bcd307474e2799782d3bb1d",
+   "blake3": "e862b1fa35b16b023f171c80f2a151897543df529f7b0a132b10c734798795d7",
+   "bytes": 4087,
    "tier": "core",
    "source": "origin"
   },
@@ -2064,8 +2064,8 @@
    "source": "origin"
   },
   "boot-pack.json": {
-   "sha256": "22d0854289da579bd1fb890afc283ea22337824310cbba0afdbe682c54bb282d",
-   "blake3": "5fdee51528265513685496f3165ae2c6ef1df4e4235c78e8d8945c7bbd011c5f",
+   "sha256": "5b288f771ea632146a839decbae34b5ac7cf370b5f3f632d75aa6cf77aa25667",
+   "blake3": "96bc3cfbad04b85dd52dc4db291e0ceaafe5401921b8497adb442c5e23081777",
    "bytes": 111,
    "tier": "core",
    "source": "origin"
@@ -2519,9 +2519,9 @@
    "source": "origin"
   },
   "usr/lib/holo/holo-evict-rescue.mjs": {
-   "sha256": "ac245f45b06e416d68306c37c1c3ccf59fa8e89f750a3f6ca8f0d6fcb41bd189",
-   "blake3": "139fb37c771a4ce0957d2fe1974eccc0c4aeb2d58a6f67f196554fe016526d13",
-   "bytes": 7377,
+   "sha256": "a37d000abf67ea3a10e35a51ac63d895d915d993424f65a8b3a3fb598fad0435",
+   "blake3": "2628605fc13cef53278afa50614581617538eea7c443112f5998414136759eaf",
+   "bytes": 8082,
    "tier": "core",
    "source": "origin"
   },
@@ -2568,9 +2568,9 @@
    "source": "origin"
   },
   "usr/lib/holo/holo-forge/holo-kstore.mjs": {
-   "sha256": "b788bbf01c4e2df2375dae629e255b34db4c36c08613193497645742dba8a145",
-   "blake3": "91659c36d860718a5da19ee976bddb415d1148ea5d853d1edd0f123600e3afc3",
-   "bytes": 3308,
+   "sha256": "f2ee9a8ef482568c2a0f5662380b43f53f490e03134cdb362535ce2722740332",
+   "blake3": "76a5004feeae49319c4409a9da02a40421053cd3ffa7dbd8e7496b44ffd586a3",
+   "bytes": 4249,
    "tier": "core",
    "source": "origin"
   },
@@ -2918,9 +2918,9 @@
    "source": "origin"
   },
   "usr/lib/holo/holo-plymouth.mjs": {
-   "sha256": "bf4fcde1ead81008ea6f7aeef55dab08cfb993b1f624e3bc2f6295dbd9d5ed91",
-   "blake3": "1e2e91e36b6a7faee76e425ff8e150ac9fb3db204bc66ec729d1d41e6b5c2ffa",
-   "bytes": 98062,
+   "sha256": "6e32f6dddb3931ccbac3d77213e04a58541807dfb8986136e75a00e460e0b578",
+   "blake3": "b919ec001760856a49b2dc4c44b20930d1d1f05161a4bad394a1c7693c9e994f",
+   "bytes": 98557,
    "tier": "core",
    "source": "origin"
   },
@@ -3093,9 +3093,9 @@
    "source": "origin"
   },
   "usr/lib/holo/holo-rungs.mjs": {
-   "sha256": "3543fdde0790b1b6561d3ba04c73037fe27a962ab996a26ade77ec5dfb794942",
-   "blake3": "f3b58d19aa3c035fa6296bc77e0fb4f8bcf81eeda3d0cec7d75d1c7e82bc26c1",
-   "bytes": 10406,
+   "sha256": "de7983165c68a839c3e4a055b6873d2fb4720f7ccb2dd743a893ec04016e4b6e",
+   "blake3": "a712c92d59dd4c5a0fb2458bd930ebb09ab8b76a953f8b3388071994747e564c",
+   "bytes": 11059,
    "tier": "core",
    "source": "origin"
   },

@@ -99,10 +99,13 @@ export function makeLadder({ base = "", rung = null, world = null } = {}) {
   // resolve(axis, hex, { ext, extraMirrors, skipOrigin }) →
   //   verified Response (200) · last MISS Response (a 404 the caller may pass through) · null (all rungs dead).
   // A response that reaches the caller with .ok either re-derived here or is the >CAP streaming path.
+  // no await on this path may hang a fetch event forever (the painted-truth collar law): a wedged
+  // device store skips to the network rungs; the race is transparent when the store is healthy.
+  const collar = (p, ms) => Promise.race([Promise.resolve(p).catch(() => null), new Promise((r) => setTimeout(() => r(null), ms))]);
   async function resolve(axis, hex, { ext = "", extraMirrors = [], skipOrigin = false } = {}) {
-    const store = await R();
+    const store = await collar(R(), 1500);
     if (store) {   // O2: the device store answers first — warm boot must never add a network hop
-      try { const u8 = await store.get(axis, hex); if (u8) return new Response(u8, { status: 200, headers: { ...headersFor(ext), "x-holo-source": "device-store", "x-holo-kappa": axis + ":" + hex } }); } catch {}
+      try { const u8 = await collar(store.get(axis, hex), 2500); if (u8) return new Response(u8, { status: 200, headers: { ...headersFor(ext), "x-holo-source": "device-store", "x-holo-kappa": axis + ":" + hex } }); } catch {}
     }
     const table = await rungs();
     const bases = [...(skipOrigin ? [] : [base + "/b/"]), ...extraMirrors, ...(table[axis] || [])];
@@ -133,7 +136,9 @@ export function makeLadder({ base = "", rung = null, world = null } = {}) {
     for (let i = 0; i < bases.length; i++) {
       const origin = !skipOrigin && i === 0;
       let r = null;
-      try { r = await fetch(bases[i] + hex); } catch { continue; }
+      const ac = typeof AbortController !== "undefined" ? new AbortController() : null;   // a dead keep-alive socket aborts to the NEXT rung, never hangs the ladder
+      const tt = ac && setTimeout(() => ac.abort(), 8000);
+      try { r = await fetch(bases[i] + hex, ac ? { signal: ac.signal } : {}); } catch { continue; } finally { if (tt) clearTimeout(tt); }
       if (!r.ok) { miss = miss || r; continue; }
       const served = await serveVerified(r, origin ? "origin-b" : "rung-" + i, origin);
       if (served) return served;

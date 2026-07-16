@@ -36,26 +36,34 @@ export function makeEvictRescue({ base, blake3Import, rung } = {}) {
   const _world = makeWorld({ base }); try { _world.warm(); } catch {}
   let _reg = null;          // resolved { apps:Set, trees:[{prefix,closure}] } — sync fast path
   let _regP = null;         // in-flight (dedup)
+  const _collar = (p, ms) => Promise.race([Promise.resolve(p).catch(() => null), new Promise((r) => setTimeout(() => r(null), ms))]);
   const registry = () => _reg || (function () { const w = _world.registrySync(); return w ? (_reg = w) : null; })() || (_regP ||= (async () => {
-    // Z2b (BYTE-ZERO): the WORLD answers before the legacy manifest — awaited (a rescue already
-    // awaits the network, and the root is device-pinned so this is ~0ms after the first visit).
-    // Positive-hits-only: an absent or EMPTY world registry still falls through to the loose
-    // evicted.json, which stays the honest fallthrough until Z3 deletes it.
-    try { const w = await _world.registry(); if (w && (w.apps.size || w.trees.length)) return (_reg = w); } catch {}
-    try {
-      const r = await fetch(base + "/evicted.json", { cache: "no-store" });
-      const j = r.ok ? await r.json() : {};
-      return (_reg = { apps: new Set(j.apps || []), trees: (j.trees || []).filter((t) => t && t.prefix && t.closure) });
-    } catch { _regP = null; return { apps: new Set(), trees: [] }; }
+    // Z2b (BYTE-ZERO): the WORLD answers before the legacy manifest — awaited under a COLLAR (a hung
+    // world load used to wedge this memo, and every evicted-app navigation with it, for the worker's
+    // whole life). POSITIVE-ONLY memoization: with evicted.json deleted (Z3) the world is the only
+    // positive source, so an empty answer only ever means "not warm yet" — serve it ONCE un-memoized
+    // and let the next event retry.
+    const w = await _collar(_world.registry(), 2500);
+    if (w && (w.apps.size || w.trees.length)) return (_reg = w);
+    const r = await _collar(fetch(base + "/evicted.json", { cache: "no-store" }), 4000);
+    let j = {}; try { j = r && r.ok ? await r.json() : {}; } catch {}
+    const reg = { apps: new Set(j.apps || []), trees: (j.trees || []).filter((t) => t && t.prefix && t.closure) };
+    if (reg.apps.size || reg.trees.length) return (_reg = reg);
+    _regP = null;
+    return reg;
   })());
 
   const _closures = new Map();   // closureUrl → Promise<closure|null>
   const closure = async (url) => {
     let w = _world.closureSync(url);
-    if (w === undefined) { try { w = await _world.closureFor(url); } catch { w = null; } }   // Z2b: await the world (device-pinned root) before the loose map
+    if (w === undefined) w = await _collar(_world.closureFor(url), 2500);   // Z2b: await the world (device-pinned root) before the loose map — collared, never wedges the event
     if (w && w.files) return w;                                             // monolith world (inline files) — unchanged
-    if (w && w.filesKappa) { const full = await _world.closureFilesFor(url); if (full) return full; }   // Z1 sharded; a shard miss falls through
-    if (!_closures.has(url)) _closures.set(url, fetch(url, { cache: "no-store" }).then((r) => (r.ok ? r.json() : null)).catch(() => null));
+    if (w && w.filesKappa) { const full = await _collar(_world.closureFilesFor(url), 4000); if (full) return full; }   // Z1 sharded; a shard miss falls through
+    if (!_closures.has(url)) _closures.set(url, (async () => {
+      const r = await _collar(fetch(url, { cache: "no-store" }), 4000);
+      if (!r) { _closures.delete(url); return null; }                       // hung/dead socket — retry on the next request, never a poisoned memo
+      try { return r.ok ? await r.json() : null; } catch { _closures.delete(url); return null; }
+    })());
     return _closures.get(url);
   };
 
@@ -83,7 +91,8 @@ export function makeEvictRescue({ base, blake3Import, rung } = {}) {
   // rescue(req, cand) → Response. Falls back to fetch(req) whenever the candidate turns out not evicted,
   // the closure lacks the file, or the mirror misses — the origin stays the honest fallback.
   async function rescue(req, cand) {
-    const reg = await registry();
+    let reg = await registry();
+    if (!reg.apps.size && !reg.trees.length) reg = await registry();   // empty = not-warm-yet (un-memoized): ONE in-event retry before falling through
     if (cand.kind === "app" && !reg.apps.has(cand.key)) return fetch(req);
     if (cand.kind === "tree?") {   // resolve the tentative claim now that the registry is known
       const p = cand.path;
