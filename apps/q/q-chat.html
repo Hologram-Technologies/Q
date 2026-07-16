@@ -742,6 +742,14 @@ function mkClauseSpeaker() {
   const MIN = 16;   // don't voice tiny fragments — they sound clipped
   const part = (t) => {
     t = _spokenText(t); if (!t) return;
+    /* HOLO-POCKET-QUEUE: when the pocket queue exists, enqueue IMMEDIATELY (no _csQ serialization) — the
+       queue itself orders playback while generating ahead, so clauses stream with zero silence between. */
+    if (_kokoro && _kokoro.speakQueued && _kokoro.ready && _kokoro.ready()) {
+      if (epoch !== _csEpoch || !voiceOn || _muteState()) return;
+      qOrb("speaking"); _qSpeaking++;
+      Promise.resolve(_kokoro.speakQueued(t)).catch(() => {}).then(() => { _qSpeaking = Math.max(0, _qSpeaking - 1); if (!_qSpeaking) qOrb("idle"); });
+      return;
+    }
     _csQ = _csQ.then(() => {
       if (epoch !== _csEpoch || !voiceOn) return;
       if (!(_kokoro && _kokoro.ready && _kokoro.ready())) return;   // HQ-or-silent mid-stream — the full reply is parked by speak() at flush instead

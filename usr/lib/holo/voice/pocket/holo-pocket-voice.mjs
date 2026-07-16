@@ -162,12 +162,105 @@ export function createPocketVoice(opts = {}) {
   function stop() {
     try { if (worker) worker.postMessage({ type: "stop" }); } catch (e) {}
     if (session) session.halt();
+    if (queueSession) { const q = queueSession; queueSession = null; q.kill(); }
+  }
+
+  // ── QUEUE MODE (speak-while-generating): clause N+1 GENERATES while clause N still PLAYS, all chunks
+  // scheduled gaplessly on ONE AudioContext cursor. This is what removes the inter-clause silence when a
+  // streamed reply is voiced sentence-by-sentence. One queue at a time; stop()/kill() silences instantly. ──
+  let queueSession = null;
+  function openQueue(o = {}) {
+    stop();   // a queue supersedes any one-shot utterance
+    const ctx = o.ctx || new (window.AudioContext || window.webkitAudioContext)();
+    const onLevel = typeof o.onLevel === "function" ? o.onLevel : null;
+    const onDrain = typeof o.onDrain === "function" ? o.onDrain : null;
+
+    const analyser = ctx.createAnalyser();
+    analyser.fftSize = 512; analyser.smoothingTimeConstant = 0.6;
+    analyser.connect(ctx.destination);
+    const bins = new Uint8Array(analyser.frequencyBinCount);
+    let metering = true;
+    const meter = () => {
+      if (!metering) return;
+      try { analyser.getByteFrequencyData(bins); let s = 0; for (let i = 0; i < bins.length; i++) s += bins[i]; if (onLevel) onLevel(Math.min(1, (s / bins.length) / 90 * 1.6)); } catch (e) {}
+      requestAnimationFrame(meter);
+    };
+    requestAnimationFrame(meter);
+
+    const q = {
+      closed: false,
+      cursor: 0,
+      sources: [],
+      chain: Promise.resolve(),   // serializes worker generates (the worker is single-track)
+      pendingCount: 0,
+      gaps: 0,          // clock overruns after start = audible silences (witness metric)
+      gapSec: 0,        // total silence the listener actually heard mid-stream
+      startedOnce: false,
+      schedule(audio, sampleRate) {
+        try {
+          const buf = ctx.createBuffer(1, audio.length, sampleRate || 24000);
+          buf.getChannelData(0).set(audio);
+          const src = ctx.createBufferSource();
+          src.buffer = buf; src.connect(analyser);
+          const now = ctx.currentTime;
+          if (q.cursor < now + 0.05) { if (q.startedOnce) { q.gaps++; q.gapSec += (now + 0.05 - q.cursor); } q.cursor = now + 0.05; }
+          q.startedOnce = true;
+          src.start(q.cursor);
+          q.cursor += buf.duration;
+          q.sources.push(src);
+          if (q.sources.length > 64) q.sources.splice(0, 16);   // keep the halt list bounded
+        } catch (e) {}
+      },
+      enqueue(text) {
+        text = String(text || "").trim();
+        if (!text || q.closed || !ready) return Promise.resolve(false);
+        q.pendingCount++;
+        const run = q.chain.then(() => new Promise((res) => {
+          if (q.closed) { res(false); return; }
+          const mySeq = ++seq;
+          let got = false;
+          const h = (e) => {
+            const m = e.data || {};
+            if (m.seq !== mySeq) return;
+            if (m.type === "chunk") { got = true; q.schedule(m.audio, m.sampleRate); }
+            if (m.type === "done" || m.type === "error") { worker.removeEventListener("message", h); res(got); }
+          };
+          worker.addEventListener("message", h);
+          try { worker.postMessage({ type: "generate", data: { text, seq: mySeq } }); } catch (e) { res(false); }
+          setTimeout(() => { worker.removeEventListener("message", h); res(got); }, 60000);
+        }));
+        q.chain = run.then(() => {});
+        // resolve to the caller when THIS text's audio has finished PLAYING (clock passes the cursor)
+        return run.then((got) => new Promise((res) => {
+          const waitMs = Math.max(0, (q.cursor - ctx.currentTime) * 1000) + 60;
+          setTimeout(() => {
+            q.pendingCount--;
+            if (q.pendingCount === 0 && !q.closed && onDrain) { try { onDrain(); } catch (e) {} }
+            res(got);
+          }, waitMs);
+        }));
+      },
+      kill() {
+        q.closed = true;
+        metering = false;
+        try { analyser.disconnect(); } catch (e) {}
+        if (onLevel) { try { onLevel(0); } catch (e) {} }
+        for (const s of q.sources) { try { s.stop(); } catch (e) {} }
+        q.sources.length = 0;
+        try { if (worker) worker.postMessage({ type: "stop" }); } catch (e) {}
+      },
+    };
+    const resume = () => { if (ctx.state === "suspended") ctx.resume().catch(() => {}); };
+    resume();
+    queueSession = q;
+    return q;
   }
 
   return {
     warm,
     speak,
     stop,
+    openQueue,
     isReady: () => ready,
     engine: () => engineInfo,
   };

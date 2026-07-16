@@ -165,6 +165,7 @@ export function createVoice(opts = {}) {
     active = false;
     try { if (typeof window !== "undefined" && window.speechSynthesis) window.speechSynthesis.cancel(); } catch (e) {}
     try { if (_pocket && _pocket.stop) _pocket.stop(); } catch (e) {} /* HOLO-POCKET-STOP */
+    qsess = null; /* HOLO-POCKET-QUEUE-STOP: _pocket.stop() above killed the live queue session */
     try { if (curSrc) curSrc.stop(); } catch (e) {} curSrc = null;
     try { if (node) node.disconnect(); } catch (e) {}
     finish(); cur = null;
@@ -252,7 +253,20 @@ export function createVoice(opts = {}) {
     return warming;
   }
 
-  return { speak, stop, warmHD, attachHD(engine) { hd = engine || null; }, hasHD() { return !!hd || _pocketReady(); }, get speaking() { return active; } };
+  /* HOLO-POCKET-QUEUE: streamed-reply voice — enqueue clauses as they complete; gapless. */
+  let qsess = null;
+  async function speakQ(text) {
+    text = String(text || "").trim(); if (!text) return false;
+    if (_voiceMuted()) return false;
+    if (!_pocketReady() || !_pocket.openQueue) return speak(text);   // not warm → classic ladder (atlas/park)
+    try {
+      ac = ac || new (window.AudioContext || window.webkitAudioContext)();
+      if (!qsess || qsess.closed) { qsess = _pocket.openQueue({ ctx: ac, onLevel: (v) => { tgt = v; }, onDrain: () => { finish(); } }); }
+      begin();
+      return await qsess.enqueue(text);
+    } catch (e) { try { finish(); } catch (e2) {} return false; }
+  }
+  return { speak, speakQ, stop, warmHD, attachHD(engine) { hd = engine || null; }, hasHD() { return !!hd || _pocketReady(); }, get speaking() { return active; } };
 }
 
 // ── backward-compatible SINGLETON API (apps/q q-chat.html, make-chat-space.mjs). Progressive enhancement: warms
@@ -267,6 +281,7 @@ function _s() {
 export function ready() { return _s().hasHD(); }
 export async function loadVoice(onProgress) { return _s().warmHD({ onProgress }); }
 export function speak(text, voice) { return _s().speak(text); }   // voice arg accepted for compat (default af_heart)
+export function speakQueued(text) { return _s().speakQ(text); }   /* HOLO-POCKET-QUEUE: clause-streamed speech */
 export function stop() { try { if (_singleton) _singleton.stop(); } catch (e) {} }
 export function engine() { return _pocketReady() ? "pocket-tts" : _s().hasHD() ? "kokoro" : "speechSynthesis"; }
 
