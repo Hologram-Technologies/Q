@@ -60,6 +60,9 @@ export function makeResolver(fetchBytesByKappa) {
 }
 
 // ── the machine registry: an open set, not a switch ──────────────────────────────────────
+// HOLO-RESOLVER-IN-RUNTIME G1: the capset (SEC-2 attenuation) at the mount boundary — LOG-ONLY here.
+import { attenuate, overRequest, fromHolospace, ROOT } from "./holo-capset.mjs";
+
 export function makeRegistry() {
   const reg = new Map();   // machineκ → adapter { realize(imageκ, params, snapshot, surface) → handle }
   return {
@@ -79,14 +82,26 @@ export const Machines = makeRegistry();
 
 // mount(κ, surface, {resolve, machines}) — THE verb. The whole dispatcher; no branching on type.
 // Returns { ok, machine, handle } on success, or { ok:false, reason } fail-closed (never a wrong mount).
-export async function mount(spaceKappa, surface, { resolve, machines = Machines } = {}) {
+export async function mount(spaceKappa, surface, { resolve, machines = Machines, capset = ROOT, onCap = null } = {}) {
   if (typeof resolve !== "function") throw new Error("holospace.mount: a resolve() is required");
   const m = await resolve(spaceKappa);
   if (!m) return { ok: false, reason: "unresolved" };               // miss / tamper / bad shape
   const adapter = machines.get(m.machine);
   if (!adapter) return { ok: false, reason: "no-machine:" + m.machine };
+  // G1 (SEC-2, LOG-ONLY): the child's declared capset (holospace.json schema on the manifest) is
+  // attenuated under the parent; we LOG what would be dropped and attach the admitted set — realize()
+  // is UNCHANGED (dual-run before enforce). Fail-soft: the probe never throws into the mount path.
+  let admitted = null;
+  try {
+    const declared = fromHolospace(m);                      // absent capabilities ⇒ requests nothing
+    admitted = attenuate(capset, declared);
+    const over = overRequest(capset, declared);
+    const entry = { kappa: String(spaceKappa).slice(0, 24), machine: m.machine, name: m.name || null, admitted, over };
+    if (typeof onCap === "function") onCap(entry);
+    else if (typeof self !== "undefined" && self.HoloSysHealth && typeof self.HoloSysHealth.capLog === "function") self.HoloSysHealth.capLog(entry);
+  } catch {}
   const handle = await adapter.realize(m.image, m.params || {}, m.snapshot || null, surface);
-  return { ok: true, machine: m.machine, name: m.name || null, handle };
+  return { ok: true, machine: m.machine, name: m.name || null, handle, capset: admitted };
 }
 
 export default {
