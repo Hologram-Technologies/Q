@@ -14,7 +14,7 @@
   },
   "apps": {
    "files": 54,
-   "bytes": 2405468,
+   "bytes": 2405663,
    "hf": 0
   }
  },
@@ -1931,9 +1931,9 @@
    "source": "origin"
   },
   "apps/q/q-chat.html": {
-   "sha256": "8dc00649474a3eba4cc3ff3fdcff83e5d530f81da54d085f4d43f6b6533bea1c",
-   "blake3": "0cd025e2cad1ea16a2def49efa4eeb290093c3c2bc85aa83ba24731b133a5b65",
-   "bytes": 101438,
+   "sha256": "01bb4c767cfa021cd0f4723ced77d0afb78a284ec8abfc294d10b9a06fbe5baf",
+   "blake3": "b967ac008547249f06fbd02051fdfa0198f0cd71911702b9960954425dd8e935",
+   "bytes": 101633,
    "tier": "apps",
    "source": "origin"
   },

@@ -704,7 +704,7 @@ async function warmKokoro() {
     const mod = await import("./core/voice-out.js");
     _kokoro = mod;   // set at import → speak() reaches the pre-baked ATLAS (instant, no HD/COI) before HD warms
     mod.loadVoice((p) => { if (p && p.status === "progress" && p.file) { try { console.debug("[Q voice] kokoro", p.file, Math.round(p.progress || 0) + "%"); } catch {} } })
-      .then(() => { _kokoro = mod; _voiceErr = null; try { console.info("[Q voice] Kokoro ready — natural voice active"); } catch {} _speakGreeting(false); try { _flushVoiceQ(); } catch (e) {} })
+      .then(() => { _kokoro = mod; _voiceErr = null; try { console.info("[Q voice] ready — engine: " + ((mod.engine && mod.engine()) || "pocket-tts") + " (pocket-tts = canonical; kokoro/OS = fallback rungs only)") /* HOLO-VOICE-CANONICAL */; } catch {} _speakGreeting(false); try { _flushVoiceQ(); } catch (e) {} })
       .catch((e) => { _kokoro = null; _voiceErr = String((e && e.message) || e); try { console.warn("[Q voice] Kokoro FAILED, using system voice:", e); } catch {} });
   } catch (e) { _kokoro = null; _voiceErr = String((e && e.message) || e); try { console.warn("[Q voice] Kokoro import FAILED:", e); } catch {} }
 }
