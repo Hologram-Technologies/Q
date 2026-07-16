@@ -824,7 +824,9 @@ try { window.addEventListener("holo-voice-mute", _renderMute); } catch (e) {}
 const micBtn = $("#mic");
 let _listenMod = null, _hf = null;
 async function ensureHF() {
-  if (!_listenMod) _listenMod = await import("./core/listen.js");
+  /* HOLO-EAR-MOONSHINE: moonshine ear (base; tiny on phones) — 280ms warm transcribe vs whisper's ~1s,
+     better accuracy, same API. Fail-soft: any failure → the original listen.js whisper ear. */
+  if (!_listenMod) _listenMod = await import("../../usr/lib/holo/voice/ear/holo-ear.mjs").then((m) => (m && m.createHandsFree ? m : null)).catch(() => null) || await import("./core/listen.js");
   if (!_hf) _hf = _listenMod.createHandsFree({
     /* HOLO-DUPLEX: under ?duplex=1 the mic stays open while Q speaks — VAD onset (existing "speech"
        handler) stops Q instantly = barge-in. AEC (already on) suppresses Q's own voice in the mic. */
