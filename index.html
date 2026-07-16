@@ -35,20 +35,6 @@ const refuse = (why) => { document.body.innerHTML =
   + '<p style="color:#8696a0;margin:0">The first stage did not re-derive to its fingerprint. Reload — if it '
   + 'persists, the source you reached is tampered or corrupt.</p></main>'; console.error("seed:", why); };
 (async () => {
-  // MOBILE (HOLO-PHONE) — PHONE-HOME reroute: a phone lands on the minimalist calm home (home-screen.html is
-  // relative-pathed → renders cold, no SW needed, so the reroute is unconditional). ?desktop=1 opts out.
-  try {
-    var _sp = new URLSearchParams(location.search);
-    var _uad = navigator.userAgentData;
-    // userAgentData.mobile is AUTHORITATIVE on Chromium: a touchscreen desktop is coarse-pointer yet mobile:false,
-    // so trust it exclusively when present; only engines lacking it (Safari/Firefox) use the viewport heuristic.
-    var _phone = _uad ? !!_uad.mobile
-                      : (matchMedia("(pointer:coarse)").matches && Math.min(innerWidth, innerHeight) <= 700);
-    if (_phone && !_sp.has("desktop") && !/home-screen/.test(location.pathname)) {
-      location.replace(new URL("usr/share/frame/home-screen.html", location.href).href);
-      return;
-    }
-  } catch (e) {}
   // BYTE-ZERO (S0): the worker is registered from the seed's first tick and the boot is FENCED on
   // control, collared — no arrival fetch outside this seed's own closure precedes the rescuer, and
   // a browser without workers (or a hung install) folds to today's path after 1600ms, never hangs.
