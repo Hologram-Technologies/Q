@@ -65,6 +65,33 @@ function _ensurePocket() {
 }
 function _pocketReady() { try { return !!(_pocket && _pocket.isReady()); } catch (e) { return false; } }
 
+/* HOLO-VOICE-MUTE: Q's voice is ON by default — this is the one user switch that silences it, everywhere. */
+const _MUTE_KEY = "holo-voice-mute";
+function _voiceMuted() { try { return localStorage.getItem(_MUTE_KEY) === "1"; } catch (e) { return false; } }
+export function muted() { return _voiceMuted(); }
+export function setMuted(m) {
+  try { localStorage.setItem(_MUTE_KEY, m ? "1" : "0"); } catch (e) {}
+  if (m) { try { stop(); } catch (e) {} try { if (_pocket && _pocket.stop) _pocket.stop(); } catch (e) {} }
+  try { (typeof window !== "undefined" ? window : self).dispatchEvent(new CustomEvent("holo-voice-mute", { detail: { muted: !!m } })); } catch (e) {}
+}
+
+/* HOLO-POCKET-AUTOWARM: voice ready before the first reply — warm at idle (download needs no gesture).
+   Respects the user: skipped when muted, on data-saver, or on 2g. Fail-soft and once per page. */
+try {
+  const _autoWarm = () => {
+    try {
+      if (_voiceMuted()) return;
+      const c = typeof navigator !== "undefined" && navigator.connection;
+      if (c && (c.saveData || /(^|-)2g$/.test(String(c.effectiveType || "")))) return;
+      _ensurePocket().then((pv) => { if (pv) pv.warm(); });
+    } catch (e) {}
+  };
+  if (typeof window !== "undefined") {
+    if ("requestIdleCallback" in window) setTimeout(() => requestIdleCallback(_autoWarm, { timeout: 8000 }), 3500);
+    else setTimeout(_autoWarm, 5000);
+  }
+} catch (e) {}
+
 
 export function createVoice(opts = {}) {
   const onLevel = typeof opts.onLevel === "function" ? opts.onLevel : function () {};
@@ -145,6 +172,7 @@ export function createVoice(opts = {}) {
 
   async function speak(text) {
     text = String(text || "").trim(); if (!text) return false;
+    if (_voiceMuted()) return false;   /* HOLO-VOICE-MUTE-GATE: silent while muted — nothing parked */
     stop();
     /* HOLO VOICE ATLAS rung: pre-baked premium audio → instant, even before HD warms (else Q holds silent). */
     try { const _bk = await _atlasGet(text); if (_bk && _bk.audio && _bk.audio.length) { begin(); await playBuffer({ audio: _bk.audio, sampling_rate: _bk.rate }); finish(); return true; } } catch (e) {}

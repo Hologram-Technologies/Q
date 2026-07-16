@@ -138,6 +138,7 @@ try{if(window.self===window.top){if(self.crossOriginIsolated){try{sessionStorage
   <div class=av><canvas id=orb></canvas></div>
   <div class=hmeta><b>Q</b><span id=status>online</span></div>
   <span id=perf title="on-device speed — tokens/second · time to first token"></span>
+  <button id=qmute aria-label="Mute Q's voice" style="background:none;border:0;font-size:15px;line-height:1;cursor:pointer;opacity:.7;padding:2px 6px">🔊</button><!-- HOLO-VOICE-MUTE -->
 </header>
 <div id=log></div>
 <div class=chips id=chips></div>
@@ -715,7 +716,7 @@ let _voiceQ = null;
 const _OS_VOICE_OK = (() => { try { return /[?&]osvoice=1/.test(location.search); } catch (e) { return false; } })();
 function _flushVoiceQ() { const t = _voiceQ; if (t && _kokoro && _kokoro.ready && _kokoro.ready()) { _voiceQ = null; speak(t); } }
 function speak(text) {
-  if (!voiceOn || !text) return;
+  if (!voiceOn || !text || _muteState()) return;   /* HOLO-VOICE-MUTE-GATE */
   text = _spokenText(text); if (!text) return;   // Q says human words — markdown/code/urls stay on screen only
   if (_kokoro && _kokoro.speak) {   // voice-out.speak tries the pre-baked ATLAS first (instant, no HD/COI) → HD → park
     qOrb("speaking"); _qSpeaking++;
@@ -792,6 +793,19 @@ function _onFirstGesture() {
   if (!_speakGreeting(false)) _greetTimer = setTimeout(() => _speakGreeting(true), 5000);   // Kokoro grace, then OS fallback
 }
 ["pointerdown", "keydown", "touchstart"].forEach((ev) => window.addEventListener(ev, _onFirstGesture, { once: true, passive: true }));
+
+/* HOLO-VOICE-MUTE: voice is ON by default — the header 🔊 is the user's one switch. Persists per device. */
+const _muteBtn = document.getElementById("qmute");
+function _muteState() { try { return localStorage.getItem("holo-voice-mute") === "1"; } catch (e) { return false; } }
+function _renderMute() { if (!_muteBtn) return; const m = _muteState(); _muteBtn.textContent = m ? "\u{1F507}" : "\u{1F50A}"; _muteBtn.title = m ? "Unmute Q's voice" : "Mute Q's voice"; _muteBtn.style.opacity = m ? "1" : ".7"; }
+if (_muteBtn) _muteBtn.onclick = () => {
+  const m = !_muteState();
+  try { if (_kokoro && _kokoro.setMuted) _kokoro.setMuted(m); else localStorage.setItem("holo-voice-mute", m ? "1" : "0"); } catch (e) {}
+  if (m) { try { stopSpeak(); } catch (e) {} }
+  _renderMute();
+};
+_renderMute();
+try { window.addEventListener("holo-voice-mute", _renderMute); } catch (e) {}
 
 // ── Q's EAR (on-device listening): press & hold the mic to talk. The audio is transcribed LOCALLY by
 // Whisper-tiny (core/listen.js) — nothing leaves the device; only the model streams from HF on first use.
