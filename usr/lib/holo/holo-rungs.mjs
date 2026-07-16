@@ -47,10 +47,15 @@ export const BUILTIN_RUNGS = {
   // centralized rungs miss/censor AND any peer on the decentralized web holds the object. Bounded to
   // single raw blocks (≤ ~1 MiB); larger objects are UnixFS-chunked on IPFS (root CID ≠ κ) and simply
   // miss here → the caller falls through, exactly as before.
+  // HOLO-PERMISSIONLESS-HEAL H1a: TRUSTLESS block gateways. The ladder re-derives every byte (L5),
+  // so these are untrusted, swappable block SOURCES — not servers we trust. Fetched as `?format=raw`
+  // (Accept: application/vnd.ipld.raw): a κ is a CIDv1(raw), so the raw block IS the object. Diverse +
+  // trustless → no single reputation-flagged HTML gateway is load-bearing; any one that holds the block serves.
   ipfs: [
+    "https://trustless-gateway.link",
     "https://ipfs.io",
     "https://dweb.link",
-    "https://cloudflare-ipfs.com",
+    "https://4everland.io",
   ],
 };
 
@@ -155,7 +160,8 @@ export function makeLadder({ base = "", rung = null, world = null } = {}) {
           try {
             const ac = typeof AbortController !== "undefined" ? new AbortController() : null;
             const t = ac && setTimeout(() => ac.abort(), IPFS_TIMEOUT);
-            r = await fetch(gw.replace(/\/$/, "") + "/ipfs/" + cid, ac ? { signal: ac.signal } : {});
+            // H1a: trustless RAW-block fetch — the block re-derives to the κ (serveVerified), so any source is safe.
+            r = await fetch(gw.replace(/\/$/, "") + "/ipfs/" + cid + "?format=raw", { headers: { accept: "application/vnd.ipld.raw" }, ...(ac ? { signal: ac.signal } : {}) });
             if (t) clearTimeout(t);
           } catch { continue; }
           if (!r || !r.ok) { if (r) miss = miss || r; continue; }
