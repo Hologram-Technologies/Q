@@ -2711,7 +2711,22 @@
       // merely declared. window.HoloTerms.gate(def) returns declared ∩ the user's standing term +
       // signed agreement (prompting for sensitive/egress), {} = bare sandbox. Fail-closed: no
       // HoloTerms ⇒ the declared set (the prior contract); any error inside gate ⇒ {} (default-deny).
-      async function gateCaps(def) { return window.HoloTerms ? await window.HoloTerms.gate(def) : (def.capabilities || {}); }
+      // HOLO-RESOLVER-IN-RUNTIME (SEC-2 dual-run): the app's declared caps, attenuated under the OS ROOT
+      // CapabilitySet and LOGGED. Returns DECLARED unchanged — the iframe sandbox/allow enforcement is
+      // untouched (log-before-enforce). Top level: ROOT grants all → admitted === declared, over = {}.
+      let _holoCapset = null;
+      async function gateCaps(def) {
+        const declared = window.HoloTerms ? await window.HoloTerms.gate(def) : (def.capabilities || {});
+        try {
+          _holoCapset = _holoCapset || await import("/usr/lib/holo/holo-capset.mjs");
+          const admitted = _holoCapset.attenuate(_holoCapset.ROOT, declared || {});
+          const over = _holoCapset.overRequest(_holoCapset.ROOT, declared || {});
+          const entry = { app: (def && def.id) || null, admitted, over };
+          (window.__holoCapLog || (window.__holoCapLog = [])).push(entry);
+          if (window.HoloSysHealth && typeof window.HoloSysHealth.capLog === "function") window.HoloSysHealth.capLog(entry);
+        } catch (e) { /* fail-soft: enforcement is unchanged regardless */ }
+        return declared;
+      }
       // kappaEntry(app, def) — the κ-native frame BODY for an app (Law L1/L5): resolve the entry's κ from the
       // app's content lock, fetch it BY ITS κ-route, re-derive it (refuse a mismatch), and return the projected
       // srcdoc — the document IS the κ, mounted as content, not navigated to a path. projectHtml injects ONE

@@ -9,7 +9,7 @@
  "tiers": {
   "core": {
    "files": 600,
-   "bytes": 11676005,
+   "bytes": 11675912,
    "hf": 0
   },
   "apps": {
@@ -986,16 +986,16 @@
    "source": "origin"
   },
   "apps/holo-messenger/_vendor/ui/chat-ui.bundle.css": {
-   "sha256": "1471babea81933c5ba2c41bb960728f051370c0ac2dd8b1f7168667fe99fb279",
-   "blake3": "1cfae302e61f0580f51e6013544e10754ebb89c278999888dab57189a5624e7c",
-   "bytes": 253427,
+   "sha256": "32db1a363ab82fb3acef80742025571233034e413f61ba8d76eef809f8f641ac",
+   "blake3": "f67cf5c12101f6318c466613518b15fe8b26c815bda06a35def08be3a5421690",
+   "bytes": 252355,
    "tier": "core",
    "source": "origin"
   },
   "apps/holo-messenger/_vendor/ui/chat-ui.bundle.js": {
-   "sha256": "2ebb8ecbff0f5ecb68a87c9629c1a2be2b05a6536e02cac0608a0e8512ca8650",
-   "blake3": "6e81cd2b9174855c3a149ed98ac71ca2bfc6e0443b965a758cc699d96634aa31",
-   "bytes": 429388,
+   "sha256": "41747f7be9e910e49eb7d040828e32068e42f783b90c8b8b08f30d0019fc4bab",
+   "blake3": "68d1b46fb45f47512c46bc6744357cbaba3418ef5b717142f5369719ae3a5e8a",
+   "bytes": 429353,
    "tier": "core",
    "source": "origin"
   },
@@ -1434,8 +1434,8 @@
    "source": "origin"
   },
   "apps/holo-messenger/holo-sw.js": {
-   "sha256": "dab841ab219375e0f6ecba6b34cada4b48cd635534e84c36de06293ecd17b4cb",
-   "blake3": "9f71e744ce08bc100438f89507b20c9bc4e3606bafd2cc11b1caaf54b1847878",
+   "sha256": "5bb12e1f063ea613fc5184d286edc7a2a3bbd122058d0811ac42f67782a036d7",
+   "blake3": "6454c582ce28865d02ec2e10e00a9538051b4bba2ec568df3a2465caeb366281",
    "bytes": 26338,
    "tier": "core",
    "source": "origin"
@@ -1763,8 +1763,8 @@
    "source": "origin"
   },
   "apps/holo-messenger/shell-manifest.json": {
-   "sha256": "bd23646637f1800cfa845bad542ddea65dcab78701198ccf34ce1d0f01c0dad9",
-   "blake3": "949421bd44f3dcbe70e07a924e75ed1f49356ea54169ed7a5f9b5b15240ec6f4",
+   "sha256": "829055486248babc2110ab317ebfe50f5fa5170e870ec77ecb4d99ce215c348f",
+   "blake3": "4583b51fd6dad670c28823023821baa44cd5397ca3faa78c289eeb13dcca67c0",
    "bytes": 6812,
    "tier": "core",
    "source": "origin"
@@ -4542,9 +4542,9 @@
    "source": "origin"
   },
   "usr/share/frame/shell-main.mjs": {
-   "sha256": "acac30dfa201f28bd041032d7f4fabbf039c07667695f06bfc6c216a401dedfc",
-   "blake3": "9537c358056c1d9a122e5cc47ddb1dd4fea3eda4c487512fb5d6ed7a4b7b6534",
-   "bytes": 615780,
+   "sha256": "2c42b06144392b40c43a3457eca8eb16034e4ebe8a7b4ed0044b703b5f9bf949",
+   "blake3": "5b9321aff1668d9788b347183cbd1d6d7e07ae089c754b32766df6f9a3e172f7",
+   "bytes": 616794,
    "tier": "core",
    "source": "origin"
   },
