@@ -9,12 +9,12 @@
  "tiers": {
   "core": {
    "files": 602,
-   "bytes": 13764334,
+   "bytes": 13764851,
    "hf": 0
   },
   "apps": {
    "files": 54,
-   "bytes": 2405543,
+   "bytes": 2401534,
    "hf": 0
   }
  },
@@ -1910,9 +1910,9 @@
    "source": "origin"
   },
   "apps/q/core/voice-out.js": {
-   "sha256": "dc144fde1669a24b92a4a721737c85d90e013d3edd8816ef675b5d64d26932af",
-   "blake3": "67d691362a96c542859b5e3b176ba76f1a50d3431922c889953c2428e11745d7",
-   "bytes": 18953,
+   "sha256": "116e3359f3aae7d4ceecc4dd6a7a57d03c7828a52118665f4d04e4ff91bb091c",
+   "blake3": "6d3da8855bef7d662e9ea62f4864b9fbce1355297a4c7655b931debb3c17086e",
+   "bytes": 14824,
    "tier": "apps",
    "source": "origin"
   },
@@ -1931,9 +1931,9 @@
    "source": "origin"
   },
   "apps/q/q-chat.html": {
-   "sha256": "868d40a6ef8599407f4776cfe36090dd8d9695a5dc0afaee2c7010ddccac4495",
-   "blake3": "c163a4c9c371b24dfc1527686667d25967ad61e84e01f1a7e03114145d328faf",
-   "bytes": 101513,
+   "sha256": "01bb4c767cfa021cd0f4723ced77d0afb78a284ec8abfc294d10b9a06fbe5baf",
+   "blake3": "b967ac008547249f06fbd02051fdfa0198f0cd71911702b9960954425dd8e935",
+   "bytes": 101633,
    "tier": "apps",
    "source": "origin"
   },
@@ -3912,9 +3912,9 @@
    "source": "origin"
   },
   "usr/lib/holo/voice/ear/holo-ear.mjs": {
-   "sha256": "8439da8235a1e6a7260a23734f500a5ee98b746c7f06a8f104c03b051b328c37",
-   "blake3": "e6e991657b2ca66f97f11f675fa15ba8f1b73dcbef3f03109d0a902798a1c5de",
-   "bytes": 11598,
+   "sha256": "8a0a6cc24140c08bf49a6113b788c76470bd1bd9ab1ab7a51a17cbc6f5cc9be7",
+   "blake3": "8c15c99f1a13ff67e68898e65b7c9ad2986db724a16e676a316bd4e5c0147533",
+   "bytes": 12115,
    "tier": "core",
    "source": "origin"
   },

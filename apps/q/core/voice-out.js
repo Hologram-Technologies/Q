@@ -194,59 +194,11 @@ export function createVoice(opts = {}) {
     if (warming) return warming;
     warming = (async () => {
       const gpu = typeof navigator !== "undefined" && !!navigator.gpu;
-      /* HOLO-POCKET-WARM: Plan A0 — the default engine. Success = HQ voice armed (kokoro stays fallback). */
+      /* HOLO-POCKET-WARM: the ONE engine. Success = HQ voice armed (no fallback engines — canon). */
       try { const _pv = await _ensurePocket(); if (_pv) { const _ok = await _pv.warm(o.onProgress); if (_ok) return true; } } catch (e) {}
-      // Plan A — vendored createTTS (holo-voice-tts.mjs), fully local
-      try {
-        // subpath-robust import: the web deploy serves this module under /Q/… so a ROOT-absolute
-        // /usr/…/holo-voice-tts.mjs resolves to a stub — try the root path AND one resolved RELATIVE to this
-        // module (…/apps/q/core → /usr/…), so the fully-local GPU-tiered engine is reachable off-root too.
-        const _ttsUrls = [o.ttsUrl, "/usr/lib/holo/voice/holo-voice-tts.mjs"].filter(Boolean);
-        try { _ttsUrls.push(new URL("../../../usr/lib/holo/voice/holo-voice-tts.mjs", import.meta.url).href); } catch (e) {}
-        let mod = null;
-        for (const u of _ttsUrls) { try { const m = await import(/* @vite-ignore */ u); if (m && m.createTTS) { mod = m; break; } } catch (e) {} }
-        if (mod && mod.createTTS) {
-          const plans = gpu ? [{ device: "webgpu", dtype: "fp16", preferWebGPU: true }, { device: "wasm", dtype: "q8" }] : [{ device: "wasm", dtype: "q8" }];
-          for (const p of plans) {
-            try { const e = mod.createTTS(p); await e.load(o.onProgress); try { await e.synth("Hi."); } catch (e2) {} hd = e; return true; } catch (e2) {}
-          }
-        }
-      } catch (e) {}
-      // Plan B — original kokoro-js (needs @huggingface/transformers import map; works in apps/q).
-      // RESILIENT IMPORT: the vendored kokoro.js is served by the shell service worker, whose first-hit
-      // resolution can race (a cold `import()` 404s with ERR_ABORTED while a warm fetch of the SAME url is
-      // 200). So we try a small set of candidate urls — root-absolute (the published location) plus one
-      // resolved RELATIVE to this module (covers a /Q subpath deploy) — and RETRY once after a short warm
-      // delay. Any failure still falls through to the speechSynthesis floor; this can only add reachability.
-      try {
-        const _koUrls = ["/_shared/voice/vendor/kokoro/kokoro.js"];   // published location first (live + native host)
-        try { _koUrls.push(new URL("../../../_shared/voice/vendor/kokoro/kokoro.js", import.meta.url).href); } catch (e) {}   // subpath co-publish fallback
-        const _importKo = async () => { for (const u of _koUrls) { try { const mod = await import(/* @vite-ignore */ u); if (mod && mod.KokoroTTS) return mod; } catch (e) {} } return null; };
-        let ko = await _importKo();
-        if (!ko) { await new Promise((r) => setTimeout(r, 500)); ko = await _importKo(); }   // warm the SW, retry once
-        if (!ko) throw new Error("kokoro.js unresolved");
-        // kokoro.js RE-EXPORTS its transformers env — use it directly. The bare "@huggingface/transformers"
-        // import-map entry is ROOT-absolute, which is a dead URL on a /Q mount without the root SW (the map
-        // was the last root-absolute dependency killing this plan on the live site).
-        const tf = ko.env ? ko : await import(/* @vite-ignore */ "@huggingface/transformers");
-        const env = tf.env, KokoroTTS = ko.KokoroTTS;
-        env.allowRemoteModels = true; env.allowLocalModels = false;
-        // EVICTED-TREE LAW (live /Q): do NOT override wasmPaths or set proxy here. ort's proxy worker is a
-        // blob worker whose fetches BYPASS the service worker — and the vendored transformers dir is an
-        // evicted tree (real network 404s; only SW-rescued page-context fetches reach it). Defaults resolve
-        // the wasm relative to transformers.js and fetch it from the PAGE context, where the rescue serves
-        // it verified; webgpu carries the heavy math. This exact config is live-proven (fp16 ready in 24s).
-        // HIGHER-QUALITY VOICE: on a WebGPU device stream the fp16 weights and synth on the GPU — far warmer
-        // and more natural than the q8/wasm floor, and quicker to speak. Fall back to q8/wasm without WebGPU,
-        // or if the GPU load fails, so higher quality never costs reliability.
-        const _mk = async (dtype, device) => {
-          const t = await KokoroTTS.from_pretrained("onnx-community/Kokoro-82M-v1.0-ONNX", { dtype, device, progress_callback: o.onProgress });
-          return { synth: (text) => t.generate(String(text), { voice: "af_heart" }) };
-        };
-        try { hd = gpu ? await _mk("fp16", "webgpu") : await _mk("q8", "wasm"); }
-        catch (e3) { hd = await _mk("q8", "wasm"); }
-        return true;
-      } catch (e) {}
+      /* HOLO-VOICE-CANON (operator 2026-07-16): kokoro Plans A/B removed — pocket-tts IS the voice.
+         Failure mode is HOLD (atlas still speaks fixed phrases; parked text speaks when pocket warms
+         on a later retry). ?osvoice=1 accessibility floor unchanged. */
       return false;
     })().catch(() => false)
       .then((ok) => { if (ok && parked) { const t = parked; parked = null; speak(t); } return ok; });   // HD just warmed → speak the held utterance

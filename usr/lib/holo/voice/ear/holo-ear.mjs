@@ -58,24 +58,18 @@ async function importBlob(url) {
   try { return await import(/* @vite-ignore */ b); } finally { URL.revokeObjectURL(b); }
 }
 
-// ── legacy listen.js (whisper fallback + shared VAD) — candidate-loop import, never memoize absence ──
-let _legacy = null;
-async function legacy() {
-  if (_legacy) return _legacy;
-  const urls = ["/apps/q/core/listen.js"];
-  try { const m = (typeof location !== "undefined" ? location.pathname : "/").split("/")[1]; if (m) urls.unshift(`/${m}/apps/q/core/listen.js`); } catch (e) {}
-  try { urls.unshift(new URL("../../../../apps/q/core/listen.js", import.meta.url).href); } catch (e) {}
-  for (const u of urls) { try { const m = await import(/* @vite-ignore */ u); if (m && m.transcribe) { _legacy = m; return m; } } catch (e) {} }
-  return null;
-}
+// ── ONE RUNTIME (canonical, operator 2026-07-16): the pinned 3.8.1 carries BOTH the moonshine ASR and
+// the Silero VAD — no legacy listen.js import, no second ORT wasm in memory, no whisper fallback.
+// Failure mode is silence + retry-on-next-use (never memoized), matching the voice's HQ-or-hold law. ──
+let _tfP = null;
+function runtime() { return _tfP || (_tfP = importBlob(TF_PIN).catch((e) => { _tfP = null; throw e; })); }
 
-// ── moonshine pipeline (pinned runtime), fail-soft ──
 let _ms = null, _msLoading = null;
 export async function loadEar(onProgress) {
   if (_ms) return _ms;
   if (_msLoading) return _msLoading;
   _msLoading = (async () => {
-    const tf = await importBlob(TF_PIN);
+    const tf = await runtime();
     const { pipeline, env } = tf;
     env.allowRemoteModels = true; env.allowLocalModels = false;
     // model files fetch via transformers' own browser cache (default on) — cached users are 0-network
@@ -88,23 +82,40 @@ export async function loadEar(onProgress) {
   return _msLoading;
 }
 
-// Transcribe Float32 mono PCM @16kHz → text. Moonshine first; whisper (listen.js) on any failure.
+// Transcribe Float32 mono PCM @16kHz → text. Moonshine is THE ear; failure returns "" (caller retries).
 export async function transcribe(pcm16k, onProgress) {
   try {
     const pipe = await loadEar(onProgress);
     const r = await pipe(pcm16k);
-    const t = ((Array.isArray(r) ? r.map((x) => x.text).join(" ") : (r && r.text)) || "").trim();
-    if (t) return t;
+    return ((Array.isArray(r) ? r.map((x) => x.text).join(" ") : (r && r.text)) || "").trim();
   } catch (e) {}
-  try { const lg = await legacy(); if (lg) return await lg.transcribe(pcm16k, onProgress); } catch (e) {}
   return "";
 }
 
-// VAD: reuse listen.js's Silero loader (one VAD for the whole OS). Fail-soft null → hands-free unavailable.
-async function loadVAD(onProgress) {
-  const lg = await legacy();
-  if (!lg || !lg.loadVAD) throw new Error("VAD unavailable");
-  return lg.loadVAD(onProgress);
+// Silero VAD on the SAME runtime (ported from listen.js loadVAD — one ORT for the whole ear).
+let _vad = null, _vadLoading = null;
+export async function loadVAD(onProgress) {
+  if (_vad) return _vad;
+  if (_vadLoading) return _vadLoading;
+  _vadLoading = (async () => {
+    const tf = await runtime();
+    const { AutoModel, Tensor, env } = tf;
+    env.allowRemoteModels = true; env.allowLocalModels = false;
+    const net = await AutoModel.from_pretrained("onnx-community/silero-vad", { config: { model_type: "custom" }, dtype: "fp32", progress_callback: onProgress });
+    const sr = new Tensor("int64", [16000n], []);
+    let state = new Tensor("float32", new Float32Array(256), [2, 1, 128]);
+    _vad = {
+      reset() { state = new Tensor("float32", new Float32Array(256), [2, 1, 128]); },
+      async prob(frame512) {
+        const input = new Tensor("float32", frame512, [1, 512]);
+        const out = await net({ input, sr, state });
+        if (out.stateN) state = out.stateN;
+        const o = out.output && out.output.data; return o && o.length ? o[0] : 0;
+      },
+    };
+    return _vad;
+  })().catch((e) => { _vadLoading = null; throw e; });   // no memoized absence
+  return _vadLoading;
 }
 
 // ── press-to-talk (same shape as listen.js createEar, transcribe upgraded) ──
@@ -219,4 +230,4 @@ export function createHandsFree(opts = {}) {
   return { start, stop, available, get running() { return running; } };
 }
 
-export function engine() { return _ms ? "moonshine" : "whisper"; }
+export function engine() { return _ms ? "moonshine" : "warming"; }
