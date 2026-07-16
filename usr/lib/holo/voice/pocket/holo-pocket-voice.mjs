@@ -12,19 +12,39 @@ const MIRROR = "https://huggingface.co/HOLOGRAMTECH/q-pocket-tts/resolve/main/";
 const ORT_BASE = "https://cdn.jsdelivr.net/npm/onnxruntime-web@1.20.0/dist/";
 
 export function createPocketVoice(opts = {}) {
-  const base = opts.base || MIRROR;
+  const base = opts.base || (typeof window !== "undefined" && window.__HOLO_POCKET_BASE) || MIRROR;
   const ortBase = opts.ortBase || ORT_BASE;
   let worker = null, ready = false, warming = null, engineInfo = null;
   let seq = 0;
   let session = null;   // active playback session
 
-  function ensureWorker() {
+  // Worker boot needs a REAL served path: SW-synthetic root-abs urls (/usr/…) load fine as page fetches
+  // but FAIL as worker-destination requests. So try each candidate and require its "boot" ack; a dead
+  // candidate is terminated and the next tried. Relative-to-module first (real path when the module was
+  // imported relatively), then root-abs, then a mount-prefixed guess derived from this module's own url.
+  function bootWorker(url, ackMs) {
+    return new Promise((res) => {
+      let w = null;
+      try { w = new Worker(url, { type: "module" }); } catch (e) { res(null); return; }
+      const t = setTimeout(() => { try { w.terminate(); } catch (e) {} res(null); }, ackMs || 5000);
+      w.addEventListener("message", function ack(e) {
+        if ((e.data || {}).type === "boot") { clearTimeout(t); w.removeEventListener("message", ack); res(w); }
+      });
+      w.addEventListener("error", () => { clearTimeout(t); try { w.terminate(); } catch (e) {} res(null); });
+    });
+  }
+  async function ensureWorker() {
     if (worker) return worker;
     const candidates = [];
     try { candidates.push(new URL("./pocket-worker.js", import.meta.url).href); } catch (e) {}
     candidates.push("/usr/lib/holo/voice/pocket/pocket-worker.js");
+    try {
+      const mount = (typeof location !== "undefined" ? location.pathname : "/").split("/")[1];
+      if (mount) candidates.push(`/${mount}/usr/lib/holo/voice/pocket/pocket-worker.js`);
+    } catch (e) {}
     for (const u of candidates) {
-      try { worker = new Worker(u, { type: "module" }); break; } catch (e) {}
+      const w = await bootWorker(u);
+      if (w) { worker = w; break; }
     }
     if (!worker) return null;
     worker.addEventListener("message", onMessage);
@@ -46,10 +66,10 @@ export function createPocketVoice(opts = {}) {
     if (ready) return Promise.resolve(true);
     if (warming) { if (onProgress) progressCbs.add(onProgress); return warming; }
     if (onProgress) progressCbs.add(onProgress);
-    const w = ensureWorker();
-    if (!w) return Promise.resolve(false);
-    warming = new Promise((res) => {
-      const done = (ok) => { progressCbs.clear(); res(ok); };
+    warming = ensureWorker().then((w) => {
+      if (!w) { warming = null; return false; }   // no memoized absence — a later warm() retries
+      return new Promise((res) => {
+      const done = (ok) => { progressCbs.clear(); if (!ok) warming = null; res(ok); };   // failure never memoizes
       const onReady = (e) => {
         const m = e.data || {};
         if (m.type === "ready") { w.removeEventListener("message", onReady); done(true); }
@@ -60,6 +80,7 @@ export function createPocketVoice(opts = {}) {
         w.postMessage({ type: "load", data: { base, ortBase, ep: opts.ep || "auto", threads: opts.threads || 0 } });
       } catch (e) { done(false); }
       setTimeout(() => { w.removeEventListener("message", onReady); done(ready); }, opts.warmTimeoutMs || 300000);
+      });
     });
     return warming;
   }

@@ -38,7 +38,7 @@ function _ensureAtlas() {
       } catch (e) {}
     }
     return null;
-  })().catch(() => null);
+  })().then((a) => { if (!a) _atlasLoad = null; return a; }).catch(() => { _atlasLoad = null; return null; }); /* HOLO-ATLAS-RETRY */
   return _atlasLoad;
 }
 async function _atlasGet(text) { try { const a = await _ensureAtlas(); if (!a || !a.has(text)) return null; return await a.get(text); } catch (e) { return null; } }
@@ -48,18 +48,19 @@ try { _ensureAtlas(); } catch (e) {}
 // kyutai pocket-tts 100M — Q's DEFAULT live voice: streams on-device in real time (first audio
 // ~240-900ms warm, no COI needed; webgpu when present, wasm else). Weights stream once from the
 // HOLOGRAMTECH HF mirror and persist in the Cache API. Fail-soft: any failure → the pre-pocket ladder.
-let _pocket = null, _pocketLoad = null;
+let _pocket = null, _pocketLoad = null; /* HOLO-POCKET-V2 */
 function _ensurePocket() {
   if (_pocket) return Promise.resolve(_pocket);
   if (_pocketLoad) return _pocketLoad;
-  const urls = ["/usr/lib/holo/voice/pocket/holo-pocket-voice.mjs"];
+  const urls = [];
   try { urls.push(new URL("../../../usr/lib/holo/voice/pocket/holo-pocket-voice.mjs", import.meta.url).href); } catch (e) {}
+  urls.push("/usr/lib/holo/voice/pocket/holo-pocket-voice.mjs");
   _pocketLoad = (async () => {
     for (const u of urls) {
       try { const m = await import(/* @vite-ignore */ u); const mk = m && (m.createPocketVoice || m.default); if (mk) { _pocket = mk({}); return _pocket; } } catch (e) {}
     }
     return null;
-  })().catch(() => null);
+  })().then((p) => { if (!p) _pocketLoad = null; return p; }).catch(() => { _pocketLoad = null; return null; });
   return _pocketLoad;
 }
 function _pocketReady() { try { return !!(_pocket && _pocket.isReady()); } catch (e) { return false; } }

@@ -27,38 +27,48 @@ let generating = false, ready = false, genSeq = 0;
 const log = (...a) => { if (DEBUG) console.log("[pocket-worker]", ...a); };
 const status = (s) => postMessage({ type: "status", status: s });
 
-// ── cached streaming fetch: Cache API first, network once, progress events while downloading ──
+// ── cached streaming fetch: Cache API first, network once, progress events while downloading.
+// A STALL WATCHDOG aborts any network read that goes quiet (default 25s without a byte) so one flaky
+// CDN response fails the warm FAST into the caller's fail-soft ladder instead of hanging it. A cached
+// warm touches the network ZERO times — returning users are immune to upstream weather (and offline-ok).
+const STALL_MS = 25000;
 async function fetchCached(url, label, onBytes) {
   let cache = null;
   try { cache = await caches.open(cfg.cacheName); } catch (e) {}
   if (cache) {
     try { const hit = await cache.match(url); if (hit) return new Uint8Array(await hit.arrayBuffer()); } catch (e) {}
   }
-  const res = await fetch(url, { credentials: "omit" });
-  if (!res.ok) throw new Error(`${label}: HTTP ${res.status}`);
-  const total = +res.headers.get("content-length") || 0;
-  if (res.body && onBytes) {
-    const reader = res.body.getReader();
-    const parts = []; let got = 0;
-    for (;;) {
-      const { done, value } = await reader.read();
-      if (done) break;
-      parts.push(value); got += value.length;
-      onBytes(label, got, total);
+  const ab = new AbortController();
+  let watchdog = setTimeout(() => ab.abort(), STALL_MS);
+  const feed = () => { clearTimeout(watchdog); watchdog = setTimeout(() => ab.abort(), STALL_MS); };
+  try {
+    const res = await fetch(url, { credentials: "omit", signal: ab.signal });
+    if (!res.ok) throw new Error(`${label}: HTTP ${res.status}`);
+    const total = +res.headers.get("content-length") || 0;
+    let buf;
+    if (res.body) {
+      const reader = res.body.getReader();
+      const parts = []; let got = 0;
+      for (;;) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        feed();
+        parts.push(value); got += value.length;
+        if (onBytes) onBytes(label, got, total);
+      }
+      buf = new Uint8Array(got);
+      let off = 0; for (const p of parts) { buf.set(p, off); off += p.length; }
+    } else {
+      buf = new Uint8Array(await res.arrayBuffer());
     }
-    const buf = new Uint8Array(got);
-    let off = 0; for (const p of parts) { buf.set(p, off); off += p.length; }
     if (cache) { try { await cache.put(url, new Response(buf.slice(), { headers: { "content-type": "application/octet-stream" } })); } catch (e) {} }
     return buf;
-  }
-  const buf = new Uint8Array(await res.arrayBuffer());
-  if (cache) { try { await cache.put(url, new Response(buf.slice(), { headers: { "content-type": "application/octet-stream" } })); } catch (e) {} }
-  return buf;
+  } finally { clearTimeout(watchdog); }
 }
 
-async function importBlobModule(url) {
-  const txt = await (await fetch(url, { credentials: "omit" })).text();
-  const blob = new Blob([txt], { type: "text/javascript" });
+async function importBlobModule(url, label) {
+  const bytes = await fetchCached(url, label || "module");
+  const blob = new Blob([bytes], { type: "text/javascript" });
   const burl = URL.createObjectURL(blob);
   try { return await import(burl); } finally { URL.revokeObjectURL(burl); }
 }
@@ -208,7 +218,7 @@ async function load() {
   const ortCandidates = [cfg.ortBase, "https://cdn.jsdelivr.net/npm/onnxruntime-web@1.20.0/dist/"];
   for (const base of ortCandidates) {
     try {
-      const m = await import(/* @vite-ignore */ base + "ort.min.mjs").catch(() => importBlobModule(base + "ort.min.mjs"));
+      const m = await importBlobModule(base + "ort.min.mjs", "ort").catch(() => import(/* @vite-ignore */ base + "ort.min.mjs"));
       ort = m.default || m;
       ort.env.wasm.wasmPaths = base;
       break;
@@ -223,7 +233,7 @@ async function load() {
   const eps = wantGpu ? ["webgpu", "wasm"] : ["wasm"];
 
   status("bundle");
-  meta = await (await fetch(cfg.base + "bundle.json", { credentials: "omit" })).json();
+  meta = JSON.parse(new TextDecoder().decode(await fetchCached(cfg.base + "bundle.json", "bundle")));
   sr = +meta.sample_rate; samplesPerFrame = +meta.samples_per_frame;
   latentDim = +meta.latent_dim; condDim = +meta.conditioning_dim; maxTok = +(meta.max_token_per_chunk || 50);
 
@@ -246,7 +256,7 @@ async function load() {
   [sessText, sessMain, sessFlow, sessDecode] = await Promise.all([mk(bText), mk(bMain), mk(bFlow), mk(bDec)]);
 
   status("tokenizer");
-  const sp = await importBlobModule(cfg.base + "sentencepiece.js");
+  const sp = await importBlobModule(cfg.base + "sentencepiece.js", "sp");
   tokenizer = new sp.SentencePieceProcessor();
   let b64 = ""; const CH = 0x8000;
   for (let i = 0; i < bTok.length; i += CH) b64 += String.fromCharCode.apply(null, bTok.subarray(i, i + CH));
