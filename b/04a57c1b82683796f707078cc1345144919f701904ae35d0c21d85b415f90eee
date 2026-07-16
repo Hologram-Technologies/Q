@@ -8,13 +8,13 @@
  "mirror": "https://huggingface.co/HOLOGRAMTECH/holo-messenger-shell/resolve/main/b/",
  "tiers": {
   "core": {
-   "files": 601,
-   "bytes": 13745405,
+   "files": 602,
+   "bytes": 13760243,
    "hf": 0
   },
   "apps": {
    "files": 54,
-   "bytes": 2404629,
+   "bytes": 2405122,
    "hf": 0
   }
  },
@@ -349,9 +349,9 @@
    "source": "origin"
   },
   "_shared/holo-forge/holo-kstore.mjs": {
-   "sha256": "e85309b51dd4dcf9ca211409aff28dbc2ab0d7c4503cbd022742810c4d6330a7",
-   "blake3": "568ad5cd298977821ee30388702c6e25796d4728a1f64a65fd74133fc91f3022",
-   "bytes": 3146,
+   "sha256": "28c4d4f43306fe9cc88a0290b04088a70a3b0dfe3bcd307474e2799782d3bb1d",
+   "blake3": "e862b1fa35b16b023f171c80f2a151897543df529f7b0a132b10c734798795d7",
+   "bytes": 4087,
    "tier": "core",
    "source": "origin"
   },
@@ -1931,9 +1931,9 @@
    "source": "origin"
   },
   "apps/q/q-chat.html": {
-   "sha256": "bb5fef58aa4c1c38adedb982afd606b10b3ca85fca8cc896061901f154b53896",
-   "blake3": "eda11fdb3a84458ca9c8fa9d83828ededbbc426d87e7a5db241134f8430468db",
-   "bytes": 100599,
+   "sha256": "e12d8ff353743ce63524394e1219a80dded08bb9788b9a749018896b334252d8",
+   "blake3": "455f1dc6c72ff7eee793eaa8eb653b8be27382b6c2a22a1e2db2a2a382e1b83e",
+   "bytes": 101092,
    "tier": "apps",
    "source": "origin"
   },
@@ -2519,9 +2519,9 @@
    "source": "origin"
   },
   "usr/lib/holo/holo-evict-rescue.mjs": {
-   "sha256": "ac245f45b06e416d68306c37c1c3ccf59fa8e89f750a3f6ca8f0d6fcb41bd189",
-   "blake3": "139fb37c771a4ce0957d2fe1974eccc0c4aeb2d58a6f67f196554fe016526d13",
-   "bytes": 7377,
+   "sha256": "a37d000abf67ea3a10e35a51ac63d895d915d993424f65a8b3a3fb598fad0435",
+   "blake3": "2628605fc13cef53278afa50614581617538eea7c443112f5998414136759eaf",
+   "bytes": 8082,
    "tier": "core",
    "source": "origin"
   },
@@ -2568,9 +2568,9 @@
    "source": "origin"
   },
   "usr/lib/holo/holo-forge/holo-kstore.mjs": {
-   "sha256": "b788bbf01c4e2df2375dae629e255b34db4c36c08613193497645742dba8a145",
-   "blake3": "91659c36d860718a5da19ee976bddb415d1148ea5d853d1edd0f123600e3afc3",
-   "bytes": 3308,
+   "sha256": "f2ee9a8ef482568c2a0f5662380b43f53f490e03134cdb362535ce2722740332",
+   "blake3": "76a5004feeae49319c4409a9da02a40421053cd3ffa7dbd8e7496b44ffd586a3",
+   "bytes": 4249,
    "tier": "core",
    "source": "origin"
   },
@@ -3093,9 +3093,9 @@
    "source": "origin"
   },
   "usr/lib/holo/holo-rungs.mjs": {
-   "sha256": "3543fdde0790b1b6561d3ba04c73037fe27a962ab996a26ade77ec5dfb794942",
-   "blake3": "f3b58d19aa3c035fa6296bc77e0fb4f8bcf81eeda3d0cec7d75d1c7e82bc26c1",
-   "bytes": 10406,
+   "sha256": "de7983165c68a839c3e4a055b6873d2fb4720f7ccb2dd743a893ec04016e4b6e",
+   "blake3": "a712c92d59dd4c5a0fb2458bd930ebb09ab8b76a953f8b3388071994747e564c",
+   "bytes": 11059,
    "tier": "core",
    "source": "origin"
   },
@@ -3908,6 +3908,13 @@
    "sha256": "f2bc8afcbb2d2d66d085084f3c96d0fa65694a5b747c8abc9a21d92f012b1058",
    "blake3": "f098133532abfe6d732447cda876d841cd65f83d38acafe8fb3d70a620fdf74c",
    "bytes": 4988,
+   "tier": "core",
+   "source": "origin"
+  },
+  "usr/lib/holo/voice/ear/holo-ear.mjs": {
+   "sha256": "8439da8235a1e6a7260a23734f500a5ee98b746c7f06a8f104c03b051b328c37",
+   "blake3": "e6e991657b2ca66f97f11f675fa15ba8f1b73dcbef3f03109d0a902798a1c5de",
+   "bytes": 11598,
    "tier": "core",
    "source": "origin"
   },
