@@ -361,3 +361,4 @@ self.addEventListener("notificationclick", (event) => {
     if (self.clients.openWindow) return self.clients.openWindow((BASE || "") + "/?route=" + encodeURIComponent(JSON.stringify(route)));
   })());
 });
+const SW_GRAPH = "52089f41826cbfd4"; // module-graph identity — auto-stamped each seal (sw-graph-stamp.mjs) so a worker whose imports changed byte-changes too and stale/wedged registrations self-replace

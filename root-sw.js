@@ -383,3 +383,4 @@ self.addEventListener("fetch", (e) => {
     e.respondWith(collaredNet(net, () => pathFallback(rp)));
   }
 });
+const SW_GRAPH = "383bb5084c01b19d"; // module-graph identity — auto-stamped each seal (sw-graph-stamp.mjs) so a worker whose imports changed byte-changes too and stale/wedged registrations self-replace

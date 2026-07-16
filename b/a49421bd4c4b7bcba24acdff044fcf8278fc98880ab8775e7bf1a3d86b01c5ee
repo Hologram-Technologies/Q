@@ -9,12 +9,12 @@
  "tiers": {
   "core": {
    "files": 602,
-   "bytes": 13760243,
+   "bytes": 13764334,
    "hf": 0
   },
   "apps": {
    "files": 54,
-   "bytes": 2405122,
+   "bytes": 2405468,
    "hf": 0
   }
  },
@@ -62,9 +62,9 @@
    "source": "origin"
   },
   "404.html": {
-   "sha256": "4dad1cc256784c5ca8924b464349d2113d4d3dda53e46df3c0783d2416c60291",
-   "blake3": "c8777f475b35814a1f2f8e4d49bf13231d0d05f5a628e8a22efb0e6185f64c67",
-   "bytes": 1493,
+   "sha256": "44423bcc4c8f89af299f05f854ecf3368cb8c728e125d59dd3ee2887bfbe0998",
+   "blake3": "fff552bb549066a35656ba2b3e2df954bddfa28b693168f0256cb1fe45744447",
+   "bytes": 5174,
    "tier": "core",
    "source": "origin"
   },
@@ -1441,9 +1441,9 @@
    "source": "origin"
   },
   "apps/holo-messenger/holo-sw.js": {
-   "sha256": "5bb12e1f063ea613fc5184d286edc7a2a3bbd122058d0811ac42f67782a036d7",
-   "blake3": "6454c582ce28865d02ec2e10e00a9538051b4bba2ec568df3a2465caeb366281",
-   "bytes": 26338,
+   "sha256": "0e4fd0155a641ee63e73fdf216918c5a7dea8444d8777429d0fadc949ba15648",
+   "blake3": "0740d97f27250db4fcd65a7e70bc068bc333ea94a850b5305d6751624cad8c78",
+   "bytes": 26543,
    "tier": "core",
    "source": "origin"
   },
@@ -1931,9 +1931,9 @@
    "source": "origin"
   },
   "apps/q/q-chat.html": {
-   "sha256": "e12d8ff353743ce63524394e1219a80dded08bb9788b9a749018896b334252d8",
-   "blake3": "455f1dc6c72ff7eee793eaa8eb653b8be27382b6c2a22a1e2db2a2a382e1b83e",
-   "bytes": 101092,
+   "sha256": "8dc00649474a3eba4cc3ff3fdcff83e5d530f81da54d085f4d43f6b6533bea1c",
+   "blake3": "0cd025e2cad1ea16a2def49efa4eeb290093c3c2bc85aa83ba24731b133a5b65",
+   "bytes": 101438,
    "tier": "apps",
    "source": "origin"
   },
@@ -2176,9 +2176,9 @@
    "source": "origin"
   },
   "root-sw.js": {
-   "sha256": "496746c5d03052a3d9fa4192a7713449b937216ea8487e5399ddc41088d2e639",
-   "blake3": "06dbacc4d6838cb274dba186df0edc13c76ec5794ccaba4e5bad5f88c785ca43",
-   "bytes": 25755,
+   "sha256": "86d8042292ac467c53b00ede10f379a207b04930bca05e9686e6f9dd9ccd191e",
+   "blake3": "feb38ff785698c213a972558c50cc273ab0a9ade48a031c1e37f17ee8028287c",
+   "bytes": 25960,
    "tier": "core",
    "source": "origin"
   },
