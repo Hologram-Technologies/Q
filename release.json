@@ -20,12 +20,12 @@
   "prov:Entity",
   "holstr:Entry"
  ],
- "holstr:seq": 408,
- "holstr:prev": "did:holo:sha256:0a0485399aae8c98ebe93fdf6675478d7ac7176d8cdfbf8578ea2a3ac339458a",
+ "holstr:seq": 409,
+ "holstr:prev": "did:holo:sha256:c39274912c901872f4716bf1d7ea2e7225e11e08e02dcef839e58746f381ee6e",
  "holstr:kind": "release",
  "holstr:payload": {
-  "shell": "81f23450114dd09589101077bd3b481e9ded2e4caadbc5fd4981d4e5d0396f75",
-  "manifest": "bd23646637f1800cfa845bad542ddea65dcab78701198ccf34ce1d0f01c0dad9",
+  "shell": "102185408f9e134628e468207e7eb741a9f5227ea583641a31494b73efcf8421",
+  "manifest": "829055486248babc2110ab317ebfe50f5fa5170e870ec77ecb4d99ce215c348f",
   "runtime": {
    "apps/q/pkg/holospaces_web.js": "b9f8a887de588c5193dc65ca9ce206a70c6df53595b848e0ce0299c2d88a5753",
    "apps/q/pkg/holospaces_web_bg.wasm": "9d90b4ea8bccee8c239073c7ec7dd5158c6d11f1f668487570d17475d79e661e",
@@ -48,13 +48,13 @@
    "entry": "holo-portal.mjs",
    "sha256": "caeb3e57b6eeab09bee6d67c022145a8e2dae610c929a7f51bc169898625e7e8"
   },
-  "closure": "46bc79f7a6f6af48f84838d96dcbcf8fa20b31cb27c63305dfd2a8813ef827ec",
-  "world": "2f3142b081feb81b0cc5ad051df5afc15fb144be5b3af8b24e3e798731659fc4"
+  "closure": "89dbe9256787c9aa17c6711949234b96b72a3917fcbd5938661c84d7072ed881",
+  "world": "fcca22da05ad5acbe040940e04e6cba75af45983dbb8105253df755289c6a24e"
  },
- "prov:generatedAtTime": "2026-07-16T08:45:37.514Z",
+ "prov:generatedAtTime": "2026-07-16T09:19:02.534Z",
  "holstr:op": "did:holo:sha256:87599792c7b13fad9d6c57d3b89d2cef35e4715869f5cde597ab60ca92699f0b",
- "id": "did:holo:sha256:c39274912c901872f4716bf1d7ea2e7225e11e08e02dcef839e58746f381ee6e",
- "holstr:sig": "ovfdgghTKcixU3FEUF7tEbMumn164/45W7lBtPVm8f6v9F0lmcq8EE5rFuxp6EyQZVAxF2dxxWxdcRO1Pq0WDQ==",
+ "id": "did:holo:sha256:6b75724f12f0ec1b82b9d452b9f39e4241f2fc66211e7bdb8ed27da23e80d409",
+ "holstr:sig": "p9/qmSVsVGwKaSzJU8MWW5H7kPobjZ/w+4n/P0VkfplozhxlTntx3GRbDYvRdTzUf2FelncIEk1YSMJewws3Dw==",
  "holstr:alg": "Ed25519",
  "holstr:pub": "snYY6y35gdZ1ngOE5E+G1BGFjlTo2MfpfP8h6yc7r+M="
 }
