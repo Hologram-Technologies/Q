@@ -828,7 +828,7 @@ let _listenMod = null, _hf = null;
 async function ensureHF() {
   /* HOLO-EAR-MOONSHINE: moonshine ear (base; tiny on phones) — 280ms warm transcribe vs whisper's ~1s,
      better accuracy, same API. Fail-soft: any failure → the original listen.js whisper ear. */
-  if (!_listenMod) _listenMod = await import("../../usr/lib/holo/voice/ear/holo-ear.mjs").then((m) => (m && m.createHandsFree ? m : null)).catch(() => null) || await import("./core/listen.js");
+  if (!_listenMod) _listenMod = (window.__earLadderOff ? null : await import("../../usr/lib/holo/voice/ear/holo-ear.mjs").then((m) => (m && m.createHandsFree ? m : null)).catch(() => null)) || await import("./core/listen.js"); /* HOLO-EAR-FALLBACK */
   if (!_hf) _hf = _listenMod.createHandsFree({
     /* HOLO-DUPLEX: under ?duplex=1 the mic stays open while Q speaks — VAD onset (existing "speech"
        handler) stops Q instantly = barge-in. AEC (already on) suppresses Q's own voice in the mic. */
@@ -845,7 +845,10 @@ async function ensureHF() {
   });
   return _hf;
 }
-function micError(err) { const m = (err && err.name === "NotAllowedError") ? "I'd love to listen — enable microphone access and tap the mic again." : "I couldn't reach the microphone just now."; bubble("a", m); }
+function micError(err) {
+  /* HOLO-EAR-FALLBACK: an ear that failed to start never gets a second chance to fail the same way —
+     drop the cached module + skip the moonshine ladder so the next tap arms the proven whisper ear. */
+  try { _listenMod = null; _hf = null; window.__earLadderOff = 1; } catch (e) {} const m = (err && err.name === "NotAllowedError") ? "I'd love to listen — enable microphone access and tap the mic again." : "I couldn't reach the microphone just now."; bubble("a", m); }
 if (micBtn && micAvailable) {   // syncComposer() shows the mic only when the field is empty; no dead button when unsupported
   micBtn.onclick = async () => {
     if (_hf && _hf.running) { _hf.stop(); micBtn.classList.remove("rec"); setStatus(armed ? "online" : "loading", armed ? undefined : "getting ready…"); return; }
